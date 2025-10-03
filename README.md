@@ -28,7 +28,7 @@ Designed for use on a Raspberry Pi (kiosk side) and external PCs (admin side). T
 
 ### 1. Clone the Repository
 ```bash
-git clone [<your-repo-url>](https://github.com/mselletoe/brgypuj-kiosk.git)
+git clone https://github.com/mselletoe/brgypuj-kiosk.git
 cd brgypuj-kiosk
 ```
 
