@@ -4,7 +4,7 @@
     <!-- Sidebar -->
     <div class="w-72 flex flex-col">
 
-      <div class="p-6 border-b">
+      <div class="p-8 border-b">
         <h1>Logo</h1>
       </div>
       
@@ -12,10 +12,10 @@
     </div>
 
     <!-- Main content -->
-    <div class="flex flex-col flex-1">
+    <div class="flex flex-col flex-1 p-8">
       <Header />
 
-      <main class="flex-1 p-6 overflow-auto bg-white">
+      <main class="flex-1 overflow-auto">
         <router-view />
       </main>
     </div>

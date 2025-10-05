@@ -1,3 +1,5 @@
 <template>
-  <h2 class="text-2xl font-semibold">Overview</h2>
+  <div class="stats bg-white rounded-md w-full h-[170px]">
+
+  </div>
 </template>

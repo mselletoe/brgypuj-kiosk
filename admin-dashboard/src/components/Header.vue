@@ -1,10 +1,8 @@
 <template>
-  <header class="px-6 py-4 flex items-center justify-between">
-    <div class="flex-1">
-      <h1 class="text-xl font-bold text-gray-800">Admin Dashboard</h1>
-    </div>
+  <header class="pb-8 flex items-center justify-between">
+    <div class="bg-white rounded-md w-[700px] h-[40px]"></div>
     <div>
-      <button class="btn btn-sm btn-ghost">Logout</button>
+      <button class="btn btn-sm btn-ghost px-6 bg-white rounded-md w-[200px] h-[40px] hover:bg-gray-100 text-start">Account</button>
     </div>
   </header>
 </template>

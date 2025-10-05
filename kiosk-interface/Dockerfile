@@ -1,5 +1,6 @@
-# Stage 1: Build the Vite app
-FROM node:18 AS build
+# Stage 1: Build
+FROM node:20-alpine AS build
+
 WORKDIR /app
 COPY package*.json ./
 RUN npm install
