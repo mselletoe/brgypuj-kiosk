@@ -53,3 +53,40 @@ uvicorn app.main:app --reload
 
 
 
+## 📝 Notes
+
+### 1. Commit and Push
+```bash
+git add .
+git commit -m "Desc"
+git push
+```
+
+### REMINDER: Always move to the parent folder before committing.
+
+### 2. Create Branch
+```bash
+git checkout -b branchname
+```
+
+### 3. Switch Branch
+```bash
+git checkout branchname
+```
+
+### 3. Use PascalCase
+```bash
+SharedComponents.vue
+DocumentTemplates.vue
+```
+
+### 4. <script> first before <template>
+
+### 5. Move up one directory level
+```bash
+cd ..
+
+Ex. From /home/user/Documents/Projects
+cd ..
+You'll end up to /home/user/Documents
+```
