@@ -1,3 +1,8 @@
+<script setup>
+import Drawer from '@/components/Drawer.vue'
+import Header from '@/components/Header.vue'
+</script>
+
 <template>
   <div class="flex h-screen">
 
@@ -22,8 +27,3 @@
 
   </div>
 </template>
-
-<script setup>
-import Drawer from '@/components/Drawer.vue'
-import Header from '@/components/Header.vue'
-</script>
