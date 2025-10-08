@@ -55,7 +55,7 @@ uvicorn app.main:app --reload
 
 ## 📝 Notes
 
-### 1. Commit and Push
+### Commit and Push
 ```bash
 git add .
 git commit -m "Desc"
@@ -64,25 +64,33 @@ git push
 
 ### REMINDER: Always move to the parent folder before committing.
 
-### 2. Create Branch
+### Create Branch
 ```bash
 git checkout -b branchname
+
+for sure after first push using bagong branch lalabas to:
+git push --set-upstream origin branchname
 ```
 
-### 3. Switch Branch
+### AFTER CREATING BRANCH AND BEFORE PUSHING COMMITS
+```bash
+git pull origin main
+```
+
+### Switch Branch
 ```bash
 git checkout branchname
 ```
 
-### 3. Use PascalCase
+### Use PascalCase
 ```bash
 SharedComponents.vue
 DocumentTemplates.vue
 ```
 
-### 4. <script> first before <template>
+### script first before template
 
-### 5. Move up one directory level
+### Move up one directory level
 ```bash
 cd ..
 
