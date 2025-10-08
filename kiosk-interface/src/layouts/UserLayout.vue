@@ -1,5 +1,4 @@
 <script setup>
-import Drawer from '@/components/Drawer.vue'
 import Header from '@/components/Header.vue'
 </script>
 
