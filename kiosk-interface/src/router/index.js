@@ -1,12 +1,13 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import UserLayout from '@/layouts/UserLayout.vue'
-import KioskHome from '@/views/KioskHome.vue'
-import Login from '@/views/Login.vue'
-import Announcements from '@/views/Announcements.vue'
-import EquipmentBorrowing from '@/views/EquipmentBorrowing.vue'
-import HelpAndSupport from '@/views/HelpAndSupport.vue'
-import Feedback from '@/views/Feedback.vue'
-import Appointments from '@/views/Appointments.vue'
+import KioskHome from '@/views/home/KioskHome.vue'
+import Login from '@/views/login/Login.vue'
+import Announcements from '@/views/announcements/Announcements.vue'
+import DocumentServices from '@/views/document-services/DocumentServices.vue'
+import EquipmentBorrowing from '@/views/equipment-borrowing/EquipmentBorrowing.vue'
+import HelpAndSupport from '@/views/help-and-support/HelpAndSupport.vue'
+import Feedback from '@/views/feedback/Feedback.vue'
+import Appointments from '@/views/appointments/Appointments.vue'
 
 const routes = [
   { 
@@ -17,6 +18,7 @@ const routes = [
       { path: '/kiosk-home', component: KioskHome },
       { path: '/login', component: Login },
       { path: '/announcements', component: Announcements },
+      { path: '/document-services', component: DocumentServices },
       { path: '/equipment-borrowing', component: EquipmentBorrowing },
       { path: '/help-and-support', component: HelpAndSupport },
       { path: '/feedback', component: Feedback },
