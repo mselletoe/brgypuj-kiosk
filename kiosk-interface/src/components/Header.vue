@@ -1,70 +1,84 @@
 <template>
-  <header
-    class="flex justify-between items-center bg-white shadow-md p-4 text-gray-800"
-  >
+  <header class="flex items-center justify-between px-5 py-2 bg-white-800 text-[#003A6B] shadow-md border-b-4 border-[#003A6B]">
     <!-- Left: Logo -->
-    <div class="flex items-center space-x-2">
-      <img src="/logo.png" alt="Logo" class="w-10 h-10" />
-      <h1 class="text-xl font-semibold">My App</h1>
+    <div class="flex items-center space-x-1">
+      <img src="../assets/images/Pob1Logo.svg" alt="Poblacion 1, Amadeo, Cavite" class="w-20 h-20" />
+
+      <div class="flex flex-col font-poppins">
+        <h1 class="text-[20px] font-bold leading-[1] tracking-tight">Brgy. Poblacion 1</h1> <br/>
+        <h2 class="text-[20px] font-light -mt-5 leading-[1] tracking-tight">Amadeo, Cavite - Kiosk System</h2>
+      </div>
     </div>
 
     <!-- Center: Time and Date -->
-    <div class="text-center">
-      <p class="text-lg font-medium">{{ currentTime }}</p>
-      <p class="text-sm text-gray-500">{{ currentDate }}</p>
+    <div class="text-center font-poppins">
+      <p class="text-[20px] font-bold leading-none tracking-tight">{{ currentTime }}</p>
+      <p class="text-[20px] font-light leading-[1] tracking-tight">{{ currentDate }}</p>
     </div>
 
-    <!-- Right: Profile & Logout -->
-    <div class="flex items-center space-x-4">
-      <button
-        class="text-sm text-gray-700 hover:text-blue-600 font-medium"
-        @click="handleLogout"
-      >
-        Logout
+    <!-- Right: Profile and Logout -->
+    <div class="flex items-center space-x-4 font-poppins">
+      <button class="px-4 py-2 bg-[#D1E5F1] border-2 border-[#003A6B] 
+                    hover:bg-[#003A6B] hover:text-[white] rounded-md
+                    transition-colors duration-300 ease-in-out">Profile</button>
+      <button @click="logout" class="px-4 py-2 bg-[#FF2B3A] border-2 border-[#FF2B3A] 
+                                    hover:bg-[#CD000E] text-white font-light rounded-md
+                                    transition-colors duration-300 ease-in-out
+                                    flex items-center space-x-2"><span>Logout</span>
+                                    <img src="" class="w-10 h-10" />
       </button>
-      <img
-        src="/profile.png"
-        alt="Profile"
-        class="w-10 h-10 rounded-full border border-gray-300"
-      />
     </div>
   </header>
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, onMounted, onUnmounted } from "vue";
+import '../assets/images/Pob1Logo.svg';
 
-const currentTime = ref('')
-const currentDate = ref('')
+const currentTime = ref("");
+const currentDate = ref("");
 
-function updateDateTime() {
-  const now = new Date()
-  currentTime.value = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-  currentDate.value = now.toLocaleDateString(undefined, {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric'
+const updateDateTime = () => {
+  const now = new Date();
+  currentTime.value = now.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true, 
   })
-}
+  .toUpperCase();
 
-let timer
+  currentDate.value = now.toLocaleDateString([], {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+};
+
+let interval;
 onMounted(() => {
-  updateDateTime()
-  timer = setInterval(updateDateTime, 1000)
-})
-onBeforeUnmount(() => clearInterval(timer))
+  updateDateTime();
+  interval = setInterval(updateDateTime, 1000);
+});
+onUnmounted(() => clearInterval(interval));
 
-function handleLogout() {
-  alert('You have logged out!')
-}
+const logout = () => {
+  alert("You have been logged out!");
+};
 </script>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap');
+
 header {
   width: 100%;
   position: fixed;
   top: 0;
   left: 0;
+}
+
+.font-poppins {
+  font-family: 'Poppins', sans-serif;
 }
 </style>
