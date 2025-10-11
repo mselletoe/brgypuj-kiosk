@@ -17,5 +17,15 @@ export default defineConfig({
     postcss: {
       plugins: [tailwindcss()],
     },
-  }
+  },
+  server: {
+    port: 8080,
+  },
+  build: {
+    rollupOptions: {
+      input: path.resolve(__dirname, 'index.html'),
+    }
+  },
+  // SPA fallback for history mode
+  base: './',
 })

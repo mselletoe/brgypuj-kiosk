@@ -49,36 +49,30 @@ onMounted(fetchResidents)
         <thead>
           <tr>
             <th>#</th>
-            <th>Last Name</th>
             <th>First Name</th>
+            <th>Last Name</th>
             <th>Middle Name</th>
-            <th>Suffix</th>
-            <th>Sex/Gender</th>
-            <th>Age</th>
-            <th>Birthdate</th>
-            <th>Years of <br></br>Residency</th>
+            <th>RFID UID</th>
             <th>Unit/Blk/Street</th>
             <th>Purok</th>
+            <th>Phone Number</th>
           </tr>
         </thead>
 
         <tbody>
           <tr v-for="(resident, index) in paginatedResidents" :key="resident.id">
             <th>{{ startIndex + index + 1 }}</th>
-            <td>{{ resident.last_name }}</td>
             <td>{{ resident.first_name }}</td>
+            <td>{{ resident.last_name }}</td>
             <td>{{ resident.middle_name }}</td>
-            <td>{{ resident.suffix }}</td>
-            <td>{{ resident.sex_gender }}</td>
-            <td>{{ resident.age }}</td>
-            <td>{{ resident.birthdate }}</td>
-            <td>{{ resident.years_residency }}</td>
+            <td>{{ resident.rfid_uid }}</td>
             <td>{{ resident.unit_blk_street }}</td>
             <td>{{ resident.purok }}</td>
+            <td>{{ resident.phone_number }}</td>
           </tr>
 
           <tr v-if="paginatedResidents.length === 0">
-            <td colspan="15" class="text-center text-gray-500 py-4">
+            <td colspan="8" class="text-center text-gray-500 py-4">
               No residents found.
             </td>
           </tr>
