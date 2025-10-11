@@ -1,5 +1,5 @@
 <template>
-  <header class="flex items-center justify-between px-5 py-2 bg-white-800 text-[#003A6B] shadow-md border-b-4 border-[#003A6B]">
+  <header class="flex items-center justify-between px-5 py-2 bg-white text-[#003A6B] shadow-md border-b-4 border-[#003A6B]">
     <!-- Left: Logo -->
     <div class="flex items-center space-x-1">
       <img src="../assets/images/Pob1Logo.svg" alt="Poblacion 1, Amadeo, Cavite" class="w-[70px] h-[70px]" />
