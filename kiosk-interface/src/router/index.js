@@ -56,18 +56,18 @@ const routes = [
   // Idle
   { path: '/', redirect: '/idle' },
   { path: '/idle', component: Idle },
-  { path: '/idle/announcements', component: Announcements },
+  { path: '/announcements', component: Announcements },
 
   // Login + Subpages
-  { path: '/idle/login', component: Login },
-  { path: '/idle/login/guest-kiosk-home', component: KioskHome, meta: { layout: UserLayout, header: 'Guest' } },
-  { path: '/idle/login/rfid', component: UseRFID },
-  { path: '/idle/login/rfid/processing', component: ProcessingScreen },
-  { path: '/idle/login/rfid/processing/keypad', component: Keypad },
+  { path: '/login', component: Login },
+  { path: '/guest-kiosk-home', component: KioskHome, meta: { layout: UserLayout, header: 'Guest' } },
+  { path: '/login/rfid', component: UseRFID },
+  { path: '/login/rfid/processing', component: ProcessingScreen },
+  { path: '/login/rfid/processing/keypad', component: Keypad },
 
   // Kiosk Home (after login)
   {
-    path: '/idle/login/rfid/processing/keypad/kiosk-home',
+    path: '/kiosk-home',
     component: UserLayout,
     children: [
       { path: '', component: KioskHome },
