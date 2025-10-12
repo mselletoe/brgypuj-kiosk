@@ -4,7 +4,7 @@ import Display from '@/views/Display.vue'
 </script>
 
 <template>
-  <div class="flex h-screen flex-col items-center">
+  <div class="flex h-full flex-col items-center">
 
     <Display />
     <!-- <Announcements /> -->
