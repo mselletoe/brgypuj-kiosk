@@ -4,7 +4,8 @@
 
 @layer base {
   html {
-    font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+    /* Set Poppins as the default font for the entire application */
+    font-family: 'Poppins', system-ui, Avenir, Helvetica, Arial, sans-serif;
   }
 
   body {
