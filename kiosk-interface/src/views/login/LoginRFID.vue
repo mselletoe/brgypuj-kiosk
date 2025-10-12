@@ -34,7 +34,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="h-screen w-screen bg-gradient-to-br from-[#0F4878] to-[#487090] flex justify-center items-center font-poppins">
+  <div class="h-screen w-screen bg-gradient-to-br from-[#003A6B] to-[#89CFF1] flex justify-center items-center font-poppins">
     
     <div class="bg-white w-[974px] h-[550px] rounded-lg shadow-2xl relative flex flex-col justify-center items-center p-8">
 
@@ -57,8 +57,8 @@ onUnmounted(() => {
         </div>
 
         <div v-else class="flex flex-col items-center">
-          <div class="bg-[#295B83] w-80 h-52 rounded-lg flex justify-center items-center">
-            <SignalIcon class="h-24 w-24 text-white [animation:pulse_1s_infinite]" />
+          <div class="bg-[#1B5886] w-80 h-52 rounded-lg flex justify-center items-center">
+            <SignalIcon class="h-24 w-24 text-white animate-[pulse_1s_infinite]" />
           </div>
 
           <h2 class="text-3xl font-semibold text-[#295B83] mt-8">

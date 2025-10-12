@@ -9,7 +9,7 @@
 </script>
 
 <template>
-  <div class="h-screen w-screen bg-gradient-to-br from-[#0F4978] to-[#487090] flex justify-center items-center font-poppins">
+  <div class="h-screen w-screen bg-gradient-to-br from-[#003A6B] to-[#89CFF1] flex justify-center items-center font-poppins">
     
     <div class="bg-white w-[974px] h-[550px] rounded-lg shadow-2xl flex flex-col justify-center items-center p-8">
       
