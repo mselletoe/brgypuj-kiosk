@@ -15,7 +15,7 @@ const route = useRoute()
 </script>
 
 <template>
-  <div class="drawer drawer-open p-8">
+  <div class="drawer drawer-open ">
     <div class="drawer-side">
       <ul class="menu text-base-content w-full h-full space-y-1 text-sm">
         <li>

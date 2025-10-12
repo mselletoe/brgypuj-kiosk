@@ -1,16 +1,17 @@
 <script setup>
 import Drawer from '@/components/Drawer.vue'
 import Header from '@/components/Header.vue'
+import logo from '@/assets/logo.svg'
 </script>
 
 <template>
   <div class="flex h-screen">
 
     <!-- Sidebar -->
-    <div class="w-72 flex flex-col">
+    <div class="w-72 flex flex-col p-8">
 
-      <div class="p-8 border-b">
-        <h1>Logo</h1>
+      <div class="mb-8 border-b">
+        <img :src="logo" alt="Logo" class="h-100 object-contain" />
       </div>
       
       <Drawer />

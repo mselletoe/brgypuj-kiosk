@@ -1,5 +1,5 @@
 <script setup>
-import '../assets/announcements.css'
+import '@/assets/announcements.css'
 import { onMounted, onUnmounted } from 'vue'
 
 onMounted(() => {
