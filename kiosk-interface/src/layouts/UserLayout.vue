@@ -7,7 +7,7 @@ import Header from '@/components/Header.vue'
 
     <Header />
 
-    <main class="flex-1 overflow-auto">
+    <main class="flex-1 overflow-auto pt-[95px] w-full">
       <router-view />
     </main>
 
