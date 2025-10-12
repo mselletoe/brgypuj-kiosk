@@ -8,7 +8,6 @@ import Announcements from '@/views/announcements/Announcements.vue'
 
 // Login subpages
 import LoginRFID from '@/views/login/LoginRFID.vue'
-import LoginProcessing from '@/views/login/LoginProcessing.vue'
 import LoginKeypad from '@/views/login/LoginKeypad.vue'
 
 // Document Services
@@ -98,15 +97,26 @@ const routes = [
     ]
   },
 
-  // Login (outside main layout)
+  // Login routes (no layout)
   {
     path: '/login',
-    component: Login,
-    children: [
-      { path: 'rfid', component: LoginRFID },
-      { path: 'processing', component: LoginProcessing },
-      { path: 'keypad', component: LoginKeypad }
-    ]
+    name: 'Login',
+    component: Login
+  },
+  {
+    path: '/login-rfid',
+    name: 'LoginRFID',
+    component: LoginRFID
+  },
+  {
+    path: '/login-keypad',
+    name: 'LoginKeypad',
+    component: LoginKeypad
+  },
+  // Default redirect to the login page
+  {
+    path: '/',
+    redirect: '/login'
   }
 ]
 
