@@ -45,16 +45,15 @@ import GeneralExperienceFeedback from '@/views/feedback/GeneralExperienceFeedbac
 
 // Appointments
 import Appointments from '@/views/appointments/Appointments.vue'
-import ScheduleAppointment from '@/views/appointments/ScheduleAppointment.vue'
-import AppointmentSubmitted from '@/views/appointments/AppointmentSubmitted.vue'
+import Idle from '@/views/Idle.vue'
 
 const routes = [
   {
     path: '/',
     component: UserLayout,
-    redirect: '/kiosk-home',
+    redirect: '/idle',
     children: [
-      { path: 'kiosk-home', component: KioskHome },
+      { path: 'idle', component: Idle },
       { path: 'announcements', component: Announcements },
 
       // Document Services
@@ -91,9 +90,7 @@ const routes = [
       { path: 'feedback/general-experience', component: GeneralExperienceFeedback },
 
       // Appointments
-      { path: 'appointments', component: Appointments },
-      { path: 'appointments/schedule', component: ScheduleAppointment },
-      { path: 'appointments/submitted', component: AppointmentSubmitted }
+      { path: 'appointments', component: Appointments }
     ]
   },
 
@@ -117,6 +114,10 @@ const routes = [
   {
     path: '/',
     redirect: '/login'
+  },
+  {
+    path: '/idle',
+    component: Idle
   }
 ]
 
