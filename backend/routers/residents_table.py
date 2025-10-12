@@ -1,34 +1,9 @@
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import JSONResponse
-from fastapi.middleware.cors import CORSMiddleware
-import psycopg2
-from psycopg2.extras import RealDictCursor
+from fastapi import APIRouter, HTTPException
+from db import get_conn
 
-DB_URL = "postgresql://admin:admin7890@localhost:5432/kioskdb"
+router = APIRouter(prefix="/api/residents", tags=["Residents"])
 
-app = FastAPI(title="Kiosk Backend API")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:8080"],  # frontend dev server
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-def get_conn():
-    try:
-        conn = psycopg2.connect(DB_URL)
-        return conn
-    except Exception as e:
-        print("Database connection failed:", e)
-        raise
-
-@app.get("/")
-def root():
-    return {"message": "Kiosk backend is running"}
-
-@app.get("/api/residents")
+@router.get("/")
 def list_residents(page: int = 1, limit: int = 10):
     offset = (page - 1) * limit
     try:
