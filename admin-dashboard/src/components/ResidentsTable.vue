@@ -60,7 +60,7 @@ onMounted(fetchResidents)
         </thead>
 
         <tbody>
-          <tr v-for="(resident, index) in paginatedResidents" :key="resident.id">
+          <tr class="text-center" v-for="(resident, index) in paginatedResidents" :key="resident.id">
             <th>{{ startIndex + index + 1 }}</th>
             <td>{{ resident.first_name }}</td>
             <td>{{ resident.last_name }}</td>
