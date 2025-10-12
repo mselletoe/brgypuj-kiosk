@@ -54,7 +54,7 @@ const updateDateTime = () => {
   })
   .toUpperCase();
 
-  currentDate.value = now.toLocaleDateString([], {
+  currentDate.value = now.toLocaleDateString("en-US", {
     weekday: "long",
     year: "numeric",
     month: "long",
