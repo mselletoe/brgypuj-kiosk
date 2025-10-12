@@ -1,6 +1,4 @@
 import { createRouter, createWebHistory } from 'vue-router'
-
-// Layouts
 import UserLayout from '@/layouts/UserLayout.vue'
 
 // Idle Screens
@@ -55,117 +53,62 @@ import ScheduleAppointment from '@/views/appointments/ScheduleAppointment.vue'
 import AppointmentSubmitted from '@/views/appointments/AppointmentSubmitted.vue'
 
 const routes = [
+  // Idle
+  { path: '/', redirect: '/idle' },
+  { path: '/idle', component: Idle },
+  { path: '/idle/announcements', component: Announcements },
+
+  // Login + Subpages
+  { path: '/idle/login', component: Login },
+  { path: '/idle/login/guest-kiosk-home', component: KioskHome, meta: { layout: UserLayout, header: 'Guest' } },
+  { path: '/idle/login/rfid', component: UseRFID },
+  { path: '/idle/login/rfid/processing', component: ProcessingScreen },
+  { path: '/idle/login/rfid/processing/keypad', component: Keypad },
+
+  // Kiosk Home (after login)
   {
-    path: '/',
-    redirect: '/idle',
-  },
-  {
-    path: '/idle',
-    component: Idle,
+    path: '/idle/login/rfid/processing/keypad/kiosk-home',
+    component: UserLayout,
     children: [
-      { path: 'announcements', component: Announcements },
-      {
-        path: 'login',
-        component: Login,
-        children: [
-          // Guest kiosk home (for guest users)
-          {
-            path: 'guest-kiosk-home',
-            component: UserLayout,
-            children: [
-              { path: '', component: KioskHome, meta: { header: 'Guest' } },
-            ],
-          },
-          {
-            path: 'rfid',
-            component: UseRFID,
-            children: [
-              {
-                path: 'processing',
-                component: ProcessingScreen,
-                children: [
-                  {
-                    path: 'keypad',
-                    component: Keypad,
-                    children: [
-                      {
-                        path: 'kiosk-home',
-                        component: UserLayout,
-                        children: [
-                          { path: '', component: KioskHome },
+      { path: '', component: KioskHome },
 
-                          // Document Services
-                          {
-                            path: 'document-services',
-                            component: DocumentServices,
-                            children: [
-                              { path: 'barangay-clearance', component: BarangayClearance },
-                              { path: 'barangay-clearance-good-moral', component: BarangayClearanceGoodMoral },
-                              { path: 'business-permit', component: BusinessPermit },
-                              { path: 'barangay-id', component: BarangayID },
-                              { path: 'pwd-id', component: PWDID },
-                              { path: 'senior-citizen-id', component: SeniorCitizenID },
-                              { path: 'solo-parent-id', component: SoloParentID },
-                              { path: 'indigency', component: CertificateOfIndigency },
-                              { path: 'residency', component: CertificateOfResidency },
-                            ],
-                          },
+      // Document Services
+      { path: 'document-services', component: DocumentServices },
+      { path: 'document-services/barangay-clearance', component: BarangayClearance },
+      { path: 'document-services/barangay-clearance-good-moral', component: BarangayClearanceGoodMoral },
+      { path: 'document-services/business-permit', component: BusinessPermit },
+      { path: 'document-services/barangay-id', component: BarangayID },
+      { path: 'document-services/pwd-id', component: PWDID },
+      { path: 'document-services/senior-citizen-id', component: SeniorCitizenID },
+      { path: 'document-services/solo-parent-id', component: SoloParentID },
+      { path: 'document-services/indigency', component: CertificateOfIndigency },
+      { path: 'document-services/residency', component: CertificateOfResidency },
 
-                          // Equipment Borrowing
-                          {
-                            path: 'equipment-borrowing',
-                            component: EquipmentBorrowing,
-                            children: [
-                              { path: 'select', component: EquipmentSelect },
-                              { path: 'select-dates', component: EquipmentSelectDates },
-                              { path: 'form', component: EquipmentForm },
-                              { path: 'review', component: EquipmentReviewRequest },
-                              { path: 'submitted', component: EquipmentRequestSubmitted },
-                            ],
-                          },
+      // Equipment Borrowing
+      { path: 'equipment-borrowing', component: EquipmentBorrowing },
+      { path: 'equipment-borrowing/select', component: EquipmentSelect },
+      { path: 'equipment-borrowing/select-dates', component: EquipmentSelectDates },
+      { path: 'equipment-borrowing/form', component: EquipmentForm },
+      { path: 'equipment-borrowing/review', component: EquipmentReviewRequest },
+      { path: 'equipment-borrowing/submitted', component: EquipmentRequestSubmitted },
 
-                          // Help and Support
-                          {
-                            path: 'help-and-support',
-                            component: HelpAndSupport,
-                            children: [
-                              { path: 'faqs', component: FAQs },
-                              { path: 'contact', component: Contact },
-                            ],
-                          },
+      // Help and Support
+      { path: 'help-and-support', component: HelpAndSupport },
+      { path: 'help-and-support/faqs', component: FAQs },
+      { path: 'help-and-support/contact', component: Contact },
 
-                          // Feedback
-                          {
-                            path: 'feedback',
-                            component: Feedback,
-                            children: [
-                              { path: 'service-quality', component: ServiceQualityFeedback },
-                              { path: 'interface-design', component: InterfaceDesignFeedback },
-                              { path: 'system-speed', component: SystemSpeedFeedback },
-                              { path: 'accessibility', component: AccessibilityFeedback },
-                              { path: 'general-experience', component: GeneralExperienceFeedback },
-                            ],
-                          },
+      // Feedback
+      { path: 'feedback', component: Feedback },
+      { path: 'feedback/service-quality', component: ServiceQualityFeedback },
+      { path: 'feedback/interface-design', component: InterfaceDesignFeedback },
+      { path: 'feedback/system-speed', component: SystemSpeedFeedback },
+      { path: 'feedback/accessibility', component: AccessibilityFeedback },
+      { path: 'feedback/general-experience', component: GeneralExperienceFeedback },
 
-                          // Appointments
-                          {
-                            path: 'appointments',
-                            component: Appointments,
-                            children: [
-                              { path: 'schedule', component: ScheduleAppointment },
-                              { path: 'submitted', component: AppointmentSubmitted },
-                            ],
-                          },
-                        ],
-                      },
-                    ],
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-      },
+      // Appointments
+      { path: 'appointments', component: Appointments },
+      { path: 'appointments/schedule', component: ScheduleAppointment },
+      { path: 'appointments/submitted', component: AppointmentSubmitted },
     ],
   },
 ]
