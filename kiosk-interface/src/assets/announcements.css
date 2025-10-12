@@ -3,7 +3,7 @@
 body.announcements-page {
     margin: 0;
     height: 100vh;
-    weight: 100vw;
+    width: 100vw;
     background: radial-gradient(circle at top left, #3291E3 0%, #ffffff 44%);
     background-repeat: no-repeat;
     background-attachment: fixed;
@@ -13,3 +13,4 @@ body.announcements-page {
     font-family: 'Poppins', sans-serif;
     overflow: hidden;
 }
+
