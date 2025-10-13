@@ -24,6 +24,8 @@ import ShareYourThoughts from '@/views/feedback/ShareYourThoughts.vue'
 
 import Appointments from '@/views/appointments/Appointments.vue'
 
+import Modal from '../components/shared/Modal.vue'  
+
 const routes = [
   // Default route
   { path: '/', redirect: '/idle' },
@@ -58,6 +60,7 @@ const routes = [
           ]
       },
       { path: 'appointments', component: Appointments },
+      { path: '/modal', component: Modal },
     ],
   },
 
