@@ -1,16 +1,14 @@
 <script setup>
-import { ref, onUnmounted } from 'vue' // <-- Import onUnmounted
+import { ref, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ArrowLeftIcon, SignalIcon } from '@heroicons/vue/24/solid'
+import PrimaryButton from '@/components/shared/PrimaryButton.vue'
 
 const router = useRouter()
 const isScanning = ref(false)
-
-// 1. A variable to hold the ID of our timer
 let scanTimer = null
 
 const goBack = () => {
-  // 2. Before navigating, check if a timer is active and cancel it
   if (scanTimer) {
     clearTimeout(scanTimer)
   }
@@ -19,15 +17,11 @@ const goBack = () => {
 
 const startScan = () => {
   isScanning.value = true
-
-  // 3. Store the timer's ID in our variable
   scanTimer = setTimeout(() => {
     router.push('/login-pin')
-  }, 5000)
+  }, 3000)
 }
 
-// 4. (Failsafe) This function runs automatically when the page is left
-//    It ensures the timer is cancelled no matter how the user navigates away.
 onUnmounted(() => {
   clearTimeout(scanTimer)
 })
@@ -70,10 +64,17 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <button @click="goBack" class="btn btn-ghost absolute bottom-8 left-8">
-        <ArrowLeftIcon class="h-6 w-6" />
-        Go Back
-      </button>
+      <PrimaryButton 
+        @click="goBack" 
+        bgColor="bg-transparent"
+        textColor="text-[#013C6D]"
+        class="absolute bottom-8 left-8 w-auto px-4 text-[14px] rounded-[20px]"
+      >
+        <span class="flex items-center gap-x-2">
+          <ArrowLeftIcon class="h-5 w-5" />
+          Go Back
+        </span>
+      </PrimaryButton>
 
     </div>
   </div>
