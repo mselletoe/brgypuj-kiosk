@@ -27,7 +27,7 @@ const showAnnouncements = () => {
 </script>
 
 <template>
-  <div class="h-screen w-screen bg-blue-100 flex items-center justify-center relative">
+  <div class="h-screen w-screen flex items-center justify-center relative">
     <component
       :is="currentView === 'display' ? Display : Announcements"
       @see-announcements="showAnnouncements"

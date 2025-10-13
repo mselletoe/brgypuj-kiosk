@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import UserLayout from '@/layouts/UserLayout.vue'
 
 // Screens
+import Display from '@/views/idle/Display.vue'
 import Idle from '@/views/idle/Idle.vue'
 import Announcements from '@/views/idle/Announcements.vue'
 import Login from '@/views/login/Login.vue'
@@ -18,7 +19,6 @@ import EquipmentBorrowing from '@/views/equipment-borrowing/EquipmentBorrowing.v
 import HelpAndSupport from '@/views/help-and-support/HelpAndSupport.vue'
 
 import Feedback from '@/views/feedback/Feedback.vue'
-import FeedbackSelect from '@/views/feedback/FeedbackSelect.vue'
 import Rating from '@/views/feedback/Rating.vue'
 import ShareYourThoughts from '@/views/feedback/ShareYourThoughts.vue'
 
@@ -29,6 +29,7 @@ const routes = [
   { path: '/', redirect: '/idle' },
 
   // Non-layout routes (Idle, Announcements, Login)
+  { path: '/display', component: Display},
   { path: '/idle', component: Idle },
   { path: '/announcements', component: Announcements },
   { path: '/login', component: Login },
@@ -51,8 +52,7 @@ const routes = [
       { path: 'help-and-support', component: HelpAndSupport },
       { path: 'feedback', component: Feedback,
           children: [
-            { path: '', redirect: '/feedback/select' },
-            { path: 'select', component: FeedbackSelect },
+            { path: '', redirect: '/feedback' },
             { path: 'rating', component: Rating },
             { path: 'comments', component: ShareYourThoughts },
           ]
