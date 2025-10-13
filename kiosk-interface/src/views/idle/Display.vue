@@ -1,5 +1,5 @@
 <script setup>
-import '@/assets/display.css'
+import '@/views/idle/display.css' 
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useTouchToStart } from '@/composables/touchToStart'
@@ -22,7 +22,7 @@ const goToAnnouncements = (event) => {
 </script>
 
 <template>
-  <div class="flex items-center justify-center text-center h-full w-full overflow-hidden relative select-none text-[#0c2d57]">
+  <div class="display-page flex items-center justify-center text-center h-full w-full overflow-hidden relative select-none text-[#0c2d57]">
     
     <!-- Top-right buttons -->
     <div class="absolute top-6 right-6 flex items-center gap-2">
@@ -79,3 +79,27 @@ const goToAnnouncements = (event) => {
     />
   </div>
 </template>
+
+<style scoped>
+.display-page {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background: radial-gradient(circle at top left, #3291E3 0%, #ffffff 44%);
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+  background-attachment: local;
+  font-family: 'Poppins', sans-serif;
+}
+
+#app {
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+</style>

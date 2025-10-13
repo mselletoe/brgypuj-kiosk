@@ -1,5 +1,5 @@
 <script setup>
-import '@/assets/announcements.css'
+import './display.css'
 import { useTouchToStart } from '@/composables/touchToStart'
 
 useTouchToStart()
