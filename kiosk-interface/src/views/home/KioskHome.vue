@@ -193,8 +193,8 @@ html, body, #app {
 
 .logo-section {
   position: fixed;
-  top: 102px;
-  left: 800px;
+  top: 80px;
+  left: 790px;
   display: flex;
   align-items: center;
   justify-content: center;
