@@ -23,7 +23,7 @@
             <p class="box-title">Schedule<br>Appointment</p>
             <p class="box-subtitle">Schedule meetings with<br>Barangay Officials</p>
           </div>
-            <div class="service-box box4" @click="goTo('help-and-support')">
+          <div class="service-box box4" @click="goTo('help-and-support')">
             <img src="@/assets/vectors/HelpSupport.svg" alt="Help & Support" class="box-logo" />
             <p class="box-title">Help &<br>Support</p>
             <p class="box-subtitle">Find answers and<br>get assistance</p>
@@ -46,7 +46,6 @@
 <script setup>
 import { useRouter } from 'vue-router'
 const router = useRouter()
-
 function goTo(path) {
   router.push(path)
 }
@@ -94,8 +93,8 @@ html, body, #app {
   line-height: 45px;
   letter-spacing: -0.03em;
   text-shadow:
-    inset 0 1px 1px rgba(0, 0, 0, 0.25),
-    2px 2px 3px rgba(0, 0, 0, 0.25);
+    3px 3px 5px rgba(0, 0, 0, 0.3),
+    -2px -2px 4px rgba(255, 255, 255, 0.6);
   margin: 0;
 }
 
@@ -104,9 +103,10 @@ html, body, #app {
   font-weight: 700;
   line-height: 50px;
   letter-spacing: -0.03em;
+  color: #003a6b;
   text-shadow:
-    inset 0 1px 1px rgba(0, 0, 0, 0.25),
-    3px 3px 4px rgba(0, 0, 0, 0.25);
+    3px 3px 5px rgba(0, 0, 0, 0.3),
+    -2px -2px 4px rgba(255, 255, 255, 0.6);
   margin: 0 0 25px 0;
 }
 
@@ -143,7 +143,6 @@ html, body, #app {
   cursor: pointer;
 }
 
-/* Hover effect */
 .service-box:hover {
   transform: scale(1.05) translateY(-3px);
   box-shadow:
@@ -152,7 +151,6 @@ html, body, #app {
     6px 6px 12px rgba(0, 0, 0, 0.35);
 }
 
-/* Click effect */
 .service-box:active {
   transform: scale(0.97);
   box-shadow:
