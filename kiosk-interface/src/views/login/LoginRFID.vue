@@ -22,7 +22,7 @@ const startScan = () => {
 
   // 3. Store the timer's ID in our variable
   scanTimer = setTimeout(() => {
-    router.push('/login-keypad')
+    router.push('/login-pin')
   }, 5000)
 }
 
