@@ -37,7 +37,7 @@
       </div>
 
       <div class="logo-section">
-        <img src="@/assets/LogoTransparent.svg" alt="Barangay Logo" class="logo" />
+        <img src="@/assets/images/Pob1Logo.svg" alt="Barangay Logo" class="logo" />
       </div>
     </div>
   </div>
@@ -202,7 +202,8 @@ html, body, #app {
 }
 
 .logo {
-  width: 150px;
-  height: 150px;
+  width: 180px;
+  height: 180px;
+  margin-top: 0;
 }
 </style>
