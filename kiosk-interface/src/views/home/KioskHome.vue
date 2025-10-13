@@ -18,20 +18,20 @@
             <p class="box-title">Equipment<br>Borrowing</p>
             <p class="box-subtitle">Borrow tents, chairs, and<br>other Barangay utilities</p>
           </div>
-          <div class="service-box box3" @click="goTo('help-and-support')">
+          <div class="service-box box3" @click="goTo('appointments')">
+            <img src="@/assets/vectors/ScheduleAppointment.svg" alt="Schedule Appointment" class="box-logo" />
+            <p class="box-title">Schedule<br>Appointment</p>
+            <p class="box-subtitle">Schedule meetings with<br>Barangay Officials</p>
+          </div>
+            <div class="service-box box4" @click="goTo('help-and-support')">
             <img src="@/assets/vectors/HelpSupport.svg" alt="Help & Support" class="box-logo" />
             <p class="box-title">Help &<br>Support</p>
             <p class="box-subtitle">Find answers and<br>get assistance</p>
           </div>
-          <div class="service-box box4" @click="goTo('feedback')">
+          <div class="service-box box5" @click="goTo('feedback')">
             <img src="@/assets/vectors/Feedback.svg" alt="Feedback" class="box-logo" />
             <p class="box-title">Feedback</p>
             <p class="box-subtitle">Help us improve the<br>Barangay Kiosk<br>experience</p>
-          </div>
-          <div class="service-box box5" @click="goTo('appointments')">
-            <img src="@/assets/vectors/ScheduleAppointment.svg" alt="Schedule Appointment" class="box-logo" />
-            <p class="box-title">Schedule<br>Appointment</p>
-            <p class="box-subtitle">Schedule meetings with<br>Barangay Officials</p>
           </div>
         </div>
       </div>
@@ -120,12 +120,12 @@ html, body, #app {
 
 .service-container {
   display: flex;
-  gap: 15px;
+  gap: 10px;
   margin-top: 45px;
 }
 
 .service-box {
-  width: 160px;
+  width: 165px;
   height: 220px;
   border-radius: 15px;
   box-shadow:
@@ -168,15 +168,15 @@ html, body, #app {
 .box5 { background-color: #13B3A1; }
 
 .box-logo {
-  width: 100px;
-  height: 100px;
+  width: 105px;
+  height: 105px;
   margin-bottom: 5px;
 }
 
 .box-title {
   font-family: 'Poppins', sans-serif;
   font-weight: 700;
-  font-size: 20px;
+  font-size: 18px;
   line-height: 20px;
   letter-spacing: 0;
   color: #ffffff;
