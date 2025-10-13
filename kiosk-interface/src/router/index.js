@@ -24,9 +24,6 @@ import Rating from '@/views/feedback/Rating.vue'
 import ShareYourThoughts from '@/views/feedback/ShareYourThoughts.vue'
 
 import Appointments from '@/views/appointments/Appointments.vue'
-import Modal from '@/components/shared/Modal.vue'
-
-import Modal from '../components/shared/Modal.vue'  
 
 const routes = [
   // Default route
@@ -39,7 +36,6 @@ const routes = [
   { path: '/login', component: Login },
   { path: '/login-rfid', component: LoginRFID },
   { path: '/login-pin', component: LoginPIN },
-  { path: '/modal', component: Modal},
 
   // Authenticated routes (inside layout)
   {
@@ -64,7 +60,6 @@ const routes = [
           ]
       },
       { path: 'appointments', component: Appointments },
-      { path: '/modal', component: Modal },
     ],
   },
 

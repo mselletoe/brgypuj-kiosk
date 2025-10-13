@@ -68,7 +68,7 @@ onUnmounted(() => {
         @click="goBack" 
         bgColor="bg-transparent"
         textColor="text-[#013C6D]"
-        class="absolute bottom-8 left-8 w-auto px-4 text-[14px] rounded-[20px]"
+        class="absolute bottom-8 left-8 w-auto px-4 text-[14px] rounded-[20px] h-[40px]"
       >
         <span class="flex items-center gap-x-2">
           <ArrowLeftIcon class="h-5 w-5" />

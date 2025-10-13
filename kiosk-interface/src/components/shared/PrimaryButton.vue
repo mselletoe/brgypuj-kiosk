@@ -20,14 +20,10 @@ defineProps({
 <template>
   <button
     :class="[
-      // Base styles that are always applied
       'flex items-center justify-center',
       'border-2 rounded-[10px]',
       'transition-colors hover:opacity-90',
-      'shadow-xl', // Shadow added for depth
-
-      // Default dimensions (can be overridden by a class in the parent)
-      'h-10 w-[100px]',
+      'shadow-xl', 
       
       // Dynamic styles from props
       bgColor,
