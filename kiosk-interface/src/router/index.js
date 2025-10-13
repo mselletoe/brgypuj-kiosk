@@ -6,62 +6,63 @@ import Idle from '@/views/idle/Idle.vue'
 import Announcements from '@/views/idle/Announcements.vue'
 import Login from '@/views/login/Login.vue'
 import LoginRFID from '@/views/login/LoginRFID.vue'
+import LoginPIN from '@/views/login/LoginPIN.vue'
 import KioskHome from '@/views/home/KioskHome.vue'
+
+// Document Services
 import DocumentServices from '@/views/document-services/DocumentServices.vue'
+import DocumentFormWrapper from '@/views/document-services/DocumentFormWrapper.vue'
+
 import EquipmentBorrowing from '@/views/equipment-borrowing/EquipmentBorrowing.vue'
+
 import HelpAndSupport from '@/views/help-and-support/HelpAndSupport.vue'
+
 import Feedback from '@/views/feedback/Feedback.vue'
+import FeedbackSelect from '@/views/feedback/FeedbackSelect.vue'
+import Rating from '@/views/feedback/Rating.vue'
+import ShareYourThoughts from '@/views/feedback/ShareYourThoughts.vue'
+
 import Appointments from '@/views/appointments/Appointments.vue'
 
 const routes = [
-  // Default Route
+  // Default route
+  { path: '/', redirect: '/idle' },
+
+  // Non-layout routes (Idle, Announcements, Login)
+  { path: '/idle', component: Idle },
+  { path: '/announcements', component: Announcements },
+  { path: '/login', component: Login },
+  { path: '/login-rfid', component: LoginRFID },
+  { path: '/login-pin', component: LoginPIN },
+
+  // Authenticated routes (inside layout)
   {
     path: '/',
-    redirect: '/idle',
-  },
-
-  // Non-layout Routes 
-  {
-    path: '/idle',
-    name: 'Idle',
-    component: Idle,
-  },
-  {
-    path: '/announcements',
-    name: 'Announcements',
-    component: Announcements
-  },
-  {
-    path: '/login',
-    name: 'Login',
-    component: Login,
-  },
-  {
-    path: '/login-rfid',
-    name: 'LoginRFID',
-    component: LoginRFID,
-  },
-
-  // Authenticated Routes
-  {
-    path: '/app',
     component: UserLayout,
     children: [
-      { path: '', redirect: '/app/home' },
       { path: 'home', component: KioskHome },
-      { path: 'document-services', component: DocumentServices },
+      {
+        path: '/document-services', component: DocumentServices,
+        children: [
+          { path: ':docType', component: DocumentFormWrapper, },
+        ],
+      },
       { path: 'equipment-borrowing', component: EquipmentBorrowing },
       { path: 'help-and-support', component: HelpAndSupport },
-      { path: 'feedback', component: Feedback },
+      { path: 'feedback', component: Feedback,
+          children: [
+            { path: '', redirect: '/feedback/select' },
+            { path: 'select', component: FeedbackSelect },
+            { path: 'rating', component: Rating },
+            { path: 'comments', component: ShareYourThoughts },
+          ]
+      },
       { path: 'appointments', component: Appointments },
     ],
   },
 
-  // Fallback
-  {
-    path: '/:pathMatch(.*)*',
-    redirect: '/idle',
-  },
+  // Fallback for unknown routes
+  { path: '/:pathMatch(.*)*', redirect: '/idle' },
 ]
 
 const router = createRouter({

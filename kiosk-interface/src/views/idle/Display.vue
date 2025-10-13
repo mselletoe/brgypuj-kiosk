@@ -16,7 +16,7 @@ const toggleLang = () => (currentLang.value = currentLang.value === 'FIL' ? 'ENG
 
 // --- Navigate to Announcements manually ---
 const goToAnnouncements = (event) => {
-  event.stopPropagation()
+  event.stopPropagation() 
   router.push('/announcements')
 }
 </script>
@@ -26,11 +26,21 @@ const goToAnnouncements = (event) => {
     
     <!-- Top-right buttons -->
     <div class="absolute top-6 right-6 flex items-center gap-2">
-      <button @click="toggleMute" class="bg-[#0c2d57] text-white rounded-full p-2 shadow-md hover:opacity-90 transition" title="Toggle Sound">
+      <!-- Mute button -->
+      <button 
+        @click.stop="toggleMute" 
+        class="bg-[#0c2d57] text-white rounded-full p-2 shadow-md hover:opacity-90 transition" 
+        title="Toggle Sound"
+      >
         <span v-if="!isMuted">🔊</span>
         <span v-else>🔇</span>
       </button>
-      <button @click="toggleLang" class="bg-[#0c2d57] text-white font-semibold px-4 py-1 rounded-lg shadow-md hover:opacity-90 transition">
+
+      <!-- Language button -->
+      <button 
+        @click.stop="toggleLang" 
+        class="bg-[#0c2d57] text-white font-semibold px-4 py-1 rounded-lg shadow-md hover:opacity-90 transition"
+      >
         {{ currentLang }}
       </button>
     </div>
@@ -44,8 +54,9 @@ const goToAnnouncements = (event) => {
         AMADEO, CAVITE
       </h2>
 
+      <!-- See Announcements button -->
       <button
-        @click="goToAnnouncements"
+        @click.stop="goToAnnouncements"
         class="mt-8 bg-transparent border-2 border-[#003E71] text-[13px] text-[#003E71] font-bold px-6 py-2 rounded-lg shadow-sm hover:bg-[#003E71] hover:text-white transition-colors duration-300 ease-in-out"
       >
         See Announcements

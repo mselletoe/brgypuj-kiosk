@@ -1,21 +1,26 @@
 import { onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 
+let active = true // controls whether touch-to-start should trigger
+
+export function disableTouchToStart() {
+  active = false
+}
+
 export function useTouchToStart() {
   const router = useRouter()
 
+  const handleTouch = () => {
+    if (active) router.push('/login')
+  }
+
   onMounted(() => {
-    const handleScreenTouch = (event) => {
-      if (event.target.closest('button')) return
-      router.push('/login')
-    }
+    window.addEventListener('click', handleTouch)
+    window.addEventListener('touchstart', handleTouch)
+  })
 
-    window.addEventListener('click', handleScreenTouch)
-    window.addEventListener('touchstart', handleScreenTouch)
-
-    onUnmounted(() => {
-      window.removeEventListener('click', handleScreenTouch)
-      window.removeEventListener('touchstart', handleScreenTouch)
-    })
+  onUnmounted(() => {
+    window.removeEventListener('click', handleTouch)
+    window.removeEventListener('touchstart', handleTouch)
   })
 }
