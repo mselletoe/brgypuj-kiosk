@@ -3,8 +3,9 @@
 @tailwind utilities;
 
 @layer base {
-  html {
-    font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  html,
+  .n-config-provider {
+    font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif !important; 
   }
 
   body {
