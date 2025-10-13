@@ -31,7 +31,7 @@ const goBack = () => {
         class="absolute top-6 left-6" 
       />
 
-      <img src="@/assets/LogoTransparent.svg" alt="Barangay Logo" class="h-28 w-28 mb-3 drop-shadow-lg">
+      <img src="@/assets/images/Pob1Logo.svg" alt="Barangay Logo" class="h-[140px] w-[140px] mb-0 drop-shadow-lg">
       
       <div class="text-center text-gray-800">
         <h1 class="mt-1 text-5xl font-bold">Brgy. Poblacion I</h1>

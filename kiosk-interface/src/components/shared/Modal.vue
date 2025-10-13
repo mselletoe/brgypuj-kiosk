@@ -24,7 +24,7 @@ const handleDone = () => {
     <!-- Modal Container -->
     <div
       class="bg-white shadow-lg rounded-2xl p-10 text-center w-[75%]
-              border border-[#C1C1C1] border-[2px]"
+              border-[#C1C1C1] border-[2px]"
     >
       <!-- Icon -->
       <div class="flex justify-center mb-6">
