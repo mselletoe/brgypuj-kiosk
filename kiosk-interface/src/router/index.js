@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import UserLayout from '@/layouts/UserLayout.vue'
 
 // Screens
+import Display from '@/views/idle/Display.vue'
 import Idle from '@/views/idle/Idle.vue'
 import Announcements from '@/views/idle/Announcements.vue'
 import Login from '@/views/login/Login.vue'
@@ -23,6 +24,7 @@ import Rating from '@/views/feedback/Rating.vue'
 import ShareYourThoughts from '@/views/feedback/ShareYourThoughts.vue'
 
 import Appointments from '@/views/appointments/Appointments.vue'
+import Modal from '@/components/shared/Modal.vue'
 
 import Modal from '../components/shared/Modal.vue'  
 
@@ -31,11 +33,13 @@ const routes = [
   { path: '/', redirect: '/idle' },
 
   // Non-layout routes (Idle, Announcements, Login)
+  { path: '/display', component: Display},
   { path: '/idle', component: Idle },
   { path: '/announcements', component: Announcements },
   { path: '/login', component: Login },
   { path: '/login-rfid', component: LoginRFID },
   { path: '/login-pin', component: LoginPIN },
+  { path: '/modal', component: Modal},
 
   // Authenticated routes (inside layout)
   {
