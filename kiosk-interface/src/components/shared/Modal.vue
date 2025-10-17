@@ -24,7 +24,7 @@ const handleDone = () => {
     
     <div class="flex flex-col items-center justify-center h-full">
       <div
-        class="bg-white shadow-lg rounded-2xl p-10 text-center border-[#C1C1C1] border-[2px] w-[600px] h-[350px] flex flex-col justify-center"
+        class="bg-white shadow-lg rounded-2xl p-10 text-center border-[#C1C1C1] border-[2px] w-[650px] h-[350px] flex flex-col justify-center"
       >
         <div class="flex justify-center mb-6">
           <div class="w-[80px] h-[80px] rounded-full bg-[#E4F5FC] flex items-center justify-center">
