@@ -1,5 +1,9 @@
 <template>
   <div class="feedback-layout">
+    <ArrowBackButton 
+      @click="goBack"
+      class="absolute top-0 left-6" 
+    />
     <h1 class="title-text">Your Feedback Matters</h1>
     <h2 class="new-title-text">Rate our {{ feedbackCategory }}</h2>
     <p class="subtitle-text">Tap a star to rate your experience</p>
@@ -31,6 +35,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import ArrowBackButton from '@/components/shared/ArrowBackButton.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -59,6 +64,10 @@ const handleRatingClick = (stars, text) => {
     }
   })
 }
+
+const goBack = () => {
+  router.push({ path: '/feedback' })
+}
 </script>
 
 <style>
@@ -66,8 +75,11 @@ html,body{margin:0;padding:0;overflow:hidden;width:1024px;height:600px;}
 </style>
 
 <style scoped>
-.feedback-layout{display:flex;flex-direction:column;align-items:center;width:100%;height:100%;overflow:hidden;background-color:#ffffff;font-family:'Poppins';color:#003a6b;box-sizing:border-box;padding:0px 20px 20px 20px;}
-.title-text{font-size:45px;font-weight:700;line-height:50px;letter-spacing:-0.03em;color:#03335C;text-shadow:3px 3px 5px rgba(0,0,0,0.3),-2px -2px 4px rgba(255,255,255,0.6);margin:0 auto 50px 75px;text-align:left;width:auto;max-width:100%;}
+.feedback-layout{position:relative;display:flex;flex-direction:column;align-items:center;width:100%;height:100%;overflow:hidden;background-color:#ffffff;font-family:'Poppins';color:#003a6b;box-sizing:border-box;padding:0px 20px 20px 20px;}
+.absolute{position:absolute;}
+.top-0{top:0;}
+.left-6{left:1.5rem;}
+.title-text{font-size:45px;font-weight:700;line-height:50px;letter-spacing:-0.03em;color:#03335C;text-shadow:3px 3px 5px rgba(0,0,0,0.3),-2px -2px 4px rgba(255,255,255,0.6);margin:3px auto 50px 75px;text-align:left;width:auto;max-width:100%;}
 .new-title-text{font-size:30px;font-weight:700;line-height:35px;letter-spacing:-0.03em;color:#003a6b;text-shadow:3px 3px 5px rgba(0,0,0,0.3),-2px -2px 4px rgba(255,255,255,0.6);margin:5px 0 5px 0;text-align:center;width:100%;}
 .subtitle-text{font-size:13px;text-align:center;margin-bottom:23px;color:#003a6b;font-weight:500;max-width:100%;}
 .container-wrapper{display:flex;gap:10px;justify-content:flex-start;flex-wrap:nowrap;width:869px;align-self:flex-start;margin-top:15px;}
