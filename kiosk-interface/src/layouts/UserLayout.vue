@@ -3,11 +3,11 @@ import Header from '@/components/Header.vue'
 </script>
 
 <template>
-  <div class="flex h-screen flex-col items-center p-16">
+  <div class="flex h-screen flex-col">
 
     <Header />
 
-    <main class="flex-1 overflow-auto pt-[2.5em] w-full">
+    <main class="flex-1 overflow-auto pt-20 px-8">
       <router-view />
     </main>
 
