@@ -20,7 +20,7 @@ const columns = [
   { title: 'RFID UID', key: 'rfid_uid' },
   { title: 'Unit/Blk/Street', key: 'unit_blk_street' },
   { title: 'Purok', key: 'purok' },
-  { title: 'Phone Number', key: 'phone_number' }
+  { title: 'Phone Number', key: 'phone_number' },
 ]
 </script>
 

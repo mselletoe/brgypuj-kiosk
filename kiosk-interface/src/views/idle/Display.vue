@@ -69,7 +69,7 @@ const goToAnnouncements = (event) => {
     </div>
 
     <!-- Touch prompt -->
-    <div class="absolute bottom-8 text-[#8EC3EF] text-xl font-semibold animate-pulse">
+    <div class="absolute bottom-11 left-[80px] text-[#8EC3EF] text-xl font-semibold animate-pulse">
       Touch anywhere to start
     </div>
 
