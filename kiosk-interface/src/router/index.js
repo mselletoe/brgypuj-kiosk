@@ -5,9 +5,10 @@ import UserLayout from '@/layouts/UserLayout.vue'
 import Display from '@/views/idle/Display.vue'
 import Idle from '@/views/idle/Idle.vue'
 import Announcements from '@/views/idle/Announcements.vue'
-import Login from '@/views/login/Login.vue'
-import LoginRFID from '@/views/login/LoginRFID.vue'
-import LoginPIN from '@/views/login/LoginPIN.vue'
+import Login from '@/views/auth/Login.vue'
+import LoginRFID from '@/views/auth/LoginRFID.vue'
+import LoginPIN from '@/views/auth/LoginPIN.vue'
+import Register from '@/views/auth/Register.vue'
 import KioskHome from '@/views/home/KioskHome.vue'
 
 // Document Services
@@ -29,8 +30,8 @@ const routes = [
   { path: '/', redirect: '/idle' },
 
   // Non-layout routes (Idle, Announcements, Login)
-  { path: '/display', component: Display},
   { path: '/idle', component: Idle },
+  { path: '/display', component: Display },
   { path: '/announcements', component: Announcements },
   { path: '/login', component: Login },
   { path: '/login-rfid', component: LoginRFID },
@@ -42,6 +43,7 @@ const routes = [
     component: UserLayout,
     children: [
       { path: 'home', component: KioskHome },
+      { path: 'register', component: Register },
       {
         path: '/document-services', component: DocumentServices,
         children: [
