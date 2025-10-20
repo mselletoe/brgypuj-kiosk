@@ -6,16 +6,15 @@ import DocumentForm from './DocumentForm.vue'
 const route = useRoute()
 const router = useRouter()
 
-const currentStep = ref('form') // 'form' or 'preview'
+const currentStep = ref('form')
 const formData = ref({})
 const showSuccessModal = ref(false)
-
 const docType = computed(() => route.params.docType)
 
-// Document configurations
+// Document configurations (same as your original)
 const documentConfigs = {
-  'barangay-certificate': {
-    title: 'Barangay Certificate',
+  'barangay-clearance': {
+    title: 'Barangay Clearance',
     fields: [
       { name: 'fullName', label: 'Full Name', type: 'text', required: true, placeholder: 'Juan Dela Cruz' },
       { name: 'address', label: 'Complete Address', type: 'textarea', required: true, placeholder: 'Street, Barangay, City' },
@@ -55,7 +54,7 @@ const documentConfigs = {
       { name: 'weight', label: 'Weight (kg)', type: 'number', required: true, placeholder: '65' },
     ]
   },
-  'certificate-indigency': {
+  'indigency': {
     title: 'Certificate of Indigency',
     fields: [
       { name: 'fullName', label: 'Full Name', type: 'text', required: true, placeholder: 'Juan Dela Cruz' },
@@ -94,14 +93,9 @@ const goBack = () => {
   }
 }
 
-
 const handleSubmit = async () => {
   try {
     console.log('Submitting:', { docType: docType.value, data: formData.value })
-    
-    // TODO: Replace with actual API call
-    // await submitDocumentRequest(docType.value, formData.value)
-    
     showSuccessModal.value = true
   } catch (error) {
     console.error('Submission failed:', error)
@@ -118,36 +112,68 @@ const closeModal = () => {
 </script>
 
 <template>
-  <div>
-    <!-- Back button -->
-    <button
-      @click="goBack"
-      class="mb-4 px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 flex items-center gap-2"
-    >
-      <span>←</span>
-      <span>{{ currentStep === 'preview' ? 'Edit Information' : 'Back to List' }}</span>
-    </button>
-
-    <!-- Page title -->
-    <h1 class="text-3xl font-bold mb-6">{{ config?.title || 'Document Request' }}</h1>
-
-    <!-- Form Step -->
-    <DocumentForm
-      v-if="currentStep === 'form' && config"
-      :config="config"
-      :initial-data="formData"
-      @continue="goToPreview"
-    />
-
-    <!-- Not found -->
-    <div v-else class="text-center py-12">
-      <p class="text-gray-600 text-lg">Document type not found</p>
+  <div class="p-8 max-w-5xl mx-auto font-poppins">
+    <!-- Header -->
+    <div class="flex items-center mb-6">
+      <!-- Back Button (Top Left like in your image) -->
       <button 
-        @click="router.push('/document-services')"
-        class="mt-4 px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+        @click="goBack"
+        class="flex items-center justify-center w-14 h-14 border border-[#002B5B] rounded-2xl hover:bg-[#002B5B] group transition"
       >
-        Back to Documents
+        <svg xmlns="http://www.w3.org/2000/svg" 
+             fill="none" 
+             viewBox="0 0 24 24" 
+             stroke-width="2" 
+             stroke="currentColor"
+             class="w-6 h-6 text-[#002B5B] group-hover:text-white transition">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+        </svg>
       </button>
+
+      <!-- Title and Subtext -->
+      <div class="flex justify-between items-center w-full ml-6">
+        <h1 class="text-[40px] font-extrabold text-[#002B5B] leading-none">{{ config?.title || 'Document Request' }}</h1>
+        <p class="text-sm text-gray-600 text-right leading-tight">
+          Kindly fill up the details needed<br />for the said document
+        </p>
+      </div>
+    </div>
+
+    <!-- Form Box -->
+    <div class="border border-[#002B5B]/40 rounded-2xl p-10 shadow-md bg-white">
+      <DocumentForm
+        v-if="currentStep === 'form' && config"
+        :config="config"
+        :initial-data="formData"
+        @continue="handleSubmit"
+      />
+
+      <!-- Not found -->
+      <div v-else class="text-center py-12">
+        <p class="text-gray-600 text-lg">Document type not found</p>
+        <button 
+          @click="router.push('/document-services')"
+          class="mt-4 px-6 py-2 bg-[#002B5B] text-white rounded hover:bg-[#001F40]"
+        >
+          Back to Documents
+        </button>
+      </div>
+
+      <!-- Buttons (Next only) -->
+      <div class="flex justify-end mt-8">
+        <button 
+          @click="handleSubmit" 
+          class="px-8 py-3 bg-[#002B5B] text-white font-semibold rounded-full hover:bg-[#001F40] transition"
+        >
+          Next
+        </button>
+      </div>
     </div>
   </div>
 </template>
+
+<style scoped>
+.font-poppins {
+  font-family: 'Poppins', sans-serif;
+}
+</style>
