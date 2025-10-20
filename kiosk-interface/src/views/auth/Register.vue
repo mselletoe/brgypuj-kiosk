@@ -1,18 +1,16 @@
 <script setup>
-import { useTouchToStart } from '@/composables/touchToStart'
+import ArrowBackButton from '@/components/shared/ArrowBackButton.vue'
 
-useTouchToStart()
 </script>
 
 <template>
-  <div class="flex items-center justify-center text-center h-screen w-screen relative">
-    <h1 class="text-transparent bg-clip-text bg-[linear-gradient(90deg,#003E71_0%,#0076D7_60%)] drop-shadow-lg font-extrabold text-7xl">
-      BARANGAY <br /> ANNOUNCEMENTS
-    </h1>
-
-    <!-- Touch prompt -->
-    <div class="absolute bottom-8 text-[#8EC3EF] text-xl font-semibold animate-pulse">
-      Touch anywhere to start
+  <div class="py-0 pb-8">
+    <div class="flex items-center gap-4 between">
+      <ArrowBackButton @click="goBackToHome" />
+        <div class="flex items-center justify-between w-full">
+            <h1 class="text-3xl font-bold text-[#013C6D]">Register your RFID</h1>
+            <h1 class="text-3xl font-bold text-[#013C6D]">0054973429</h1>
+        </div>
     </div>
   </div>
 </template>
