@@ -20,7 +20,7 @@ import HelpAndSupport from '@/views/help-and-support/HelpAndSupport.vue'
 
 import Feedback from '@/views/feedback/Feedback.vue'
 import Rating from '@/views/feedback/Rating.vue'
-import ShareYourThoughts from '@/views/feedback/ShareYourThoughts.vue'
+import Comments from '@/views/feedback/Comments.vue'
 
 import Appointments from '@/views/appointments/Appointments.vue'
 
@@ -50,13 +50,9 @@ const routes = [
       },
       { path: 'equipment-borrowing', component: EquipmentBorrowing },
       { path: 'help-and-support', component: HelpAndSupport },
-      { path: 'feedback', component: Feedback,
-          children: [
-            { path: '', redirect: '/feedback' },
-            { path: 'rating', component: Rating },
-            { path: 'comments', component: ShareYourThoughts },
-          ]
-      },
+      { path: 'feedback', component: Feedback },
+      { path: 'rating', component: Rating },
+      { path: 'comments', component: Comments },
       { path: 'appointments', component: Appointments },
     ],
   },
