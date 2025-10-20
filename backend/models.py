@@ -1,6 +1,7 @@
 # models.py
 from sqlalchemy import Column, Integer, String, Date, SmallInteger, Boolean, ForeignKey, Text, TIMESTAMP
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 from database import Base
 
 class Resident(Base):
@@ -59,3 +60,14 @@ class RfidUID(Base):
     is_active = Column(Boolean, default=True)
 
     resident = relationship("Resident", back_populates="rfid")
+
+class BrgyStaff(Base):
+    __tablename__ = "brgy_staff"
+
+    id = Column(Integer, primary_key=True, index=True)
+    resident_id = Column(SmallInteger, ForeignKey("residents.id", ondelete="CASCADE", onupdate="CASCADE"))
+    email = Column(String(64), unique=True, nullable=False)
+    password = Column(String, nullable=False)
+    role = Column(String(128))
+    created_at = Column(TIMESTAMP, server_default=func.now())
+    is_active = Column(Boolean, default=True)
