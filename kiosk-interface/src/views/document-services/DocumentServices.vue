@@ -14,8 +14,8 @@ const documents = [
 </script>
 
 <template>
-  <div class="p-5 max-w-6xl mx-auto">
-    <div v-if="isParent()">
+  <div>
+    <div v-if="isParent()" class="max-w-6xl mx-auto">
       <h1 class="text-[45px] text-[#03335C] font-bold text-center -mb-2 tracking-tight">Document Services</h1>
       <p class="text-center text-[#03335C] mb-9">
         Select and apply for barangay documents

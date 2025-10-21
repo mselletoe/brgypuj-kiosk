@@ -1,18 +1,11 @@
-import axios from 'axios'
+import api from './api'
 
-const API_BASE_URL = 'http://127.0.0.1:8000'
-
-export async function fetchResidents(params = {}) {
-  try {
-    const response = await axios.get(`${API_BASE_URL}/residents`, { params })
-    return response.data
-  } catch (error) {
-    console.error('Error fetching residents:', error)
-    throw error
-  }
+// Fetch paginated residents
+export const fetchResidents = (params = {}) => {
+  return api.get('/residents', { params }).then(res => res.data)
 }
 
-export async function fetchPuroks() {
-  const { data } = await axios.get(`${API_BASE_URL}/residents/puroks`)
-  return data
+// Fetch puroks for dropdown
+export const fetchPuroks = () => {
+  return api.get('/residents/puroks').then(res => res.data)
 }

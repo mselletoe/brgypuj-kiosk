@@ -1,5 +1,5 @@
 <template>
-  <div class="feedback-layout">
+  <div class="feedback-layout py-0 p-8">
     <ArrowBackButton 
       @click="goBack"
       class="absolute top-0 left-6" 
@@ -48,7 +48,7 @@ const goBack = () => {
 </script>
 
 <style scoped>
-.feedback-layout{position:relative;display:flex;flex-direction:column;align-items:center;width:100%;height:100%;overflow:hidden;background-color:#ffffff;font-family:'Poppins';color:#003a6b;box-sizing:border-box;padding:0px 20px 20px 20px;}
+.feedback-layout{position:relative;display:flex;flex-direction:column;align-items:center;width:100%;height:100%;overflow:hidden;background-color:#ffffff;font-family:'Poppins';color:#003a6b;box-sizing:border-box;}
 .absolute{position:absolute;}
 .top-6{top:1.5rem;}
 .left-6{left:1.5rem;}

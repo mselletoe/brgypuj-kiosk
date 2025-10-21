@@ -14,8 +14,8 @@ const props = defineProps({
 
 const columns = [
   { title: '#', key: 'index', render: (row, index) => index + 1, width: 60, align: 'center' },
-  { title: 'First Name', key: 'first_name' },
   { title: 'Last Name', key: 'last_name' },
+  { title: 'First Name', key: 'first_name' },
   { title: 'Middle Name', key: 'middle_name' },
   { title: 'RFID UID', key: 'rfid_uid' },
   { title: 'Unit/Blk/Street', key: 'unit_blk_street' },

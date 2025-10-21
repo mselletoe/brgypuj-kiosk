@@ -66,8 +66,7 @@ const handleNext = () => {
 </script>
 
 <template>
-  <div class="pb-8">
-    
+  <div class="py-0 p-8">
     <div class="flex items-center gap-4">
       <ArrowBackButton @click="handleBack" />
       <h1 class="text-3xl font-bold text-[#013C6D]">Equipment Borrowing</h1>

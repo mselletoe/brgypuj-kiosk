@@ -3,7 +3,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ArrowLeftIcon, SignalIcon } from '@heroicons/vue/24/solid'
 import PrimaryButton from '@/components/shared/PrimaryButton.vue'
-import api from '@/api/api' // your axios instance
+import api from '@/api/api'
 
 const router = useRouter()
 const isScanning = ref(false)
@@ -12,6 +12,7 @@ const isProcessing = ref(false)
 
 let inputBuffer = ''
 let timeout = null
+const hiddenInput = ref(null)
 
 const startScan = () => {
   isScanning.value = true
@@ -96,6 +97,14 @@ onUnmounted(() => {
           <p class="text-lg text-gray-500 mt-2">Keep your card near the scanner.</p>
         </div>
       </div>
+
+      <input
+        ref="hiddenInput"
+        v-model="scannedUID"
+        type="text"
+        placeholder="RFID Input Area"
+        class="mt-6 border border-gray-300 rounded-md px-4 py-2 w-64 text-center"
+      />
 
       <PrimaryButton 
         @click="goBack" 

@@ -112,7 +112,7 @@ const closeModal = () => {
 </script>
 
 <template>
-  <div class="p-8 max-w-5xl mx-auto font-poppins">
+  <div class="py-0 p-8">
     <!-- Header -->
     <div class="flex items-center mb-6">
       <!-- Back Button (Top Left like in your image) -->
