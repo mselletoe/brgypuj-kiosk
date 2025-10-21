@@ -1,5 +1,4 @@
 <script setup>
-import '@/views/idle/display.css' 
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useTouchToStart } from '@/composables/touchToStart'
