@@ -18,7 +18,7 @@ const handleGuestLogin = () => {
 }
 
 const goBack = () => {
-  router.push('/idle')
+  router.back()
 }
 </script>
 
