@@ -10,7 +10,7 @@ export const useAuth = defineStore('auth', {
     setToken(token) {
       this.token = token
       try {
-        this.user = jwt_decode(token)
+        this.user = jwtDecode(token)
       } catch {
         this.user = null
       }

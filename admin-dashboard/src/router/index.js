@@ -1,4 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { useAuth } from '@/stores/authStore'
+
 import AdminLayout from '@/layouts/AdminLayout.vue'
 import Overview from '@/views/Overview.vue'
 import Requests from '@/views/Requests.vue'
@@ -16,17 +18,20 @@ const routes = [
   {
     path: '/auth',
     name: 'Auth',
-    component: Auth
+    component: Auth,
+    meta: { requiresGuest: true }
   },
   {
     path: '/create-account',
     name: 'CreateAccount',
-    component: CreateAccount
+    component: CreateAccount,
+    meta: { requiresGuest: true }
   },
   {
     path: '/',
     component: AdminLayout,
     redirect: '/overview',
+    meta: { requiresAuth: true },
     children: [
       { path: 'overview', component: Overview },
       { path: 'requests', component: Requests },
@@ -44,6 +49,32 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes
+})
+
+router.beforeEach((to, from, next) => {
+  const auth = useAuth()
+  
+  // Load token from localStorage if not already loaded
+  if (!auth.token) {
+    auth.loadToken()
+  }
+
+  const isAuthenticated = !!auth.token
+  const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
+  const requiresGuest = to.matched.some(record => record.meta.requiresGuest)
+
+  // If page requires auth and user is NOT authenticated
+  if (requiresAuth && !isAuthenticated) {
+    next('/auth')
+  }
+  // If page requires guest (auth/create-account) and user IS authenticated
+  else if (requiresGuest && isAuthenticated) {
+    next('/overview')
+  }
+  // Otherwise, allow navigation
+  else {
+    next()
+  }
 })
 
 export default router

@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 from database import get_db
-from models import BrgyStaff
+from models import BrgyStaff, Resident
 import os
 
 # ==========================
@@ -54,6 +54,7 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
 # ==========================
 @router.post("/login", response_model=TokenResponse)
 def login(request: LoginRequest, db: Session = Depends(get_db)):
+    # Join with Residents table to get name
     user = db.query(BrgyStaff).filter(BrgyStaff.email == request.email).first()
     if not user:
         raise HTTPException(status_code=401, detail="Invalid email or password")
@@ -69,6 +70,15 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
     if not user.is_active:
         raise HTTPException(status_code=403, detail="Account inactive")
 
-    token_data = {"sub": user.email, "role": user.role, "id": user.id}
+    # Get resident info for name
+    resident = db.query(Resident).filter(Resident.id == user.resident_id).first()
+    
+    token_data = {
+        "sub": user.email, 
+        "role": user.role, 
+        "id": user.id,
+        "first_name": user.resident.first_name if user.resident else "Unknown",
+        "last_name": user.resident.last_name if user.resident else "User"
+    }
     access_token = create_access_token(data=token_data)
     return {"access_token": access_token}

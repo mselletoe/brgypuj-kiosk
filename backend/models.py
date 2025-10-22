@@ -37,6 +37,7 @@ class Address(Base):
     created_at = Column(TIMESTAMP)
     is_current = Column(Boolean, default=True)
 
+    # Relationships
     resident = relationship("Resident", back_populates="address")
     purok = relationship("Purok", back_populates="addresses")
 
@@ -46,6 +47,7 @@ class Purok(Base):
     id = Column(SmallInteger, primary_key=True, index=True)
     purok_name = Column(String(8))
 
+    # Relationships
     addresses = relationship("Address", back_populates="purok")
 
 class RfidUID(Base):
@@ -58,6 +60,7 @@ class RfidUID(Base):
     created_at = Column(TIMESTAMP)
     is_active = Column(Boolean, default=True)
 
+    # Relationships
     resident = relationship("Resident", back_populates="rfid")
 
 class BrgyStaff(Base):
@@ -71,5 +74,5 @@ class BrgyStaff(Base):
     created_at = Column(TIMESTAMP)
     is_active = Column(Boolean, default=True)
 
-    # Relationship to Resident (optional, if you want)
+    # Relationships
     resident = relationship("Resident", backref="staff")
