@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { ArrowLeftIcon, SignalIcon } from '@heroicons/vue/24/solid'
 import PrimaryButton from '@/components/shared/PrimaryButton.vue'
 import api from '@/api/api'
+import { login } from '@/stores/auth'
 
 const router = useRouter()
 const scannedUID = ref('')
@@ -14,42 +15,46 @@ const hiddenInput = ref(null)
 
 const checkRFID = async (uid) => {
   try {
-    console.log(`🔍 Checking UID ${uid} in backend...`)
     const { data } = await api.get(`/rfid/check/${uid}`)
-    console.log('✅ Backend Response:', data)
 
     if (data.exists) {
-      // Pass resident_id to PIN page
-      router.push({ 
-        path: '/login-pin', 
-        query: { resident_id: data.resident_id } 
-      })
+      const userRes = await api.get(`/users/${data.resident_id}`);
+
+      const userData = {
+        id: data.resident_id,
+        name: `${userRes.data.first_name} ${userRes.data.last_name}`,
+      };
+
+      login(userData);
+
+      localStorage.setItem('auth_user', JSON.stringify({ user: userData, isGuest: false }));
+
+      router.replace({
+        path: '/login-pin',
+        query: { resident_id: data.resident_id },
+      });
     } else {
-      // Pass UID to registration page
       router.push(`/register?uid=${uid}`)
     }
   } catch (error) {
-    console.error('❌ Error checking RFID:', error)
-    router.push('/register') // fallback
+    router.push('/register')
   }
 }
 
 const handleRFIDInput = (event) => {
   const key = event.key
 
-  if (isProcessing.value) return // ignore while checking
+  if (isProcessing.value) return
 
   if (key === 'Enter') {
     const uid = inputBuffer.trim()
     if (!uid) return
 
     scannedUID.value = uid
-    console.log('✅ RFID UID Detected:', uid)
 
     isProcessing.value = true
     checkRFID(uid)
 
-    // reset buffer for next scan
     inputBuffer = ''
     if (hiddenInput.value) hiddenInput.value.value = ''
   } 
@@ -57,28 +62,19 @@ const handleRFIDInput = (event) => {
     inputBuffer += key
   }
 
-  // Reset input buffer if user pauses mid-scan
   clearTimeout(timeout)
   timeout = setTimeout(() => {
     inputBuffer = ''
   }, 1000)
 }
 
-// --- Go back to login screen ---
 const goBack = () => {
   router.push('/login')
 }
 
-// --- Setup on mount ---
 onMounted(async () => {
-  // Focus invisible input (for USB RFID reader)
   await nextTick()
-  if (hiddenInput.value) {
-    hiddenInput.value.focus()
-    console.log('%c[RFID Scanner Ready: Input Focused]', 'color: #007ACC; font-weight: bold;')
-  }
-
-  // Listen globally for RFID "typed" data
+  if (hiddenInput.value) hiddenInput.value.focus()
   window.addEventListener('keydown', handleRFIDInput)
 })
 

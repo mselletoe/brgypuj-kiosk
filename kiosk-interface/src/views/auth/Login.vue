@@ -4,6 +4,7 @@ import { disableTouchToStart } from '@/composables/touchToStart'
 import ArrowBackButton from '@/components/shared/ArrowBackButton.vue'
 import PrimaryButton from '@/components/shared/PrimaryButton.vue'
 import { SignalIcon } from '@heroicons/vue/24/solid'
+import { login, auth } from '@/stores/auth'
 
 const router = useRouter()
 
@@ -14,7 +15,11 @@ const handleRfidLogin = () => {
 
 const handleGuestLogin = () => {
   disableTouchToStart()
-  router.push('/home')
+  const guestUser = { id: 'guest', name: 'Guest User' }
+  login(guestUser)
+  auth.isGuest = true
+  localStorage.setItem('auth_user', JSON.stringify({ user: guestUser, isGuest: true }))
+  router.replace('/home')
 }
 
 const goBack = () => {

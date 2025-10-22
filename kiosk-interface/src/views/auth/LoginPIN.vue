@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import api from '@/api/api'
+import { login } from '@/stores/auth'
 
 const router = useRouter()
 const route = useRoute()
@@ -9,6 +10,7 @@ const route = useRoute()
 const pin = ref('')
 const confirmPin = ref('')
 const residentId = ref(null)
+const residentName = ref('')
 const hasPin = ref(false)
 const isSettingPin = ref(false)
 
@@ -20,39 +22,40 @@ onMounted(async () => {
     return
   }
 
-  // Check if user has PIN
   try {
     const res = await api.get(`/users/${residentId.value}/pin`)
     hasPin.value = res.data.has_pin
-    isSettingPin.value = !hasPin.value   // <-- important: determine if setting PIN
+    isSettingPin.value = !hasPin.value
     console.log('Has PIN:', hasPin.value, 'Is setting PIN:', isSettingPin.value)
+
+    const userRes = await api.get(`/users/${residentId.value}`);
+    residentName.value = `${userRes.data.first_name} ${userRes.data.last_name}`;
   } catch (err) {
-    console.error('❌ Failed to check PIN:', err)
     alert('Error checking PIN. Please try again.')
   }
 })
 
 const submitPin = async () => {
   if (!pin.value) return alert('Please enter a PIN')
-
   if (isSettingPin.value && pin.value !== confirmPin.value) {
     return alert('PINs do not match')
   }
 
   try {
     if (isSettingPin.value) {
-      // Set new PIN
       await api.post(`/users/${residentId.value}/pin`, { pin: pin.value })
       alert('✅ PIN set successfully!')
     } else {
-      // Verify existing PIN
       const res = await api.post(`/users/${residentId.value}/pin/verify`, { pin: pin.value })
       if (!res.data.valid) return alert('Invalid PIN')
     }
 
-    router.push('/home')
+    const userData = { id: residentId.value, name: residentName.value };
+    login(userData);
+    localStorage.setItem('auth_user', JSON.stringify({ user: userData, isGuest: false }));
+
+    router.replace('/home')
   } catch (err) {
-    console.error('❌ PIN error:', err)
     alert(err.response?.data?.detail || 'Error processing PIN')
   }
 }

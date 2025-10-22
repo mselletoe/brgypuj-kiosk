@@ -9,21 +9,16 @@ const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
 const route = useRoute()
 const router = useRouter()
 
-// filters
 const lastNameLetter = ref('A')
 const firstNameLetter = ref('A')
 
-// data and states
 const residents = ref([])  
 const selectedResidentId = ref('')
 const residentDetails = ref({})
 const registrationSummary = ref({ idNum: '', name: '' })
 
-// the scanned UID from LoginRFID.vue
 const scannedUid = ref(route.query.uid || '')
 
-
-// --- Fetch filtered residents ---
 const fetchResidents = async () => {
   try {
     const res = await api.get('/residents/filter', {
@@ -38,7 +33,6 @@ const fetchResidents = async () => {
   }
 }
 
-// --- Watchers ---
 watch([lastNameLetter, firstNameLetter], fetchResidents, { immediate: true })
 
 watch(selectedResidentId, (id) => {
@@ -60,21 +54,16 @@ watch(selectedResidentId, (id) => {
 
 // --- Register RFID ---
 const handleRegister = async () => {
-  console.log('🧠 handleRegister triggered') // add this
-  // --- Check for required fields ---
   if (!scannedUid.value) {
     alert('⚠️ No RFID UID detected. Please scan a card first.')
     return
   }
-
-  console.log('🔗 Attempting to link RFID:', scannedUid.value, selectedResidentId.value)
 
   if (!selectedResidentId.value) {
     alert('⚠️ Please select a resident first.')
     return
   }
 
-  // --- Prevent registering someone who already has an RFID ---
   const selectedResident = residents.value.find(r => r.id === selectedResidentId.value)
   if (selectedResident?.has_rfid) {
     alert('⚠️ This resident already has a registered RFID.')
@@ -82,23 +71,17 @@ const handleRegister = async () => {
   }
 
   try {
-    // --- Send registration request ---
     const res = await api.post('/rfid/register', {
       resident_id: selectedResidentId.value,
       rfid_uid: scannedUid.value,
     })
 
-    // --- Success feedback ---
-    console.log('✅ RFID linked:', res.data)
     alert(`✅ RFID successfully linked to ${registrationSummary.value.name}!`)
 
-    // --- Small delay for UX before redirect ---
     setTimeout(() => router.push('/rfid-success'), 500)
 
   } catch (err) {
-    console.error('❌ Error linking RFID:', err)
 
-    // --- Handle common backend errors gracefully ---
     const msg = err.response?.data?.detail || ''
 
     if (msg.includes('already registered')) {
@@ -111,7 +94,6 @@ const handleRegister = async () => {
   }
 }
 
-// --- Reset filters and selections ---
 const handleReset = () => {
   lastNameLetter.value = 'A'
   firstNameLetter.value = 'A'
@@ -121,12 +103,15 @@ const handleReset = () => {
   registrationSummary.value = { idNum: '', name: '' }
 }
 
-// --- Go back button ---
 const goBackToHome = () => {
-  router.push('/login')
+  const stored = localStorage.getItem('auth_user')
+  if (stored) {
+    router.replace('/home')
+  } else {
+    router.push('/login')
+  }
 }
 
-// --- Mounted ---
 onMounted(() => {
   if (!route.query.uid) {
     alert('⚠️ No RFID UID detected. Please scan a card first.');
@@ -134,7 +119,6 @@ onMounted(() => {
     return;
   }
   scannedUid.value = route.query.uid;
-  console.log('📡 Scanned UID detected:', scannedUid.value);
 });
 </script>
 
