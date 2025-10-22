@@ -2,6 +2,8 @@
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import DocumentForm from './DocumentForm.vue'
+import ArrowBackButton from '@/components/shared/ArrowBackButton.vue' 
+import Modal from '@/components/shared/Modal.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -11,26 +13,23 @@ const formData = ref({})
 const showSuccessModal = ref(false)
 const docType = computed(() => route.params.docType)
 
-// Document configurations (same as your original)
+// Document configurations
 const documentConfigs = {
   'barangay-clearance': {
     title: 'Barangay Clearance',
     fields: [
-      { name: 'fullName', label: 'Full Name', type: 'text', required: true, placeholder: 'Juan Dela Cruz' },
-      { name: 'address', label: 'Complete Address', type: 'textarea', required: true, placeholder: 'Street, Barangay, City' },
-      { name: 'birthDate', label: 'Date of Birth', type: 'date', required: true },
-      { name: 'civilStatus', label: 'Civil Status', type: 'select', required: true, options: ['Single', 'Married', 'Widowed', 'Separated'] },
-      { name: 'contactNumber', label: 'Contact Number', type: 'tel', required: true, placeholder: '09123456789' },
-      { name: 'purpose', label: 'Purpose', type: 'textarea', required: true, placeholder: 'State the purpose of this certificate' },
+      { name: 'fullName', label: 'First Name', type: 'text', required: true, placeholder: 'Juan' },
+      { name: 'lastName', label: 'Last Name', type: 'text', required: true, placeholder: 'Dela Cruz' },
+      { name: 'purpose', label: 'Purpose', type: 'select', required: true, options: ['Financial Assistance', 'Educational Assistance','Others'] },
     ]
   },
   'barangay-id': {
     title: 'Barangay ID',
     fields: [
-      { name: 'fullName', label: 'Full Name', type: 'text', required: true, placeholder: 'Juan Dela Cruz' },
+      { name: 'firstName', label: 'First Name', type: 'text', required: true, placeholder: 'Juan' },
+      { name: 'lastName', label: 'Last Name', type: 'text', required: true, placeholder: 'Dela Cruz' },
       { name: 'address', label: 'Complete Address', type: 'textarea', required: true, placeholder: 'Street, Barangay, City' },
       { name: 'birthDate', label: 'Date of Birth', type: 'date', required: true },
-      { name: 'birthPlace', label: 'Place of Birth', type: 'text', required: true, placeholder: 'City, Province' },
       { name: 'gender', label: 'Gender', type: 'select', required: true, options: ['Male', 'Female'] },
       { name: 'civilStatus', label: 'Civil Status', type: 'select', required: true, options: ['Single', 'Married', 'Widowed', 'Separated'] },
       { name: 'contactNumber', label: 'Contact Number', type: 'tel', required: true, placeholder: '09123456789' },
@@ -38,33 +37,12 @@ const documentConfigs = {
       { name: 'emergencyNumber', label: 'Emergency Contact Number', type: 'tel', required: true, placeholder: '09123456789' },
     ]
   },
-  'cedula': {
-    title: 'Cedula (Community Tax Certificate)',
-    fields: [
-      { name: 'fullName', label: 'Full Name', type: 'text', required: true, placeholder: 'Juan Dela Cruz' },
-      { name: 'address', label: 'Complete Address', type: 'textarea', required: true, placeholder: 'Street, Barangay, City' },
-      { name: 'birthDate', label: 'Date of Birth', type: 'date', required: true },
-      { name: 'civilStatus', label: 'Civil Status', type: 'select', required: true, options: ['Single', 'Married', 'Widowed', 'Separated'] },
-      { name: 'citizenship', label: 'Citizenship', type: 'text', required: true, placeholder: 'Filipino' },
-      { name: 'tin', label: 'TIN (if available)', type: 'text', required: false, placeholder: '000-000-000-000' },
-      { name: 'occupation', label: 'Occupation', type: 'text', required: true, placeholder: 'Employee, Self-employed, etc.' },
-      { name: 'employer', label: 'Employer/Business', type: 'text', required: false, placeholder: 'Company/Business Name' },
-      { name: 'salary', label: 'Salary/Income Range', type: 'select', required: true, options: ['Below ₱5,000', '₱5,000 - ₱10,000', '₱10,000 - ₱20,000', '₱20,000 - ₱50,000', 'Above ₱50,000'] },
-      { name: 'height', label: 'Height (cm)', type: 'number', required: true, placeholder: '170' },
-      { name: 'weight', label: 'Weight (kg)', type: 'number', required: true, placeholder: '65' },
-    ]
-  },
   'indigency': {
     title: 'Certificate of Indigency',
     fields: [
-      { name: 'fullName', label: 'Full Name', type: 'text', required: true, placeholder: 'Juan Dela Cruz' },
-      { name: 'address', label: 'Complete Address', type: 'textarea', required: true, placeholder: 'Street, Barangay, City' },
-      { name: 'birthDate', label: 'Date of Birth', type: 'date', required: true },
-      { name: 'civilStatus', label: 'Civil Status', type: 'select', required: true, options: ['Single', 'Married', 'Widowed', 'Separated'] },
-      { name: 'occupation', label: 'Occupation', type: 'text', required: true, placeholder: 'Unemployed, Laborer, etc.' },
-      { name: 'monthlyIncome', label: 'Monthly Income', type: 'number', required: true, placeholder: '0' },
-      { name: 'familyMembers', label: 'Number of Family Members', type: 'number', required: true, placeholder: '4' },
-      { name: 'purpose', label: 'Purpose', type: 'textarea', required: true, placeholder: 'Medical assistance, financial aid, etc.' },
+      { name: 'fullName', label: 'First Name', type: 'text', required: true, placeholder: 'Juan' },
+      { name: 'lastName', label: 'Last Name', type: 'text', required: true, placeholder: 'Dela Cruz' },
+      { name: 'assistance', label: 'Type of Assistance', type: 'select', required: true, options: ['Financial Assistance', 'Educational Assistance','Others'] },
     ]
   },
   'business-permit': {
@@ -114,33 +92,25 @@ const closeModal = () => {
 <template>
   <div class="py-0 p-8">
     <!-- Header -->
-    <div class="flex items-center mb-6">
-      <!-- Back Button (Top Left like in your image) -->
-      <button 
-        @click="goBack"
-        class="flex items-center justify-center w-14 h-14 border border-[#002B5B] rounded-2xl hover:bg-[#002B5B] group transition"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" 
-             fill="none" 
-             viewBox="0 0 24 24" 
-             stroke-width="2" 
-             stroke="currentColor"
-             class="w-6 h-6 text-[#002B5B] group-hover:text-white transition">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
-        </svg>
-      </button>
+    <div class="relative flex items-center mb-10">
+      <ArrowBackButton
+        @click="goBack" 
+        class="absolute top-0 left-0 mt-2 mr-6"
+      />
 
       <!-- Title and Subtext -->
-      <div class="flex justify-between items-center w-full ml-6">
-        <h1 class="text-[40px] font-extrabold text-[#002B5B] leading-none">{{ config?.title || 'Document Request' }}</h1>
-        <p class="text-sm text-gray-600 text-right leading-tight">
+      <div class="flex justify-between items-center w-full ml-20">
+        <h1 class="text-[40px] font-extrabold text-[#03335C] leading-tight mt-2">
+          {{ config?.title || (docType)?.charAt(0).toUpperCase() + (config?.title || docType)?.slice(1)  }}
+        </h1>
+        <p class="text-sm text-[#002B5B] text-right leading-tight mt-4 italic">
           Kindly fill up the details needed<br />for the said document
         </p>
       </div>
     </div>
 
     <!-- Form Box -->
-    <div class="border border-[#002B5B]/40 rounded-2xl p-10 shadow-md bg-white">
+    <div class="border-[2px] border-[#00203C] rounded-2xl p-10 shadow-md bg-white">
       <DocumentForm
         v-if="currentStep === 'form' && config"
         :config="config"
@@ -150,30 +120,14 @@ const closeModal = () => {
 
       <!-- Not found -->
       <div v-else class="text-center py-12">
-        <p class="text-gray-600 text-lg">Document type not found</p>
+        <p class="text-[#003A6B] text-lg">The type of document you are requesting <br/> is currently out of stock.</p>
         <button 
           @click="router.push('/document-services')"
-          class="mt-4 px-6 py-2 bg-[#002B5B] text-white rounded hover:bg-[#001F40]"
+          class="mt-4 px-6 py-2 bg-[#003A6B] text-white rounded hover:bg-[#001F40]"
         >
           Back to Documents
-        </button>
-      </div>
-
-      <!-- Buttons (Next only) -->
-      <div class="flex justify-end mt-8">
-        <button 
-          @click="handleSubmit" 
-          class="px-8 py-3 bg-[#002B5B] text-white font-semibold rounded-full hover:bg-[#001F40] transition"
-        >
-          Next
         </button>
       </div>
     </div>
   </div>
 </template>
-
-<style scoped>
-.font-poppins {
-  font-family: 'Poppins', sans-serif;
-}
-</style>

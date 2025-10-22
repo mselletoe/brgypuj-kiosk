@@ -1,30 +1,50 @@
 <script setup>
 import { ref } from 'vue'
+import ArrowBackButton from '@/components/shared/ArrowBackButton.vue'
+import VueDatePicker from '@vuepic/vue-datepicker'
+import '@vuepic/vue-datepicker/dist/main.css'
+import { CalendarIcon } from '@heroicons/vue/24/outline'
 
 const props = defineProps({
   config: Object,
   initialData: {
     type: Object,
-    default: () => ({})
-  }
+    default: () => ({}),
+  },
 })
 
 const emit = defineEmits(['continue'])
 
-// Initialize form data
+// Initialize form data and errors
 const formData = ref({})
-props.config.fields.forEach(field => {
+const errors = ref({})
+
+props.config.fields.forEach((field) => {
   formData.value[field.name] = props.initialData[field.name] || ''
+  errors.value[field.name] = '' // initialize error message
 })
 
+// Helper function to format placeholder text
+const formatPlaceholder = (placeholder, label) => {
+  const text = placeholder || label
+  return `e.g. "${text}"`
+}
+
 const validate = () => {
-  for (const field of props.config.fields) {
+  let isValid = true
+
+  props.config.fields.forEach((field) => {
+    // Clear previous errors
+    errors.value[field.name] = ''
+
+    // Check required fields
     if (field.required && !formData.value[field.name]) {
-      alert(`Please fill in: ${field.label}`)
-      return false
+      errors.value[field.name] = 'This field is required'
+      isValid = false
     }
-  }
-  return true
+  })
+
+  return isValid
 }
 
 const handleContinue = () => {
@@ -36,66 +56,106 @@ const handleContinue = () => {
 
 <template>
   <div class="space-y-5">
-    <!-- Dynamically render fields based on config -->
-    <div v-for="field in config.fields" :key="field.name">
-      <label class="block mb-2 font-medium text-gray-700">
-        {{ field.label }}
-        <span v-if="field.required" class="text-red-500">*</span>
-      </label>
-
-      <!-- Text Input -->
-      <input 
-        v-if="field.type === 'text' || field.type === 'email' || field.type === 'tel'"
-        v-model="formData[field.name]"
-        :type="field.type"
-        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        :placeholder="field.placeholder || field.label"
-      />
-
-      <!-- Number Input -->
-      <input 
-        v-else-if="field.type === 'number'"
-        v-model.number="formData[field.name]"
-        type="number"
-        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        :placeholder="field.placeholder || field.label"
-      />
-
-      <!-- Date Input -->
-      <input 
-        v-else-if="field.type === 'date'"
-        v-model="formData[field.name]"
-        type="date"
-        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-      />
-
-      <!-- Textarea -->
-      <textarea 
-        v-else-if="field.type === 'textarea'"
-        v-model="formData[field.name]"
-        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        rows="3"
-        :placeholder="field.placeholder || field.label"
-      ></textarea>
-
-      <!-- Select -->
-      <select 
-        v-else-if="field.type === 'select'"
-        v-model="formData[field.name]"
-        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <div
+        v-for="field in config.fields"
+        :key="field.name"
+        class="flex flex-col"
       >
-        <option value="">Select {{ field.label }}</option>
-        <option v-for="option in field.options" :key="option" :value="option">
-          {{ option }}
-        </option>
-      </select>
+        <label class="block mb-2 font-bold text-[#003A6B]">
+          {{ field.label }}
+          <span v-if="field.required" class="text-red-500">*</span>
+        </label>
+
+        <!-- Text / Email / Tel / Number Input -->
+        <input
+          v-if="['text', 'email', 'tel', 'number'].includes(field.type)"
+          v-model="formData[field.name]"
+          :type="field.type"
+          :placeholder="formatPlaceholder(field.placeholder, field.label)"
+          :maxlength="field.type === 'tel' ? 11 : null"
+          inputmode="numeric"
+          pattern="[0-9]*"
+          @input="(e) => {
+            if (field.type === 'tel') {
+              e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 11)
+              formData[field.name] = e.target.value
+            }
+          }"
+          :class="[
+            'w-full p-3 border rounded-lg shadow-md transition-shadow duration-200 focus:shadow-lg focus:ring-2 placeholder:italic',
+            errors[field.name]
+              ? 'border-red-500 focus:ring-red-500'
+              : 'border-[#464646] focus:ring-blue-500',
+          ]"
+        />
+
+        <!-- VueDatePicker for Date Fields -->
+        <VueDatePicker
+          v-else-if="field.type === 'date'"
+          v-model="formData[field.name]"
+          :enable-time-picker="false"
+          auto-apply
+          teleport-center
+          format="MM/dd/yyyy"
+          :max-date="new Date()"
+          :placeholder="formatPlaceholder(field.placeholder, field.label)"
+          input-class-name="'w-full p-3 border rounded-lg shadow-md transition-shadow duration-200 focus:shadow-lg focus:ring-2'"
+        >
+          <template #input-icon>
+            <CalendarIcon class="w-5 h-5 text-gray-400 ml-3" />
+          </template>
+        </VueDatePicker>
+
+        <!-- Textarea -->
+        <textarea
+          v-else-if="field.type === 'textarea'"
+          v-model="formData[field.name]"
+          :placeholder="formatPlaceholder(field.placeholder, field.label)"
+          :class="[
+            'w-full h-[48px] p-3 border rounded-lg shadow-md transition-shadow duration-200 focus:shadow-lg focus:ring-2 leading-tight resize-none placeholder:italic',
+            errors[field.name]
+              ? 'border-red-500 focus:ring-red-500'
+              : 'border-[#464646] focus:ring-blue-500',
+          ]"
+        ></textarea>
+
+        <!-- Select -->
+        <select
+          v-else-if="field.type === 'select'"
+          v-model="formData[field.name]"
+          :class="[
+            'w-full p-3 border rounded-lg shadow-md transition-shadow duration-200 focus:shadow-lg focus:ring-2',
+            errors[field.name]
+              ? 'border-red-500 focus:ring-red-500'
+              : 'border-[#464646] focus:ring-blue-500',
+          ]"
+        >
+          <option value="">Select {{ field.label }}</option>
+          <option
+            v-for="option in field.options"
+            :key="option"
+            :value="option"
+          >
+            {{ option }}
+          </option>
+        </select>
+
+        <!-- Error message -->
+        <p v-if="errors[field.name]" class="text-red-500 text-[10px] text-sm mt-1 italic">
+          {{ errors[field.name] }}
+        </p>
+      </div>
     </div>
 
-    <button
-      @click="handleContinue"
-      class="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold mt-6 transition"
-    >
-      Continue to Preview
-    </button>
+    <div class="flex justify-end">
+      <button
+        @click="handleContinue"
+        class="px-8 py-3 bg-[#003A6B] text-white 
+              font-semibold rounded-full hover:bg-[#001F40] transition">
+        Next
+      </button>
+    </div>
   </div>
 </template>
+
