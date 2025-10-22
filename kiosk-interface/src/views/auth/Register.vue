@@ -60,22 +60,54 @@ watch(selectedResidentId, (id) => {
 
 // --- Register RFID ---
 const handleRegister = async () => {
+  console.log('🧠 handleRegister triggered') // add this
+  // --- Check for required fields ---
+  if (!scannedUid.value) {
+    alert('⚠️ No RFID UID detected. Please scan a card first.')
+    return
+  }
+
+  console.log('🔗 Attempting to link RFID:', scannedUid.value, selectedResidentId.value)
+
   if (!selectedResidentId.value) {
     alert('⚠️ Please select a resident first.')
     return
   }
 
+  // --- Prevent registering someone who already has an RFID ---
+  const selectedResident = residents.value.find(r => r.id === selectedResidentId.value)
+  if (selectedResident?.has_rfid) {
+    alert('⚠️ This resident already has a registered RFID.')
+    return
+  }
+
   try {
+    // --- Send registration request ---
     const res = await api.post('/rfid/register', {
       resident_id: selectedResidentId.value,
       rfid_uid: scannedUid.value,
     })
-    alert('✅ RFID successfully linked to resident!')
-    console.log('RFID linked:', res.data)
-    router.push('/rfid-success')
+
+    // --- Success feedback ---
+    console.log('✅ RFID linked:', res.data)
+    alert(`✅ RFID successfully linked to ${registrationSummary.value.name}!`)
+
+    // --- Small delay for UX before redirect ---
+    setTimeout(() => router.push('/rfid-success'), 500)
+
   } catch (err) {
     console.error('❌ Error linking RFID:', err)
-    alert(err.response?.data?.detail || 'Error linking RFID. It may already be registered.')
+
+    // --- Handle common backend errors gracefully ---
+    const msg = err.response?.data?.detail || ''
+
+    if (msg.includes('already registered')) {
+      alert('⚠️ This RFID tag is already linked to another resident.')
+    } else if (msg.includes('Resident not found')) {
+      alert('⚠️ Resident not found. Please try again.')
+    } else {
+      alert('❌ An unexpected error occurred while linking RFID.')
+    }
   }
 }
 
@@ -96,11 +128,14 @@ const goBackToHome = () => {
 
 // --- Mounted ---
 onMounted(() => {
-  if (route.query.uid) {
-    scannedUid.value = route.query.uid
-    console.log('📡 Scanned UID detected:', scannedUid.value)
+  if (!route.query.uid) {
+    alert('⚠️ No RFID UID detected. Please scan a card first.');
+    router.push('/login');
+    return;
   }
-})
+  scannedUid.value = route.query.uid;
+  console.log('📡 Scanned UID detected:', scannedUid.value);
+});
 </script>
 
 <template>
@@ -156,6 +191,7 @@ onMounted(() => {
               <option disabled value="">Select Resident</option>
               <option v-for="resident in residents" :key="resident.id" :value="resident.id">
                 {{ resident.name }}
+                {{ resident.has_rfid ? '🔒' : '🆕' }}
               </option>
             </select>
           </div>

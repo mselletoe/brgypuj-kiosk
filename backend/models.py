@@ -53,7 +53,7 @@ class RfidUID(Base):
 
     id = Column(SmallInteger, primary_key=True, index=True)
     resident_id = Column(SmallInteger, ForeignKey("residents.id", ondelete="CASCADE", onupdate="CASCADE"))
-    rfid_uid = Column(String(9), unique=True)
+    rfid_uid = Column(String(20), unique=True, nullable=False) 
     status = Column(Text)
     created_at = Column(TIMESTAMP)
     is_active = Column(Boolean, default=True)

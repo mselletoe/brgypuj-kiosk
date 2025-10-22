@@ -12,7 +12,6 @@ let inputBuffer = ''
 let timeout = null
 const hiddenInput = ref(null)
 
-// --- Check RFID in backend ---
 const checkRFID = async (uid) => {
   try {
     console.log(`🔍 Checking UID ${uid} in backend...`)
@@ -20,22 +19,21 @@ const checkRFID = async (uid) => {
     console.log('✅ Backend Response:', data)
 
     if (data.exists) {
-      // Already linked → success page
-      router.push('/rfid-success')
+      // Pass resident_id to PIN page
+      router.push({ 
+        path: '/login-pin', 
+        query: { resident_id: data.resident_id } 
+      })
     } else {
-      // Not linked → go to register page with UID
+      // Pass UID to registration page
       router.push(`/register?uid=${uid}`)
     }
   } catch (error) {
     console.error('❌ Error checking RFID:', error)
-    // Fallback to registration if something goes wrong
-    router.push(`/register?uid=${uid}`)
-  } finally {
-    isProcessing.value = false
+    router.push('/register') // fallback
   }
 }
 
-// --- Handle RFID input (keyboard emulator) ---
 const handleRFIDInput = (event) => {
   const key = event.key
 
