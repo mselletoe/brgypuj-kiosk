@@ -59,3 +59,17 @@ class RfidUID(Base):
     is_active = Column(Boolean, default=True)
 
     resident = relationship("Resident", back_populates="rfid")
+
+class BrgyStaff(Base):
+    __tablename__ = "brgy_staff"
+
+    id = Column(SmallInteger, primary_key=True, index=True)
+    resident_id = Column(SmallInteger, ForeignKey("residents.id", ondelete="CASCADE", onupdate="CASCADE"))
+    email = Column(String(64), unique=True, nullable=False)
+    password = Column(Text, nullable=False)  # hashed password
+    role = Column(String(128))
+    created_at = Column(TIMESTAMP)
+    is_active = Column(Boolean, default=True)
+
+    # Relationship to Resident (optional, if you want)
+    resident = relationship("Resident", backref="staff")

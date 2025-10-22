@@ -9,8 +9,20 @@ import CommunityFeedback from '@/views/CommunityFeedback.vue'
 import InformationHub from '@/views/InformationHub.vue'
 import Residents from '@/views/Residents.vue'
 import Utilities from '@/views/Utilities.vue'
+import Auth from '@/views/Auth.vue'
+import CreateAccount from '@/views/CreateAccount.vue'
 
 const routes = [
+  {
+    path: '/auth',
+    name: 'Auth',
+    component: Auth
+  },
+  {
+    path: '/create-account',
+    name: 'CreateAccount',
+    component: CreateAccount
+  },
   {
     path: '/',
     component: AdminLayout,

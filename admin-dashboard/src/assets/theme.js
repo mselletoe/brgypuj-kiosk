@@ -2,17 +2,33 @@
 export const blueThemeOverrides = {
   common: {
     primaryColor: '#0957FF',
-    borderRadius: '5px',
-    textColorBase: '#535353',
-    placeholderTextColor: '#808080',
+    primaryColorHover: '#3C7EFF',
+    primaryColorPressed: '#0043CC',
+    borderRadius: '6px',
+    textColorBase: '#373737',
+    placeholderColor: '#999999'
   },
   Input: {
-    inputColor: '#F3F3F3',
+    color: '#FFFFFF',
+    borderRadius: '6px',
+    heightLarge: '42px',
+    placeholderColor: '#999999',
     borderHover: '2px solid #8FB2FF',
     borderFocus: '2px solid #0957FF',
-    borderRadius: '5px',
-    textColor: '#535353',
-    placeholderTextColor: '#808080',
-    height: '42px'
+    boxShadow: '0 0 0 2px rgba(9, 87, 255, 0.3)'
+  },
+  Select: {
+    peers: {
+      InternalSelection: {
+        color: '#FFFFFF',
+        textColor: '#373737',
+        borderRadius: '6px',
+        heightLarge: '42px',
+        placeholderColor: '#808080',
+        borderHover: '2px solid #8FB2FF',
+        borderFocus: '2px solid #0957FF',
+        boxShadowFocus: '0 0 0 2px rgba(9, 87, 255, 0.3)'
+      }
+    }
   }
 }
