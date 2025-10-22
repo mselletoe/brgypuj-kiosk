@@ -6,7 +6,7 @@ import Display from '@/views/idle/Display.vue'
 import Idle from '@/views/idle/Idle.vue'
 import Announcements from '@/views/idle/Announcements.vue'
 import Login from '@/views/auth/Login.vue'
-import LoginRFID from '@/views/auth/LoginRFID.vue'
+import ScanRFID from '@/views/auth/ScanRFID.vue'
 import LoginPIN from '@/views/auth/LoginPIN.vue'
 import Register from '@/views/auth/Register.vue'
 import KioskHome from '@/views/home/KioskHome.vue'
@@ -34,7 +34,7 @@ const routes = [
   { path: '/idle', component: Idle },
   { path: '/announcements', component: Announcements },
   { path: '/login', component: Login },
-  { path: '/login-rfid', component: LoginRFID },
+  { path: '/login-rfid', component: ScanRFID },
   { path: '/login-pin', component: LoginPIN },
 
   // Authenticated routes (inside layout)
