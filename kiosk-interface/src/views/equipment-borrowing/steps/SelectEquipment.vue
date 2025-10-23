@@ -80,7 +80,7 @@ const goBackToHome = () => {
 }
 </script>
 
-<<template>
+<template>
   <div class="py-0 p-8">
     <div class="flex items-start gap-4">
       <ArrowBackButton @click="goBackToHome" />
