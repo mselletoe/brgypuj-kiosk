@@ -2,11 +2,10 @@
 import { ref, computed } from 'vue';
 import ArrowBackButton from '@/components/shared/ArrowBackButton.vue';
 import PrimaryButton from '@/components/shared/PrimaryButton.vue';
-import Modal from '@/components/shared/Modal.vue'; // Make sure this path is correct
+import Modal from '@/components/shared/Modal.vue';
 import { MagnifyingGlassIcon } from '@heroicons/vue/24/outline';
 import { useRouter } from 'vue-router';
 
-// --- Props ---
 const props = defineProps({
   selectedEquipment: Array,
   selectedDates: Object,
@@ -14,12 +13,11 @@ const props = defineProps({
   goBack: Function,
 });
 
-const router = useRouter();
+const emit = defineEmits(['start-new-request']);
 
-// State to control modal visibility
+const router = useRouter();
 const showModal = ref(false);
 
-// --- Helper Methods ---
 const formatCurrency = (value) => {
   if (!value) return '$0';
   return `$${value.toLocaleString()}`;
@@ -35,7 +33,6 @@ const formatDisplayDate = (dateString) => {
   });
 };
 
-// --- Computed Properties ---
 const totalCost = computed(() => {
   if (!props.selectedDates || !props.selectedEquipment) {
     return 0;
@@ -46,14 +43,13 @@ const totalCost = computed(() => {
   }, 0);
 });
 
-// --- Navigation & Modal Handlers ---
-const handleBack = () => {
-  props.goBack('info'); // Go back to the BorrowerInfo step
+const handlePageBack = () => {
+   props.goBack('info');
 };
 
-const handleNewRequest = () => {
-  showModal.value = false; // Close the modal
-  props.goBack('select'); // Go back to the first step (SelectEquipment)
+const handleModalNewRequest = () => {
+  showModal.value = false;
+  emit('start-new-request');
 };
 
 const handleSubmit = () => {
@@ -63,20 +59,19 @@ const handleSubmit = () => {
     info: props.borrowerInfo,
     total: totalCost.value,
   });
-  // Show the modal
   showModal.value = true;
 };
 
 const handleModalDone = () => {
-  showModal.value = false; // Close the modal
-  router.push('/home'); // Navigate to the home page
+  showModal.value = false;
+  router.push('/home');
 };
 </script>
 
 <template>
   <div class="py-0 p-8">
     <div class="flex items-center gap-4">
-      <ArrowBackButton @click="handleBack" />
+      <ArrowBackButton @click="handlePageBack" />
       <h1 class="text-[40px] font-bold text-[#013C6D]">Equipment Borrowing</h1>
     </div>
 
@@ -150,7 +145,7 @@ const handleModalDone = () => {
 
     <div class="mt-[11px] grid grid-cols-2 gap-8">
       <PrimaryButton
-        @click="handleBack"
+        @click="handlePageBack"
         bgColor="bg-gray-400"
         borderColor="border-gray-400"
         class="py-3 text-lg font-bold"
@@ -172,7 +167,7 @@ const handleModalDone = () => {
         :showNewRequest="true"
         newRequestText="New Request"
         @done="handleModalDone"
-        @newRequest="handleNewRequest"
+        @newRequest="handleModalNewRequest"
       />
     </div>
   </div>
