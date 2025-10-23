@@ -71,7 +71,7 @@ router.beforeEach((to, from, next) => {
   const loggedIn = !!auth.user
   const isGuest = auth.isGuest
   const loginPaths = ['/login', '/login-rfid']
-  const nonAuthPaths = ['/login', '/login-rfid', '/auth-pin', '/idle', '/display', '/announcements', '/register']
+  const nonAuthPaths = ['/login', '/login-rfid', '/auth-pin', '/idle', '/display', '/announcements']
 
   // Guests
   if (isGuest && loginPaths.includes(to.path)) return next('/home')
