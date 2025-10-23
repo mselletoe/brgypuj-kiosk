@@ -76,17 +76,19 @@ const continueStep = () => {
   props.goNext('dates')
 }
 const goBackToHome = () => {
-  router.push({ name: 'KioskHome' })
+  router.push('/home')
 }
 </script>
 
-<template>
+<<template>
   <div class="py-0 p-8">
-    <div class="flex items-center gap-4">
+    <div class="flex items-start gap-4">
       <ArrowBackButton @click="goBackToHome" />
-      <h1 class="text-3xl font-bold text-[#013C6D]">Equipment Borrowing</h1>
+      <div>
+        <h1 class="text-[40px] font-bold text-[#013C6D]">Equipment Borrowing</h1>
+        <p class="mt-0 text-lg text-gray-600">Below are list of available equipment:</p>
+      </div>
     </div>
-    <p class="mt-2 text-lg text-gray-600">Below are list of available equipment:</p>
 
     <div class="grid grid-cols-4 gap-5 mt-6">
       <div 

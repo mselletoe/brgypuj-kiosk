@@ -1,6 +1,4 @@
 <script setup>
-import { defineProps, defineEmits } from 'vue'
-
 const props = defineProps({
   title: { type: String, default: 'Request Submitted!' },
   message: {
@@ -12,21 +10,23 @@ const props = defineProps({
   doneText: { type: String, default: 'Done' }
 })
 
-const emit = defineEmits(['done'])
+const emit = defineEmits(['done', 'newRequest'])
 
 const handleDone = () => {
   emit('done')
+}
+
+const handleNewRequestClick = () => {
+  emit('newRequest')
 }
 </script>
 
 <template>
   <div class="flex flex-col items-center justify-center h-full">
-    <!-- Modal Container -->
     <div
       class="bg-white shadow-lg rounded-2xl p-10 text-center w-[75%]
               border-[#C1C1C1] border-[2px]"
     >
-      <!-- Icon -->
       <div class="flex justify-center mb-6">
         <div class="w-[80px] h-[80px] rounded-full bg-[#E4F5FC] flex items-center justify-center">
           <div class="w-[65px] h-[65px] rounded-full border-[4px] border-[#1B5886] flex items-center justify-center">
@@ -44,30 +44,28 @@ const handleDone = () => {
         </div>
       </div>
 
-      <!-- Title -->
       <h1 class="text-[30px] font-extrabold tracking-tight text-[#1B5886] mb-3">
         {{ title }}
       </h1>
 
-      <!-- Description --> 
       <p class="text-[#003A6B] mb-8">
         {{ message }}
       </p>
 
-      <!-- Buttons -->
       <div class="flex justify-center gap-4">
         <button
           v-if="showNewRequest"
-          class="px-7 py-3 rounded-xl bg-[#BBC3CE] text-[white] font-semibold shadow-md cursor-not-allowed"
-          disabled
+          @click="handleNewRequestClick"
+          class="px-7 py-3 rounded-xl border-2 border-[#1B5886] text-[#1B5886] font-semibold shadow-md
+                 hover:bg-[#1B5886] hover:text-white transition-colors duration-300 ease-in-out"
         >
           {{ newRequestText }}
         </button>
 
         <button
           @click="handleDone"
-          class="px-12 py-3 rounded-xl border-2 border-[#1B5886] text-[#1B5886] font-semibold shadow-md
-                 hover:bg-[#1B5886] hover:text-white transition-colors duration-300 ease-in-out"
+          class="px-12 py-3 rounded-xl bg-[#1B5886] text-white font-semibold shadow-md
+                 hover:opacity-90 transition-opacity duration-300 ease-in-out" 
         >
           {{ doneText }}
         </button>

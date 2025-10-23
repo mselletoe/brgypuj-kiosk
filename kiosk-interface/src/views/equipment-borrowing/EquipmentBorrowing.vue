@@ -1,45 +1,47 @@
 <script setup>
-// 1. You MUST import 'onActivated' from 'vue'
 import { ref, onActivated } from 'vue'
+// Removed useRouter import
 
-// Step components (statically imported)
+// Step components
 import EquipmentSelect from './steps/SelectEquipment.vue'
 import EquipmentSelectDates from './steps/SelectDates.vue'
 import EquipmentForm from './steps/BorrowerInfo.vue'
 import EquipmentReviewRequest from './steps/ReviewRequest.vue'
+// Removed RequestSubmitted import
 
-// Shared state across steps
+// Removed router instance
+
+// Shared state
 const selectedEquipment = ref([])
 const selectedDates = ref(null)
 const borrowerInfo = ref({})
-
-// Current step
 const currentStep = ref('select')
 
 // Navigate steps
 const goNext = (step) => currentStep.value = step
 const goBack = (step) => currentStep.value = step
 
+// Event Handlers
 const onUpdateEquipment = (newEquipmentArray) => {
   selectedEquipment.value = newEquipmentArray
 }
-
 const onUpdateDates = (newDatesObject) => {
   selectedDates.value = newDatesObject
 }
+const onUpdateBorrowerInfo = (newInfoObject) => {
+  borrowerInfo.value = newInfoObject
+}
 
-// 2. You MUST add this 'onActivated' block
-// This hook runs every time you navigate TO this component
-// if it is being kept alive by <KeepAlive>.
+// Removed handleFlowDone function
+
 onActivated(() => {
-  // Reset all the data to its starting state
   selectedEquipment.value = []
   selectedDates.value = null
   borrowerInfo.value = {}
   currentStep.value = 'select'
 })
 
-// Map step names to components
+// Removed 'submitted' step from map
 const components = {
   select: EquipmentSelect,
   dates: EquipmentSelectDates,
@@ -59,7 +61,10 @@ const components = {
     @update:selected-dates="onUpdateDates"
 
     :borrower-info="borrowerInfo"
+    @update:borrower-info="onUpdateBorrowerInfo"
+
     :go-next="goNext"
     :go-back="goBack"
-  />
+    
+    />
 </template>

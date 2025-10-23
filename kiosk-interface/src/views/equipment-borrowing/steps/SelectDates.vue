@@ -69,18 +69,17 @@ const handleNext = () => {
   <div class="py-0 p-8">
     <div class="flex items-center gap-4">
       <ArrowBackButton @click="handleBack" />
-      <h1 class="text-3xl font-bold text-[#013C6D]">Equipment Borrowing</h1>
+      <h1 class="text-[40px] font-bold text-[#013C6D]">Equipment Borrowing</h1>
     </div>
 
-    <div class="mt-8 grid grid-cols-5 gap-8 items-stretch">
+    <div class="mt-6 grid grid-cols-5 gap-8 items-stretch">
       
       <div class="col-span-2">
-        <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 h-full min-h-[300px]">
-          <h3 class="text-[23px] font-bold text-[#013C6D] flex items-center gap-2">
-            <CalendarIcon class="w-6 h-6" />
+        <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 h-full min-h-[320px]">
+          <h3 class="text-[23px] font-bold text-[#013C6D] flex items-center gap-2 whitespace-nowrap">
             Select Borrowing Dates
           </h3>
-          <div class="mt-8 space-y-6">
+          <div class="mt-8 space-y-8">
             <div>
               <label for="borrow-date" class="block text-base font-medium text-gray-700">
                 Borrow Date *
@@ -125,9 +124,9 @@ const handleNext = () => {
       </div>
 
       <div class="col-span-3">
-        <div class="bg-[#EBF5FF] rounded-2xl shadow-lg border border-[#B0D7F8] p-6 h-full min-h-[310px]">
+        <div class="bg-[#EBF5FF] rounded-2xl shadow-lg border border-[#B0D7F8] p-6 h-full min-h-[310px] flex flex-col">
           <h3 class="text-2xl font-bold text-[#013C6D]">Cost Breakdown</h3>
-          <ul class="mt-6 space-y-3">
+          <ul class="mt-6 space-y-0 flex-grow">
             <li 
               v-for="item in costBreakdown"
               :key="item.id"
@@ -148,7 +147,7 @@ const handleNext = () => {
       </div>
     </div> 
     
-    <div class="mt-8 grid grid-cols-2 gap-8">
+    <div class="mt-[35px] grid grid-cols-2 gap-8">
       <PrimaryButton
         @click="handleBack"
         bgColor="bg-gray-400"
