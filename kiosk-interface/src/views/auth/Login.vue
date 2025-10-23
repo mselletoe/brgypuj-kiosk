@@ -13,12 +13,11 @@ const handleRfidLogin = () => {
   router.push('/login-rfid')
 }
 
-const handleGuestLogin = () => {
-  disableTouchToStart()
-  const guestUser = { id: 'guest', name: 'Guest User' }
-  login(guestUser)
-  auth.isGuest = true
-  localStorage.setItem('auth_user', JSON.stringify({ user: guestUser, isGuest: true }))
+const continueAsGuest = () => {
+  const guestUser = { name: "Guest User" };
+  auth.user = guestUser;
+  auth.isGuest = true;
+  localStorage.setItem('auth_user', JSON.stringify({ user: guestUser, isGuest: true }));
   router.replace('/home')
 }
 
@@ -57,7 +56,7 @@ const goBack = () => {
         </PrimaryButton>
 
         <PrimaryButton 
-          @click="handleGuestLogin"
+          @click="continueAsGuest()"
           bgColor="bg-transparent"
           textColor="text-[#013C6D]"
           class="w-96 h-[45px] text-[15px]"

@@ -8,7 +8,7 @@ import Idle from '@/views/idle/Idle.vue'
 import Announcements from '@/views/idle/Announcements.vue'
 import Login from '@/views/auth/Login.vue'
 import ScanRFID from '@/views/auth/ScanRFID.vue'
-import LoginPIN from '@/views/auth/LoginPIN.vue'
+import AuthPIN from '@/views/auth/AuthPIN.vue'
 import Register from '@/views/auth/Register.vue'
 import KioskHome from '@/views/home/KioskHome.vue'
 import DocumentServices from '@/views/document-services/DocumentServices.vue'
@@ -28,7 +28,7 @@ const routes = [
   { path: '/announcements', component: Announcements },
   { path: '/login', component: Login },
   { path: '/login-rfid', component: ScanRFID },
-  { path: '/login-pin', component: LoginPIN },
+  { path: '/auth-pin', component: AuthPIN },
 
   // Authenticated & Inside-layout routes 
   {
@@ -71,7 +71,7 @@ router.beforeEach((to, from, next) => {
   const loggedIn = !!auth.user
   const isGuest = auth.isGuest
   const loginPaths = ['/login', '/login-rfid']
-  const nonAuthPaths = ['/login', '/login-rfid', '/idle', '/display', '/announcements', '/register']
+  const nonAuthPaths = ['/login', '/login-rfid', '/auth-pin', '/idle', '/display', '/announcements', '/register']
 
   // Guests
   if (isGuest && loginPaths.includes(to.path)) return next('/home')

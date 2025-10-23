@@ -25,19 +25,18 @@ const checkRFID = async (uid) => {
         name: `${userRes.data.first_name} ${userRes.data.last_name}`,
       };
 
-      login(userData);
-
-      localStorage.setItem('auth_user', JSON.stringify({ user: userData, isGuest: false }));
-
       router.replace({
-        path: '/login-pin',
-        query: { resident_id: data.resident_id },
+        path: '/auth-pin',
+        query: { mode: 'user', resident_id: data.resident_id, name: userData.name },
       });
     } else {
-      router.push(`/register?uid=${uid}`)
+      router.replace({
+        path: '/auth-pin',
+        query: { mode: 'admin', uid },
+      });
     }
   } catch (error) {
-    router.push('/register')
+    router.push('/login-rfid')
   }
 }
 
