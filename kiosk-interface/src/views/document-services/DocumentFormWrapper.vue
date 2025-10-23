@@ -11,6 +11,7 @@ const router = useRouter()
 const currentStep = ref('form')
 const formData = ref({})
 const showSuccessModal = ref(false)
+const isFadingOut = ref(false) 
 const docType = computed(() => route.params.docType)
 
 // Document configurations
@@ -82,10 +83,14 @@ const handleSubmit = async () => {
 }
 
 const closeModal = () => {
-  showSuccessModal.value = false
-  formData.value = {}
-  currentStep.value = 'form'
-  router.push('/document-services')
+  isFadingOut.value = true
+  setTimeout(() => {
+    showSuccessModal.value = false
+    formData.value = {}
+    currentStep.value = 'form'
+    isFadingOut.value = false
+    router.push('/home') 
+  }, 500) // match transition duration
 }
 </script>
 
@@ -129,5 +134,34 @@ const closeModal = () => {
         </button>
       </div>
     </div>
+
+    <!-- ✅ Success Modal with fade + blur -->
+    <transition name="fade-blur">
+      <div
+        v-if="showSuccessModal"
+        class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 transition-opacity duration-500"
+        :class="{ 'opacity-0': isFadingOut, 'opacity-100': !isFadingOut }"
+      >
+        <Modal
+          title="Application Submitted!"
+          message="Your request has been successfully submitted. You will be notified once it’s processed."
+          doneText="Done"
+          :showNewRequest="false"
+          @done="closeModal"
+        />
+      </div>
+    </transition>
   </div>
 </template>
+
+<!-- ✅ Smooth fade and blur transition -->
+<style scoped>
+.fade-blur-enter-active,
+.fade-blur-leave-active {
+  transition: opacity 0.5s ease-in-out;
+}
+.fade-blur-enter-from,
+.fade-blur-leave-to {
+  opacity: 0;
+}
+</style>

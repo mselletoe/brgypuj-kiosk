@@ -1,9 +1,21 @@
 <script setup>
 import { useRoute, useRouter } from 'vue-router'
-import ArrowBackButton from '@/components/shared/ArrowBackButton.vue' 
+import { ref } from 'vue'
+import ArrowBackButton from '@/components/shared/ArrowBackButton.vue'
+import SuccessModal from '@/components/shared/Modal.vue'
 
 const route = useRoute()
-const router = useRouter()
+const router = useRouter() 
+
+// Modal control
+const showModal = ref(false)
+const handleContinue = () => {
+  showModal.value = true
+}
+const handleDone = () => {
+  showModal.value = false
+  router.push('/home')  
+}
 
 // Go back handler
 const goBack = () => router.push('/home')
