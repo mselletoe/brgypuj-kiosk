@@ -1,3 +1,29 @@
+<script setup>
+import { useRouter } from 'vue-router'
+import { onMounted, onBeforeUnmount } from 'vue'
+import { auth } from '@/stores/auth'
+
+const router = useRouter()
+
+onMounted(() => {
+  history.pushState(null, '', window.location.href)
+
+  const preventBack = (event) => {
+    history.pushState(null, '', window.location.href)
+  }
+
+  window.addEventListener('popstate', preventBack)
+
+  onBeforeUnmount(() => {
+    window.removeEventListener('popstate', preventBack)
+  })
+})
+
+function goTo(path) {
+  router.replace(path)
+}
+</script>
+
 <template>
   <div class="kiosk-home py-0 p-8">
     <div class="header-section">
@@ -43,14 +69,6 @@
 
   </div>
 </template>
-
-<script setup>
-import { useRouter } from 'vue-router'
-const router = useRouter()
-function goTo(path) {
-  router.push(path)
-}
-</script>
 
 <style scoped>
 .kiosk-home {

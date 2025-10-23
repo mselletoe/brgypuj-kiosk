@@ -37,6 +37,7 @@ class Address(Base):
     created_at = Column(TIMESTAMP)
     is_current = Column(Boolean, default=True)
 
+    # Relationships
     resident = relationship("Resident", back_populates="address")
     purok = relationship("Purok", back_populates="addresses")
 
@@ -46,6 +47,7 @@ class Purok(Base):
     id = Column(SmallInteger, primary_key=True, index=True)
     purok_name = Column(String(8))
 
+    # Relationships
     addresses = relationship("Address", back_populates="purok")
 
 class RfidUID(Base):
@@ -53,9 +55,24 @@ class RfidUID(Base):
 
     id = Column(SmallInteger, primary_key=True, index=True)
     resident_id = Column(SmallInteger, ForeignKey("residents.id", ondelete="CASCADE", onupdate="CASCADE"))
-    rfid_uid = Column(String(9), unique=True)
+    rfid_uid = Column(String(20), unique=True, nullable=False) 
     status = Column(Text)
     created_at = Column(TIMESTAMP)
     is_active = Column(Boolean, default=True)
 
+    # Relationships
     resident = relationship("Resident", back_populates="rfid")
+
+class BrgyStaff(Base):
+    __tablename__ = "brgy_staff"
+
+    id = Column(SmallInteger, primary_key=True, index=True)
+    resident_id = Column(SmallInteger, ForeignKey("residents.id", ondelete="CASCADE", onupdate="CASCADE"))
+    email = Column(String(64), unique=True, nullable=False)
+    password = Column(Text, nullable=False)  # hashed password
+    role = Column(String(128))
+    created_at = Column(TIMESTAMP)
+    is_active = Column(Boolean, default=True)
+
+    # Relationships
+    resident = relationship("Resident", backref="staff")

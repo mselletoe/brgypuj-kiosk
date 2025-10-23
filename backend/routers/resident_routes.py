@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from database import get_db
-from models import Resident, Address
+from models import Resident, RfidUID 
 
 router = APIRouter(prefix="/residents", tags=["Residents"])
 
@@ -20,12 +20,22 @@ def get_filtered_residents(
     )
 
     # Prepare list for dropdown (formatted full names)
-    return [
-        {
+    result = []
+    for resident in residents:
+        # Check if this resident already has RFID
+        has_rfid = (
+            db.query(RfidUID)
+            .filter(RfidUID.resident_id == resident.id)
+            .first()
+            is not None
+        )
+
+        result.append({
             "id": resident.id,
             "name": f"{resident.first_name} {resident.middle_name or ''} {resident.last_name}".strip(),
             "birthdate": resident.birthdate,
-            "address": resident.address.unit_blk_street if resident.address else None
-        }
-        for resident in residents
-    ]
+            "address": resident.address.unit_blk_street if resident.address else None,
+            "has_rfid": has_rfid
+        })
+
+    return result

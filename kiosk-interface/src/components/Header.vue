@@ -1,11 +1,11 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from "vue";
-import { useRouter } from "vue-router"; // ✅ added
+import { auth, logout as authLogout } from "@/stores/auth";
+import { useRouter } from "vue-router";
 import '../assets/images/Pob1Logo.svg';
 import '../assets/vectors/Logout.svg';
 
-const router = useRouter(); // ✅ added
-
+const router = useRouter();
 const currentTime = ref("");
 const currentDate = ref("");
 
@@ -31,12 +31,20 @@ let interval;
 onMounted(() => {
   updateDateTime();
   interval = setInterval(updateDateTime, 1000);
+
+  const stored = localStorage.getItem('auth_user');
+  if (stored) {
+    const parsed = JSON.parse(stored);
+    auth.user = parsed.user;
+    auth.isGuest = parsed.isGuest;
+  }
 });
 onUnmounted(() => clearInterval(interval));
 
 const logout = () => {
-  alert("You have been logged out!");
-  router.push('/idle'); // ✅ redirect to Idle page
+  authLogout();
+  localStorage.removeItem('auth_user');
+  window.location.href = '/idle';
 };
 </script>
 
@@ -64,15 +72,19 @@ const logout = () => {
       <button class="px-4 py-2 bg-[#D1E5F1] border-2 border-[#003A6B] 
                     rounded-md font-semibold
                     transition-colors duration-300 ease-in-out flex flex-col items-center leading-[0.5]">
-                    <span class="text-[12px] -mt-[3px] leading-[1]">Angela Dela Cruz</span> <br/>
-                    <span class="text-[8px] font-normal -mt-[4px] leading-[1]">Authenticated via RFID</span>
+                            <span class="text-[12px] leading-[1]">
+                              {{ auth.user ? auth.user.name : 'Guest' }}
+                            </span> <br/>
+                            <span class="text-[8px] font-normal -mt-[4px] leading-[1]">
+                              {{ auth.user ? 'Authenticated via RFID' : 'Guest Access' }}
+                            </span>
                   </button>
 
       <button @click="logout" class="px-4 py-2 bg-[#FF2B3A] border-2 border-[#FF2B3A] 
-                                    hover:bg-[#CD000E] text-white font-light rounded-md
-                                    transition-colors duration-300 ease-in-out
-                                    flex items-center space-x-2 text-[12px]"><span>Logout</span>
-                                    <img src="../assets/vectors/Logout.svg" class="w-6" />
+        hover:bg-[#CD000E] text-white font-light rounded-md
+        transition-colors duration-300 ease-in-out
+        flex items-center space-x-2 text-[12px]"><span>Logout</span>
+        <img src="../assets/vectors/Logout.svg" class="w-6" />
       </button>
     </div>
   </header>
