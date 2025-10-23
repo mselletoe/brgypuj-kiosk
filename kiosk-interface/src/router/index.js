@@ -21,10 +21,8 @@ import Comments from '@/views/feedback/Comments.vue'
 import Appointments from '@/views/appointments/Appointments.vue'
 
 const routes = [
-  // Default route
   { path: '/', redirect: '/idle' },
 
-  // Non-layout routes
   { path: '/display', component: Display},
   { path: '/idle', component: Idle },
   { path: '/announcements', component: Announcements },
@@ -37,24 +35,21 @@ const routes = [
     path: '/',
     component: UserLayout,
     children: [
-      { path: '/home', component: KioskHome, meta: { requiresAuth: true } },
-      { path: 'register', component: Register, meta: { requiresAuth: true }},
-      {
-        path: '/document-services', component: DocumentServices,
+      { path: 'home', component: KioskHome, meta: { requiresAuth: true } },
+      { path: 'document-services', component: DocumentServices, meta: { requiresAuth: true },
         children: [
-          { path: ':docType', component: DocumentFormWrapper, },
-        ],
+          { path: ':docType', component: DocumentFormWrapper, meta: { requiresAuth: true } }
+        ]
       },
-      { path: 'equipment-borrowing', component: EquipmentBorrowing },
-      { path: 'help-and-support', component: HelpAndSupport },
-      { path: 'feedback', component: Feedback },
-      { path: 'rating', component: Rating },
-      { path: 'comments', component: Comments },
-      { path: 'appointments', component: Appointments },
-    ],
+      { path: 'equipment-borrowing', component: EquipmentBorrowing, meta: { requiresAuth: true } },
+      { path: 'help-and-support', component: HelpAndSupport, meta: { requiresAuth: true } },
+      { path: 'feedback', component: Feedback, meta: { requiresAuth: true } },
+      { path: 'rating', component: Rating, meta: { requiresAuth: true } },
+      { path: 'comments', component: Comments, meta: { requiresAuth: true } },
+      { path: 'appointments', component: Appointments, meta: { requiresAuth: true } },
+      { path: 'register', component: Register }
+    ]
   },
-
-  // Fallback for unknown routes
   { path: '/:pathMatch(.*)*', redirect: '/idle' },
 ]
 
@@ -75,20 +70,24 @@ router.beforeEach((to, from, next) => {
 
   const loggedIn = !!auth.user
   const isGuest = auth.isGuest
+  const loginPaths = ['/login', '/login-rfid']
+  const nonAuthPaths = ['/login', '/login-rfid', '/idle', '/display', '/announcements', '/register']
 
-  // Guest users go directly to /home
-  if (isGuest && (to.path === '/login' || to.path === '/login-rfid' || to.path === '/login-pin')) {
-    return next('/home')
-  }
+  // Guests
+  if (isGuest && loginPaths.includes(to.path)) return next('/home')
 
-  // If logged in, prevent re-entering login or RFID
-  if (loggedIn && (to.path === '/login' || to.path === '/login-rfid')) {
-    return next('/home')
-  }
+  // Logged-in users
+  if (loggedIn && loginPaths.includes(to.path)) return next('/home')
 
   // Protect routes with requiresAuth
   if (!loggedIn && !isGuest && to.meta.requiresAuth) {
+    if (to.path === '/register' && to.query.uid) return next()
     return next('/login-rfid')
+  }
+
+  // Prevent logged-in or guest from going back to non-auth pages
+  if ((loggedIn || isGuest) && nonAuthPaths.includes(to.path)) {
+    return next('/home') // always redirect to home
   }
 
   next()

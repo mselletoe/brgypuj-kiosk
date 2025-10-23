@@ -41,7 +41,7 @@ const checkRFID = async (uid) => {
   }
 }
 
-const handleRFIDInput = (event) => {
+const handleRFIDInput = async (event) => {
   const key = event.key
 
   if (isProcessing.value) return
@@ -51,9 +51,16 @@ const handleRFIDInput = (event) => {
     if (!uid) return
 
     scannedUID.value = uid
-
     isProcessing.value = true
-    checkRFID(uid)
+
+    try {
+      await checkRFID(uid)
+    } finally {
+      // Reset processing only if still on this page
+      if (router.currentRoute.value.path === '/scan') {
+        isProcessing.value = false
+      }
+    }
 
     inputBuffer = ''
     if (hiddenInput.value) hiddenInput.value.value = ''

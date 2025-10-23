@@ -1,23 +1,7 @@
 <script setup>
 import { useRouter } from 'vue-router'
-import { onMounted, onBeforeUnmount } from 'vue'
-import { auth } from '@/stores/auth'
 
 const router = useRouter()
-
-onMounted(() => {
-  history.pushState(null, '', window.location.href)
-
-  const preventBack = (event) => {
-    history.pushState(null, '', window.location.href)
-  }
-
-  window.addEventListener('popstate', preventBack)
-
-  onBeforeUnmount(() => {
-    window.removeEventListener('popstate', preventBack)
-  })
-})
 
 function goTo(path) {
   router.replace(path)
@@ -30,7 +14,8 @@ function goTo(path) {
       <div class="text-section">
         <h2 class="welcome-text">Welcome to</h2>
         <h1 class="title-text">Barangay Services</h1>
-        <p class="subtitle">Select a service below to get started.<br></br>
+        <p class="subtitle">
+          Select a service below to get started.<br>
           All services are designed for easy touch navigation.
         </p>
       </div>
@@ -66,7 +51,6 @@ function goTo(path) {
         <p class="box-subtitle">Help us improve the<br>Barangay Kiosk<br>experience</p>
       </div>
     </div>
-
   </div>
 </template>
 
