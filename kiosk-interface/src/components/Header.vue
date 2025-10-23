@@ -1,7 +1,10 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from "vue";
+import { useRouter } from "vue-router"; // ✅ added
 import '../assets/images/Pob1Logo.svg';
 import '../assets/vectors/Logout.svg';
+
+const router = useRouter(); // ✅ added
 
 const currentTime = ref("");
 const currentDate = ref("");
@@ -33,6 +36,7 @@ onUnmounted(() => clearInterval(interval));
 
 const logout = () => {
   alert("You have been logged out!");
+  router.push('/idle'); // ✅ redirect to Idle page
 };
 </script>
 
@@ -82,5 +86,4 @@ header {
   left: 0;
    z-index: 50; 
 }
-
 </style>
