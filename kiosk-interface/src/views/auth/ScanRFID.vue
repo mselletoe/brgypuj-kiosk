@@ -4,7 +4,6 @@ import { useRouter } from 'vue-router'
 import { ArrowLeftIcon, SignalIcon } from '@heroicons/vue/24/solid'
 import PrimaryButton from '@/components/shared/PrimaryButton.vue'
 import api from '@/api/api'
-import { login } from '@/stores/auth'
 
 const router = useRouter()
 const scannedUID = ref('')

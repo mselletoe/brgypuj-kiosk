@@ -18,6 +18,7 @@ const ADMIN_PIN = '7890' // Changeable later if needed
 
 onMounted(async () => {
   mode.value = route.query.mode || 'user'
+  console.log('🧭 Mode:', mode.value, 'UID:', route.query.uid)
 
   // --- Admin PIN Mode ---
   if (mode.value === 'admin') {
