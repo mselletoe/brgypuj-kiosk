@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, computed, onMounted, onUnmounted } from "vue";
 import { auth, logout as authLogout } from "@/stores/auth";
 import { useRouter } from "vue-router";
 import '../assets/images/Pob1Logo.svg';
@@ -46,6 +46,18 @@ const logout = () => {
   localStorage.removeItem('auth_user');
   window.location.href = '/idle';
 };
+
+const displayName = computed(() => {
+  if (auth.user?.isAdmin) return "Admin";
+  if (auth.isGuest) return "Guest User";
+  return auth.user?.name || "Guest";
+});
+
+const accessType = computed(() => {
+  if (auth.user?.isAdmin) return "Admin Access";
+  if (auth.isGuest) return "Public Access";
+  return "Authenticated via RFID";
+});
 </script>
 
 <template>
@@ -70,15 +82,15 @@ const logout = () => {
     <div class="flex items-center space-x-4 font-poppins">
 
       <button class="px-4 py-2 bg-[#D1E5F1] border-2 border-[#003A6B] 
-                    rounded-md font-semibold
-                    transition-colors duration-300 ease-in-out flex flex-col items-center leading-[0.5]">
-                            <span class="text-[12px] leading-[1]">
-                              {{ auth.user ? auth.user.name : 'Guest' }}
-                            </span> <br/>
-                            <span class="text-[8px] font-normal -mt-[4px] leading-[1]">
-                              {{ auth.user ? 'Authenticated via RFID' : 'Guest Access' }}
-                            </span>
-                  </button>
+        rounded-md font-semibold
+        transition-colors duration-300 ease-in-out flex flex-col items-center leading-[0.5]">
+        <span class="text-[12px] leading-[1]">
+          {{ displayName }}
+        </span> <br/>
+        <span class="text-[8px] font-normal -mt-[4px] leading-[1]">
+          {{ accessType }}
+        </span>
+      </button>
 
       <button @click="logout" class="px-4 py-2 bg-[#FF2B3A] border-2 border-[#FF2B3A] 
         hover:bg-[#CD000E] text-white font-light rounded-md

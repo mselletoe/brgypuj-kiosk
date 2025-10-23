@@ -25,23 +25,22 @@ const checkRFID = async (uid) => {
         name: `${userRes.data.first_name} ${userRes.data.last_name}`,
       };
 
-      login(userData);
-
-      localStorage.setItem('auth_user', JSON.stringify({ user: userData, isGuest: false }));
-
       router.replace({
-        path: '/login-pin',
-        query: { resident_id: data.resident_id },
+        path: '/auth-pin',
+        query: { mode: 'user', resident_id: data.resident_id, name: userData.name },
       });
     } else {
-      router.push(`/register?uid=${uid}`)
+      router.replace({
+        path: '/auth-pin',
+        query: { mode: 'admin', uid },
+      });
     }
   } catch (error) {
-    router.push('/register')
+    router.push('/login-rfid')
   }
 }
 
-const handleRFIDInput = (event) => {
+const handleRFIDInput = async (event) => {
   const key = event.key
 
   if (isProcessing.value) return
@@ -51,9 +50,16 @@ const handleRFIDInput = (event) => {
     if (!uid) return
 
     scannedUID.value = uid
-
     isProcessing.value = true
-    checkRFID(uid)
+
+    try {
+      await checkRFID(uid)
+    } finally {
+      // Reset processing only if still on this page
+      if (router.currentRoute.value.path === '/scan') {
+        isProcessing.value = false
+      }
+    }
 
     inputBuffer = ''
     if (hiddenInput.value) hiddenInput.value.value = ''
