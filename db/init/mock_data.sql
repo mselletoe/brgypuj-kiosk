@@ -21098,43 +21098,43 @@ VALUES (483, '1A9JW4UWJ', 'active', NOW(), TRUE);
 
 
 INSERT INTO brgy_staff (id, resident_id, email, password, role, created_at, is_active)
-VALUES (1, 1385, 'staff1@example.com', 'osa6NPBH', 'Clerk', NOW(), TRUE);
+VALUES (1, 1385, 'staff1@example.com', '$2b$12$xLyNrvrW1ynW3vrc9qsxFeqjem4GFq/PROMdDlfGEtXIXPjto7uk6', 'Clerk', NOW(), TRUE);
 
 
 INSERT INTO brgy_staff (id, resident_id, email, password, role, created_at, is_active)
-VALUES (2, 614, 'staff2@example.com', '8vkZdhbw', 'Admin', NOW(), TRUE);
+VALUES (2, 614, 'staff2@example.com', '$2b$12$hi8.PwxJ5C5wOqK8c4optec9TAusP3j6DUZanlFnBUC8n5tU0Dvo2', 'Admin', NOW(), TRUE);
 
 
 INSERT INTO brgy_staff (id, resident_id, email, password, role, created_at, is_active)
-VALUES (3, 3, 'staff3@example.com', 'iM2v4fKp', 'Admin', NOW(), TRUE);
+VALUES (3, 3, 'staff3@example.com', '$2b$12$6yAqP12YIG2WemvZfdIaNuYy3NFQHMaXWvdnmEaj3/N/ckwZGVD56', 'Admin', NOW(), TRUE);
 
 
 INSERT INTO brgy_staff (id, resident_id, email, password, role, created_at, is_active)
-VALUES (4, 1078, 'staff4@example.com', 'FSYUPPYH', 'Clerk', NOW(), TRUE);
+VALUES (4, 1078, 'staff4@example.com', '$2b$12$jQoo6vIBufwoOa5vYol2OOILGYpaxasA737cERwKXNUpx9yLr/Hva', 'Clerk', NOW(), TRUE);
 
 
 INSERT INTO brgy_staff (id, resident_id, email, password, role, created_at, is_active)
-VALUES (5, 49, 'staff5@example.com', 'bP7QrVXQ', 'Encoder', NOW(), TRUE);
+VALUES (5, 49, 'staff5@example.com', '$2b$12$a6V7A2lYUPtf10ywi9IYyOqn7BLZW.ZklQ3WHhKipVb7N/1gwfXMS', 'Encoder', NOW(), TRUE);
 
 
 INSERT INTO brgy_staff (id, resident_id, email, password, role, created_at, is_active)
-VALUES (6, 1527, 'staff6@example.com', 'lcsGCT6l', 'Admin', NOW(), TRUE);
+VALUES (6, 1527, 'staff6@example.com', '$2b$12$6RKl9eIem8ivwDdQ6Ix7Y.TBjtJdI8PjSLvvXXv5mfWPNwojPqHCW', 'Admin', NOW(), TRUE);
 
 
 INSERT INTO brgy_staff (id, resident_id, email, password, role, created_at, is_active)
-VALUES (7, 1384, 'staff7@example.com', 'YQBcEfeb', 'Admin', NOW(), TRUE);
+VALUES (7, 1384, 'staff7@example.com', '$2b$12$g2w.IYa3.05qEw8gbIHjcexratNaixbplzCNvmLPgYOeYfSCvdlTC', 'Admin', NOW(), TRUE);
 
 
 INSERT INTO brgy_staff (id, resident_id, email, password, role, created_at, is_active)
-VALUES (8, 1548, 'staff8@example.com', 'L7VoB2pe', 'Encoder', NOW(), TRUE);
+VALUES (8, 1548, 'staff8@example.com', '$2b$12$mFlFHAcLcZ7Kw3VcO1J7z.rsdrhjtBo2HxrUh7y7Svc8OKnI9PqMq', 'Encoder', NOW(), TRUE);
 
 
 INSERT INTO brgy_staff (id, resident_id, email, password, role, created_at, is_active)
-VALUES (9, 745, 'staff9@example.com', 'xZXgJfuO', 'Clerk', NOW(), TRUE);
+VALUES (9, 745, 'staff9@example.com', '$2b$12$USUMFDSBE5GtQ6OeQTFiFeEdFakBynijTqAt6wm51eKJhTu8D3K/O', 'Clerk', NOW(), TRUE);
 
 
 INSERT INTO brgy_staff (id, resident_id, email, password, role, created_at, is_active)
-VALUES (10, 246, 'staff10@example.com', 'iOwFaGwU', 'Encoder', NOW(), TRUE);
+VALUES (10, 246, 'staff10@example.com', '$2b$12$egnojTxFg6W5/NKn9w1ODewLWoB3mnNiq47gY/fwSqqlFJgsF.1Pi', 'Encoder', NOW(), TRUE);
 
 
 INSERT INTO templates (id, template_name, description, created_at, updated_at)
