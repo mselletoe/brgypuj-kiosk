@@ -44,7 +44,7 @@ const handleSelect = (key) => {
 </script>
 
 <template>
-  <header class="pb-8 flex items-center justify-between">
+  <header class="pb-8 flex items-center justify-between w-[99%]">
     <div class="bg-white rounded-md w-[700px] h-[40px]"></div>
     <div>
       <n-dropdown

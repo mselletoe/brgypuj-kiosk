@@ -1,3 +1,9 @@
+<script setup>
+import PageTitle from '@/components/shared/PageTitle.vue'
+</script>
+
 <template>
-  <h2 class="text-2xl font-semibold">Announcements</h2>
+  <div class="p-6 bg-white rounded-md w-[99%] h-[98%] shadow-lg space-y-5">
+    <PageTitle title="Announcements" />
+  </div>
 </template>

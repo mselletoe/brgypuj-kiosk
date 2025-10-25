@@ -3,7 +3,7 @@ import { useAuth } from '@/stores/authStore'
 
 import AdminLayout from '@/layouts/AdminLayout.vue'
 import Overview from '@/views/Overview.vue'
-import Requests from '@/views/Requests.vue'
+import Requests from '@/views/requests/RequestsManagement.vue'
 import Documenttemplates from '@/views/DocumentTemplates.vue'
 import Announcements from '@/views/Announcements.vue'
 import Appointments from '@/views/Appointments.vue'
