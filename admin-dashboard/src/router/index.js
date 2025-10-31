@@ -10,9 +10,10 @@ import Appointments from '@/views/Appointments.vue'
 import CommunityFeedback from '@/views/CommunityFeedback.vue'
 import InformationHub from '@/views/InformationHub.vue'
 import Residents from '@/views/Residents.vue'
-import Utilities from '@/views/Utilities.vue'
 import Auth from '@/views/Auth.vue'
 import CreateAccount from '@/views/CreateAccount.vue'
+import EquipmentManagement from '@/views/equipment/EquipmentManagement.vue'
+
 
 const routes = [
   {
@@ -31,7 +32,7 @@ const routes = [
     path: '/',
     component: AdminLayout,
     redirect: '/overview',
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: false }, //L Login bypass
     children: [
       { path: 'overview', component: Overview },
       { path: 'requests', component: Requests },
@@ -40,8 +41,8 @@ const routes = [
       { path: 'appointments', component: Appointments },
       { path: 'community-feedback', component: CommunityFeedback },
       { path: 'information-hub', component: InformationHub },
-      { path: 'residents', component: Residents },
-      { path: 'utilities', component: Utilities }
+      { path: 'residents', component: Residents },  
+      { path: 'equipment-management', component: EquipmentManagement }
     ]
   }
 ]
@@ -54,7 +55,6 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   const auth = useAuth()
   
-  // Load token from localStorage if not already loaded
   if (!auth.token) {
     auth.loadToken()
   }
@@ -63,15 +63,12 @@ router.beforeEach((to, from, next) => {
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
   const requiresGuest = to.matched.some(record => record.meta.requiresGuest)
 
-  // If page requires auth and user is NOT authenticated
   if (requiresAuth && !isAuthenticated) {
     next('/auth')
   }
-  // If page requires guest (auth/create-account) and user IS authenticated
   else if (requiresGuest && isAuthenticated) {
     next('/overview')
   }
-  // Otherwise, allow navigation
   else {
     next()
   }
