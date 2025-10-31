@@ -5,7 +5,7 @@ import PageTitle from '@/components/shared/PageTitle.vue'
 import PendingTab from '@/views/requests/subtabs/PendingTab.vue'
 import ProcessingTab from '@/views/requests/subtabs/ProcessingTab.vue'
 import ReadyTab from '@/views/requests/subtabs/ReadyTab.vue'
-import CompletedTab from '@/views/requests/subtabs/CompletedTab.vue'
+import ReleasedTab from '@/views/requests/subtabs/ReleasedTab.vue'
 import RejectedTab from '@/views/requests/subtabs/RejectedTab.vue'
 
 const activeTab = ref('pending')
