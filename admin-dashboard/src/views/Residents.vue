@@ -72,7 +72,7 @@ watch([page, query, searchFilter, selectedValues], loadResidents)
 </script>
 
 <template>
-  <div class="p-6 bg-white rounded-md w-[99%] h-[98%] shadow-lg space-y-5">
+  <div class="p-6 bg-white rounded-md w-full h-full space-y-5">
     <header class="flex items-center justify-between mb-8 space-x-5">
       <PageTitle title="Residents Information" />
 
