@@ -1,7 +1,8 @@
 # models.py
-from sqlalchemy import Column, Integer, String, Date, SmallInteger, Boolean, ForeignKey, Text, TIMESTAMP
+from sqlalchemy import Column, Integer, String, Date, SmallInteger, Boolean, ForeignKey, Text, TIMESTAMP, LargeBinary, DateTime
 from sqlalchemy.orm import relationship
 from database import Base
+from sqlalchemy.sql import func
 
 class Resident(Base):
     __tablename__ = "residents"
@@ -76,3 +77,25 @@ class BrgyStaff(Base):
 
     # Relationships
     resident = relationship("Resident", backref="staff")
+
+class RequestType(Base):
+    __tablename__ = "request_types"
+
+    id = Column(Integer, primary_key=True, index=True)
+    request_type_name = Column(String(64))
+    description = Column(Text)
+    template_id = Column(Integer, ForeignKey("templates.id", ondelete="SET NULL", onupdate="CASCADE"))
+    status = Column(String(16), default="active")
+    price = Column(Integer, default=0)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
+
+class Template(Base):
+    __tablename__ = "templates"
+
+    id = Column(Integer, primary_key=True, index=True)
+    template_name = Column(String(64), nullable=False)
+    description = Column(Text)
+    file = Column(LargeBinary)
+    created_at = Column(TIMESTAMP)
+    updated_at = Column(TIMESTAMP)
