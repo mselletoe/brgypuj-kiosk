@@ -90,6 +90,7 @@ CREATE TABLE IF NOT EXISTS templates (
     template_name VARCHAR(64),
     description TEXT,
     file BYTEA,
+    file_name VARCHAR(128),
     request_type_id INT UNIQUE REFERENCES request_types(id) ON DELETE SET NULL ON UPDATE CASCADE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

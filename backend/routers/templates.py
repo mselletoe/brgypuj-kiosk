@@ -7,6 +7,7 @@ from typing import List, Optional
 from datetime import datetime
 from fastapi.responses import StreamingResponse
 from io import BytesIO
+import mimetypes
 
 router = APIRouter(prefix="/templates", tags=["Templates"])
 
@@ -69,6 +70,7 @@ async def upload_template(
         template_name=template_name,
         description=description,
         file=content,
+        file_name=file.filename,
         request_type_id=request_type_id if request_type_id else None,
     )
     db.add(new_template)
@@ -148,12 +150,14 @@ def download_template(template_id: int, db: Session = Depends(get_db)):
     if not template or not template.file:
         raise HTTPException(status_code=404, detail="File not found")
 
-    return StreamingResponse(
-        BytesIO(template.file),
-        media_type="application/octet-stream",
-        headers={"Content-Disposition": f"attachment; filename={template.template_name}.docx"}
-    )
+    file_stream = BytesIO(template.file)
+    file_name = template.file_name or f"{template.template_name}.bin"
 
+    import mimetypes
+    mime_type, _ = mimetypes.guess_type(file_name)
+    response = StreamingResponse(file_stream, media_type=mime_type or "application/octet-stream")
+    response.headers["Content-Disposition"] = f"inline; filename={file_name}"
+    return response
 
 # ------------------------------
 # Delete template
