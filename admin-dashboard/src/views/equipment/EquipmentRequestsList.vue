@@ -321,7 +321,7 @@ const tabs = ['Pending', 'Approved', 'Picked-Up', 'Returned', 'Rejected'];
           {{ index + 1 }}
         </div>
 
-        <div class="flex-1 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 mb-4 sm:mb-0">
+        <div class="flex-grow grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 mb-4 sm:mb-0">
           
           <div class="col-span-2 text-lg font-semibold text-gray-800">
             {{ formatItems(request.items) }}
@@ -356,7 +356,7 @@ const tabs = ['Pending', 'Approved', 'Picked-Up', 'Returned', 'Rejected'];
 
         </div>
 
-        <div class="flex-shrink-0 sm:w-64 flex flex-col items-end space-y-2 w-full sm:w-auto sm:ml-4">
+        <div class="flex-shrink-0 w-full sm:w-64 sm:ml-4 flex flex-col items-end space-y-2">
           <div class="text-xl font-bold text-green-700">₱{{ request.totalCost.toLocaleString() }}</div>
           <div class="flex flex-wrap gap-2 justify-end">
             
