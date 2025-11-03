@@ -4,6 +4,7 @@ import api from '@/api/api'
 import { NDataTable, NInput, NButton, useMessage } from 'naive-ui'
 import PageTitle from '@/components/shared/PageTitle.vue'
 import Templates from './Templates.vue'
+import requestTypesApi from '@/api/requestTypes'
 
 const message = useMessage()
 const services = ref([])
@@ -19,32 +20,53 @@ const newService = ref({
 const pagination = { pageSize: 5 }
 
 async function fetchServices() {
-  const res = await api.get('/request-types/')
-  services.value = res.data
+  try {
+    const res = await requestTypesApi.getAll()
+    services.value = res.data
+  } catch (err) {
+    console.error(err)
+    message.error('Failed to load services.')
+  }
 }
 
 async function addService() {
   if (!newService.value.request_type_name.trim()) {
     return message.warning('Please enter a service name.')
   }
-  await api.post('/request-types/', newService.value)
-  message.success('Service added!')
-  newService.value = { request_type_name: '', description: '', price: 0 }
-  fetchServices()
+
+  try {
+    await requestTypesApi.create(newService.value)
+    message.success('Service added!')
+    newService.value = { request_type_name: '', description: '', price: 0 }
+    fetchServices()
+  } catch (err) {
+    console.error(err)
+    message.error('Failed to add service.')
+  }
 }
 
 async function updateService(service) {
-  await api.put(`/request-types/${service.id}`, service)
-  editingId.value = null
-  message.success('Service updated!')
-  fetchServices()
+  try {
+    await requestTypesApi.update(service.id, service)
+    editingId.value = null
+    message.success('Service updated!')
+    fetchServices()
+  } catch (err) {
+    console.error(err)
+    message.error('Failed to update service.')
+  }
 }
 
 async function deleteService(id) {
-  if (confirm('Are you sure you want to delete this service?')) {
-    await api.delete(`/request-types/${id}`)
+  if (!confirm('Are you sure you want to delete this service?')) return
+
+  try {
+    await requestTypesApi.delete(id)
     message.success('Service deleted!')
     fetchServices()
+  } catch (err) {
+    console.error(err)
+    message.error('Failed to delete service.')
   }
 }
 
