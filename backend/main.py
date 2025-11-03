@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import residents_table, rfid_uid, resident_routes, users, admin_auth, request_types
+from routers import residents_table, rfid_uid, resident_routes, users, admin_auth, request_types, templates
 
 app = FastAPI(title="Kiosk Backend API")
 
@@ -24,6 +24,7 @@ app.include_router(resident_routes.router)
 app.include_router(users.router)
 app.include_router(admin_auth.router)
 app.include_router(request_types.router)
+app.include_router(templates.router)
 
 @app.get("/")
 def root():

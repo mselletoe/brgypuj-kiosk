@@ -17,7 +17,7 @@ const masterEquipmentList = ref([
 </script>
 
 <template>
-  <div class="p-6 bg-gray-50 min-h-screen">
+  <div class="p-6 bg-white min-h-screen rounded-md w-full space-y-5">
     
     <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
       <h1 class="text-3xl font-bold text-gray-800">

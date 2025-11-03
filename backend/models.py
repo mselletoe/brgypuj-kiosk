@@ -84,11 +84,13 @@ class RequestType(Base):
     id = Column(Integer, primary_key=True, index=True)
     request_type_name = Column(String(64))
     description = Column(Text)
-    template_id = Column(Integer, ForeignKey("templates.id", ondelete="SET NULL", onupdate="CASCADE"))
     status = Column(String(16), default="active")
     price = Column(Integer, default=0)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
+
+    # Relationship
+    template = relationship("Template", back_populates="request_type", uselist=False)
 
 class Template(Base):
     __tablename__ = "templates"
@@ -97,5 +99,8 @@ class Template(Base):
     template_name = Column(String(64), nullable=False)
     description = Column(Text)
     file = Column(LargeBinary)
-    created_at = Column(TIMESTAMP)
-    updated_at = Column(TIMESTAMP)
+    request_type_id = Column(Integer, ForeignKey("request_types.id", ondelete="SET NULL", onupdate="CASCADE"), unique=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
+
+    request_type = relationship("RequestType", back_populates="template")

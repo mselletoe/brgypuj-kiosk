@@ -3,17 +3,20 @@ import { ref, onMounted, h } from 'vue'
 import api from '@/api/api'
 import { NDataTable, NInput, NButton, useMessage } from 'naive-ui'
 import PageTitle from '@/components/shared/PageTitle.vue'
+import Templates from './Templates.vue'
 
 const message = useMessage()
 const services = ref([])
 const editingId = ref(null)
+const showTemplates = ref(false)
+
 const newService = ref({
   request_type_name: '',
   description: '',
   price: 0,
 })
 
-const pagination = { pageSize: 10 }
+const pagination = { pageSize: 5 }
 
 async function fetchServices() {
   const res = await api.get('/request-types/')
@@ -165,10 +168,24 @@ onMounted(fetchServices)
 </script>
 
 <template>
-  <div class="p-6 bg-white rounded-md w-full h-full space-y-5">
-    <PageTitle title="Document Services Management" />
- 
-    <div class="bg-white p-6 rounded-lg shadow-md">
+  <div class="p-6 bg-white min-h-screen rounded-md w-full space-y-5">
+    <!------------------------ Header ------------------------>
+    <div class="flex items-center justify-between">
+      <PageTitle title="Document Services Management" />
+      <button
+        @click="showTemplates = !showTemplates"
+        :class="[
+          'px-4 py-2 rounded-md font-medium text-sm transition',
+          showTemplates
+            ? 'bg-[#0957FF] text-white shadow-md'
+            : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-100'
+        ]"
+      >
+        Templates
+      </button> 
+    </div>
+
+    <div v-if="!showTemplates" class="bg-white p-6 rounded-lg shadow-md">
       <div class="flex items-center space-x-3 mb-6">
         <n-input v-model:value="newService.request_type_name" placeholder="Service Name" style="width: 200px" />
         <n-input v-model:value="newService.description" placeholder="Description" style="width: 250px" />
@@ -182,6 +199,11 @@ onMounted(fetchServices)
         :bordered="true"
         :pagination="pagination"
       />
+
+    </div>
+
+    <div v-else>
+      <Templates />
     </div>
   </div>
 </template>

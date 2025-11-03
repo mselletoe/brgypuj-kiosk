@@ -71,6 +71,18 @@ CREATE TABLE IF NOT EXISTS brgy_staff (
 );
 
 -- ==============================
+--  TABLE: request_types
+-- ==============================
+CREATE TABLE IF NOT EXISTS request_types (
+    id SERIAL PRIMARY KEY,
+    request_type_name VARCHAR(64),
+    description TEXT,
+    status TEXT CHECK (status IN ('active', 'inactive')) DEFAULT 'active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ==============================
 --  TABLE: templates
 -- ==============================
 CREATE TABLE IF NOT EXISTS templates (
@@ -78,19 +90,7 @@ CREATE TABLE IF NOT EXISTS templates (
     template_name VARCHAR(64),
     description TEXT,
     file BYTEA,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- ==============================
---  TABLE: request_types
--- ==============================
-CREATE TABLE IF NOT EXISTS request_types (
-    id SERIAL PRIMARY KEY,
-    request_type_name VARCHAR(64),
-    description TEXT,
-    template_id INT REFERENCES templates(id) ON DELETE SET NULL ON UPDATE CASCADE,
-    status TEXT CHECK (status IN ('active', 'inactive')) DEFAULT 'active',
+    request_type_id INT UNIQUE REFERENCES request_types(id) ON DELETE SET NULL ON UPDATE CASCADE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
