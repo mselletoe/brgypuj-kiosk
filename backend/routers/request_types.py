@@ -12,7 +12,6 @@ router = APIRouter( prefix="/request-types", tags=["Request Types"] )
 class RequestTypeBase(BaseModel):
     request_type_name: str
     description: Optional[str] = None
-    template_id: Optional[int] = None
     status: Optional[str] = "active"
     price: Optional[float] = 0.0
 

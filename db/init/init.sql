@@ -78,6 +78,7 @@ CREATE TABLE IF NOT EXISTS request_types (
     request_type_name VARCHAR(64),
     description TEXT,
     status TEXT CHECK (status IN ('active', 'inactive')) DEFAULT 'active',
+    price NUMERIC(10,2) DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
