@@ -64,7 +64,7 @@ CREATE TABLE IF NOT EXISTS brgy_staff (
     id SMALLSERIAL PRIMARY KEY,
     resident_id SMALLINT REFERENCES residents(id) ON DELETE CASCADE ON UPDATE CASCADE,
     email VARCHAR(64) UNIQUE,
-    password TEXT, -- store hashed password
+    password TEXT,
     role VARCHAR(128),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     is_active BOOLEAN DEFAULT TRUE

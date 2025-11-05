@@ -21136,47 +21136,6 @@ VALUES (9, 745, 'staff9@example.com', '$2b$12$USUMFDSBE5GtQ6OeQTFiFeEdFakBynijTq
 INSERT INTO brgy_staff (id, resident_id, email, password, role, created_at, is_active)
 VALUES (10, 246, 'staff10@example.com', '$2b$12$egnojTxFg6W5/NKn9w1ODewLWoB3mnNiq47gY/fwSqqlFJgsF.1Pi', 'Encoder', NOW(), TRUE);
 
-
-INSERT INTO templates (id, template_name, description, created_at, updated_at)
-VALUES (1, 'Template 1', 'Description 1', NOW(), NOW());
-
-
-INSERT INTO templates (id, template_name, description, created_at, updated_at)
-VALUES (2, 'Template 2', 'Description 2', NOW(), NOW());
-
-
-INSERT INTO templates (id, template_name, description, created_at, updated_at)
-VALUES (3, 'Template 3', 'Description 3', NOW(), NOW());
-
-
-INSERT INTO templates (id, template_name, description, created_at, updated_at)
-VALUES (4, 'Template 4', 'Description 4', NOW(), NOW());
-
-
-INSERT INTO templates (id, template_name, description, created_at, updated_at)
-VALUES (5, 'Template 5', 'Description 5', NOW(), NOW());
-
-
-INSERT INTO request_types (id, request_type_name, description, template_id, status, created_at, updated_at)
-VALUES (1, 'Request Type 1', 'Description 1', 1, 'active', NOW(), NOW());
-
-
-INSERT INTO request_types (id, request_type_name, description, template_id, status, created_at, updated_at)
-VALUES (2, 'Request Type 2', 'Description 2', 2, 'active', NOW(), NOW());
-
-
-INSERT INTO request_types (id, request_type_name, description, template_id, status, created_at, updated_at)
-VALUES (3, 'Request Type 3', 'Description 3', 3, 'active', NOW(), NOW());
-
-
-INSERT INTO request_types (id, request_type_name, description, template_id, status, created_at, updated_at)
-VALUES (4, 'Request Type 4', 'Description 4', 4, 'active', NOW(), NOW());
-
-
-INSERT INTO request_types (id, request_type_name, description, template_id, status, created_at, updated_at)
-VALUES (5, 'Request Type 5', 'Description 5', 5, 'active', NOW(), NOW());
-
-
 INSERT INTO requests (resident_id, request_type_id, processed_by, rejected_by, purpose, status, created_at, updated_at)
 VALUES (730, 1, 5, NULL, 'Sample request', 'ready', NOW(), NOW());
 
