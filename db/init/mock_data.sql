@@ -21135,14 +21135,3 @@ VALUES (9, 745, 'staff9@example.com', '$2b$12$USUMFDSBE5GtQ6OeQTFiFeEdFakBynijTq
 
 INSERT INTO brgy_staff (id, resident_id, email, password, role, created_at, is_active)
 VALUES (10, 246, 'staff10@example.com', '$2b$12$egnojTxFg6W5/NKn9w1ODewLWoB3mnNiq47gY/fwSqqlFJgsF.1Pi', 'Encoder', NOW(), TRUE);
-
-INSERT INTO requests (resident_id, request_type_id, processed_by, rejected_by, purpose, status, created_at, updated_at)
-VALUES (730, 1, 5, NULL, 'Sample request', 'ready', NOW(), NOW());
-
-
-INSERT INTO requests (resident_id, request_type_id, processed_by, rejected_by, purpose, status, created_at, updated_at)
-VALUES (622, 5, 7, NULL, 'Sample request', 'ready', NOW(), NOW());
-
-
-INSERT INTO requests (resident_id, request_type_id, processed_by, rejected_by, purpose, status, created_at, updated_at)
-VALUES (362, 2, 5, NULL, 'Sample request', 'ready', NOW(), NOW());
