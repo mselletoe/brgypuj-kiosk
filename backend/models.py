@@ -1,5 +1,5 @@
 # models.py
-from sqlalchemy import Column, Integer, String, Date, SmallInteger, Boolean, ForeignKey, Text, TIMESTAMP, LargeBinary, DateTime
+from sqlalchemy import Column, Integer, String, Date, SmallInteger, Boolean, ForeignKey, Text, TIMESTAMP, LargeBinary, DateTime, JSON
 from sqlalchemy.orm import relationship
 from database import Base
 from sqlalchemy.sql import func
@@ -86,6 +86,7 @@ class RequestType(Base):
     description = Column(Text)
     status = Column(String(16), default="active")
     price = Column(Integer, default=0)
+    fields = Column(JSON, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
 

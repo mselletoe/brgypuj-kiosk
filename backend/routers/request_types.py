@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models import RequestType
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Any
 from datetime import datetime
 
 router = APIRouter( prefix="/request-types", tags=["Request Types"] )
@@ -14,6 +14,7 @@ class RequestTypeBase(BaseModel):
     description: Optional[str] = None
     status: Optional[str] = "active"
     price: Optional[float] = 0.0
+    fields: Optional[List[Any]] = []
 
 class RequestTypeCreate(RequestTypeBase):
     pass

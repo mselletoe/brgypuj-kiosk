@@ -1,12 +1,16 @@
 <script setup>
 import { ref, onMounted, h } from 'vue'
-import api from '@/api/api'
-import { NDataTable, NInput, NButton, useMessage } from 'naive-ui'
+import { NDataTable, NInput, NButton, NModal, NSelect, NCheckbox, useMessage } from 'naive-ui'
 import PageTitle from '@/components/shared/PageTitle.vue'
 import Templates from './Templates.vue'
 import requestTypesApi from '@/api/requestTypes'
+import FieldEditor from './FieldEditor.vue'
 
 const message = useMessage()
+
+// ======================================
+// Services Data
+// ======================================
 const services = ref([])
 const editingId = ref(null)
 const showTemplates = ref(false)
@@ -19,6 +23,9 @@ const newService = ref({
 
 const pagination = { pageSize: 5 }
 
+// ======================================
+// Fetch Services
+// ======================================
 async function fetchServices() {
   try {
     const res = await requestTypesApi.getAll()
@@ -29,15 +36,21 @@ async function fetchServices() {
   }
 }
 
+// ======================================
+// CRUD Handlers
+// ======================================
 async function addService() {
   if (!newService.value.request_type_name.trim()) {
     return message.warning('Please enter a service name.')
   }
 
   try {
-    await requestTypesApi.create(newService.value)
+    await requestTypesApi.create({
+      ...newService.value,
+      fields: newService.value.fields || []
+    })
     message.success('Service added!')
-    newService.value = { request_type_name: '', description: '', price: 0 }
+    newService.value = { request_type_name: '', description: '', price: 0, fields: [] }
     fetchServices()
   } catch (err) {
     console.error(err)
@@ -47,7 +60,10 @@ async function addService() {
 
 async function updateService(service) {
   try {
-    await requestTypesApi.update(service.id, service)
+    await requestTypesApi.update(service.id, {
+      ...service,
+      fields: service.fields || []
+    })
     editingId.value = null
     message.success('Service updated!')
     fetchServices()
@@ -74,12 +90,34 @@ function startEdit(id) {
   editingId.value = id
 }
 
+// ======================================
+// Field Configuration Modal
+// ======================================
+const editingFields = ref(null)
+const showFieldModal = ref(false)
+
+function editFields(service) {
+  editingFields.value = {
+    fields: JSON.parse(JSON.stringify(service.fields || [])), // clone array
+    serviceId: service.id
+  }
+  showFieldModal.value = true
+}
+
+function saveFields(updatedFields, serviceId) {
+  const service = services.value.find(s => s.id === serviceId)
+  if (service) {
+    service.fields = updatedFields
+    updateService(service)
+  }
+  showFieldModal.value = false
+}
+
+// ======================================
+// Table Columns
+// ======================================
 const columns = [
-  {
-    title: 'ID',
-    key: 'id',
-    width: 70,
-  },
+  { title: 'ID', key: 'id', width: 70 },
   {
     title: 'Name',
     key: 'request_type_name',
@@ -87,13 +125,11 @@ const columns = [
       if (editingId.value === row.id) {
         return h(NInput, {
           value: row.request_type_name,
-          onUpdateValue(v) {
-            row.request_type_name = v
-          },
+          onUpdateValue(v) { row.request_type_name = v }
         })
       }
       return row.request_type_name
-    },
+    }
   },
   {
     title: 'Description',
@@ -102,13 +138,11 @@ const columns = [
       if (editingId.value === row.id) {
         return h(NInput, {
           value: row.description,
-          onUpdateValue(v) {
-            row.description = v
-          },
+          onUpdateValue(v) { row.description = v }
         })
       }
       return row.description
-    },
+    }
   },
   {
     title: 'Price',
@@ -119,71 +153,32 @@ const columns = [
         return h(NInput, {
           value: row.price,
           type: 'number',
-          onUpdateValue(v) {
-            row.price = Number(v)
-          },
+          onUpdateValue(v) { row.price = Number(v) }
         })
       }
       return `₱${parseFloat(row.price).toFixed(2)}`
-    },
+    }
   },
-  {
-    title: 'Status',
-    key: 'status',
-    width: 100,
-  },
+  { title: 'Status', key: 'status', width: 100 },
   {
     title: 'Actions',
     key: 'actions',
-    width: 200,
+    width: 350,
     render(row) {
       if (editingId.value === row.id) {
         return [
-          h(
-            NButton,
-            {
-              type: 'success',
-              size: 'small',
-              onClick: () => updateService(row),
-            },
-            { default: () => 'Save' }
-          ),
-          h(
-            NButton,
-            {
-              type: 'default',
-              size: 'small',
-              onClick: () => (editingId.value = null),
-              style: 'margin-left: 8px;',
-            },
-            { default: () => 'Cancel' }
-          ),
+          h(NButton, { type: 'success', size: 'small', onClick: () => updateService(row) }, { default: () => 'Save' }),
+          h(NButton, { type: 'default', size: 'small', onClick: () => (editingId.value = null), style: 'margin-left: 8px;' }, { default: () => 'Cancel' }),
         ]
       }
 
       return [
-        h(
-          NButton,
-          {
-            type: 'primary',
-            size: 'small',
-            onClick: () => startEdit(row.id),
-          },
-          { default: () => 'Edit' }
-        ),
-        h(
-          NButton,
-          {
-            type: 'error',
-            size: 'small',
-            onClick: () => deleteService(row.id),
-            style: 'margin-left: 8px;',
-          },
-          { default: () => 'Delete' }
-        ),
+        h(NButton, { type: 'primary', size: 'small', onClick: () => startEdit(row.id) }, { default: () => 'Edit' }),
+        h(NButton, { type: 'error', size: 'small', onClick: () => deleteService(row.id), style: 'margin-left: 8px;' }, { default: () => 'Delete' }),
+        h(NButton, { type: 'info', size: 'small', onClick: () => editFields(row), style: 'margin-left: 8px;' }, { default: () => 'Configure Fields' }),
       ]
-    },
-  },
+    }
+  }
 ]
 
 onMounted(fetchServices)
@@ -227,5 +222,14 @@ onMounted(fetchServices)
     <div v-else>
       <Templates />
     </div>
+    
+    <!----------------- Field Editor Modal ----------------->
+    <FieldEditor
+      :show="showFieldModal"
+      :fields-data="editingFields?.fields"
+      @close="showFieldModal = false"
+      @saved="saveFields"
+      :service-id="editingFields?.serviceId"
+    />
   </div>
 </template>
