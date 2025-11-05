@@ -39,11 +39,11 @@ import {
 
         <li>
           <router-link
-            to="/document-templates"
+            to="/document-services"
             class="flex items-center gap-3 w-full py-3 px-4 font-normal rounded-md text-[#535353]"
           >
             <FolderIcon class="w-5 h-5" />
-            Document Templates
+            Document Services
           </router-link>
         </li>
 
@@ -103,7 +103,7 @@ import {
             class="flex items-center gap-3 w-full py-3 px-4 font-normal rounded-md text-[#535353]"
           >
             <DocumentCheckIcon class="w-5 h-5" />
-            Equipment Request Management
+            Equipment Request
           </router-link> 
         </li>
 

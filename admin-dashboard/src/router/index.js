@@ -4,7 +4,11 @@ import { useAuth } from '@/stores/authStore'
 import AdminLayout from '@/layouts/AdminLayout.vue'
 import Overview from '@/views/Overview.vue'
 import Requests from '@/views/requests/RequestsManagement.vue'
+<<<<<<< HEAD
 import Documenttemplates from '@/views/docutemp/DocumentTemplates.vue'
+=======
+import DocumentServices from '@/views/document-services/DocumentServices.vue'
+>>>>>>> 9719b0fd1a9a5ec9ab17f1d6660cbdcaa63e4a44
 import Announcements from '@/views/Announcements.vue'
 import Appointments from '@/views/Appointments.vue'
 import CommunityFeedback from '@/views/CommunityFeedback.vue'
@@ -36,7 +40,7 @@ const routes = [
     children: [
       { path: 'overview', component: Overview },
       { path: 'requests', component: Requests },
-      { path: 'document-templates', component: Documenttemplates },
+      { path: 'document-services', component: DocumentServices },
       { path: 'announcements', component: Announcements },
       { path: 'appointments', component: Appointments },
       { path: 'community-feedback', component: CommunityFeedback },

@@ -5,6 +5,7 @@ import PageTitle from '@/components/shared/PageTitle.vue'
 import PendingTab from '@/views/requests/subtabs/PendingTab.vue'
 import ProcessingTab from '@/views/requests/subtabs/ProcessingTab.vue'
 import ReadyTab from '@/views/requests/subtabs/ReadyTab.vue'
+import ReleasedTab from '@/views/requests/subtabs/ReleasedTab.vue'
 import RejectedTab from '@/views/requests/subtabs/RejectedTab.vue'
 
 const activeTab = ref('pending')
@@ -27,8 +28,8 @@ const activeTab = ref('pending')
         <ReadyTab />
       </n-tab-pane>
       
-      <n-tab-pane name="completed" tab="Completed">
-        <CompletedTab />
+      <n-tab-pane name="released" tab="Released">
+        <ReleasedTab />
       </n-tab-pane>
       
       <n-tab-pane name="rejected" tab="Rejected">
