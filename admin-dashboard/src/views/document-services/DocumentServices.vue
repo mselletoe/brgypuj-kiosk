@@ -188,7 +188,7 @@ const columns = [
       }
 
       return [
-        h(NButton, { type: 'primary', size: 'small', onClick: () => startEdit(row.id) }, { default: () => 'Edit' }),
+        h(NButton, { type: 'warning', size: 'small', onClick: () => startEdit(row.id) }, { default: () => 'Edit' }),
         h(NButton, { type: 'error', size: 'small', onClick: () => deleteService(row.id), style: 'margin-left: 8px;' }, { default: () => 'Delete' }),
         h(NButton, { type: 'info', size: 'small', onClick: () => editFields(row), style: 'margin-left: 8px;' }, { default: () => 'Configure Fields' }),
       ]
