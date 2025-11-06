@@ -15,6 +15,7 @@ class RequestTypeBase(BaseModel):
     status: Optional[str] = "active"
     price: Optional[float] = 0.0
     fields: Optional[List[Any]] = []
+    available: Optional[bool] = True
 
 class RequestTypeCreate(RequestTypeBase):
     pass

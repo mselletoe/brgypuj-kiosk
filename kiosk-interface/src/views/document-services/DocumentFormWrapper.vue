@@ -28,7 +28,8 @@ const fetchConfigs = async () => {
       const slug = type.request_type_name.toLowerCase().replace(/\s+/g, '-')
       documentConfigs.value[slug] = {
         title: type.request_type_name,
-        fields: type.fields || []
+        fields: type.fields || [],
+        available: type.available ?? true
       }
     })
   } catch (err) {
@@ -104,7 +105,7 @@ const handleSubmit = async (data) => {
     <!-- Form Box -->
     <div class="border-[2px] border-[#00203C] rounded-2xl p-10 shadow-md bg-white">
       <DocumentForm
-        v-if="currentStep === 'form' && config"
+        v-if="currentStep === 'form' && config?.available"
         :config="config"
         :initial-data="formData"
         @continue="handleSubmit"

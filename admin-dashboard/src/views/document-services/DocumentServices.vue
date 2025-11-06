@@ -19,9 +19,10 @@ const newService = ref({
   request_type_name: '',
   description: '',
   price: 0,
+  available: true,
 })
 
-const pagination = { pageSize: 5 }
+const pagination = { pageSize: 8 }
 
 // ======================================
 // Fetch Services
@@ -50,7 +51,7 @@ async function addService() {
       fields: newService.value.fields || []
     })
     message.success('Service added!')
-    newService.value = { request_type_name: '', description: '', price: 0, fields: [] }
+    newService.value = { request_type_name: '', description: '', price: 0, available: true, fields: [] }
     fetchServices()
   } catch (err) {
     console.error(err)
@@ -159,11 +160,25 @@ const columns = [
       return `₱${parseFloat(row.price).toFixed(2)}`
     }
   },
+  {
+    title: 'Available',
+    key: 'available',
+    width: 120,
+    render(row) {
+      if (editingId.value === row.id) {
+        return h(NCheckbox, {
+          checked: row.available, 
+          onUpdateChecked(v) { row.available = v } 
+        })
+      }
+      return row.available ? 'Yes' : 'No'
+    }
+  },
   { title: 'Status', key: 'status', width: 100 },
   {
     title: 'Actions',
     key: 'actions',
-    width: 350,
+    width: 400,
     render(row) {
       if (editingId.value === row.id) {
         return [
@@ -207,6 +222,7 @@ onMounted(fetchServices)
         <n-input v-model:value="newService.request_type_name" placeholder="Service Name" style="width: 200px" />
         <n-input v-model:value="newService.description" placeholder="Description" style="width: 250px" />
         <n-input v-model:value="newService.price" type="number" placeholder="Price" style="width: 120px" />
+        <NCheckbox v-model:checked="newService.available">Available</NCheckbox>
         <n-button type="primary" @click="addService">Add</n-button>
       </div>
 
