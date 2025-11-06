@@ -13,4 +13,16 @@
     min-height: 100vh;
     background-color: #EEF2F9;
   }
+
+  .n-button,
+  .n-input,
+  .n-select,
+  .n-checkbox,
+  .n-modal,
+  .n-card,
+  .n-base-selection,
+  .n-base-selection-input,
+  .n-base-select-option {
+    font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif !important;
+  }
 }
