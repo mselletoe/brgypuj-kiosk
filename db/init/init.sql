@@ -64,7 +64,7 @@ CREATE TABLE IF NOT EXISTS brgy_staff (
     id SMALLSERIAL PRIMARY KEY,
     resident_id SMALLINT REFERENCES residents(id) ON DELETE CASCADE ON UPDATE CASCADE,
     email VARCHAR(64) UNIQUE,
-    password TEXT, -- store hashed password
+    password TEXT,
     role VARCHAR(128),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     is_active BOOLEAN DEFAULT TRUE
@@ -78,6 +78,9 @@ CREATE TABLE IF NOT EXISTS request_types (
     request_type_name VARCHAR(64),
     description TEXT,
     status TEXT CHECK (status IN ('active', 'inactive')) DEFAULT 'active',
+    price NUMERIC(10,2) DEFAULT 0,
+    fields JSON DEFAULT '[]',
+    available BOOLEAN DEFAULT true,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

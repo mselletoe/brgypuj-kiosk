@@ -1,9 +1,10 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import DocumentForm from './DocumentForm.vue'
 import ArrowBackButton from '@/components/shared/ArrowBackButton.vue' 
 import Modal from '@/components/shared/Modal.vue'
+import { fetchRequestTypes } from '@/api/requestTypes'
 
 const route = useRoute()
 const router = useRouter()
@@ -14,71 +15,44 @@ const showSuccessModal = ref(false)
 const isFadingOut = ref(false) 
 const docType = computed(() => route.params.docType)
 
-// Document configurations
-const documentConfigs = {
-  'barangay-clearance': {
-    title: 'Barangay Clearance',
-    fields: [
-      { name: 'fullName', label: 'First Name', type: 'text', required: true, placeholder: 'Juan' },
-      { name: 'lastName', label: 'Last Name', type: 'text', required: true, placeholder: 'Dela Cruz' },
-      { name: 'purpose', label: 'Purpose', type: 'select', required: true, options: ['Financial Assistance', 'Educational Assistance','Others'] },
-    ]
-  },
-  'barangay-id': {
-    title: 'Barangay ID',
-    fields: [
-      { name: 'firstName', label: 'First Name', type: 'text', required: true, placeholder: 'Juan' },
-      { name: 'lastName', label: 'Last Name', type: 'text', required: true, placeholder: 'Dela Cruz' },
-      { name: 'address', label: 'Complete Address', type: 'textarea', required: true, placeholder: 'Street, Barangay, City' },
-      { name: 'birthDate', label: 'Date of Birth', type: 'date', required: true },
-      { name: 'gender', label: 'Gender', type: 'select', required: true, options: ['Male', 'Female'] },
-      { name: 'civilStatus', label: 'Civil Status', type: 'select', required: true, options: ['Single', 'Married', 'Widowed', 'Separated'] },
-      { name: 'contactNumber', label: 'Contact Number', type: 'tel', required: true, placeholder: '09123456789' },
-      { name: 'emergencyContact', label: 'Emergency Contact Name', type: 'text', required: true, placeholder: 'Full Name' },
-      { name: 'emergencyNumber', label: 'Emergency Contact Number', type: 'tel', required: true, placeholder: '09123456789' },
-    ]
-  },
-  'indigency': {
-    title: 'Certificate of Indigency',
-    fields: [
-      { name: 'fullName', label: 'First Name', type: 'text', required: true, placeholder: 'Juan' },
-      { name: 'lastName', label: 'Last Name', type: 'text', required: true, placeholder: 'Dela Cruz' },
-      { name: 'assistance', label: 'Type of Assistance', type: 'select', required: true, options: ['Financial Assistance', 'Educational Assistance','Others'] },
-    ]
-  },
-  'business-permit': {
-    title: 'Business Permit',
-    fields: [
-      { name: 'businessName', label: 'Business Name', type: 'text', required: true, placeholder: 'ABC Trading' },
-      { name: 'businessAddress', label: 'Business Address', type: 'textarea', required: true, placeholder: 'Street, Barangay, City' },
-      { name: 'businessType', label: 'Type of Business', type: 'select', required: true, options: ['Retail', 'Service', 'Food', 'Manufacturing', 'Other'] },
-      { name: 'ownerName', label: 'Owner Full Name', type: 'text', required: true, placeholder: 'Juan Dela Cruz' },
-      { name: 'ownerAddress', label: 'Owner Address', type: 'textarea', required: true, placeholder: 'Street, Barangay, City' },
-      { name: 'tin', label: 'TIN', type: 'text', required: true, placeholder: '000-000-000-000' },
-      { name: 'contactNumber', label: 'Contact Number', type: 'tel', required: true, placeholder: '09123456789' },
-      { name: 'email', label: 'Email Address', type: 'email', required: false, placeholder: 'email@example.com' },
-      { name: 'startDate', label: 'Expected Start Date', type: 'date', required: true },
-    ]
+
+// ==================================
+// Fetch dynamic configs
+// ==================================
+const documentConfigs = ref({})
+
+const fetchConfigs = async () => {
+  try {
+    const types = await fetchRequestTypes()
+    types.forEach(type => {
+      const slug = type.request_type_name.toLowerCase().replace(/\s+/g, '-')
+      documentConfigs.value[slug] = {
+        title: type.request_type_name,
+        fields: type.fields || [],
+        available: type.available ?? true
+      }
+    })
+  } catch (err) {
+    console.error('Failed to fetch request type configs', err)
   }
 }
 
-const config = computed(() => documentConfigs[docType.value])
+onMounted(fetchConfigs)
 
+// ==================================
+// Computer for current config
+// ==================================
+const config = computed(() => documentConfigs.value[docType.value])
+
+
+// ==================================
+// Navigation
+// ==================================
 const goBack = () => {
   if (currentStep.value === 'preview') {
     currentStep.value = 'form'
   } else {
     router.push('/document-services')
-  }
-}
-
-const handleSubmit = async () => {
-  try {
-    console.log('Submitting:', { docType: docType.value, data: formData.value })
-    showSuccessModal.value = true
-  } catch (error) {
-    console.error('Submission failed:', error)
-    alert('Failed to submit request. Please try again.')
   }
 }
 
@@ -89,8 +63,22 @@ const closeModal = () => {
     formData.value = {}
     currentStep.value = 'form'
     isFadingOut.value = false
-    router.push('/home') 
-  }, 500) // match transition duration
+    router.push('/home')
+  }, 500)
+}
+
+// ==================================
+// Form Submission
+// ==================================
+const handleSubmit = async (data) => {
+  try {
+    formData.value = data
+    console.log('Submitting:', { docType: docType.value, data })
+    showSuccessModal.value = true
+  } catch (err) {
+    console.error('Submission failed', err)
+    alert('Failed to submit request.')
+  }
 }
 </script>
 
@@ -117,7 +105,7 @@ const closeModal = () => {
     <!-- Form Box -->
     <div class="border-[2px] border-[#00203C] rounded-2xl p-10 shadow-md bg-white">
       <DocumentForm
-        v-if="currentStep === 'form' && config"
+        v-if="currentStep === 'form' && config?.available"
         :config="config"
         :initial-data="formData"
         @continue="handleSubmit"
