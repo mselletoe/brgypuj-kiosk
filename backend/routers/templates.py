@@ -1,3 +1,25 @@
+"""
+================================================================================
+File: templates.py
+Description:
+    This module manages the uploading, updating, retrieval, downloading, and
+    deletion of document templates within the system.
+
+    Templates represent pre-designed files (such as official document forms)
+    that are linked to specific request types. Each template record may store:
+      • Template name and description
+      • File binary content and filename
+      • Related request type (if applicable)
+      • Metadata such as creation and update timestamps
+
+    The routes provided here support:
+      • Uploading and updating template files
+      • Listing all templates with request type names
+      • Downloading stored template files
+      • Deleting templates from the database
+================================================================================
+"""
+
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from database import get_db
@@ -9,12 +31,14 @@ from fastapi.responses import StreamingResponse
 from io import BytesIO
 import mimetypes
 
+# ==================================
+# Initialize Router
+# ==================================
 router = APIRouter(prefix="/templates", tags=["Templates"])
 
-
-# ------------------------------
-# Pydantic output model (safe for JSON)
-# ------------------------------
+# ==================================
+# Pydantic model for output
+# ==================================
 class TemplateOut(BaseModel):
     id: int
     template_name: str
@@ -25,12 +49,12 @@ class TemplateOut(BaseModel):
     updated_at: datetime
 
     class Config:
-        from_attributes = True  # orm_mode equivalent in Pydantic v2
+        from_attributes = True  # Equivalent to orm_mode=True in Pydantic v1
 
 
-# ------------------------------
+# ==================================
 # Get all templates
-# ------------------------------
+# ==================================
 @router.get("/", response_model=List[TemplateOut])
 def get_templates(db: Session = Depends(get_db)):
     templates = (
@@ -39,6 +63,7 @@ def get_templates(db: Session = Depends(get_db)):
         .all()
     )
 
+    # Format query results into JSON-serializable objects
     return [
         {
             "id": t.Template.id,
@@ -52,10 +77,9 @@ def get_templates(db: Session = Depends(get_db)):
         for t in templates
     ]
 
-
-# ------------------------------
+# ==================================
 # Upload a new template
-# ------------------------------
+# ==================================
 @router.post("/", response_model=TemplateOut)
 async def upload_template(
     template_name: str = Form(...),
@@ -66,6 +90,7 @@ async def upload_template(
 ):
     content = await file.read()
 
+    # Create a new template record
     new_template = Template(
         template_name=template_name,
         description=description,
@@ -77,6 +102,7 @@ async def upload_template(
     db.commit()
     db.refresh(new_template)
 
+    # Retrieve related request type name for display
     request_type_name = None
     if request_type_id:
         req_type = db.query(RequestType).filter(RequestType.id == request_type_id).first()
@@ -93,10 +119,9 @@ async def upload_template(
         "updated_at": new_template.updated_at
     }
 
-
-# ------------------------------
+# ==================================
 # Update existing template
-# ------------------------------
+# ==================================
 @router.put("/{template_id}", response_model=TemplateOut)
 async def update_template(
     template_id: int,
@@ -110,7 +135,7 @@ async def update_template(
     if not template:
         raise HTTPException(status_code=404, detail="Template not found")
 
-    # Update basic fields
+    # Update metadata fields if provided
     if template_name:
         template.template_name = template_name
     if description:
@@ -124,6 +149,7 @@ async def update_template(
     db.commit()
     db.refresh(template)
 
+    # Fetch request type name for output
     request_type_name = None
     if template.request_type_id:
         req_type = db.query(RequestType).filter(RequestType.id == template.request_type_id).first()
@@ -140,10 +166,9 @@ async def update_template(
         "updated_at": template.updated_at
     }
 
-
-# ------------------------------
+# ==================================
 # Download template file
-# ------------------------------
+# ==================================
 @router.get("/{template_id}/download")
 def download_template(template_id: int, db: Session = Depends(get_db)):
     template = db.query(Template).filter(Template.id == template_id).first()
@@ -159,9 +184,9 @@ def download_template(template_id: int, db: Session = Depends(get_db)):
     response.headers["Content-Disposition"] = f"inline; filename={file_name}"
     return response
 
-# ------------------------------
+# ==================================
 # Delete template
-# ------------------------------
+# ==================================
 @router.delete("/{id}")
 def delete_template(id: int, db: Session = Depends(get_db)):
     template = db.query(Template).filter(Template.id == id).first()
