@@ -15,7 +15,9 @@ const props = defineProps({
 
 const emit = defineEmits(['continue'])
 
+// ==============================================
 // Initialize form data and errors
+// ==============================================
 const formData = ref({})
 const errors = ref({})
 
@@ -24,20 +26,23 @@ props.config.fields.forEach((field) => {
   errors.value[field.name] = '' // initialize error message
 })
 
+// ==============================================
 // Helper function to format placeholder text
+// ==============================================
 const formatPlaceholder = (placeholder, label) => {
   const text = placeholder || label
   return `e.g. "${text}"`
 }
 
+// ==============================================
+// Validation
+// ==============================================
 const validate = () => {
   let isValid = true
 
   props.config.fields.forEach((field) => {
-    // Clear previous errors
     errors.value[field.name] = ''
 
-    // Check required fields
     if (field.required && !formData.value[field.name]) {
       errors.value[field.name] = 'This field is required'
       isValid = false
@@ -57,17 +62,13 @@ const handleContinue = () => {
 <template>
   <div class="space-y-5">
     <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-      <div
-        v-for="field in config.fields"
-        :key="field.name"
-        class="flex flex-col"
-      >
+      <div v-for="field in config.fields" :key="field.name" class="flex flex-col">
         <label class="block mb-2 font-bold text-[#003A6B]">
           {{ field.label }}
           <span v-if="field.required" class="text-red-500">*</span>
         </label>
 
-        <!-- Text / Email / Tel / Number Input -->
+        <!-- Text / Email / Tel / Number -->
         <input
           v-if="['text', 'email', 'tel', 'number'].includes(field.type)"
           v-model="formData[field.name]"
@@ -90,7 +91,7 @@ const handleContinue = () => {
           ]"
         />
 
-        <!-- VueDatePicker for Date Fields -->
+        <!-- Date Picker -->
         <VueDatePicker
           v-else-if="field.type === 'date'"
           v-model="formData[field.name]"
@@ -133,7 +134,7 @@ const handleContinue = () => {
         >
           <option value="">Select {{ field.label }}</option>
           <option
-            v-for="option in field.options"
+            v-for="option in (Array.isArray(field.options) ? field.options : [])"
             :key="option"
             :value="option"
           >
@@ -151,11 +152,10 @@ const handleContinue = () => {
     <div class="flex justify-end">
       <button
         @click="handleContinue"
-        class="px-8 py-3 bg-[#003A6B] text-white 
-              font-semibold rounded-full hover:bg-[#001F40] transition">
+        class="px-8 py-3 bg-[#003A6B] text-white font-semibold rounded-full hover:bg-[#001F40] transition"
+      >
         Next
       </button>
     </div>
   </div>
 </template>
-

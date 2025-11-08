@@ -1,13 +1,16 @@
 <script setup>
 import { useRoute, useRouter } from 'vue-router'
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import ArrowBackButton from '@/components/shared/ArrowBackButton.vue'
+import { fetchRequestTypes } from '@/api/requestTypes'
 import SuccessModal from '@/components/shared/Modal.vue'
 
 const route = useRoute()
 const router = useRouter() 
 
+// ==========================================
 // Modal control
+// ==========================================
 const showModal = ref(false)
 const handleContinue = () => {
   showModal.value = true
@@ -17,22 +20,45 @@ const handleDone = () => {
   router.push('/home')  
 }
 
+// ==========================================
 // Go back handler
+// ==========================================
 const goBack = () => router.push('/home')
 
-// Checks if we are in the parent page (no document type selected)
+// ==========================================
+// Checks if no document type selected
+// ==========================================
 const isParent = () => !route.params.docType
 
-const documents = [
-  { name: 'Barangay Clearance', type: 'barangay-clearance', fee: 50 },
-  { name: 'Cedula', type: 'cedula', fee: 50 },
-  { name: 'Certificate of Indigency', type: 'indigency', fee: 100 },
-  { name: 'Barangay ID', type: 'barangay-id', fee: 30 },
-]
+// ==========================================
+// Documents type fetched from backend
+// ==========================================
+const documents = ref([])
+const loading = ref(false)
+const error = ref(null)
+
+// ==========================================
+// Fetch data from backend API
+// ==========================================
+const fetchDocuments = async () => {
+  loading.value = true
+  try {
+    const data = await fetchRequestTypes()
+    documents.value = data.filter(item => item.status === 'active')
+  } catch (err) {
+    console.error('Error fetching request types:', err)
+    error.value = err.message
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(fetchDocuments)
 </script>
 
 <template>
   <div>
+    <!-------------------- Header -------------------->
     <div  v-if="isParent()" class="relative py-0 p-8 flex items-start gap-4 mb-6">
       <ArrowBackButton 
         @click="goBack"
@@ -48,34 +74,38 @@ const documents = [
       </div>
     </div>
 
-    <!-- Parent view -->
-    <div v-if="isParent()" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <!-------------------- Loading / Error States -------------------->
+    <div v-if="loading" class="text-center text-gray-500">Loading services...</div>
+    <div v-if="error" class="text-center text-red-500">Failed to load: {{ error }}</div>
+
+    <!-------------------- Parent view -------------------->
+    <div v-if="isParent() && !loading && !error" class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <router-link
         v-for="doc in documents"
         :key="doc.type"
-        :to="`/document-services/${doc.type}`"
+        :to="`/document-services/${doc.request_type_name.toLowerCase().replace(/\s+/g, '-')}`"
         class="group block p-6 rounded-2xl border border-gray-300 shadow-md bg-white 
                hover:bg-[#003A6B] hover:text-white transition-all duration-300 ease-in-out"
       >
         <h2 class="text-[30px] text-[#003A6B] font-bold mb-2 group-hover:text-white
         transition-all duration-300 ease-in-out">
-          {{ doc.name }}
+          {{ doc.request_type_name }}
         </h2>
         <p class="text-gray-500 group-hover:text-gray-100 text-sm mb-4
                   transition-all duration-300 ease-in-out">
-          Select what type of {{ doc.name.toLowerCase() }} you'd like to get
+          {{ doc.description }}
         </p>
 
-        <!-- Fee row -->
+        <!-------------------- Fee row -------------------->
         <div class="flex justify-between items-center font-semibold text-[#003A6B] group-hover:text-white
-                    transition-all duration-300 ease-in-out">
+            transition-all duration-300 ease-in-out">
           <span>Fee:</span>
-          <span>₱{{ doc.fee }}</span>
+          <span>₱{{ doc.price || 0 }}</span>
         </div>
       </router-link>
     </div>
 
-    <!-- Child view (the form page) -->
+    <!-------------------- Child view (the form page) -------------------->
     <router-view v-if="!isParent()" />
   </div>
 </template>

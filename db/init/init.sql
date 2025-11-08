@@ -64,10 +64,25 @@ CREATE TABLE IF NOT EXISTS brgy_staff (
     id SMALLSERIAL PRIMARY KEY,
     resident_id SMALLINT REFERENCES residents(id) ON DELETE CASCADE ON UPDATE CASCADE,
     email VARCHAR(64) UNIQUE,
-    password TEXT, -- store hashed password
+    password TEXT,
     role VARCHAR(128),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     is_active BOOLEAN DEFAULT TRUE
+);
+
+-- ==============================
+--  TABLE: request_types
+-- ==============================
+CREATE TABLE IF NOT EXISTS request_types (
+    id SERIAL PRIMARY KEY,
+    request_type_name VARCHAR(64),
+    description TEXT,
+    status TEXT CHECK (status IN ('active', 'inactive')) DEFAULT 'active',
+    price NUMERIC(10,2) DEFAULT 0,
+    fields JSON DEFAULT '[]',
+    available BOOLEAN DEFAULT true,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ==============================
@@ -78,19 +93,8 @@ CREATE TABLE IF NOT EXISTS templates (
     template_name VARCHAR(64),
     description TEXT,
     file BYTEA,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- ==============================
---  TABLE: request_types
--- ==============================
-CREATE TABLE IF NOT EXISTS request_types (
-    id SERIAL PRIMARY KEY,
-    request_type_name VARCHAR(64),
-    description TEXT,
-    template_id INT REFERENCES templates(id) ON DELETE SET NULL ON UPDATE CASCADE,
-    status TEXT CHECK (status IN ('active', 'inactive')) DEFAULT 'active',
+    file_name VARCHAR(128),
+    request_type_id INT UNIQUE REFERENCES request_types(id) ON DELETE SET NULL ON UPDATE CASCADE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -105,6 +109,7 @@ CREATE TABLE IF NOT EXISTS requests (
     processed_by SMALLINT REFERENCES brgy_staff(id) ON DELETE SET NULL ON UPDATE CASCADE,
     rejected_by SMALLINT REFERENCES brgy_staff(id) ON DELETE SET NULL ON UPDATE CASCADE,
     purpose TEXT,
+    request_file BYTEA,
     status TEXT CHECK (status IN ('pending', 'processing', 'ready', 'released', 'rejected', 'cancelled')) DEFAULT 'pending',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

@@ -1,8 +1,31 @@
-# models.py
-from sqlalchemy import Column, Integer, String, Date, SmallInteger, Boolean, ForeignKey, Text, TIMESTAMP
+"""
+================================================================================
+File: models.py
+Description:
+    This module defines the SQLAlchemy ORM models used throughout the Barangay 
+    Information and Request Management System. Each class corresponds to a 
+    database table, defining columns, data types, constraints, and relationships 
+    between entities.
+
+    The schema covers:
+      • Resident personal and address information
+      • RFID associations for identity verification
+      • Barangay staff authentication records
+      • Request type definitions and associated templates
+
+    Relationships are managed using SQLAlchemy's `relationship()` and `ForeignKey`
+    constructs to maintain data integrity and simplify querying.
+================================================================================
+"""
+
+from sqlalchemy import Column, Integer, String, Date, SmallInteger, Boolean, ForeignKey, Text, TIMESTAMP, LargeBinary, DateTime, JSON
 from sqlalchemy.orm import relationship
 from database import Base
+from sqlalchemy.sql import func
 
+# ==============================================================================
+# Model: Resident
+# ==============================================================================
 class Resident(Base):
     __tablename__ = "residents"
 
@@ -23,6 +46,9 @@ class Resident(Base):
     address = relationship("Address", back_populates="resident", uselist=False)
     rfid = relationship("RfidUID", back_populates="resident", uselist=False)
 
+# ==============================================================================
+# Model: Address
+# ==============================================================================
 class Address(Base):
     __tablename__ = "addresses"
 
@@ -41,6 +67,9 @@ class Address(Base):
     resident = relationship("Resident", back_populates="address")
     purok = relationship("Purok", back_populates="addresses")
 
+# ==============================================================================
+# Model: Purok
+# ==============================================================================
 class Purok(Base):
     __tablename__ = "puroks"
 
@@ -50,6 +79,9 @@ class Purok(Base):
     # Relationships
     addresses = relationship("Address", back_populates="purok")
 
+# ==============================================================================
+# Model: RfidUID
+# ==============================================================================
 class RfidUID(Base):
     __tablename__ = "rfid_uid"
 
@@ -63,6 +95,9 @@ class RfidUID(Base):
     # Relationships
     resident = relationship("Resident", back_populates="rfid")
 
+# ==============================================================================
+# Model: BrgyStaff
+# ==============================================================================
 class BrgyStaff(Base):
     __tablename__ = "brgy_staff"
 
@@ -76,3 +111,40 @@ class BrgyStaff(Base):
 
     # Relationships
     resident = relationship("Resident", backref="staff")
+
+# ==============================================================================
+# Model: RequestType
+# ==============================================================================
+class RequestType(Base):
+    __tablename__ = "request_types"
+
+    id = Column(Integer, primary_key=True, index=True)
+    request_type_name = Column(String(64))
+    description = Column(Text)
+    status = Column(String(16), default="active")
+    price = Column(Integer, default=0)
+    fields = Column(JSON, nullable=True)
+    available = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
+
+    # Relationship
+    template = relationship("Template", back_populates="request_type", uselist=False)
+
+# ==============================================================================
+# Model: Template
+# ==============================================================================
+class Template(Base):
+    __tablename__ = "templates"
+
+    id = Column(Integer, primary_key=True, index=True)
+    template_name = Column(String(64), nullable=False)
+    description = Column(Text)
+    file = Column(LargeBinary)
+    file_name = Column(String(128))
+    request_type_id = Column(Integer, ForeignKey("request_types.id", ondelete="SET NULL", onupdate="CASCADE"), unique=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
+
+    # Relationship
+    request_type = relationship("RequestType", back_populates="template")

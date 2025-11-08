@@ -1,3 +1,21 @@
+"""
+================================================================================
+File: rfid_uid.py
+Description:
+    This module manages RFID registration and lookup for residents.
+    It provides endpoints for linking an RFID card to a resident and 
+    checking whether a specific RFID UID is already registered.
+
+    Functionality includes:
+      • Registering an RFID card for a resident
+      • Preventing duplicate RFID assignments
+      • Verifying if an RFID UID already exists and retrieving linked resident info
+
+    These endpoints are primarily used for resident identification,
+    access control, and record management across the system.
+================================================================================
+"""
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -5,13 +23,21 @@ from database import get_db
 from models import RfidUID, Resident
 from datetime import datetime
 
+# =============================================
+# Initialize Router
+# =============================================
 router = APIRouter(prefix="/rfid", tags=["RFID"])
 
+# =============================================
 # Pydantic model for request validation
+# =============================================
 class RFIDRegisterRequest(BaseModel):
     resident_id: int
     rfid_uid: str
 
+# =============================================
+# Register RFID Route
+# =============================================
 @router.post("/register")
 def register_rfid(request: RFIDRegisterRequest, db: Session = Depends(get_db)):
     resident_id = request.resident_id
@@ -50,10 +76,14 @@ def register_rfid(request: RFIDRegisterRequest, db: Session = Depends(get_db)):
         "resident_id": resident.id
     }
 
+# =============================================
+# Check RFID Route
+# =============================================
 @router.get("/check/{rfid_uid}")
 def check_rfid(rfid_uid: str, db: Session = Depends(get_db)):
     existing_uid = db.query(RfidUID).filter(RfidUID.rfid_uid == rfid_uid).first()
 
+    # If RFID exists, return linked resident details
     if existing_uid:
         resident = db.query(Resident).filter(Resident.id == existing_uid.resident_id).first()
         return {
