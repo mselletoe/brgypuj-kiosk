@@ -1,11 +1,11 @@
 <script setup>
 import { ref, computed } from 'vue';
+import { createRequest } from '@/api/equipmentApi'; // <-- Import API
 
-// --- DATA RECEIVED AS PROP ---
 const props = defineProps({
   inventory: Array
 });
-// --- END OF CHANGE ---
+const emit = defineEmits(['request-created']); // <-- Define emit
 
 const newRequest = ref({
   borrowerName: '',
@@ -18,53 +18,27 @@ const newRequest = ref({
   quantity: 1
 });
 
-// --- List of options for the dropdown ---
-const purposeOptions = ref([
-  'Barangay Event',
-  'Personal Event',
-  'Community Meeting',
-  'Emergency Use',
-  'Other'
-]);
-
-// --- Computed property to find the details of the selected item ---
+const purposeOptions = ref([ 'Barangay Event', 'Personal Event', 'Community Meeting', 'Emergency Use', 'Other' ]);
 const selectedItemDetails = computed(() => {
-  if (!newRequest.value.selectedItem || !props.inventory) {
-    return null;
-  }
+  if (!newRequest.value.selectedItem || !props.inventory) return null;
   return props.inventory.find(item => item.id === newRequest.value.selectedItem);
 });
-
-// --- Computed property to check if the quantity is valid ---
 const isQuantityInvalid = computed(() => {
-  if (!selectedItemDetails.value || !newRequest.value.quantity) {
-    return false;
-  }
+  if (!selectedItemDetails.value) return false;
   return newRequest.value.quantity > selectedItemDetails.value.available;
 });
-
-// --- Computed property to calculate the total fee ---
 const totalCost = computed(() => {
-  if (!selectedItemDetails.value || !newRequest.value.borrowDate || !newRequest.value.returnDate || newRequest.value.quantity < 1) {
-    return 0;
-  }
-
+  if (!selectedItemDetails.value || !newRequest.value.borrowDate || !newRequest.value.returnDate || newRequest.value.quantity < 1) return 0;
   const date1 = new Date(newRequest.value.borrowDate);
   const date2 = new Date(newRequest.value.returnDate);
-  if (date2 < date1) {
-    return 0; // Invalid date range
-  }
+  if (date2 < date1) return 0;
   const diffTime = Math.abs(date2.getTime() - date1.getTime());
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   const rentalDays = diffDays + 1;
-
-  const rate = selectedItemDetails.value.rate;
-  const quantity = newRequest.value.quantity;
-  
-  return rate * quantity * rentalDays;
+  return selectedItemDetails.value.rate * newRequest.value.quantity * rentalDays;
 });
 
-function handleCreateRequest() {
+async function handleCreateRequest() { // <-- Make async
   if (isQuantityInvalid.value) {
     alert('Cannot create request. Quantity exceeds available stock.');
     return;
@@ -74,30 +48,34 @@ function handleCreateRequest() {
     return;
   }
 
-  console.log('--- ADMIN CREATING NEW REQUEST ---');
-  console.log({ ...newRequest.value, totalCost: totalCost.value });
-  
-  const selectedItemName = props.inventory.find(item => item.id === newRequest.value.selectedItem)?.name;
-  alert(`New request for "${selectedItemName}" created! Total: ₱${totalCost.value}`);
-  
-  // Reset form
-  newRequest.value = {
-    borrowerName: '',
-    contactNumber: '',
-    borrowDate: null,
-    returnDate: null,
-    purpose: null,
-    notes: '',
-    selectedItem: null,
-    quantity: 1
-  };
+  // --- API CALL ---
+  try {
+    const payload = { ...newRequest.value, totalCost: totalCost.value };
+    await createRequest(payload);
+    
+    alert(`New request created!`);
+    
+    // Reset form
+    newRequest.value = {
+      borrowerName: '', contactNumber: '', borrowDate: null, returnDate: null,
+      purpose: null, notes: '', selectedItem: null, quantity: 1
+    };
+    
+    // Tell the parent to refresh
+    emit('request-created'); 
+    
+  } catch (error) {
+    console.error('Failed to create request:', error);
+    alert(`Error: ${error.message}`);
+  }
+  // --- END CALL ---
 }
 </script>
 
 <template>
   <div class="bg-white p-6 rounded-lg shadow-md">
     <h2 class="text-2xl font-bold text-gray-800 mb-4">
-      Create New Request
+      Create New Request (Admin)
     </h2>
     <p class="mb-6 text-gray-600">
       Fill out the form below to manually create a new equipment request 

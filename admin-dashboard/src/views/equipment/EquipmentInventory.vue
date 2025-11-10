@@ -1,26 +1,50 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, watch } from 'vue'; // <-- 1. Import 'watch' instead of 'onMounted'
 import { PencilIcon, CheckIcon } from '@heroicons/vue/24/outline';
+import { updateInventory } from '@/api/equipmentApi';
 
-const equipment = ref([
-  { id: 1, name: 'Event Tent', total: 10, available: 8, rate: 500, editing: false },
-  { id: 2, name: 'Monobloc Chairs', total: 200, available: 150, rate: 10, editing: false },
-  { id: 3, name: 'Folding Tables', total: 5, available: 5, rate: 1500, editing: false },
-  { id: 4, name: 'Sound System', total: 3, available: 2, rate: 300, editing: false },
-]);
+const props = defineProps({
+  inventory: Array
+});
+const emit = defineEmits(['inventory-updated']);
 
-// --- Placeholder for saving changes ---
-function saveChanges(item) {
-  // Add a simple validation
+// This is still our local copy
+const localInventory = ref([]);
+
+// --- 2. THE FIX: Replaced onMounted with watch ---
+// This function now "watches" the inventory prop.
+// When the prop changes (i.e., when the API call finishes),
+// this code will run and update localInventory.
+watch(() => props.inventory, (newInventory) => {
+  if (newInventory) {
+    // We create our local copy, adding the 'editing' flag
+    localInventory.value = newInventory.map(item => ({ 
+      ...item, 
+      editing: false 
+    }));
+  }
+}, { immediate: true }); // 'immediate: true' runs this once on load
+
+// --- END OF FIX ---
+
+async function saveChanges(item) { // <-- Made this async
   if (item.available > item.total) {
     alert('Error: "Available" count cannot be greater than "Total Owned".');
     return;
   }
   
-  item.editing = false;
-  // In a real app, you would send this 'item' object to your database
-  console.log('Saving item to database:', item);
-  alert(`Changes for "${item.name}" saved!`);
+  try {
+    // --- API CALL ---
+    await updateInventory(item);
+    // --- END CALL ---
+    item.editing = false;
+    alert(`Changes for "${item.name}" saved!`);
+    // Tell the parent to refresh ALL data
+    emit('inventory-updated'); 
+  } catch (error) {
+    console.error('Failed to save:', error);
+    alert('Failed to save changes. Please try again.');
+  }
 }
 </script>
 
@@ -36,7 +60,7 @@ function saveChanges(item) {
 
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       <div 
-        v-for="item in equipment" 
+        v-for="item in localInventory" 
         :key="item.id" 
         class="border border-gray-200 p-4 rounded-lg flex flex-col justify-between shadow-sm"
       >

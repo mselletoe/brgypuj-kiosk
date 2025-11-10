@@ -114,3 +114,58 @@ CREATE TABLE IF NOT EXISTS requests (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- =============================================================================
+-- Tables for Equipment Borrowing
+-- =============================================================================
+
+-- 1. The master list of all borrowable equipment
+CREATE TABLE IF NOT EXISTS equipment_inventory (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(128) NOT NULL UNIQUE,
+    total_quantity INTEGER NOT NULL DEFAULT 0,
+    available_quantity INTEGER NOT NULL DEFAULT 0,
+    rate DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+    rate_per VARCHAR(16) DEFAULT 'day'
+);
+
+-- 2. The main table for each individual request
+CREATE TABLE IF NOT EXISTS equipment_requests (
+    id SERIAL PRIMARY KEY,
+    resident_id SMALLINT REFERENCES residents(id) ON DELETE SET NULL,
+    borrower_name VARCHAR(255) NOT NULL,
+    contact_number VARCHAR(16),
+    purpose VARCHAR(255),
+    notes TEXT,
+    borrow_date TIMESTAMPTZ NOT NULL,
+    return_date TIMESTAMPTZ NOT NULL,
+    total_cost DECIMAL(10, 2) NOT NULL,
+    requested_via VARCHAR(64),
+    status VARCHAR(32) DEFAULT 'Pending',
+    paid BOOLEAN DEFAULT FALSE,
+    refunded BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT (NOW()),
+    updated_at TIMESTAMPTZ DEFAULT (NOW())
+);
+
+-- 3. The "join table" that links a request to its items
+CREATE TABLE IF NOT EXISTS equipment_request_items (
+    id SERIAL PRIMARY KEY,
+    request_id INTEGER NOT NULL REFERENCES equipment_requests(id) ON DELETE CASCADE,
+    item_id INTEGER NOT NULL REFERENCES equipment_inventory(id) ON DELETE RESTRICT,
+    quantity INTEGER NOT NULL DEFAULT 1
+);
+
+-- =============================================================================
+-- Pre-fill Equipment Inventory Data
+-- =============================================================================
+-- This will insert the 4 items from your admin panel's dummy data.
+-- 'ON CONFLICT (name) DO NOTHING' prevents errors if you run the script twice.
+
+INSERT INTO equipment_inventory (name, total_quantity, available_quantity, rate, rate_per)
+VALUES
+    ('Event Tent', 10, 8, 500.00, 'day'),
+    ('Monobloc Chairs', 200, 150, 10.00, 'day'),
+    ('Folding Tables', 5, 5, 1500.00, 'day'),
+    ('Sound System', 3, 2, 300.00, 'day')
+ON CONFLICT (name) DO NOTHING;

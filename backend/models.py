@@ -18,10 +18,11 @@ Description:
 ================================================================================
 """
 
-from sqlalchemy import Column, Integer, String, Date, SmallInteger, Boolean, ForeignKey, Text, TIMESTAMP, LargeBinary, DateTime, JSON
+from sqlalchemy import Column, Integer, String, Date, SmallInteger, Boolean, ForeignKey, Text, TIMESTAMP, LargeBinary, DateTime, JSON, DECIMAL
 from sqlalchemy.orm import relationship
 from database import Base
 from sqlalchemy.sql import func
+import enum
 
 # ==============================================================================
 # Model: Resident
@@ -148,3 +149,66 @@ class Template(Base):
 
     # Relationship
     request_type = relationship("RequestType", back_populates="template")
+
+
+# ==============================================================================
+# Model: EquipmentInventory
+# ==============================================================================
+class EquipmentInventory(Base):
+    __tablename__ = "equipment_inventory"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(128), nullable=False)
+    total_quantity = Column(Integer, nullable=False, default=0)
+    available_quantity = Column(Integer, nullable=False, default=0)
+    rate = Column(DECIMAL(10, 2), nullable=False, default=0.00)
+    rate_per = Column(String(16), default='day') # 'day', 'hour', 'item'
+    
+    # Relationship: This item can be part of many requests
+    request_items = relationship("EquipmentRequestItem", back_populates="item")
+
+# ==============================================================================
+# Model: EquipmentRequest
+# ==============================================================================
+class EquipmentRequest(Base):
+    __tablename__ = "equipment_requests"
+
+    id = Column(Integer, primary_key=True, index=True)
+    resident_id = Column(SmallInteger, ForeignKey("residents.id", ondelete="SET NULL"), nullable=True)
+    
+    # Form details
+    borrower_name = Column(String(255), nullable=False)
+    contact_number = Column(String(16))
+    purpose = Column(String(255))
+    notes = Column(Text, nullable=True)
+    borrow_date = Column(TIMESTAMP(timezone=True), nullable=False)
+    return_date = Column(TIMESTAMP(timezone=True), nullable=False)
+    total_cost = Column(DECIMAL(10, 2), nullable=False)
+    requested_via = Column(String(64)) # e.g., "Admin", "Kiosk - Guest"
+    
+    # Status tracking
+    status = Column(String(32), default='Pending') # 'Pending', 'Approved', 'Picked-Up', 'Returned', 'Rejected'
+    paid = Column(Boolean, default=False)
+    refunded = Column(Boolean, default=False)
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
+
+    # Relationships
+    resident = relationship("Resident", backref="equipment_requests")
+    items = relationship("EquipmentRequestItem", back_populates="request")
+
+# ==============================================================================
+# Model: EquipmentRequestItem (Join Table)
+# ==============================================================================
+class EquipmentRequestItem(Base):
+    __tablename__ = "equipment_request_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    request_id = Column(Integer, ForeignKey("equipment_requests.id", ondelete="CASCADE"), nullable=False)
+    item_id = Column(Integer, ForeignKey("equipment_inventory.id", ondelete="RESTRICT"), nullable=False)
+    quantity = Column(Integer, nullable=False, default=1)
+
+    # Relationships
+    request = relationship("EquipmentRequest", back_populates="items")
+    item = relationship("EquipmentInventory", back_populates="request_items")
