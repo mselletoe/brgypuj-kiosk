@@ -1,6 +1,5 @@
 <script setup>
 import { ref } from 'vue'
-import ArrowBackButton from '@/components/shared/ArrowBackButton.vue'
 import VueDatePicker from '@vuepic/vue-datepicker'
 import '@vuepic/vue-datepicker/dist/main.css'
 import { CalendarIcon } from '@heroicons/vue/24/outline'
@@ -29,26 +28,20 @@ props.config.fields.forEach((field) => {
 // ==============================================
 // Helper function to format placeholder text
 // ==============================================
-const formatPlaceholder = (placeholder, label) => {
-  const text = placeholder || label
-  return `e.g. "${text}"`
-}
+const formatPlaceholder = (placeholder, label) => `e.g. "${placeholder || label}"`
 
 // ==============================================
 // Validation
 // ==============================================
 const validate = () => {
   let isValid = true
-
   props.config.fields.forEach((field) => {
     errors.value[field.name] = ''
-
     if (field.required && !formData.value[field.name]) {
       errors.value[field.name] = 'This field is required'
       isValid = false
     }
   })
-
   return isValid
 }
 
@@ -64,8 +57,7 @@ const handleContinue = () => {
     <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
       <div v-for="field in config.fields" :key="field.name" class="flex flex-col">
         <label class="block mb-2 font-bold text-[#003A6B]">
-          {{ field.label }}
-          <span v-if="field.required" class="text-red-500">*</span>
+          {{ field.label }} <span v-if="field.required" class="text-red-500">*</span>
         </label>
 
         <!-- Text / Email / Tel / Number -->
@@ -83,12 +75,7 @@ const handleContinue = () => {
               formData[field.name] = e.target.value
             }
           }"
-          :class="[
-            'w-full p-3 border rounded-lg shadow-md transition-shadow duration-200 focus:shadow-lg focus:ring-2 placeholder:italic',
-            errors[field.name]
-              ? 'border-red-500 focus:ring-red-500'
-              : 'border-[#464646] focus:ring-blue-500',
-          ]"
+          :class="[errors[field.name] ? 'border-red-500 focus:ring-red-500' : 'border-[#464646] focus:ring-blue-500', 'w-full p-3 border rounded-lg shadow-md transition-shadow duration-200 focus:shadow-lg focus:ring-2']"
         />
 
         <!-- Date Picker -->
@@ -113,39 +100,23 @@ const handleContinue = () => {
           v-else-if="field.type === 'textarea'"
           v-model="formData[field.name]"
           :placeholder="formatPlaceholder(field.placeholder, field.label)"
-          :class="[
-            'w-full h-[48px] p-3 border rounded-lg shadow-md transition-shadow duration-200 focus:shadow-lg focus:ring-2 leading-tight resize-none placeholder:italic',
-            errors[field.name]
-              ? 'border-red-500 focus:ring-red-500'
-              : 'border-[#464646] focus:ring-blue-500',
-          ]"
+          :class="[errors[field.name] ? 'border-red-500 focus:ring-red-500' : 'border-[#464646] focus:ring-blue-500', 'w-full h-[48px] p-3 border rounded-lg shadow-md transition-shadow duration-200 focus:shadow-lg focus:ring-2 leading-tight resize-none placeholder:italic']"
         ></textarea>
 
         <!-- Select -->
         <select
           v-else-if="field.type === 'select'"
           v-model="formData[field.name]"
-          :class="[
-            'w-full p-3 border rounded-lg shadow-md transition-shadow duration-200 focus:shadow-lg focus:ring-2',
-            errors[field.name]
-              ? 'border-red-500 focus:ring-red-500'
-              : 'border-[#464646] focus:ring-blue-500',
-          ]"
+          :class="[errors[field.name] ? 'border-red-500 focus:ring-red-500' : 'border-[#464646] focus:ring-blue-500', 'w-full p-3 border rounded-lg shadow-md transition-shadow duration-200 focus:shadow-lg focus:ring-2']"
         >
           <option value="">Select {{ field.label }}</option>
-          <option
-            v-for="option in (Array.isArray(field.options) ? field.options : [])"
-            :key="option"
-            :value="option"
-          >
+          <option v-for="option in (Array.isArray(field.options) ? field.options : [])" :key="option" :value="option">
             {{ option }}
           </option>
         </select>
 
         <!-- Error message -->
-        <p v-if="errors[field.name]" class="text-red-500 text-[10px] text-sm mt-1 italic">
-          {{ errors[field.name] }}
-        </p>
+        <p v-if="errors[field.name]" class="text-red-500 text-[10px] text-sm mt-1 italic">{{ errors[field.name] }}</p>
       </div>
     </div>
 

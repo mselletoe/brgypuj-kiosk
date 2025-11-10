@@ -108,12 +108,32 @@ CREATE TABLE IF NOT EXISTS requests (
     request_type_id INT REFERENCES request_types(id) ON DELETE CASCADE ON UPDATE CASCADE,
     processed_by SMALLINT REFERENCES brgy_staff(id) ON DELETE SET NULL ON UPDATE CASCADE,
     rejected_by SMALLINT REFERENCES brgy_staff(id) ON DELETE SET NULL ON UPDATE CASCADE,
-    purpose TEXT,
-    request_file BYTEA,
     status TEXT CHECK (status IN ('pending', 'processing', 'ready', 'released', 'rejected', 'cancelled')) DEFAULT 'pending',
+    form_data JSONB,
+    request_file BYTEA,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- ==============================
+--  TABLE: requests_status
+-- ==============================
+CREATE TABLE IF NOT EXISTS request_status (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(50) NOT NULL UNIQUE
+);
+
+-- ==============================
+--  TABLE: requests_status feed
+-- ==============================
+INSERT INTO request_status (name) VALUES
+('pending'),
+('processing'),
+('ready'),
+('released'),
+('rejected'),
+('cancelled')
+ON CONFLICT (name) DO NOTHING;
 
 -- =============================================================================
 -- Tables for Equipment Borrowing

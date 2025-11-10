@@ -5,6 +5,7 @@ import DocumentForm from './DocumentForm.vue'
 import ArrowBackButton from '@/components/shared/ArrowBackButton.vue' 
 import Modal from '@/components/shared/Modal.vue'
 import { fetchRequestTypes } from '@/api/requestTypes'
+import { createRequest } from '@/api/requests'
 
 const route = useRoute()
 const router = useRouter()
@@ -12,9 +13,17 @@ const router = useRouter()
 const currentStep = ref('form')
 const formData = ref({})
 const showSuccessModal = ref(false)
-const isFadingOut = ref(false) 
-const docType = computed(() => route.params.docType)
+const isFadingOut = ref(false)
 
+// Placeholder for resident id (RFID or guest)
+const currentResidentId = ref(null)
+
+// ==================================
+// Slugified route param
+// ==================================
+const docTypeSlug = computed(() =>
+  route.params.docType?.toLowerCase().replace(/\s+/g, '-')
+)
 
 // ==================================
 // Fetch dynamic configs
@@ -27,6 +36,7 @@ const fetchConfigs = async () => {
     types.forEach(type => {
       const slug = type.request_type_name.toLowerCase().replace(/\s+/g, '-')
       documentConfigs.value[slug] = {
+        id: type.id,
         title: type.request_type_name,
         fields: type.fields || [],
         available: type.available ?? true
@@ -40,10 +50,9 @@ const fetchConfigs = async () => {
 onMounted(fetchConfigs)
 
 // ==================================
-// Computer for current config
+// Computed current config
 // ==================================
-const config = computed(() => documentConfigs.value[docType.value])
-
+const config = computed(() => documentConfigs.value[docTypeSlug.value])
 
 // ==================================
 // Navigation
@@ -72,9 +81,22 @@ const closeModal = () => {
 // ==================================
 const handleSubmit = async (data) => {
   try {
+    if (!config.value?.id) {
+      alert("Invalid document type.")
+      return
+    }
+
     formData.value = data
-    console.log('Submitting:', { docType: docType.value, data })
+
+    const payload = {
+      resident_id: currentResidentId.value, // null if guest
+      request_type_id: config.value.id,
+      form_data: data // dynamic fields go here
+    }
+
+    await createRequest(payload)
     showSuccessModal.value = true
+
   } catch (err) {
     console.error('Submission failed', err)
     alert('Failed to submit request.')
@@ -94,7 +116,7 @@ const handleSubmit = async (data) => {
       <!-- Title and Subtext -->
       <div class="flex justify-between items-center w-full ml-20">
         <h1 class="text-[40px] font-extrabold text-[#03335C] leading-tight mt-2">
-          {{ config?.title || (docType)?.charAt(0).toUpperCase() + (config?.title || docType)?.slice(1)  }}
+          {{ config?.title || docTypeSlug?.charAt(0).toUpperCase() + docTypeSlug?.slice(1) }}
         </h1>
         <p class="text-sm text-[#002B5B] text-right leading-tight mt-4 italic">
           Kindly fill up the details needed<br />for the said document
@@ -113,7 +135,7 @@ const handleSubmit = async (data) => {
 
       <!-- Not found -->
       <div v-else class="text-center py-12">
-        <p class="text-[#003A6B] text-lg">The type of document you are requesting <br/> is currently out of stock.</p>
+        <p class="text-[#003A6B] text-lg">The type of document you are requesting <br/> is currently unavailable.</p>
         <button 
           @click="router.push('/document-services')"
           class="mt-4 px-6 py-2 bg-[#003A6B] text-white rounded hover:bg-[#001F40]"
@@ -123,7 +145,7 @@ const handleSubmit = async (data) => {
       </div>
     </div>
 
-    <!-- ✅ Success Modal with fade + blur -->
+    <!-- ✅ Success Modal -->
     <transition name="fade-blur">
       <div
         v-if="showSuccessModal"
@@ -142,7 +164,6 @@ const handleSubmit = async (data) => {
   </div>
 </template>
 
-<!-- ✅ Smooth fade and blur transition -->
 <style scoped>
 .fade-blur-enter-active,
 .fade-blur-leave-active {

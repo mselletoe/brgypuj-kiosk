@@ -20,7 +20,7 @@ Description:
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import residents_table, rfid_uid, resident_routes, users, admin_auth, request_types, templates
+from routers import residents_table, rfid_uid, resident_routes, users, admin_auth, request_types, templates, requests
 from routers import equipment
 
 app = FastAPI(title="Kiosk Backend API")
@@ -49,6 +49,7 @@ app.include_router(admin_auth.router)
 app.include_router(request_types.router)
 app.include_router(templates.router)
 app.include_router(equipment.router)
+app.include_router(requests.router)
 
 @app.get("/")
 def root():

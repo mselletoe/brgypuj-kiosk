@@ -213,25 +213,39 @@ class EquipmentRequestItem(Base):
     request = relationship("EquipmentRequest", back_populates="items")
     item = relationship("EquipmentInventory", back_populates="request_items")
 
-# ==============================================================================
-# Model: Request
-# ==============================================================================
+# ==============================
+# Request Status
+# ==============================
+class RequestStatus(Base):
+    __tablename__ = "request_status"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(50), nullable=False, unique=True)
+
+    # Relationship to requests
+    requests = relationship("Request", back_populates="status_obj")
+
+
+# ==============================
+# Requests
+# ==============================
 class Request(Base):
     __tablename__ = "requests"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True)
     resident_id = Column(SmallInteger, ForeignKey("residents.id", ondelete="CASCADE", onupdate="CASCADE"))
     request_type_id = Column(Integer, ForeignKey("request_types.id", ondelete="CASCADE", onupdate="CASCADE"))
     processed_by = Column(SmallInteger, ForeignKey("brgy_staff.id", ondelete="SET NULL", onupdate="CASCADE"), nullable=True)
     rejected_by = Column(SmallInteger, ForeignKey("brgy_staff.id", ondelete="SET NULL", onupdate="CASCADE"), nullable=True)
-    purpose = Column(Text)
-    request_file = Column(LargeBinary, nullable=True)
-    status = Column(String(16), default="pending")
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
+    request_file = Column(Text, nullable=True)  # can store path/binary later
+    status_id = Column(Integer, ForeignKey("request_status.id", ondelete="SET NULL"), nullable=False)
+    form_data = Column(JSON, nullable=True)  # <-- NEW: store dynamic form fields as JSON
+    created_at = Column(TIMESTAMP, server_default=func.now())
+    updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
 
     # Relationships
-    resident = relationship("Resident")
-    request_type = relationship("RequestType")
+    status_obj = relationship("RequestStatus", back_populates="requests")
+    resident = relationship("Resident", backref="requests")
+    request_type = relationship("RequestType", backref="requests")
     processed_staff = relationship("BrgyStaff", foreign_keys=[processed_by])
     rejected_staff = relationship("BrgyStaff", foreign_keys=[rejected_by])
