@@ -2,7 +2,7 @@
   <div class="feedback-layout">
     <ArrowBackButton 
       @click="goBack"
-      class="absolute top-0 left-6" 
+      class="absolute top-10 left-12"
     />
     <h1 class="title-text">Your Feedback Matters</h1>
     <h2 class="new-title-text">Rate our {{ feedbackCategory }}</h2>
@@ -71,15 +71,74 @@ const goBack = () => {
 </script>
 
 <style scoped>
-.feedback-layout{position:relative;display:flex;flex-direction:column;align-items:center;width:100%;height:100%;overflow:hidden;background-color:#ffffff;font-family:'Poppins';color:#003a6b;box-sizing:border-box;padding:0px 20px 20px 20px;}
+/* --- LAYOUT CHANGES --- */
+.feedback-layout{
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  width:100%;
+  min-height:100vh; /* Changed from height: 100% */
+  overflow-x:hidden; /* Changed from overflow: hidden */
+  overflow-y:auto; /* Added for scrolling on small screens */
+  background-color:#ffffff;
+  font-family:'Poppins';
+  color:#003a6b;
+  box-sizing:border-box;
+  padding:20px; /* Changed padding */
+}
 .absolute{position:absolute;}
-.top-0{top:0;}
+/* .top-0{top:0;} */ /* Removed top-0 */
+.top-6{top: 1.5rem;} /* Added top-6 */
 .left-6{left:1.5rem;}
-.title-text{font-size:45px;font-weight:700;line-height:50px;letter-spacing:-0.03em;color:#03335C;text-shadow:3px 3px 5px rgba(0,0,0,0.3),-2px -2px 4px rgba(255,255,255,0.6);margin:3px auto 50px 75px;text-align:left;width:auto;max-width:100%;}
+
+/* --- TITLE ALIGNMENT --- */
+.title-text{
+  font-size:45px;
+  font-weight:700;
+  line-height:50px;
+  letter-spacing:-0.03em;
+  color:#03335C;
+  text-shadow:3px 3px 5px rgba(0,0,0,0.3),-2px -2px 4px rgba(255,255,255,0.6);
+  margin: 1.5rem auto 50px 100px; 
+  text-align:left;
+  width:auto;
+  max-width:100%;
+}
+/* --- END TITLE ALIGNMENT --- */
+
 .new-title-text{font-size:30px;font-weight:700;line-height:35px;letter-spacing:-0.03em;color:#003a6b;text-shadow:3px 3px 5px rgba(0,0,0,0.3),-2px -2px 4px rgba(255,255,255,0.6);margin:5px 0 5px 0;text-align:center;width:100%;}
 .subtitle-text{font-size:13px;text-align:center;margin-bottom:23px;color:#003a6b;font-weight:500;max-width:100%;}
-.container-wrapper{display:flex;gap:10px;justify-content:flex-start;flex-wrap:nowrap;width:869px;align-self:flex-start;margin-top:15px;}
-.feedback-box{width:165px;height:220px;border-radius:15px;box-shadow:inset 2px 2px 4px rgba(255,255,255,0.6),inset -2px -2px 6px rgba(0,0,0,0.15),4px 4px 8px rgba(0,0,0,0.25);transition:transform 0.15s ease,box-shadow 0.15s ease;cursor:pointer;flex-shrink:0;display:flex;flex-direction:column;justify-content:space-evenly;align-items:center;text-align:center;padding:10px;box-sizing:border-box;}
+
+/* --- RESPONSIVE CONTAINER CHANGES --- */
+.container-wrapper{
+  display:flex;
+  gap:10px;
+  justify-content:center; /* Changed from flex-start */
+  flex-wrap:wrap; /* Changed from nowrap */
+  width:100%; /* Changed from 869px */
+  max-width: 869px; /* Added max-width */
+  /* align-self:flex-start; */ /* Removed */
+  margin-top:15px;
+}
+.feedback-box{
+  width:165px;
+  height:220px;
+  border-radius:15px;
+  box-shadow:inset 2px 2px 4px rgba(255,255,255,0.6),inset -2px -2px 6px rgba(0,0,0,0.15),4px 4px 8px rgba(0,0,0,0.25);
+  transition:transform 0.15s ease,box-shadow 0.15s ease;
+  cursor:pointer;
+  /* flex-shrink:0; */ /* Removed to allow wrapping */
+  display:flex;
+  flex-direction:column;
+  justify-content:space-evenly;
+  align-items:center;
+  text-align:center;
+  padding:10px;
+  box-sizing:border-box;
+}
+/* --- END OF RESPONSIVE CHANGES --- */
+
 .container-wrapper .feedback-box:nth-child(1) {background-color: #3F4B55;}
 .container-wrapper .feedback-box:nth-child(2) {background-color: #475F73;}
 .container-wrapper .feedback-box:nth-child(3) {background-color: #246195;}

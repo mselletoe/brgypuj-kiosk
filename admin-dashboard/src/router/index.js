@@ -4,6 +4,10 @@ import { useAuth } from '@/stores/authStore'
 import AdminLayout from '@/layouts/AdminLayout.vue'
 import Overview from '@/views/Overview.vue'
 import Requests from '@/views/requests/RequestsManagement.vue'
+<<<<<<< HEAD
+=======
+import Documenttemplates from '@/views/docutemp/DocumentTemplates.vue'
+>>>>>>> 154e088c201aba4e39cd279fb9caafa577528d22
 import DocumentServices from '@/views/document-services/DocumentServices.vue'
 import Announcements from '@/views/Announcements.vue'
 import Appointments from '@/views/Appointments.vue'
