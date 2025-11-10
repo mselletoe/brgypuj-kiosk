@@ -11,9 +11,9 @@ router = APIRouter(prefix="/requests", tags=["Requests"])
 # Pydantic Schemas
 # ----------------------------
 class RequestCreate(BaseModel):
-    resident_id: Optional[int] = None  # null for guest
+    resident_id: Optional[int] = None
     request_type_id: int
-    form_data: Optional[Dict[str, Any]] = {}  # dynamic fields
+    form_data: Optional[Dict[str, Any]] = {}
 
     class Config:
         extra = "allow"
@@ -23,9 +23,10 @@ class RequestOut(BaseModel):
     resident_id: Optional[int]
     request_type_id: int
     document_type: str
+    price: int
     form_data: Optional[Dict[str, Any]] = {}
     status: str
-    price: int
+    created_at: str  # ISO formatted date
 
 # ----------------------------
 # Helper to get default pending status
@@ -33,7 +34,6 @@ class RequestOut(BaseModel):
 def get_pending_status(db: Session):
     status = db.query(RequestStatus).filter_by(name="pending").first()
     if not status:
-        # create pending if not exists
         status = RequestStatus(name="pending")
         db.add(status)
         db.commit()
@@ -47,7 +47,7 @@ def get_pending_status(db: Session):
 def create_request(req: RequestCreate, db: Session = Depends(get_db)):
     pending_status = get_pending_status(db)
 
-    # Fetch the request type for price & name
+    # Get request type info
     request_type = db.query(RequestType).filter_by(id=req.request_type_id).first()
     if not request_type:
         raise HTTPException(status_code=404, detail="Request type not found")
@@ -66,10 +66,11 @@ def create_request(req: RequestCreate, db: Session = Depends(get_db)):
         "id": new_request.id,
         "resident_id": new_request.resident_id,
         "request_type_id": new_request.request_type_id,
-        "document_type": request_type.request_type_name,  # include this
-        "price": request_type.price,                      # include this
+        "document_type": request_type.request_type_name,
+        "price": request_type.price,
         "form_data": new_request.form_data,
-        "status": pending_status.name
+        "status": pending_status.name,
+        "created_at": new_request.created_at.isoformat()
     }
 
 # ----------------------------
@@ -77,16 +78,17 @@ def create_request(req: RequestCreate, db: Session = Depends(get_db)):
 # ----------------------------
 @router.get("/", response_model=list[RequestOut])
 def get_requests(db: Session = Depends(get_db)):
-    requests = db.query(Request).options(joinedload(Request.request_type)).all()
+    results = db.query(Request).options(joinedload(Request.request_type)).all()
     output = []
-    for r in requests:
+    for r in results:
         output.append({
             "id": r.id,
             "resident_id": r.resident_id,
             "request_type_id": r.request_type_id,
             "document_type": r.request_type.request_type_name if r.request_type else "Unknown",
+            "price": r.request_type.price if r.request_type else 0,
             "form_data": r.form_data,
             "status": r.status_obj.name if r.status_obj else None,
-            "price": r.request_type.price if r.request_type else 0,
+            "created_at": r.created_at.isoformat() if r.created_at else None
         })
     return output

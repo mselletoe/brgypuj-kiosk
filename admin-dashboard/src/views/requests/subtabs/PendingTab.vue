@@ -8,28 +8,55 @@ const props = defineProps({
     type: String,
     default: ''
   }
-});
+})
 
 // --- REFS ---
 const pendingRequests = ref([])
 const isLoading = ref(true)
 const errorMessage = ref(null)
 
+// --- HELPERS ---
+const formatIndex = (index) => (index + 1).toString().padStart(2, '0')
+
+const formatCurrency = (value) => {
+  return new Intl.NumberFormat('en-PH', {
+    style: 'currency',
+    currency: 'PHP'
+  }).format(value)
+}
+
+// Format date nicely
+const formatRequestDate = (isoDate) => {
+  if (!isoDate) return "N/A"
+  const date = new Date(isoDate)
+  const now = new Date()
+  const diffMs = now - date
+  const diffSec = Math.floor(diffMs / 1000)
+  const diffMin = Math.floor(diffSec / 60)
+  const diffHour = Math.floor(diffMin / 60)
+
+  if (diffMin < 1) return `${diffSec} seconds ago`
+  if (diffHour < 1) return `${diffMin} minutes ago`
+  if (diffHour < 24) return `${diffHour} hours ago`
+
+  return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+}
+
 // --- FETCH PENDING REQUESTS ---
 const fetchPendingRequests = async () => {
   try {
-    const response = await api.get('/requests') // using centralized API
+    const response = await api.get('/requests')
     pendingRequests.value = response.data
       .filter(req => req.status === 'pending')
       .map(req => ({
         id: req.id,
         documentType: req.document_type || 'Unknown Document',
         borrowerName: req.form_data?.borrowerName || 'N/A',
-        date: req.form_data?.date || new Date(req.created_at).toLocaleDateString('en-PH'),
+        date: formatRequestDate(req.created_at),
         via: req.form_data?.via || 'Guest User',
         viaTag: req.form_data?.viaTag || null,
-        amount: req.price || 0,   // <-- use request type price here
-        paymentStatus: req.form_data?.paymentStatus || 'Unpaid',
+        amount: req.price || 0,
+        paymentStatus: req.form_data?.paymentStatus || 'Unpaid'
       }))
   } catch (error) {
     console.error('Error fetching requests:', error)
@@ -39,9 +66,10 @@ const fetchPendingRequests = async () => {
   }
 }
 
+// --- Load on mount ---
 onMounted(fetchPendingRequests)
 
-// --- COMPUTED: Filtered by search ---
+// --- COMPUTED: Search Filter ---
 const filteredRequests = computed(() => {
   if (!props.searchQuery) return pendingRequests.value
 
@@ -75,17 +103,8 @@ function handleViewDocument(id) {
 function handleProcessingDetails(id) {
   console.log(`Viewing processing details for request ${id}`)
 }
-
-// --- HELPERS ---
-const formatIndex = (index) => (index + 1).toString().padStart(2, '0')
-
-const formatCurrency = (value) => {
-  return new Intl.NumberFormat('en-PH', {
-    style: 'currency',
-    currency: 'PHP'
-  }).format(value)
-}
 </script>
+
 
 <template>
   <div class="space-y-4">
