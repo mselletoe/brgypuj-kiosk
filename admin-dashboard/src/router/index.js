@@ -33,7 +33,7 @@ const routes = [
     path: '/',
     component: AdminLayout,
     redirect: '/overview',
-    meta: { requiresAuth: false }, //L Login bypass
+    meta: { requiresAuth: true }, //L Login bypass
     children: [
       { path: 'overview', component: Overview },
       { path: 'requests', component: Requests },
