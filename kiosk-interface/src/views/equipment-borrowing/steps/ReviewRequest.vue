@@ -5,6 +5,7 @@ import PrimaryButton from '@/components/shared/PrimaryButton.vue';
 import Modal from '@/components/shared/Modal.vue';
 import { MagnifyingGlassIcon } from '@heroicons/vue/24/outline';
 import { useRouter } from 'vue-router';
+import { createKioskRequest } from '@/api/equipmentApi'; // <-- Import API
 
 const props = defineProps({
   selectedEquipment: Array,
@@ -17,10 +18,12 @@ const emit = defineEmits(['start-new-request']);
 
 const router = useRouter();
 const showModal = ref(false);
+const isSubmitting = ref(false); // <-- Add loading state
 
 const formatCurrency = (value) => {
-  if (!value) return '$0';
-  return `$${value.toLocaleString()}`;
+  if (!value) return '₱0';
+  // Use 'P' for Pesos
+  return `₱${parseFloat(value).toLocaleString()}`;
 };
 
 const formatDisplayDate = (dateString) => {
@@ -52,15 +55,46 @@ const handleModalNewRequest = () => {
   emit('start-new-request');
 };
 
-const handleSubmit = () => {
-  console.log('Submitting Request:', {
-    equipment: props.selectedEquipment,
-    dates: props.selectedDates,
+// --- MODIFIED: handleSubmit is now async and calls the API ---
+const handleSubmit = async () => {
+  isSubmitting.value = true;
+  
+  // 1. We must rename 'return' to 'return_date' for the backend
+  const datesPayload = {
+    borrow: props.selectedDates.borrow.toISOString(),
+    return_date: props.selectedDates.return.toISOString(), // <-- Renamed
+    days: props.selectedDates.days
+  };
+  
+  // 2. We only need id and quantity for the equipment
+  const equipmentPayload = props.selectedEquipment.map(item => ({
+    id: item.id,
+    quantity: item.quantity
+  }));
+
+  // 3. This is the final object to send
+  const payload = {
+    equipment: equipmentPayload,
+    dates: datesPayload,
     info: props.borrowerInfo,
     total: totalCost.value,
-  });
-  showModal.value = true;
+  };
+
+  try {
+    // 4. Call the API
+    const result = await createKioskRequest(payload);
+    console.log('Request successful:', result);
+    // Show the success modal
+    showModal.value = true;
+  } catch (error) {
+    console.error('Failed to submit request:', error);
+    // Show an error to the user
+    alert(`Error: ${error.message}\nPlease try again.`);
+  } finally {
+    isSubmitting.value = false;
+  }
 };
+// --- END OF MODIFICATION ---
 
 const handleModalDone = () => {
   showModal.value = false;
@@ -149,14 +183,18 @@ const handleModalDone = () => {
         bgColor="bg-gray-400"
         borderColor="border-gray-400"
         class="py-3 text-lg font-bold"
+        :disabled="isSubmitting"
       >
         Back to Form
       </PrimaryButton>
       <PrimaryButton
         @click="handleSubmit"
         class="py-3 text-lg font-bold"
+        :disabled="isSubmitting"
+        :bgColor="isSubmitting ? 'bg-gray-400' : 'bg-[#013C6D]'"
+        :borderColor="isSubmitting ? 'border-gray-400' : 'border-[#013C6D]'"
       >
-        Submit Request
+        {{ isSubmitting ? 'Submitting...' : 'Submit Request' }}
       </PrimaryButton>
     </div>
 

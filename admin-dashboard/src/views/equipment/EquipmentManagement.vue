@@ -1,18 +1,52 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue'; // Import onMounted
 import EquipmentRequestsList from './EquipmentRequestsList.vue';
 import EquipmentCreateForm from './EquipmentCreateForm.vue';
 import EquipmentInventory from './EquipmentInventory.vue';
+import { getInventory } from '@/api/equipmentApi'; // Import the API function
 
-const mainTab = ref('manage'); // 'manage', 'create', or 'inventory'
+const mainTab = ref('manage');
 
-// This is the "single source of truth" for your inventory.
-const masterEquipmentList = ref([
-  { id: 1, name: 'Event Tent', total: 10, available: 8, rate: 500, editing: false },
-  { id: 2, name: 'Monobloc Chairs', total: 200, available: 150, rate: 10, editing: false },
-  { id: 3, name: 'Folding Tables', total: 5, available: 5, rate: 1500, editing: false },
-  { id: 4, name: 'Sound System', total: 3, available: 2, rate: 300, editing: false },
-]);
+// This starts empty and will be filled from the API
+const masterEquipmentList = ref([]);
+
+// Fetch the inventory when the page loads
+onMounted(async () => {
+  try {
+    const inventoryData = await getInventory();
+    // Map backend names to frontend names
+    masterEquipmentList.value = inventoryData.map(item => ({
+      id: item.id,
+      name: item.name,
+      total: item.total_quantity,
+      available: item.available_quantity,
+      rate: item.rate,
+      editing: false 
+    }));
+  } catch (error) {
+    console.error('Failed to load inventory:', error);
+    alert('Error: Could not load equipment inventory from the server.');
+  }
+});
+
+// This function will be passed to the children to refresh data
+async function refreshData() {
+  try {
+    const inventoryData = await getInventory();
+    masterEquipmentList.value = inventoryData.map(item => ({
+      id: item.id,
+      name: item.name,
+      total: item.total_quantity,
+      available: item.available_quantity,
+      rate: item.rate,
+      editing: false
+    }));
+    // We also set the mainTab back to 'manage' after creation
+    mainTab.value = 'manage';
+  } catch (error) {
+    console.error('Failed to refresh inventory:', error);
+  }
+}
 
 </script>
 
@@ -63,14 +97,20 @@ const masterEquipmentList = ref([
 
     <div>
       <div v-if="mainTab === 'manage'">
-        <EquipmentRequestsList /> 
+        <EquipmentRequestsList :key="mainTab" /> 
       </div>
       
       <div v-if="mainTab === 'create'">
-        <EquipmentCreateForm :inventory="masterEquipmentList" />
+        <EquipmentCreateForm 
+          :inventory="masterEquipmentList" 
+          @request-created="refreshData" 
+        />
       </div>
       <div v-if="mainTab === 'inventory'">
-        <EquipmentInventory :inventory="masterEquipmentList" />
+        <EquipmentInventory 
+          :inventory="masterEquipmentList" 
+          @inventory-updated="refreshData" 
+        />
       </div>
     </div>
   </div>

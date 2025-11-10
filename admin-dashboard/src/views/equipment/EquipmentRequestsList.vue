@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import {
   MagnifyingGlassIcon,
   CheckCircleIcon,
@@ -8,197 +8,71 @@ import {
   CheckIcon,
   CurrencyDollarIcon,
 } from '@heroicons/vue/24/outline'; 
+// Import all our new API functions
+import { 
+  getRequests, 
+  markAsPaid, 
+  approveRequest, 
+  rejectRequest,
+  markAsPickedUp,
+  markAsReturned,
+  issueRefund
+} from '@/api/equipmentApi';
 
-const currentTab = ref('Pending'); // The "sub-tab"
+const currentTab = ref('Pending');
 const searchQuery = ref('');
+const allRequests = ref([]); // Start with an empty array
+const isLoading = ref(true);
 
-const allRequests = ref([
-  // --- 6 Pending Samples ---
-  {
-    id: 'EQ-001',
-    status: 'Pending',
-    paid: false, 
-    refunded: false,
-    borrowerName: 'Juan Dela Cruz',
-    contactNumber: '09171234567',
-    requestedVia: { type: 'RFID', id: '123456789' },
-    requestDate: 'October 30, 2025',
-    borrowDate: 'November 1, 2025',
-    returnDate: 'November 3, 2025',
-    items: [{ id: 1, name: 'Event Tent', quantity: 1, rate: 500 }, { id: 2, name: 'Monobloc Chairs', quantity: 50, rate: 10 }],
-    totalCost: 3000,
-    purpose: 'Birthday party',
-    notes: 'Need assistance for setup.',
-  },
-  {
-    id: 'EQ-002',
-    status: 'Pending',
-    paid: false, 
-    refunded: false,
-    borrowerName: 'Maria Santos',
-    contactNumber: '09209876543',
-    requestedVia: { type: 'Guest User' },
-    requestDate: 'October 29, 2025',
-    borrowDate: 'November 5, 2025',
-    returnDate: 'November 5, 2025',
-    items: [{ id: 4, name: 'Sound System', quantity: 1, rate: 300 }],
-    totalCost: 300,
-    purpose: 'Community event',
-    notes: null,
-  },
-  {
-    id: 'EQ-003',
-    status: 'Pending',
-    paid: true, 
-    refunded: false,
-    borrowerName: 'Pedro Reyes',
-    contactNumber: '09351112222',
-    requestedVia: { type: 'RFID', id: '987654321' },
-    requestDate: 'October 28, 2025',
-    borrowDate: 'November 10, 2025',
-    returnDate: 'November 11, 2025',
-    items: [{ id: 3, name: 'Folding Tables', quantity: 3, rate: 1500 }],
-    totalCost: 9000,
-    purpose: 'Presentation',
-    notes: 'Will pick up in the afternoon.',
-  },
-  {
-    id: 'EQ-004',
-    status: 'Pending',
-    paid: false, 
-    refunded: false,
-    borrowerName: 'Anna Lim',
-    contactNumber: '09001230000',
-    requestedVia: { type: 'Guest User' },
-    requestDate: 'October 28, 2025',
-    borrowDate: 'November 12, 2025',
-    returnDate: 'November 12, 2025',
-    items: [{ id: 2, name: 'Monobloc Chairs', quantity: 100, rate: 10 }],
-    totalCost: 1000,
-    purpose: 'Personal Event',
-    notes: null,
-  },
-    {
-    id: 'EQ-005',
-    status: 'Pending',
-    paid: false, 
-    refunded: false,
-    borrowerName: 'Mark Lee',
-    contactNumber: '09123456789',
-    requestedVia: { type: 'RFID', id: '112233445' },
-    requestDate: 'October 27, 2025',
-    borrowDate: 'November 15, 2025',
-    returnDate: 'November 16, 2025',
-    items: [{ id: 4, name: 'Sound System', quantity: 2, rate: 300 }],
-    totalCost: 1200,
-    purpose: 'Barangay Event',
-    notes: null,
-  },
-  {
-    id: 'EQ-006',
-    status: 'Pending',
-    paid: false, 
-    refunded: false,
-    borrowerName: 'Jose Rizal',
-    contactNumber: '09112223333',
-    requestedVia: { type: 'RFID', id: '18611896' },
-    requestDate: 'October 26, 2025',
-    borrowDate: 'November 20, 2025',
-    returnDate: 'November 22, 2025',
-    items: [{ id: 1, name: 'Event Tent', quantity: 2, rate: 500 }],
-    totalCost: 3000,
-    purpose: 'Emergency Use',
-    notes: 'Urgent',
-  },
+// --- FETCH DATA ---
+async function fetchRequests() {
+  isLoading.value = true;
+  try {
+    const data = await getRequests();
+    // Map backend data to frontend format
+    allRequests.value = data.map(req => ({
+      id: req.id,
+      status: req.status,
+      paid: req.paid,
+      refunded: req.refunded,
+      borrowerName: req.borrower_name,
+      contactNumber: req.contact_number,
+      requestedVia: { 
+        type: req.requested_via || 'Guest User', 
+        id: req.resident_id
+      }, 
+      requestDate: new Date(req.created_at).toLocaleDateString(),
+      borrowDate: new Date(req.borrow_date).toLocaleDateString(),
+      returnDate: new Date(req.return_date).toLocaleDateString(),
+      items: (req.items || []).map(item => ({
+        id: item.item.id,
+        name: item.item.name,
+        quantity: item.quantity,
+        rate: item.item.rate
+      })),
+      totalCost: req.total_cost,
+      purpose: req.purpose,
+      notes: req.notes,
+    }));
+  } catch (error) {
+    console.error('Failed to fetch requests:', error);
+    alert('Error: Could not load requests from the server.');
+  } finally {
+    isLoading.value = false;
+  }
+}
 
-  // --- Other Statuses ---
-  { 
-    id: 'EQ-007', 
-    status: 'Approved', 
-    paid: true, 
-    refunded: false,
-    borrowerName: 'Clara Kim', 
-    contactNumber: '09223334444',
-    requestedVia: { type: 'Guest User' },
-    items: [ { id: 4, name: 'Sound System', quantity: 1, rate: 300 } ], 
-    totalCost: 600,
-    purpose: 'Community Meeting',
-    notes: null,
-  },
-  { 
-    id: 'EQ-008', 
-    status: 'Approved', 
-    paid: true, 
-    refunded: false,
-    borrowerName: 'Ben Ten',
-    contactNumber: '09334445555',
-    requestedVia: { type: 'RFID', id: '10101010' },
-    items: [ { id: 2, name: 'Monobloc Chairs', quantity: 50, rate: 10 } ],
-    totalCost: 1000,
-    purpose: 'Barangay Event',
-    notes: null,
-  },
-  { 
-    id: 'EQ-009', 
-    status: 'Picked-Up', 
-    paid: true, 
-    refunded: false,
-    borrowerName: 'Son Goku',
-    contactNumber: '09445556666',
-    requestedVia: { type: 'RFID', id: '90009000' },
-    items: [ { id: 1, name: 'Event Tent', quantity: 2, rate: 500 } ],
-    totalCost: 3000,
-    purpose: 'Personal Event',
-    notes: null,
-  },
-  { 
-    id: 'EQ-010', 
-    status: 'Returned', 
-    paid: true, 
-    refunded: false,
-    borrowerName: 'Jane Doe',
-    contactNumber: '09556667777',
-    requestedVia: { type: 'Guest User' },
-    items: [ { id: 3, name: 'Folding Tables', quantity: 4, rate: 1500 } ],
-    totalCost: 18000,
-    purpose: 'Community Meeting',
-    notes: 'One table has a scratch.',
-  },
-  { 
-    id: 'EQ-011', 
-    status: 'Rejected', 
-    paid: true,
-    refunded: false,
-    borrowerName: 'V. Putin',
-    contactNumber: '09667778888',
-    requestedVia: { type: 'RFID', id: '00000001' },
-    items: [ { id: 1, name: 'Event Tent', quantity: 10, rate: 500 } ],
-    totalCost: 10000,
-    purpose: 'Personal Event',
-    notes: 'Rejected due to lack of available stock.',
-  },
-  { 
-    id: 'EQ-012', 
-    status: 'Rejected', 
-    paid: true,
-    refunded: true,
-    borrowerName: 'S. Smith',
-    contactNumber: '09778889999',
-    requestedVia: { type: 'Guest User' },
-    items: [ { id: 3, name: 'Folding Tables', quantity: 2, rate: 1500 } ],
-    totalCost: 3000,
-    purpose: 'Personal Event',
-    notes: 'Refund processed.',
-  },
-]);
+// Fetch on component mount
+onMounted(fetchRequests);
+// --- END FETCH ---
 
 const filteredRequests = computed(() => {
   let requests = allRequests.value.filter(req => req.status === currentTab.value);
-
+  
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase();
     requests = requests.filter(req =>
-      req.id.toLowerCase().includes(query) ||
+      req.id.toString().toLowerCase().includes(query) ||
       req.borrowerName.toLowerCase().includes(query) ||
       (req.items && req.items.some(item => item.name.toLowerCase().includes(query)))
     );
@@ -211,35 +85,68 @@ const formatItems = (items) => {
   return items.map(item => `${item.quantity}x ${item.name}`).join(', ');
 };
 
-// --- Action Handlers ---
-const handleMarkAsPaid = (request) => {
-  console.log('API call to mark paid', request.id);
-  request.paid = true;
-};
-const handleApprove = (request) => { 
-  console.log('API call to approve', request.id);
-  request.status = 'Approved'; 
-};
-const handleReject = (request) => { 
-  console.log('API call to reject', request.id);
-  request.status = 'Rejected'; 
-};
-const handlePickedUp = (request) => { 
-  console.log('API call to mark picked-up', request.id);
-  request.status = 'Picked-Up'; 
-};
-const handleReturned = (request) => { 
-  console.log('API call to mark returned', request.id);
-  request.status = 'Returned'; 
-};
-const handleRefund = (request) => { 
-  console.log('API call to process refund for', request.id);
-  request.refunded = true; 
-};
+// --- Action Handlers (Now async and call API) ---
+async function handleMarkAsPaid(request) {
+  try {
+    await markAsPaid(request.id);
+    request.paid = true; // Update local state
+    alert('Request marked as paid.');
+  } catch (error) {
+    alert(`Error: ${error.message}`);
+  }
+}
+async function handleApprove(request) { 
+  try {
+    await approveRequest(request.id);
+    request.status = 'Approved'; // Update local state
+    alert('Request approved.');
+  } catch (error) {
+    alert(`Error: ${error.message}`);
+  }
+}
+async function handleReject(request) { 
+  try {
+    await rejectRequest(request.id);
+    request.status = 'Rejected'; // Update local state
+    alert('Request rejected. Stock will be returned.');
+    // We don't need to re-fetch, but the parent inventory is now stale.
+    // A full solution would use a global state manager (like Pinia).
+  } catch (error) {
+    alert(`Error: ${error.message}`);
+  }
+}
+async function handlePickedUp(request) { 
+  try {
+    await markAsPickedUp(request.id);
+    request.status = 'Picked-Up'; // Update local state
+    alert('Request marked as picked up.');
+  } catch (error) {
+    alert(`Error: ${error.message}`);
+  }
+}
+async function handleReturned(request) { 
+  try {
+    await markAsReturned(request.id);
+    request.status = 'Returned'; // Update local state
+    alert('Request marked as returned. Stock updated.');
+    // Same as reject, inventory is now stale.
+  } catch (error) {
+    alert(`Error: ${error.message}`);
+  }
+}
+async function handleRefund(request) { 
+  try {
+    await issueRefund(request.id);
+    request.refunded = true; // Update local state
+    alert('Refund issued.');
+  } catch (error) {
+    alert(`Error: ${error.message}`);
+  }
+}
 const handleViewDetails = (request) => { 
   const via = request.requestedVia.type === 'RFID' 
     ? `RFID (${request.requestedVia.id})` 
-    : 'Guest User';
+    : (request.requestedVia.type || 'Guest User');
 
   const details = [
     `--- Request Details (ID: ${request.id}) ---`,
@@ -298,7 +205,11 @@ const tabs = ['Pending', 'Approved', 'Picked-Up', 'Returned', 'Rejected'];
       </div>
     </div>
 
-    <div class="space-y-4">
+    <div v-if="isLoading" class="text-center py-10 text-gray-500">
+      <p>Loading requests...</p>
+    </div>
+
+    <div v-else class="space-y-4">
       <div v-if="filteredRequests.length === 0" class="text-center py-10 text-gray-500">
         No {{ currentTab }} requests found.
       </div>
@@ -349,8 +260,8 @@ const tabs = ['Pending', 'Approved', 'Picked-Up', 'Returned', 'Rejected'];
               </span>
             </span>
             
-            <span v-else-if="request.requestedVia.type === 'Guest User'" class="font-semibold text-amber-600">
-              Guest User
+            <span v-else class="font-semibold text-amber-600">
+              {{ request.requestedVia.type }}
             </span>
           </div>
 
