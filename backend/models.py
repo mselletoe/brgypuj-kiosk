@@ -148,3 +148,26 @@ class Template(Base):
 
     # Relationship
     request_type = relationship("RequestType", back_populates="template")
+
+# ==============================================================================
+# Model: Request
+# ==============================================================================
+class Request(Base):
+    __tablename__ = "requests"
+
+    id = Column(Integer, primary_key=True, index=True)
+    resident_id = Column(SmallInteger, ForeignKey("residents.id", ondelete="CASCADE", onupdate="CASCADE"))
+    request_type_id = Column(Integer, ForeignKey("request_types.id", ondelete="CASCADE", onupdate="CASCADE"))
+    processed_by = Column(SmallInteger, ForeignKey("brgy_staff.id", ondelete="SET NULL", onupdate="CASCADE"), nullable=True)
+    rejected_by = Column(SmallInteger, ForeignKey("brgy_staff.id", ondelete="SET NULL", onupdate="CASCADE"), nullable=True)
+    purpose = Column(Text)
+    request_file = Column(LargeBinary, nullable=True)
+    status = Column(String(16), default="pending")
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
+
+    # Relationships
+    resident = relationship("Resident")
+    request_type = relationship("RequestType")
+    processed_staff = relationship("BrgyStaff", foreign_keys=[processed_by])
+    rejected_staff = relationship("BrgyStaff", foreign_keys=[rejected_by])
