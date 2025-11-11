@@ -55,7 +55,7 @@ const fetchPendingRequests = async () => {
         via: req.form_data?.via || 'Guest User',
         viaTag: req.form_data?.viaTag || null,
         amount: req.price || 0,
-        paymentStatus: req.payment_status || 'Unpaid' // ✅ use database column directly
+        paymentStatus: req.payment_status || 'Unpaid'
       }))
   } catch (error) {
     console.error('Error fetching requests:', error)
@@ -69,11 +69,41 @@ const fetchPendingRequests = async () => {
 const togglePaymentStatus = async (request) => {
   try {
     const newStatus = request.paymentStatus === 'Paid' ? 'Unpaid' : 'Paid'
-    await api.put(`/requests/${request.id}/payment`, { payment_status: newStatus }) // ✅ match backend key
-    request.paymentStatus = newStatus // ✅ update local value for instant UI feedback
+    await api.put(`/requests/${request.id}/payment`, { payment_status: newStatus })
+    request.paymentStatus = newStatus 
   } catch (error) {
     console.error('Error toggling payment status:', error)
   }
+}
+
+// --- APPROVE REQUEST ---
+const handleApprove = async (id) => {
+  try {
+    await api.put(`/requests/${id}/status`, { status_name: 'processing' })
+    // remove from pending list
+    pendingRequests.value = pendingRequests.value.filter(req => req.id !== id)
+  } catch (error) {
+    console.error('Error approving request:', error)
+  }
+}
+
+// --- REJECT REQUEST ---
+const handleReject = async (id) => {
+  try {
+    await api.put(`/requests/${id}/status`, { status_name: 'rejected' })
+    pendingRequests.value = pendingRequests.value.filter(req => req.id !== id)
+  } catch (error) {
+    console.error('Error rejecting request:', error)
+  }
+}
+
+// --- VIEW / PROCESSING ---
+const handleViewDocument = (id) => {
+  console.log(`Viewing document for request ${id}`)
+}
+
+const handleProcessingDetails = (id) => {
+  console.log(`Viewing processing details for request ${id}`)
 }
 
 // --- Load on mount ---
@@ -94,25 +124,6 @@ const filteredRequests = computed(() => {
     (req.viaTag && req.viaTag.toLowerCase().includes(lowerQuery))
   )
 })
-
-// --- ACTIONS ---
-function handleApprove(id) {
-  console.log(`Approving request ${id}`)
-  pendingRequests.value = pendingRequests.value.filter(req => req.id !== id)
-}
-
-function handleReject(id) {
-  console.log(`Rejecting request ${id}`)
-  pendingRequests.value = pendingRequests.value.filter(req => req.id !== id)
-}
-
-function handleViewDocument(id) {
-  console.log(`Viewing document for request ${id}`)
-}
-
-function handleProcessingDetails(id) {
-  console.log(`Viewing processing details for request ${id}`)
-}
 </script>
 
 <template>

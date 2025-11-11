@@ -108,7 +108,7 @@ CREATE TABLE IF NOT EXISTS requests (
     request_type_id INT REFERENCES request_types(id) ON DELETE CASCADE ON UPDATE CASCADE,
     processed_by SMALLINT REFERENCES brgy_staff(id) ON DELETE SET NULL ON UPDATE CASCADE,
     rejected_by SMALLINT REFERENCES brgy_staff(id) ON DELETE SET NULL ON UPDATE CASCADE,
-    status TEXT CHECK (status IN ('pending', 'processing', 'ready', 'released', 'rejected', 'cancelled')) DEFAULT 'pending',
+    status_id INT REFERENCES request_status(id) ON DELETE SET NULL,
     payment_status TEXT CHECK (payment_status IN ('Paid', 'Unpaid')) DEFAULT 'Unpaid',
     form_data JSONB,
     request_file BYTEA,

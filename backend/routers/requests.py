@@ -30,13 +30,17 @@ class RequestOut(BaseModel):
     created_at: str
     payment_status: Optional[str] = "Unpaid"
 
+# ✅ New Pydantic model for updating status
+class StatusUpdateSchema(BaseModel):
+    status_name: str
+
 # ----------------------------
-# Helper to get default pending status
+# Helper to get or create status
 # ----------------------------
-def get_pending_status(db: Session):
-    status = db.query(RequestStatus).filter_by(name="pending").first()
+def get_status(db: Session, name: str):
+    status = db.query(RequestStatus).filter_by(name=name).first()
     if not status:
-        status = RequestStatus(name="pending")
+        status = RequestStatus(name=name)
         db.add(status)
         db.commit()
         db.refresh(status)
@@ -47,9 +51,8 @@ def get_pending_status(db: Session):
 # ----------------------------
 @router.post("/", response_model=RequestOut)
 def create_request(req: RequestCreate, db: Session = Depends(get_db)):
-    pending_status = get_pending_status(db)
+    pending_status = get_status(db, "pending")  # ✅ updated to use generic helper
 
-    # Get request type info
     request_type = db.query(RequestType).filter_by(id=req.request_type_id).first()
     if not request_type:
         raise HTTPException(status_code=404, detail="Request type not found")
@@ -107,7 +110,6 @@ def toggle_payment_status(request_id: int, db: Session = Depends(get_db)):
     if not req:
         raise HTTPException(status_code=404, detail="Request not found")
 
-    # Toggle between Paid and Unpaid
     req.payment_status = "Paid" if req.payment_status != "Paid" else "Unpaid"
     req.updated_at = func.now()
 
@@ -116,11 +118,28 @@ def toggle_payment_status(request_id: int, db: Session = Depends(get_db)):
 
     return {"message": "Payment status updated", "payment_status": req.payment_status}
 
+# ----------------------------
+# Update Request Status (Generic)
+# ----------------------------
+@router.put("/{request_id}/status")  # ✅ new endpoint
+def update_request_status(request_id: int, payload: StatusUpdateSchema, db: Session = Depends(get_db)):
+    req = db.query(Request).filter(Request.id == request_id).first()
+    if not req:
+        raise HTTPException(status_code=404, detail="Request not found")
+
+    status = get_status(db, payload.status_name)  # ✅ use Pydantic payload
+    req.status_id = status.id
+    req.updated_at = func.now()
+
+    db.commit()
+    db.refresh(req)
+
+    return {"message": f"Request status updated to '{payload.status_name}'", "status": payload.status_name}
 
 # ----------------------------
 # Approve Request (Move to processing)
 # ----------------------------
-@router.put("/{request_id}/approve")
+@router.put("/{request_id}/approve")  # ✅ optional convenience endpoint
 def approve_request(request_id: int, db: Session = Depends(get_db)):
     req = db.query(Request).filter(Request.id == request_id).first()
     if not req:
@@ -129,14 +148,7 @@ def approve_request(request_id: int, db: Session = Depends(get_db)):
     if req.payment_status != "Paid":
         raise HTTPException(status_code=400, detail="Cannot approve unpaid request")
 
-    # Get or create 'processing' status
-    processing_status = db.query(RequestStatus).filter_by(name="processing").first()
-    if not processing_status:
-        processing_status = RequestStatus(name="processing")
-        db.add(processing_status)
-        db.commit()
-        db.refresh(processing_status)
-
+    processing_status = get_status(db, "processing")
     req.status_id = processing_status.id
     req.updated_at = func.now()
 
