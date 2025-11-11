@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import api from '@/api/api' // ✅ import API helper
+import api from '@/api/api' 
 
 // --- PROPS ---
 const props = defineProps({
@@ -34,9 +34,9 @@ const formatRequestDate = (isoDate) => {
 // --- FETCH PROCESSING REQUESTS ---
 const fetchProcessingRequests = async () => {
   try {
-    const response = await api.get('/requests') // ✅ fetch all requests
+    const response = await api.get('/requests')
     processingRequests.value = response.data
-      .filter(req => req.status === 'processing') // ✅ only 'processing'
+      .filter(req => req.status === 'processing')
       .map(req => ({
         id: req.id,
         documentType: req.document_type || 'Unknown Document',
@@ -58,7 +58,7 @@ const fetchProcessingRequests = async () => {
 // --- MARK AS READY ---
 const handleMarkAsReady = async (id) => {
   try {
-    await api.put(`/requests/${id}/status`, { status_name: 'ready' }) // ✅ update backend status
+    await api.put(`/requests/${id}/status`, { status_name: 'ready' })
     processingRequests.value = processingRequests.value.filter(req => req.id !== id)
   } catch (error) {
     console.error('Error marking request as ready:', error)
@@ -68,7 +68,7 @@ const handleMarkAsReady = async (id) => {
 // --- REJECT REQUEST ---
 const handleReject = async (id) => {
   try {
-    await api.put(`/requests/${id}/status`, { status_name: 'rejected' }) // ✅ update backend status
+    await api.put(`/requests/${id}/status`, { status_name: 'rejected' })
     processingRequests.value = processingRequests.value.filter(req => req.id !== id)
   } catch (error) {
     console.error('Error rejecting request:', error)
