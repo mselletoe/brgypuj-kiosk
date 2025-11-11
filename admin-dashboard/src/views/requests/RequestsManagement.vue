@@ -13,7 +13,7 @@ const searchQuery = ref(''); // Added for the search bar
 </script>
 
 <template>
-  <div class="p-6 bg-white rounded-md w-full h-full space-y-5">
+  <div class="p-6 bg-white rounded-md w-full h-full space-y-5 overflow-hidden">
     <PageTitle title="Requests Management" />
 
     <div class="flex justify-between items-center border-b border-gray-200">
@@ -40,7 +40,7 @@ const searchQuery = ref(''); // Added for the search bar
       </div>
     </div>
 
-    <div>
+    <div class="overflow-y-auto h-[calc(100vh-260px)] pr-2">
       <PendingTab v-if="activeTab === 'pending'" :search-query="searchQuery" />
       <ProcessingTab v-if="activeTab === 'processing'" :search-query="searchQuery" />
       <ReadyTab v-if="activeTab === 'ready'" :search-query="searchQuery" />

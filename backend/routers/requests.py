@@ -4,6 +4,7 @@ from database import get_db
 from models import Request, RequestStatus, RequestType
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
+from sqlalchemy import func
 
 router = APIRouter(prefix="/requests", tags=["Requests"])
 
@@ -26,7 +27,8 @@ class RequestOut(BaseModel):
     price: int
     form_data: Optional[Dict[str, Any]] = {}
     status: str
-    created_at: str  # ISO formatted date
+    created_at: str
+    payment_status: Optional[str] = "Unpaid"
 
 # ----------------------------
 # Helper to get default pending status
@@ -56,7 +58,8 @@ def create_request(req: RequestCreate, db: Session = Depends(get_db)):
         resident_id=req.resident_id,
         request_type_id=req.request_type_id,
         status_id=pending_status.id,
-        form_data=req.form_data
+        form_data=req.form_data,
+        payment_status="Unpaid",
     )
     db.add(new_request)
     db.commit()
@@ -70,7 +73,8 @@ def create_request(req: RequestCreate, db: Session = Depends(get_db)):
         "price": request_type.price,
         "form_data": new_request.form_data,
         "status": pending_status.name,
-        "created_at": new_request.created_at.isoformat()
+        "created_at": new_request.created_at.isoformat(),
+        "payment_status": new_request.payment_status,
     }
 
 # ----------------------------
@@ -89,6 +93,54 @@ def get_requests(db: Session = Depends(get_db)):
             "price": r.request_type.price if r.request_type else 0,
             "form_data": r.form_data,
             "status": r.status_obj.name if r.status_obj else None,
-            "created_at": r.created_at.isoformat() if r.created_at else None
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+            "payment_status": r.payment_status,
         })
     return output
+
+# ----------------------------
+# Toggle Payment Status (Paid / Unpaid)
+# ----------------------------
+@router.put("/{request_id}/payment")
+def toggle_payment_status(request_id: int, db: Session = Depends(get_db)):
+    req = db.query(Request).filter(Request.id == request_id).first()
+    if not req:
+        raise HTTPException(status_code=404, detail="Request not found")
+
+    # Toggle between Paid and Unpaid
+    req.payment_status = "Paid" if req.payment_status != "Paid" else "Unpaid"
+    req.updated_at = func.now()
+
+    db.commit()
+    db.refresh(req)
+
+    return {"message": "Payment status updated", "payment_status": req.payment_status}
+
+
+# ----------------------------
+# Approve Request (Move to processing)
+# ----------------------------
+@router.put("/{request_id}/approve")
+def approve_request(request_id: int, db: Session = Depends(get_db)):
+    req = db.query(Request).filter(Request.id == request_id).first()
+    if not req:
+        raise HTTPException(status_code=404, detail="Request not found")
+
+    if req.payment_status != "Paid":
+        raise HTTPException(status_code=400, detail="Cannot approve unpaid request")
+
+    # Get or create 'processing' status
+    processing_status = db.query(RequestStatus).filter_by(name="processing").first()
+    if not processing_status:
+        processing_status = RequestStatus(name="processing")
+        db.add(processing_status)
+        db.commit()
+        db.refresh(processing_status)
+
+    req.status_id = processing_status.id
+    req.updated_at = func.now()
+
+    db.commit()
+    db.refresh(req)
+
+    return {"message": "Request approved and moved to processing", "status": "processing"}

@@ -25,7 +25,6 @@ const formatCurrency = (value) => {
   }).format(value)
 }
 
-// Format date nicely
 const formatRequestDate = (isoDate) => {
   if (!isoDate) return "N/A"
   const date = new Date(isoDate)
@@ -56,13 +55,24 @@ const fetchPendingRequests = async () => {
         via: req.form_data?.via || 'Guest User',
         viaTag: req.form_data?.viaTag || null,
         amount: req.price || 0,
-        paymentStatus: req.form_data?.paymentStatus || 'Unpaid'
+        paymentStatus: req.payment_status || 'Unpaid' // ✅ use database column directly
       }))
   } catch (error) {
     console.error('Error fetching requests:', error)
     errorMessage.value = 'Failed to load pending requests.'
   } finally {
     isLoading.value = false
+  }
+}
+
+// --- TOGGLE PAYMENT STATUS ---
+const togglePaymentStatus = async (request) => {
+  try {
+    const newStatus = request.paymentStatus === 'Paid' ? 'Unpaid' : 'Paid'
+    await api.put(`/requests/${request.id}/payment`, { payment_status: newStatus }) // ✅ match backend key
+    request.paymentStatus = newStatus // ✅ update local value for instant UI feedback
+  } catch (error) {
+    console.error('Error toggling payment status:', error)
   }
 }
 
@@ -105,10 +115,8 @@ function handleProcessingDetails(id) {
 }
 </script>
 
-
 <template>
   <div class="space-y-4">
-    <!-- Empty State -->
     <div 
       v-if="filteredRequests.length === 0" 
       class="text-center p-10 text-gray-500"
@@ -120,7 +128,6 @@ function handleProcessingDetails(id) {
       </p>
     </div>
 
-    <!-- Request Item Card -->
     <div 
       v-for="(request, index) in filteredRequests" 
       :key="request.id" 
@@ -130,7 +137,6 @@ function handleProcessingDetails(id) {
         'border-l-4 border-l-[#FFB109]': request.via === 'Guest User'
       }"
     >
-      <!-- 1. Number -->
       <div 
         class="flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-full font-bold text-lg"
         :class="{
@@ -141,23 +147,17 @@ function handleProcessingDetails(id) {
         {{ formatIndex(index) }}
       </div>
 
-      <!-- 2. Request Details (Grid) -->
       <div class="flex-grow grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-2 ml-4">
-        
-        <!-- Col 1 -->
         <div class="text-sm">
           <label class="block text-xs text-gray-500">Document Type</label>
           <span class="font-semibold text-gray-800">{{ request.documentType }}</span>
-          
           <label class="block text-xs text-gray-500 mt-2">Request from</label>
           <span class="font-bold text-gray-700">{{ request.borrowerName }}</span>
         </div>
 
-        <!-- Col 2 -->
         <div class="text-sm">
           <label class="block text-xs text-gray-500">Requested on</label>
           <span class="font-bold text-gray-700">{{ request.date }}</span>
-          
           <label class="block text-xs text-gray-500 mt-2">Requested via</label>
           <div>
             <span 
@@ -171,36 +171,34 @@ function handleProcessingDetails(id) {
             </span>
             <span 
               v-if="request.via === 'RFID'" 
-              class="ml-2 px-2 py-0.5 text-xs font-semibold rounded-full"
-              :class="{
-                'bg-[#0957FF] text-[#FFFFFF]': request.via === 'RFID'
-              }"
+              class="ml-2 px-2 py-0.5 text-xs font-semibold rounded-full bg-[#0957FF] text-white"
             >
               {{ request.viaTag }}
             </span>
           </div>
         </div>
 
-        <!-- Col 3 -->
         <div class="text-sm">
           <label class="block text-xs text-gray-500">Amount</label>
           <span class="font-semibold text-[#159E03]">{{ formatCurrency(request.amount) }}</span>
           
           <div class="mt-2.5">
-            <span 
-              class="px-2.5 py-1 text-xs font-semibold rounded-md"
-              :class="{
-                'bg-[#BAF9B2] text-[#216917]': request.paymentStatus === 'Paid',
-                'bg-[#E0E0E0] text-[#5D5D5D]': request.paymentStatus !== 'Paid'
-              }"
+            <!-- ✅ “Unpaid” / “Paid” are clickable buttons -->
+            <button
+              @click="togglePaymentStatus(request)"
+              :class="[ 
+                'px-3 py-1 rounded text-white text-sm font-semibold', 
+                request.paymentStatus === 'Paid' 
+                  ? 'bg-green-600 hover:bg-green-700' 
+                  : 'bg-gray-400 hover:bg-gray-500'
+              ]"
             >
-              {{ request.paymentStatus === 'Paid' ? 'Paid' : 'Unpaid' }}
-            </span>
+              {{ request.paymentStatus }}
+            </button>
           </div>
         </div>
       </div>
 
-      <!-- 3. Action Buttons -->
       <div class="flex-shrink-0 flex flex-col md:flex-row md:items-center gap-2 ml-4">
         <button 
           @click="handleProcessingDetails(request.id)"
@@ -210,29 +208,22 @@ function handleProcessingDetails(id) {
         </button>
         <button 
           @click="handleViewDocument(request.id)"
-          class="flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          class="flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-md shadow-sm hover:bg-blue-700"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
-            <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
-          </svg>
           View Document
         </button>
-        
-        <!-- *** UPDATED REJECT BUTTON COLORS *** -->
         <button 
           @click="handleReject(request.id)"
           :disabled="request.paymentStatus !== 'Paid'"
-          class="px-3 py-2 text-sm font-medium bg-white border rounded-md shadow-sm hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 text-[#DC0000] border-[#DC0000] focus:ring-[#DC0000]"
+          class="px-3 py-2 text-sm font-medium bg-white border rounded-md text-[#DC0000] border-[#DC0000] hover:bg-red-50"
           :class="{ 'opacity-50 cursor-not-allowed': request.paymentStatus !== 'Paid' }"
         >
           Reject
         </button>
-        
-        <!-- *** UPDATED APPROVE BUTTON COLORS *** -->
         <button 
           @click="handleApprove(request.id)"
           :disabled="request.paymentStatus !== 'Paid'"
-          class="px-3 py-2 text-sm font-medium bg-white border rounded-md shadow-sm hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-offset-2 text-[#119500] border-[#119500] focus:ring-[#119500]"
+          class="px-3 py-2 text-sm font-medium bg-white border rounded-md text-[#119500] border-[#119500] hover:bg-green-50"
           :class="{ 'opacity-50 cursor-not-allowed': request.paymentStatus !== 'Paid' }"
         >
           Approve

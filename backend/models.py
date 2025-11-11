@@ -240,6 +240,7 @@ class Request(Base):
     request_file = Column(Text, nullable=True)  # can store path/binary later
     status_id = Column(Integer, ForeignKey("request_status.id", ondelete="SET NULL"), nullable=False)
     form_data = Column(JSON, nullable=True)  # <-- NEW: store dynamic form fields as JSON
+    payment_status = Column(String(16), default="Unpaid")
     created_at = Column(TIMESTAMP, server_default=func.now())
     updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
 
