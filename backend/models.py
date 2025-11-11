@@ -237,7 +237,7 @@ class Request(Base):
     request_type_id = Column(Integer, ForeignKey("request_types.id", ondelete="CASCADE", onupdate="CASCADE"))
     processed_by = Column(SmallInteger, ForeignKey("brgy_staff.id", ondelete="SET NULL", onupdate="CASCADE"), nullable=True)
     rejected_by = Column(SmallInteger, ForeignKey("brgy_staff.id", ondelete="SET NULL", onupdate="CASCADE"), nullable=True)
-    request_file = Column(Text, nullable=True)  # can store path/binary later
+    request_file = Column(LargeBinary, nullable=True)  # can store path/binary later
     status_id = Column(Integer, ForeignKey("request_status.id", ondelete="SET NULL"), nullable=False)
     form_data = Column(JSON, nullable=True)  # <-- NEW: store dynamic form fields as JSON
     payment_status = Column(String(16), default="Unpaid")

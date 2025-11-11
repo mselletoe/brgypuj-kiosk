@@ -39,12 +39,20 @@ watch(
   { immediate: true }
 )
 
+function formatName(value) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '_')    // spaces → underscores
+    .replace(/[^\w_]/g, '')  // remove symbols
+}
+
 // Add a new field to the list
 function addField() {
   localFields.value.push({
     id: uuidv4(),
     name: '',
-    label: '', // Still need label internally, just not showing it in UI
+    label: '',
     type: 'text',
     required: false,
     options: [],
@@ -59,18 +67,26 @@ function removeField(index) {
 
 // Save the configured fields
 function save() {
-  // Validate: all fields must have a name
   for (const field of localFields.value) {
-    if (!field.name.trim()) {
-      return message.warning('All fields must have a name.')
+    // Auto-generate a safe name from label if name is empty
+    if (!field.name.trim() && field.label.trim()) {
+      field.name = formatName(field.label)
     }
-    
-    // Auto-generate label from name if not set
+
+    // Ensure final name is properly formatted
+    field.name = formatName(field.name)
+
+    if (!field.name) {
+      return message.warning('Each field must have a valid name (e.g., full_name).')
+    }
+
     if (!field.label.trim()) {
       field.label = field.name
+        .replace(/_/g, ' ')              // replace underscores with spaces
+        .toLowerCase()                   // make everything lowercase
+        .replace(/^\w/, c => c.toUpperCase()); // capitalize the first letter only
     }
-    
-    // Validate select fields have options
+
     if (field.type === 'select' && (!field.options || field.options.length === 0)) {
       return message.warning('Select fields must have at least one option.')
     }
@@ -122,8 +138,9 @@ function save() {
               <label class="text-sm text-gray-600 mb-1 block">Field Name</label>
               <NInput
                 v-model:value="field.name"
-                placeholder="e.g., email, phone_number"
+                placeholder="e.g., full_name, contact_number"
                 size="medium"
+                @input="field.name = formatName(field.name)"
               />
             </div>
             <div>

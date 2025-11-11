@@ -22,7 +22,7 @@ class RequestCreate(BaseModel):
 class RequestOut(BaseModel):
     id: int
     resident_id: Optional[int]
-    request_type_id: int
+    request_type_id: Optional[int] = None
     document_type: str
     price: int
     form_data: Optional[Dict[str, Any]] = {}
@@ -30,7 +30,7 @@ class RequestOut(BaseModel):
     created_at: str
     payment_status: Optional[str] = "Unpaid"
 
-# ✅ New Pydantic model for updating status
+# Pydantic model for updating status
 class StatusUpdateSchema(BaseModel):
     status_name: str
 
@@ -51,7 +51,7 @@ def get_status(db: Session, name: str):
 # ----------------------------
 @router.post("/", response_model=RequestOut)
 def create_request(req: RequestCreate, db: Session = Depends(get_db)):
-    pending_status = get_status(db, "pending")  # ✅ updated to use generic helper
+    pending_status = get_status(db, "pending") 
 
     request_type = db.query(RequestType).filter_by(id=req.request_type_id).first()
     if not request_type:
@@ -121,13 +121,13 @@ def toggle_payment_status(request_id: int, db: Session = Depends(get_db)):
 # ----------------------------
 # Update Request Status (Generic)
 # ----------------------------
-@router.put("/{request_id}/status")  # ✅ new endpoint
+@router.put("/{request_id}/status")  
 def update_request_status(request_id: int, payload: StatusUpdateSchema, db: Session = Depends(get_db)):
     req = db.query(Request).filter(Request.id == request_id).first()
     if not req:
         raise HTTPException(status_code=404, detail="Request not found")
 
-    status = get_status(db, payload.status_name)  # ✅ use Pydantic payload
+    status = get_status(db, payload.status_name)
     req.status_id = status.id
     req.updated_at = func.now()
 
@@ -139,7 +139,7 @@ def update_request_status(request_id: int, payload: StatusUpdateSchema, db: Sess
 # ----------------------------
 # Approve Request (Move to processing)
 # ----------------------------
-@router.put("/{request_id}/approve")  # ✅ optional convenience endpoint
+@router.put("/{request_id}/approve") 
 def approve_request(request_id: int, db: Session = Depends(get_db)):
     req = db.query(Request).filter(Request.id == request_id).first()
     if not req:

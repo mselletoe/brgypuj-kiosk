@@ -23,13 +23,15 @@ Description:
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from database import get_db
-from models import Template, RequestType
+from models import Template, RequestType, Request
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
 from fastapi.responses import StreamingResponse
 from io import BytesIO
 import mimetypes
+from docxtpl import DocxTemplate
+import re
 
 # ==================================
 # Initialize Router
