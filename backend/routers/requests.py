@@ -1,10 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
 from database import get_db
-from models import Request, RequestStatus, RequestType
+from models import Request, RequestStatus, RequestType, Template
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
 from sqlalchemy import func
+from fastapi.responses import StreamingResponse
+import io
 
 router = APIRouter(prefix="/requests", tags=["Requests"])
 
@@ -47,16 +49,18 @@ def get_status(db: Session, name: str):
     return status
 
 # ----------------------------
-# Create a new request
+# Create a new request and auto-fill document
 # ----------------------------
 @router.post("/", response_model=RequestOut)
 def create_request(req: RequestCreate, db: Session = Depends(get_db)):
     pending_status = get_status(db, "pending") 
 
+    # Verify request type exists
     request_type = db.query(RequestType).filter_by(id=req.request_type_id).first()
     if not request_type:
         raise HTTPException(status_code=404, detail="Request type not found")
 
+    # 1️⃣ Create the new request
     new_request = Request(
         resident_id=req.resident_id,
         request_type_id=req.request_type_id,
@@ -68,6 +72,34 @@ def create_request(req: RequestCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_request)
 
+    # 2️⃣ Auto-fill document template
+    try:
+        # Find template linked to request_type
+        template = db.query(Template).filter(Template.request_type_id == req.request_type_id).first()
+        if template and template.file:
+            from docxtpl import DocxTemplate
+            import io
+
+            tpl = DocxTemplate(io.BytesIO(template.file))
+            tpl.render(req.form_data or {})
+
+            output_stream = io.BytesIO()
+            tpl.save(output_stream)
+            new_request.request_file = output_stream.getvalue()
+
+            # Make sure SQLAlchemy tracks the change
+            db.add(new_request)
+            db.commit()
+            db.refresh(new_request)
+            print(f"✅ Auto-filled document saved for request {new_request.id}")
+
+        else:
+            print(f"❌ No template found for request_type_id {req.request_type_id}")
+
+    except Exception as e:
+        print(f"❌ Auto-fill failed for request {new_request.id}: {e}")
+
+    # 3️⃣ Return the request info
     return {
         "id": new_request.id,
         "resident_id": new_request.resident_id,
