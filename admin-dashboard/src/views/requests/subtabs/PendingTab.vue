@@ -98,8 +98,23 @@ const handleReject = async (id) => {
 }
 
 // --- VIEW / PROCESSING ---
-const handleViewDocument = (id) => {
-  console.log(`Viewing document for request ${id}`)
+const handleViewDocument = async (id) => {
+  try {
+    // Open PDF in new browser tab using blob URL for better preview
+    const response = await api.get(`/requests/${id}/download-pdf`, {
+      responseType: 'blob'
+    })
+    
+    const blob = new Blob([response.data], { type: 'application/pdf' })
+    const url = URL.createObjectURL(blob)
+    window.open(url, '_blank')
+    
+    // Clean up blob URL after a delay
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+  } catch (error) {
+    console.error('Error opening PDF:', error)
+    alert('Failed to load document. Please try again.')
+  }
 }
 
 const handleProcessingDetails = (id) => {

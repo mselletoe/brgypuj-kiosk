@@ -7,6 +7,10 @@ from typing import Optional, Dict, Any
 from sqlalchemy import func
 from fastapi.responses import StreamingResponse
 import io
+import subprocess
+import tempfile
+import os
+import platform
 
 router = APIRouter(prefix="/requests", tags=["Requests"])
 
@@ -49,6 +53,69 @@ def get_status(db: Session, name: str):
     return status
 
 # ----------------------------
+# Helper to convert DOCX to PDF using LibreOffice
+# ----------------------------
+def convert_docx_to_pdf(docx_bytes: bytes) -> bytes:
+    """
+    Convert DOCX bytes to PDF bytes using LibreOffice.
+    Works on both Windows and Linux (Raspberry Pi).
+    """
+    # Create temporary directory
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # Save DOCX to temp file
+        docx_path = os.path.join(temp_dir, "document.docx")
+        with open(docx_path, "wb") as f:
+            f.write(docx_bytes)
+        
+        # Determine LibreOffice command based on platform
+        system = platform.system()
+        if system == "Windows":
+            # Common LibreOffice paths on Windows
+            libreoffice_paths = [
+                r"C:\Program Files\LibreOffice\program\soffice.exe",
+                r"C:\Program Files (x86)\LibreOffice\program\soffice.exe",
+            ]
+            soffice_cmd = None
+            for path in libreoffice_paths:
+                if os.path.exists(path):
+                    soffice_cmd = path
+                    break
+            if not soffice_cmd:
+                raise Exception("LibreOffice not found on Windows. Please install it.")
+        else:  # Linux (Raspberry Pi)
+            soffice_cmd = "soffice"
+        
+        # Convert DOCX to PDF using LibreOffice
+        try:
+            subprocess.run(
+                [
+                    soffice_cmd,
+                    "--headless",
+                    "--convert-to", "pdf",
+                    "--outdir", temp_dir,
+                    docx_path
+                ],
+                check=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=30
+            )
+        except subprocess.CalledProcessError as e:
+            raise Exception(f"LibreOffice conversion failed: {e.stderr.decode()}")
+        except FileNotFoundError:
+            raise Exception("LibreOffice not found. Install with: sudo apt-get install libreoffice")
+        
+        # Read the generated PDF
+        pdf_path = os.path.join(temp_dir, "document.pdf")
+        if not os.path.exists(pdf_path):
+            raise Exception("PDF file was not generated")
+        
+        with open(pdf_path, "rb") as f:
+            pdf_bytes = f.read()
+        
+        return pdf_bytes
+
+# ----------------------------
 # Create a new request and auto-fill document
 # ----------------------------
 @router.post("/", response_model=RequestOut)
@@ -72,32 +139,41 @@ def create_request(req: RequestCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_request)
 
-    # 2️⃣ Auto-fill document template
+    # 2️⃣ Auto-fill document template and convert to PDF
     try:
         # Find template linked to request_type
         template = db.query(Template).filter(Template.request_type_id == req.request_type_id).first()
         if template and template.file:
             from docxtpl import DocxTemplate
-            import io
 
+            # Render the DOCX template with form data
             tpl = DocxTemplate(io.BytesIO(template.file))
             tpl.render(req.form_data or {})
 
-            output_stream = io.BytesIO()
-            tpl.save(output_stream)
-            new_request.request_file = output_stream.getvalue()
+            # Save rendered DOCX to bytes
+            docx_stream = io.BytesIO()
+            tpl.save(docx_stream)
+            docx_bytes = docx_stream.getvalue()
+
+            # Convert DOCX to PDF
+            pdf_bytes = convert_docx_to_pdf(docx_bytes)
+            
+            # Save PDF to database
+            new_request.request_file = pdf_bytes
 
             # Make sure SQLAlchemy tracks the change
             db.add(new_request)
             db.commit()
             db.refresh(new_request)
-            print(f"✅ Auto-filled document saved for request {new_request.id}")
+            print(f"✅ Auto-filled PDF saved for request {new_request.id}")
 
         else:
             print(f"❌ No template found for request_type_id {req.request_type_id}")
 
     except Exception as e:
         print(f"❌ Auto-fill failed for request {new_request.id}: {e}")
+        # Don't raise exception - allow request to be created even if PDF generation fails
+        # You can choose to raise HTTPException here if PDF generation is critical
 
     # 3️⃣ Return the request info
     return {
@@ -111,6 +187,25 @@ def create_request(req: RequestCreate, db: Session = Depends(get_db)):
         "created_at": new_request.created_at.isoformat(),
         "payment_status": new_request.payment_status,
     }
+
+# ----------------------------
+# Download generated PDF
+# ----------------------------
+@router.get("/{request_id}/download-pdf")
+def download_pdf(request_id: int, db: Session = Depends(get_db)):
+    req = db.query(Request).filter(Request.id == request_id).first()
+    if not req:
+        raise HTTPException(status_code=404, detail="Request not found")
+    
+    if not req.request_file:
+        raise HTTPException(status_code=404, detail="No document file found for this request")
+    
+    # Return PDF as downloadable file
+    return StreamingResponse(
+        io.BytesIO(req.request_file),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=request_{request_id}.pdf"}
+    )
 
 # ----------------------------
 # Get all requests
