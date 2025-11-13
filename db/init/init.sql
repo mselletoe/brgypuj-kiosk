@@ -51,7 +51,7 @@ WHERE is_current = TRUE;
 CREATE TABLE IF NOT EXISTS rfid_uid (
     id SMALLSERIAL PRIMARY KEY,
     resident_id SMALLINT REFERENCES residents(id) ON DELETE CASCADE ON UPDATE CASCADE,
-    rfid_uid CHAR(9) UNIQUE,
+    rfid_uid CHAR(10) UNIQUE,
     status TEXT CHECK (status IN ('active', 'inactive')) DEFAULT 'active',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     is_active BOOLEAN DEFAULT TRUE
@@ -100,6 +100,14 @@ CREATE TABLE IF NOT EXISTS templates (
 );
 
 -- ==============================
+--  TABLE: requests_status
+-- ==============================
+CREATE TABLE IF NOT EXISTS request_status (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(50) NOT NULL UNIQUE
+);
+
+-- ==============================
 --  TABLE: requests
 -- ==============================
 CREATE TABLE IF NOT EXISTS requests (
@@ -114,14 +122,6 @@ CREATE TABLE IF NOT EXISTS requests (
     request_file BYTEA,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- ==============================
---  TABLE: requests_status
--- ==============================
-CREATE TABLE IF NOT EXISTS request_status (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(50) NOT NULL UNIQUE
 );
 
 -- ==============================
