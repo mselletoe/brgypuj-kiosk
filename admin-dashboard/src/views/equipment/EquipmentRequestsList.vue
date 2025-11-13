@@ -8,7 +8,6 @@ import {
   CheckIcon,
   CurrencyDollarIcon,
 } from '@heroicons/vue/24/outline'; 
-// Import all our new API functions
 import { 
   getRequests, 
   markAsPaid, 
@@ -21,15 +20,13 @@ import {
 
 const currentTab = ref('Pending');
 const searchQuery = ref('');
-const allRequests = ref([]); // Start with an empty array
+const allRequests = ref([]);
 const isLoading = ref(true);
 
-// --- FETCH DATA ---
 async function fetchRequests() {
   isLoading.value = true;
   try {
     const data = await getRequests();
-    // Map backend data to frontend format
     allRequests.value = data.map(req => ({
       id: req.id,
       status: req.status,
@@ -37,10 +34,7 @@ async function fetchRequests() {
       refunded: req.refunded,
       borrowerName: req.borrower_name,
       contactNumber: req.contact_number,
-      requestedVia: { 
-        type: req.requested_via || 'Guest User', 
-        id: req.resident_id
-      }, 
+      requestedVia: req.requested_via, // This will now be "Kiosk" or "Admin"
       requestDate: new Date(req.created_at).toLocaleDateString(),
       borrowDate: new Date(req.borrow_date).toLocaleDateString(),
       returnDate: new Date(req.return_date).toLocaleDateString(),
@@ -62,9 +56,7 @@ async function fetchRequests() {
   }
 }
 
-// Fetch on component mount
 onMounted(fetchRequests);
-// --- END FETCH ---
 
 const filteredRequests = computed(() => {
   let requests = allRequests.value.filter(req => req.status === currentTab.value);
@@ -85,11 +77,11 @@ const formatItems = (items) => {
   return items.map(item => `${item.quantity}x ${item.name}`).join(', ');
 };
 
-// --- Action Handlers (Now async and call API) ---
+// --- Action Handlers (no changes needed) ---
 async function handleMarkAsPaid(request) {
   try {
     await markAsPaid(request.id);
-    request.paid = true; // Update local state
+    request.paid = true;
     alert('Request marked as paid.');
   } catch (error) {
     alert(`Error: ${error.message}`);
@@ -98,7 +90,7 @@ async function handleMarkAsPaid(request) {
 async function handleApprove(request) { 
   try {
     await approveRequest(request.id);
-    request.status = 'Approved'; // Update local state
+    request.status = 'Approved';
     alert('Request approved.');
   } catch (error) {
     alert(`Error: ${error.message}`);
@@ -107,10 +99,9 @@ async function handleApprove(request) {
 async function handleReject(request) { 
   try {
     await rejectRequest(request.id);
-    request.status = 'Rejected'; // Update local state
+    request.status = 'Rejected';
     alert('Request rejected. Stock will be returned.');
-    // We don't need to re-fetch, but the parent inventory is now stale.
-    // A full solution would use a global state manager (like Pinia).
+    await fetchRequests(); 
   } catch (error) {
     alert(`Error: ${error.message}`);
   }
@@ -118,7 +109,7 @@ async function handleReject(request) {
 async function handlePickedUp(request) { 
   try {
     await markAsPickedUp(request.id);
-    request.status = 'Picked-Up'; // Update local state
+    request.status = 'Picked-Up';
     alert('Request marked as picked up.');
   } catch (error) {
     alert(`Error: ${error.message}`);
@@ -127,9 +118,9 @@ async function handlePickedUp(request) {
 async function handleReturned(request) { 
   try {
     await markAsReturned(request.id);
-    request.status = 'Returned'; // Update local state
+    request.status = 'Returned';
     alert('Request marked as returned. Stock updated.');
-    // Same as reject, inventory is now stale.
+    await fetchRequests(); 
   } catch (error) {
     alert(`Error: ${error.message}`);
   }
@@ -137,23 +128,21 @@ async function handleReturned(request) {
 async function handleRefund(request) { 
   try {
     await issueRefund(request.id);
-    request.refunded = true; // Update local state
+    request.refunded = true;
     alert('Refund issued.');
   } catch (error) {
     alert(`Error: ${error.message}`);
   }
 }
-const handleViewDetails = (request) => { 
-  const via = request.requestedVia.type === 'RFID' 
-    ? `RFID (${request.requestedVia.id})` 
-    : (request.requestedVia.type || 'Guest User');
 
+// MODIFIED: Simplified the handleViewDetails
+const handleViewDetails = (request) => { 
   const details = [
     `--- Request Details (ID: ${request.id}) ---`,
     ``,
     `Borrower: ${request.borrowerName}`,
     `Contact Number: ${request.contactNumber || 'N/A'}`,
-    `Requested Via: ${via}`,
+    `Requested Via: ${request.requestedVia}`, // This will now just say "Kiosk" or "Admin"
     ``,
     `Equipment: ${formatItems(request.items)}`,
     `Borrow Date: ${request.borrowDate}`,
@@ -171,6 +160,7 @@ const handleViewDetails = (request) => {
   
   alert(details.join('\n'));
 };
+// --- END MODIFICATION ---
 
 const tabs = ['Pending', 'Approved', 'Picked-Up', 'Returned', 'Rejected'];
 </script>
@@ -253,19 +243,15 @@ const tabs = ['Pending', 'Approved', 'Picked-Up', 'Returned', 'Rejected'];
           <div class="text-sm">
             <span class="font-medium text-gray-600">Requested via: </span>
             
-            <span v-if="request.requestedVia.type === 'RFID'" class="inline-flex items-center space-x-2">
-              <span class="font-semibold text-gray-700">RFID</span>
-              <span class="inline-flex items-center px-3 py-0.5 rounded-full text-sm font-medium bg-blue-500 text-white">
-                {{ request.requestedVia.id }}
-              </span>
+            <span v-if="request.requestedVia === 'Admin'" class="font-semibold text-purple-600">
+              Admin
             </span>
             
             <span v-else class="font-semibold text-amber-600">
-              {{ request.requestedVia.type }}
+              Kiosk
             </span>
           </div>
-
-        </div>
+          </div>
 
         <div class="flex-shrink-0 w-full sm:w-64 sm:ml-4 flex flex-col items-end space-y-2">
           <div class="text-xl font-bold text-green-700">₱{{ request.totalCost.toLocaleString() }}</div>

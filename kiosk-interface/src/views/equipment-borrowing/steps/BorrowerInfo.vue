@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import ArrowBackButton from '@/components/shared/ArrowBackButton.vue';
 import PrimaryButton from '@/components/shared/PrimaryButton.vue';
 import Keyboard from '@/components/shared/Keyboard.vue';
@@ -7,6 +7,7 @@ import { DocumentTextIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
   borrowerInfo: Object,
+  authInfo: Object,
   goNext: Function,
   goBack: Function,
 });
@@ -18,6 +19,16 @@ const localInfo = ref({
   purpose: props.borrowerInfo.purpose || null,
   notes: props.borrowerInfo.notes || ''
 });
+
+// --- Pre-fill form if user is logged in ---
+onMounted(() => {
+  if (props.authInfo) {
+    localInfo.value.contactPerson = props.authInfo.contactPerson;
+    localInfo.value.contactNumber = props.authInfo.contactNumber || '';
+  }
+});
+
+const isUserLoggedIn = computed(() => !!props.authInfo);
 
 const purposeOptions = ref([
   'Barangay Event',
@@ -40,10 +51,30 @@ const handleBack = () => {
   props.goBack('dates');
 };
 
+// --- MODIFIED: This function is now fixed ---
 const handleNext = () => {
-  emit('update:borrower-info', localInfo.value);
+  let authData = {};
+  
+  // If the user is logged in, we ALWAYS want to send their ID and RFID
+  // to the backend, even if they changed the contact name.
+  if (isUserLoggedIn.value) {
+    authData = {
+      resident_id: props.authInfo.resident_id,
+      rfid: props.authInfo.rfid
+    };
+  }
+  
+  // The final object has the (potentially edited) contact name/number
+  // AND the original resident_id/rfid (if logged in).
+  const finalInfo = {
+    ...localInfo.value, 
+    ...authData
+  };
+  
+  emit('update:borrower-info', finalInfo);
   props.goNext('review');
 };
+// --- END OF MODIFICATION ---
 
 const focusInput = (fieldName) => {
   activeInput.value = fieldName;
@@ -105,10 +136,9 @@ const inputClass = "w-full px-4 py-3 text-base border border-gray-300 rounded-lg
             v-model="localInfo.contactPerson"
             type="text"
             placeholder="Name"
-            :class="inputClass"
+            :class="[inputClass, { 'bg-gray-100': isUserLoggedIn }]"
             @focus="focusInput('contactPerson')"
-            readonly
-          />
+            :readonly="!showKeyboard" />
         </div>
 
         <div>
@@ -120,10 +150,9 @@ const inputClass = "w-full px-4 py-3 text-base border border-gray-300 rounded-lg
             v-model="localInfo.contactNumber"
             type="tel"
             placeholder="Phone Number"
-            :class="inputClass"
+            :class="[inputClass, { 'bg-gray-100': isUserLoggedIn }]"
             @focus="focusInput('contactNumber')"
-            readonly
-          />
+            :readonly="!showKeyboard" />
         </div>
 
         <div>
