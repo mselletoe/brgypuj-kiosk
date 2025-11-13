@@ -250,3 +250,21 @@ class Request(Base):
     request_type = relationship("RequestType", backref="requests")
     processed_staff = relationship("BrgyStaff", foreign_keys=[processed_by])
     rejected_staff = relationship("BrgyStaff", foreign_keys=[rejected_by])
+
+# ==============================================================================
+# Model: Announcement
+# ==============================================================================
+class Announcement(Base):
+    __tablename__ = "announcements"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    event_date = Column(Date, nullable=False)
+    event_day = Column(String(32), nullable=True)
+    event_time = Column(String(32), nullable=True)
+    location = Column(String(255), nullable=False)
+    image = Column(LargeBinary, nullable=True)   # Store uploaded image as binary
+    image_name = Column(String(255), nullable=True)  # Keep original filename
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())

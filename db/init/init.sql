@@ -190,3 +190,21 @@ VALUES
     ('Folding Tables', 5, 5, 1500.00, 'day'),
     ('Sound System', 3, 2, 300.00, 'day')
 ON CONFLICT (name) DO NOTHING;
+
+-- =============================================================================
+-- Tables for Announcements
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS announcements (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    event_date DATE NOT NULL,
+    event_day VARCHAR(32),
+    event_time VARCHAR(32),
+    location VARCHAR(255) NOT NULL,
+    image BYTEA,
+    image_name VARCHAR(255),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
