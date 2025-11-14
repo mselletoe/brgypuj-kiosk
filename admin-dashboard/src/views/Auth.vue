@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue'
-import { NInput } from 'naive-ui'
+import { NInput, useMessage } from 'naive-ui' // Added useMessage
 import logo from '@/assets/logo.svg'
 import { useRouter } from 'vue-router'
 import { useAuth } from '@/stores/authStore'
@@ -10,16 +10,30 @@ const email = ref('')
 const password = ref('')
 const router = useRouter()
 const auth = useAuth()
+const message = useMessage() // For showing errors
+const loading = ref(false) // Added loading state
 
 async function handleLogin() {
+  if (loading.value) return
+  loading.value = true
+
   try {
     const res = await loginStaff(email.value, password.value)
     auth.setToken(res.access_token)
     console.log('Login successful!', auth.user)
     router.push('/overview')
   } catch (err) {
-    console.error(err.response?.data?.detail || 'Login failed')
+    const errorMessage = err.response?.data?.detail || 'Login failed'
+    message.error(errorMessage) // Show error message to user
+    console.error(errorMessage)
+  } finally {
+    loading.value = false
   }
+}
+
+// Function to navigate to create account page
+function goToCreateAccount() {
+  router.push('/create-account')
 }
 </script>
 
@@ -43,6 +57,7 @@ async function handleLogin() {
           type="password"
           placeholder="Password"
           size="large"
+          show-password-on="click"
           class="text-left shadow-[4px_4px_10px_rgba(128,128,128,0.15)]"
         />
 
@@ -50,18 +65,21 @@ async function handleLogin() {
           type="submit"
           class="w-full bg-[#0957FF] h-[42px] text-white font-semibold py-2 rounded-md 
                  hover:bg-[#0957FF]-500 transition shadow-[4px_4px_10px_rgba(128,128,128,0.25)]"
+          :disabled="loading"
         >
-          Login
+          {{ loading ? 'Logging in...' : 'Login' }}
         </button>
 
         <hr class="my-6 border-gray-300" />
 
+        <!-- Updated button to navigate -->
         <button
             type="button"
+            @click="goToCreateAccount" 
             class="w-full bg-[#013C6D] h-[42px] text-white font-semibold py-2 rounded-md 
-             transition shadow-[4px_4px_10px_rgba(128,128,128,0.25)]"
+                 transition shadow-[4px_4px_10px_rgba(128,128,128,0.25)]"
         >
-            Create Account
+          Create Account
         </button>
       </form>
     </div>
