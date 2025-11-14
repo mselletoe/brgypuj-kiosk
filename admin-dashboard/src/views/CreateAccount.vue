@@ -1,11 +1,11 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue' // <-- Added onMounted
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { NSelect, NInput, NSpin, useMessage, NIcon } from 'naive-ui' // <-- Added NSelect
+import { NSelect, NInput, NSpin, useMessage, NIcon } from 'naive-ui'
 import logo from '@/assets/logo.svg'
 import { registerStaff, loginStaff } from '@/api/authApi' 
 import { useAuth } from '@/stores/authStore' 
-import { getAvailableResidents } from '@/api/residentsApi' // <-- Import residents API
+import { getAvailableResidents } from '@/api/residentsApi'
 import { CheckmarkCircleOutline, CloseCircleOutline } from '@vicons/ionicons5'
 
 const router = useRouter()
@@ -13,15 +13,15 @@ const message = useMessage()
 const auth = useAuth()
 
 // Form state
-const selectedResident = ref(null) // <-- ADDED
+const selectedResident = ref(null)
 const email = ref('')
 const password = ref('')
 const confirmPassword = ref('')
 const loadingSubmit = ref(false)
 
 // State for dropdowns
-const residents = ref([]) // <-- ADDED
-const loadingResidents = ref(true) // <-- ADDED
+const residents = ref([])
+const loadingResidents = ref(true)
 
 // Fetch available residents when the component mounts
 onMounted(async () => {
@@ -56,7 +56,7 @@ const passwordsMatch = computed(() => {
 async function handleRegister() {
   // 1. Validation
   const { minLength, hasNumber, hasUpper, hasLower } = passValidation.value
-  if (!selectedResident.value || !email.value || !password.value || !confirmPassword.value) { // <-- Added selectedResident
+  if (!selectedResident.value || !email.value || !password.value || !confirmPassword.value) {
     message.error('Please fill out all fields.')
     return
   }
@@ -74,10 +74,10 @@ async function handleRegister() {
 
   // 3. Prepare payload
   const payload = {
-    resident_id: selectedResident.value, // <-- ADDED
+    resident_id: selectedResident.value,
     email: email.value,
     password: password.value,
-    role: "Admin" // <-- Hard-coded role as "Admin" per your request
+    role: "Admin" 
   }
 
   // 4. Call API
@@ -153,9 +153,7 @@ async function handleRegister() {
           class="text-left shadow-[4px_4px_10px_rgba(128,128,128,0.15)]"
         />
 
-        <div v-if="password.length > 0" class="text-left p-3 bg-white/50 rounded-md space-y-1">
-          <div class="flex items-center">
-            <NIcon size="16" :color="passValidation.minLength ? '#22c55e' : '#ef4444'">
+        <div v-if="password.length > 0" class="text-left pl-3 bg-white/50 rounded-md space-y-1"> <div class="flex items-center py-1"> <NIcon size="16" :color="passValidation.minLength ? '#22c55e' : '#ef4444'">
               <CheckmarkCircleOutline v-if="passValidation.minLength" />
               <CloseCircleOutline v-else />
             </NIcon>
@@ -163,7 +161,7 @@ async function handleRegister() {
               At least 8 characters
             </span>
           </div>
-          <div class="flex items-center">
+          <div class="flex items-center py-1">
             <NIcon size="16" :color="passValidation.hasUpper ? '#22c55e' : '#ef4444'">
               <CheckmarkCircleOutline v-if="passValidation.hasUpper" />
               <CloseCircleOutline v-else />
@@ -172,7 +170,7 @@ async function handleRegister() {
               One uppercase letter (A-Z)
             </span>
           </div>
-          <div class="flex items-center">
+          <div class="flex items-center py-1">
             <NIcon size="16" :color="passValidation.hasLower ? '#22c55e' : '#ef4444'">
               <CheckmarkCircleOutline v-if="passValidation.hasLower" />
               <CloseCircleOutline v-else />
@@ -181,7 +179,7 @@ async function handleRegister() {
               One lowercase letter (a-z)
             </span>
           </div>
-          <div class="flex items-center">
+          <div class="flex items-center py-1">
             <NIcon size="16" :color="passValidation.hasNumber ? '#22c55e' : '#ef4444'">
               <CheckmarkCircleOutline v-if="passValidation.hasNumber" />
               <CloseCircleOutline v-else />
@@ -201,15 +199,13 @@ async function handleRegister() {
           class="text-left shadow-[4px_4px_10px_rgba(128,128,128,0.15)]"
         />
 
-        <div v-if="confirmPassword.length > 0" class="text-left">
-          <div class="flex items-center">
+        <div v-if="confirmPassword.length > 0" class="text-left pl-3"> <div class="flex items-center">
             <NIcon size="16" :color="passwordsMatch ? '#22c55e' : '#ef4444'">
               <CheckmarkCircleOutline v-if="passwordsMatch" />
               <CloseCircleOutline v-else />
             </NIcon>
             <span :class="['ml-2 text-xs', passwordsMatch ? 'text-green-600' : 'text-red-500']">
-              Passwords match
-            </span>
+              {{ passwordsMatch ? 'Passwords match' : 'Passwords mismatch' }} </span>
           </div>
         </div>
         
