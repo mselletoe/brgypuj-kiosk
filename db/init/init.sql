@@ -58,11 +58,12 @@ CREATE TABLE IF NOT EXISTS rfid_uid (
 );
 
 -- ==============================
---  TABLE: brgy_staff
+--  TABLE: brgy_staff
 -- ==============================
 CREATE TABLE IF NOT EXISTS brgy_staff (
     id SMALLSERIAL PRIMARY KEY,
-    resident_id SMALLINT REFERENCES residents(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    resident_id SMALLINT REFERENCES residents(id) ON DELETE CASCADE ON UPDATE CASCADE NULL,
+    staff_name VARCHAR(255) NULL, -- <-- ADDED THIS
     email VARCHAR(64) UNIQUE,
     password TEXT,
     role VARCHAR(128),
