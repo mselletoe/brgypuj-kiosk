@@ -1,5 +1,6 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+// 1. IMPORT nextTick
+import { ref, computed, onMounted, nextTick } from 'vue';
 import ArrowBackButton from '@/components/shared/ArrowBackButton.vue';
 import PrimaryButton from '@/components/shared/PrimaryButton.vue';
 import Keyboard from '@/components/shared/Keyboard.vue';
@@ -20,7 +21,6 @@ const localInfo = ref({
   notes: props.borrowerInfo.notes || ''
 });
 
-// --- Pre-fill form if user is logged in ---
 onMounted(() => {
   if (props.authInfo) {
     localInfo.value.contactPerson = props.authInfo.contactPerson;
@@ -51,34 +51,35 @@ const handleBack = () => {
   props.goBack('dates');
 };
 
-// --- MODIFIED: This function is now fixed ---
 const handleNext = () => {
   let authData = {};
-  
-  // If the user is logged in, we ALWAYS want to send their ID and RFID
-  // to the backend, even if they changed the contact name.
   if (isUserLoggedIn.value) {
     authData = {
       resident_id: props.authInfo.resident_id,
       rfid: props.authInfo.rfid
     };
   }
-  
-  // The final object has the (potentially edited) contact name/number
-  // AND the original resident_id/rfid (if logged in).
   const finalInfo = {
     ...localInfo.value, 
     ...authData
   };
-  
   emit('update:borrower-info', finalInfo);
   props.goNext('review');
 };
-// --- END OF MODIFICATION ---
 
-const focusInput = (fieldName) => {
+// 2. MODIFIED: focusInput now handles scrolling
+const focusInput = (elementId, fieldName) => {
   activeInput.value = fieldName;
   showKeyboard.value = true;
+
+  // Wait for Vue to update the DOM (to add padding)
+  nextTick(() => {
+    const el = document.getElementById(elementId);
+    if (el) {
+      // Scroll the element into the middle of the view
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  });
 };
 
 const handleKeyboardKeyPress = (char) => {
@@ -111,7 +112,10 @@ const inputClass = "w-full px-4 py-3 text-base border border-gray-300 rounded-lg
 </script>
 
 <template>
-  <div class="py-0 p-8">
+  <div 
+    class="py-0 p-8" 
+    :class="{ 'content-with-keyboard': showKeyboard }"
+  >
 
     <div class="flex items-center gap-4">
       <ArrowBackButton @click="handleBack" />
@@ -137,8 +141,9 @@ const inputClass = "w-full px-4 py-3 text-base border border-gray-300 rounded-lg
             type="text"
             placeholder="Name"
             :class="[inputClass, { 'bg-gray-100': isUserLoggedIn }]"
-            @focus="focusInput('contactPerson')"
-            :readonly="!showKeyboard" />
+            @focus="focusInput('contact-person', 'contactPerson')"
+            :readonly="!showKeyboard" 
+          />
         </div>
 
         <div>
@@ -151,8 +156,9 @@ const inputClass = "w-full px-4 py-3 text-base border border-gray-300 rounded-lg
             type="tel"
             placeholder="Phone Number"
             :class="[inputClass, { 'bg-gray-100': isUserLoggedIn }]"
-            @focus="focusInput('contactNumber')"
-            :readonly="!showKeyboard" />
+            @focus="focusInput('contact-number', 'contactNumber')"
+            :readonly="!showKeyboard" 
+          />
         </div>
 
         <div>
@@ -181,7 +187,7 @@ const inputClass = "w-full px-4 py-3 text-base border border-gray-300 rounded-lg
             rows="3"
             placeholder="Any additional notes or special requirements"
             :class="inputClass"
-            @focus="focusInput('notes')"
+            @focus="focusInput('notes', 'notes')"
             readonly
           ></textarea>
         </div>
@@ -237,5 +243,16 @@ select[value="null"] {
 .slide-up-enter-from,
 .slide-up-leave-to {
   transform: translateY(100%);
+}
+
+/* 5. ADDED: This class adds padding to the bottom of the page */
+.content-with-keyboard {
+  /* This value should be the height of your <Keyboard> component.
+    320px is a common height. Adjust it if your keyboard is taller/shorter.
+  */
+  padding-bottom: 320px;
+  
+  /* This makes the padding animate in sync with the keyboard slide */
+  transition: padding-bottom 0.3s ease-out;
 }
 </style>
