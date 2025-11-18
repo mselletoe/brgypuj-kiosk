@@ -17,25 +17,29 @@ const checkRFID = async (uid) => {
     const { data } = await api.get(`/rfid/check/${uid}`)
 
     if (data.exists) {
+      // --- MODIFIED: Fetch user data here to get the name ---
       const userRes = await api.get(`/users/${data.resident_id}`);
-
-      const userData = {
-        id: data.resident_id,
-        name: `${userRes.data.first_name} ${userRes.data.last_name}`,
-      };
+      const userName = `${userRes.data.first_name} ${userRes.data.last_name}`;
+      // --- END MODIFICATION ---
 
       router.replace({
         path: '/auth-pin',
-        query: { mode: 'user', resident_id: data.resident_id, name: userData.name },
+        // --- MODIFIED: Pass the name to the route ---
+        query: { mode: 'user', resident_id: data.resident_id, uid: uid, name: userName },
       });
     } else {
       router.replace({
         path: '/auth-pin',
-        query: { mode: 'admin', uid },
+        query: { mode: 'admin', uid: uid }, // Admin mode, pass the new UID
       });
     }
   } catch (error) {
-    router.push('/login-rfid')
+    console.error("Error checking RFID", error);
+    // Reset on error
+    isProcessing.value = false;
+    inputBuffer = '';
+    if (hiddenInput.value) hiddenInput.value.value = '';
+    alert("An error occurred. Please try scanning again.");
   }
 }
 
@@ -51,15 +55,9 @@ const handleRFIDInput = async (event) => {
     scannedUID.value = uid
     isProcessing.value = true
 
-    try {
-      await checkRFID(uid)
-    } finally {
-      // Reset processing only if still on this page
-      if (router.currentRoute.value.path === '/scan') {
-        isProcessing.value = false
-      }
-    }
+    await checkRFID(uid) // Let checkRFID handle success/failure
 
+    // Reset buffer
     inputBuffer = ''
     if (hiddenInput.value) hiddenInput.value.value = ''
   } 
@@ -93,7 +91,6 @@ onUnmounted(() => {
   <div class="h-screen w-screen bg-gradient-to-br from-[#003A6B] to-[#89CFF1] flex justify-center items-center font-poppins">
     <div class="bg-white w-[974px] h-[550px] rounded-lg shadow-2xl relative flex flex-col justify-center items-center p-8">
 
-      <!-- Main Content -->
       <div class="flex flex-col items-center text-center">
         <div v-if="!isProcessing" class="flex flex-col items-center">
           <div class="bg-gray-200 w-80 h-52 rounded-lg flex justify-center items-center">
@@ -112,7 +109,6 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <!-- Hidden Input (for keyboard emulator scanners) -->
       <input
         ref="hiddenInput"
         v-model="scannedUID"
@@ -120,7 +116,6 @@ onUnmounted(() => {
         class="absolute opacity-0 pointer-events-none"
       />
 
-      <!-- Back Button -->
       <PrimaryButton 
         @click="goBack" 
         bgColor="bg-transparent"
