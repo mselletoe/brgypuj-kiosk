@@ -82,8 +82,23 @@ const handleSendSms = (id) => {
 }
 
 // --- DOWNLOAD / DETAILS ---
-const handleDownloadDocument = (id) => {
-  console.log(`Downloading document for request ${id}`)
+const handleViewDocument = async (id) => {
+  try {
+    // Open PDF in new browser tab using blob URL for better preview
+    const response = await api.get(`/requests/${id}/download-pdf`, {
+      responseType: 'blob'
+    })
+    
+    const blob = new Blob([response.data], { type: 'application/pdf' })
+    const url = URL.createObjectURL(blob)
+    window.open(url, '_blank')
+    
+    // Clean up blob URL after a delay
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+  } catch (error) {
+    console.error('Error opening PDF:', error)
+    alert('Failed to load document. Please try again.')
+  }
 }
 
 const handleProcessingDetails = (id) => {
@@ -202,13 +217,10 @@ onMounted(fetchReadyRequests)
         </button>
         
         <button 
-          @click="handleDownloadDocument(request.id)"
+          @click="handleViewDocument(request.id)"
           class="flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
-          </svg>
-          Download Document
+          View Document
         </button>
         
         <button 
