@@ -1,89 +1,148 @@
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useTouchToStart } from '@/composables/touchToStart'
+import { ref, onMounted } from "vue";
+import api from "@/api/api"; 
+import Pob1Logo from "@/assets/images/Pob1Logo.svg";
 
-useTouchToStart()
+const announcements = ref([]);
+const current = ref(0);
+let autoSlide = null;
 
-const announcements = ref([])
-const currentSlide = ref(0)
+// Fetch announcements from API
+const loadAnnouncements = async () => {
+  try {
+    const res = await api.get("/announcements");
+    announcements.value = res.data;
+  } catch (error) {
+    console.error("Failed to load announcements:", error);
+  }
+};
 
-const fetchAnnouncements = async () => {
-  const response = await fetch('/src/data/announcements.json')
-  announcements.value = await response.json()
-}
+// Auto slide every 5 seconds
+const startSlider = () => {
+  autoSlide = setInterval(() => {
+    nextSlide();
+  }, 5000);
+};
 
 const nextSlide = () => {
-  currentSlide.value = (currentSlide.value + 1) % announcements.value.length
-}
+  if (announcements.value.length === 0) return;
+  current.value = (current.value + 1) % announcements.value.length;
+};
 
 const prevSlide = () => {
-  currentSlide.value =
-    (currentSlide.value - 1 + announcements.value.length) %
-    announcements.value.length
-}
+  if (announcements.value.length === 0) return;
+  current.value =
+    (current.value - 1 + announcements.value.length) %
+    announcements.value.length;
+};
 
-onMounted(fetchAnnouncements)
+const formatDate = (date) => {
+  if (!date) return "";
+  return new Date(date).toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+};
+
+// Navigate to kiosk home
+const start = () => {
+  window.location.href = "/home"; // change if needed
+};
+
+onMounted(async () => {
+  await loadAnnouncements();
+  startSlider();
+});
 </script>
 
 <template>
-  <div class="relative h-screen w-screen overflow-hidden">
+  <div
+    class="relative h-screen w-full overflow-hidden"
+    @click="start"
+  >
+    <!-- Background Image -->
     <div
-      v-for="(item, index) in announcements"
-      :key="item.id"
-      class="absolute inset-0 transition-opacity duration-700 ease-in-out"
-      :class="index === currentSlide ? 'opacity-100' : 'opacity-0'"
-    >
-      <!-- Background Image -->
-      <img
-        :src="item.image"
-        alt="announcement"
-        class="w-full h-full object-cover brightness-50"
-      />
+      v-if="announcements.length"
+      class="absolute inset-0 bg-cover bg-center transition-all duration-700"
+      :style="{
+        backgroundImage: `url('data:image/jpeg;base64,${
+          announcements[current].image
+        }')`,
+      }"
+    ></div>
 
-      <!-- Overlay Content -->
-      <div class="absolute inset-0 flex flex-col justify-center items-center text-center px-8">
-        <img src="/src/assets/images/Pob1Logo.svg" class="w-28 mb-4" alt="Logo" />
-        <h2 class="text-white text-lg font-semibold">Brgy. Poblacion I</h2>
-        <p class="text-white text-sm mb-4">Amadeo, Cavite - Kiosk System</p>
+    <!-- Blue overlay -->
+    <div class="absolute inset-0 bg-blue-900/60"></div>
 
-        <h1 class="text-4xl md:text-6xl font-extrabold text-white mb-4 leading-tight drop-shadow-lg">
-          {{ item.title }}
-        </h1>
+    <!-- Slider Content -->
+    <div class="relative z-10 h-full flex flex-col justify-center px-16">
+      <!-- Header -->
+      <div class="flex items-center gap-4 mb-6">
+        <img :src="Pob1Logo" class="w-20 h-20" />
 
-        <div class="text-white text-lg md:text-xl font-medium space-y-1">
-          <p>{{ new Date(item.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' }) }}</p>
-          <p>{{ item.location }}</p>
-          <p>{{ item.start }} - {{ item.end }}</p>
+        <div>
+          <h2 class="text-white text-3xl font-bold leading-tight">
+            Brgy. Poblacion I
+          </h2>
+          <p class="text-white text-xl opacity-90">
+            Amadeo, Cavite • Kiosk System
+          </p>
         </div>
-
-        <p class="absolute bottom-6 text-white opacity-70 text-sm animate-pulse">
-          Touch the screen to start
-        </p>
       </div>
+
+      <!-- Announcement Title -->
+      <h1
+        class="text-white font-extrabold text-6xl w-[60%] leading-tight drop-shadow-lg"
+      >
+        {{ announcements[current]?.title }}
+      </h1>
+
+      <!-- Details -->
+      <p class="text-white text-2xl mt-6 opacity-95 leading-relaxed">
+        {{ formatDate(announcements[current]?.event_date) }},
+        {{ announcements[current]?.event_day }} <br />
+        {{ announcements[current]?.location }} <br />
+        {{ announcements[current]?.event_time }}
+      </p>
     </div>
 
-    <!-- Navigation Buttons -->
+    <!-- Left Button -->
     <button
-      @click="prevSlide"
-      class="absolute left-6 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-20 hover:bg-opacity-40 text-white p-3 rounded-full"
+      @click.stop="prevSlide"
+      class="absolute top-1/2 left-6 -translate-y-1/2 text-white text-6xl opacity-80 hover:opacity-100"
     >
       ‹
     </button>
+
+    <!-- Right Button -->
     <button
-      @click="nextSlide"
-      class="absolute right-6 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-20 hover:bg-opacity-40 text-white p-3 rounded-full"
+      @click.stop="nextSlide"
+      class="absolute top-1/2 right-6 -translate-y-1/2 text-white text-6xl opacity-80 hover:opacity-100"
     >
       ›
     </button>
 
     <!-- Pagination Dots -->
-    <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2">
-      <div
-        v-for="(item, index) in announcements"
-        :key="item.id"
-        class="w-3 h-3 rounded-full transition-all duration-300"
-        :class="index === currentSlide ? 'bg-white' : 'bg-gray-400'"
-      ></div>
+    <div class="absolute bottom-24 w-full flex justify-center space-x-3 z-20">
+      <span
+        v-for="(a, i) in announcements"
+        :key="i"
+        class="w-4 h-4 rounded-full bg-white transition"
+        :class="i === current ? 'opacity-100' : 'opacity-40'"
+      ></span>
     </div>
+
+    <!-- Touch to Start -->
+    <p class="absolute bottom-10 w-full text-center text-white text-xl opacity-90">
+      Touch the screen to start
+    </p>
   </div>
 </template>
+
+<style>
+/* smooth fade for background switching */
+.bg-cover {
+  transition: background-image 0.6s ease-in-out;
+}
+</style>
