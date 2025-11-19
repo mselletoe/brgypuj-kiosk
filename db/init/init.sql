@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS residents (
     years_residency SMALLINT CHECK (years_residency >= 0),
     email VARCHAR(64) UNIQUE,
     phone_number CHAR(11),
-    account_pin TEXT, 
+    account_pin VARCHAR(4), 
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
