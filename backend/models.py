@@ -1,7 +1,17 @@
 """
 ================================================================================
 File: models.py
-...
+Description:
+    This module defines the SQLAlchemy ORM models.
+    It maps Python Classes to Database Tables.
+    
+    Entities covered:
+      - Resident: Personal info.
+      - Address: Location details linked to Residents.
+      - BrgyStaff: Admin accounts (linked to Residents).
+      - RequestType/Template: Configuration for document requests.
+      - EquipmentInventory/Request: Management of borrowable items.
+================================================================================
 """
 
 from sqlalchemy import Column, Integer, String, Date, SmallInteger, Boolean, ForeignKey, Text, TIMESTAMP, LargeBinary, DateTime, JSON, DECIMAL

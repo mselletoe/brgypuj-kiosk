@@ -1,3 +1,13 @@
+/*
+ * =================================================================================
+ * File: api/authApi.js
+ * Description: 
+ * API service layer for Authentication-related requests.
+ * - Handles Login requests to the backend.
+ * - Handles Logout requests.
+ * =================================================================================
+ */
+
 import api from './api'
 
 // Login staff
