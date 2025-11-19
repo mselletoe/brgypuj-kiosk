@@ -152,14 +152,13 @@ const deleteAnnouncement = async (id) => {
 </script>
 
 <template>
-  <div class="p-6 bg-white rounded-md w-full h-full space-y-5">
+  <div class="p-6 bg-white rounded-md w-full min-h-screen space-y-5">
     <div class="flex justify-between items-center">
       <PageTitle title="Announcements" />
       <button
         @click="openAddModal"
         class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center gap-1"
-      >
-        <span>➕</span> Add Announcement
+      > Add Announcement
       </button>
     </div>
 
