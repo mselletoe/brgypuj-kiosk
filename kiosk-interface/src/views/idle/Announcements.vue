@@ -1,13 +1,13 @@
 <script setup>
 import { ref, onMounted } from "vue";
-import api from "@/api/api"; 
+import api from "@/api/api";
 import Pob1Logo from "@/assets/images/Pob1Logo.svg";
 
 const announcements = ref([]);
 const current = ref(0);
 let autoSlide = null;
 
-// Fetch announcements from API
+// Fetch announcements
 const loadAnnouncements = async () => {
   try {
     const res = await api.get("/announcements");
@@ -17,7 +17,7 @@ const loadAnnouncements = async () => {
   }
 };
 
-// Auto slide every 5 seconds
+// Auto slide
 const startSlider = () => {
   autoSlide = setInterval(() => {
     nextSlide();
@@ -45,7 +45,7 @@ const formatDate = (date) => {
   });
 };
 
-// Navigate to kiosk home
+// Navigate to login
 const start = () => {
   window.location.href = "/home"; // change if needed
 };
@@ -64,67 +64,72 @@ onMounted(async () => {
     <!-- Background Image -->
     <div
       v-if="announcements.length"
-      class="absolute inset-0 bg-cover bg-center transition-all duration-700"
+      class="absolute inset-0 bg-cover bg-center transition-all duration-700 pointer-events-none"
       :style="{
         backgroundImage: `url('data:image/jpeg;base64,${
-          announcements[current].image
+          announcements[current]?.image
         }')`,
       }"
     ></div>
 
     <!-- Blue overlay -->
-    <div class="absolute inset-0 bg-blue-900/60"></div>
+    <div class="absolute inset-0 bg-[#00325D] opacity-70 pointer-events-none"></div>
 
     <!-- Slider Content -->
-    <div class="relative z-10 h-full flex flex-col justify-center px-16">
-      <!-- Header -->
-      <div class="flex items-center gap-4 mb-6">
-        <img :src="Pob1Logo" class="w-20 h-20" />
+    <div class="relative z-10 h-full flex flex-col justify-center px-20 pointer-events-auto">
+      <div class="flex items-center gap-4 mb-6
+                  absolute top-6 left-6 z-20">
+        <img :src="Pob1Logo" class="w-[110px] h-[110px]" />
 
         <div>
-          <h2 class="text-white text-3xl font-bold leading-tight">
+          <h2 class="text-white text-[15px] font-bold leading-tight">
             Brgy. Poblacion I
           </h2>
-          <p class="text-white text-xl opacity-90">
-            Amadeo, Cavite • Kiosk System
+          <p class="text-white text-[15px] opacity-90 -mt-1">
+            Amadeo, Cavite - Kiosk System
           </p>
+          <h3 class="text-white text-[30px] font-bold leading-tight">
+            BARANGAY ANNOUNCEMENTS
+          </h3>
         </div>
       </div>
 
-      <!-- Announcement Title -->
-      <h1
-        class="text-white font-extrabold text-6xl w-[60%] leading-tight drop-shadow-lg"
-      >
-        {{ announcements[current]?.title }}
-      </h1>
+      <div class="absolute left-20 top-[230px] z-20">
+        <h1
+          class="text-white font-extrabold text-[70px] tracking-tight leading-[1.05] drop-shadow-lg"
+        >
+          {{ announcements[current]?.title }}
+        </h1>
 
-      <!-- Details -->
-      <p class="text-white text-2xl mt-6 opacity-95 leading-relaxed">
-        {{ formatDate(announcements[current]?.event_date) }},
-        {{ announcements[current]?.event_day }} <br />
-        {{ announcements[current]?.location }} <br />
-        {{ announcements[current]?.event_time }}
-      </p>
+        <p
+          class="text-white text-[22px] mt-4 opacity-95 leading-[1.3]"
+        >
+          {{ formatDate(announcements[current]?.event_date) }},
+          {{ announcements[current]?.event_day }} <br />
+          {{ announcements[current]?.location }} <br />
+          {{ announcements[current]?.event_time }}
+        </p>
+      </div>
     </div>
 
     <!-- Left Button -->
     <button
-      @click.stop="prevSlide"
-      class="absolute top-1/2 left-6 -translate-y-1/2 text-white text-6xl opacity-80 hover:opacity-100"
+      @click.stop.prevent="prevSlide"
+      class="absolute top-1/2 left-6 -translate-y-1/2 text-white text-6xl opacity-80 hover:opacity-100 z-20 pointer-events-auto"
     >
       ‹
     </button>
 
     <!-- Right Button -->
     <button
-      @click.stop="nextSlide"
-      class="absolute top-1/2 right-6 -translate-y-1/2 text-white text-6xl opacity-80 hover:opacity-100"
+      @click.stop.prevent="nextSlide"
+      class="absolute top-1/2 right-6 -translate-y-1/2 text-white text-6xl opacity-80 hover:opacity-100 z-20 pointer-events-auto"
     >
       ›
     </button>
 
     <!-- Pagination Dots -->
-    <div class="absolute bottom-24 w-full flex justify-center space-x-3 z-20">
+    <div class="absolute bottom-24 w-full flex justify-center space-x-3 z-20 pointer-events-auto">
       <span
         v-for="(a, i) in announcements"
         :key="i"
@@ -133,15 +138,13 @@ onMounted(async () => {
       ></span>
     </div>
 
-    <!-- Touch to Start -->
-    <p class="absolute bottom-10 w-full text-center text-white text-xl opacity-90">
+    <p class="absolute bottom-10 w-full text-center text-white text-xl opacity-90 pointer-events-none">
       Touch the screen to start
     </p>
   </div>
 </template>
 
 <style>
-/* smooth fade for background switching */
 .bg-cover {
   transition: background-image 0.6s ease-in-out;
 }
