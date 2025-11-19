@@ -49,8 +49,9 @@ const totalCost = computed(() => {
 
 // --- Methods ---
 const formatCurrency = (value) => {
-  return `$${value.toLocaleString()}`
+  return `₱${value.toLocaleString()}`
 }
+
 const handleBack = () => {
   props.goBack('select')
 }
