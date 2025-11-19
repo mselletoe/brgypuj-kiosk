@@ -4,12 +4,18 @@ import { useRouter, useRoute } from 'vue-router'
 import api from '@/api/api'
 import { login } from '@/stores/auth'
 import Keypad from '@/components/shared/Keypad.vue'
-import { EyeIcon, EyeSlashIcon } from '@heroicons/vue/24/outline'
-// MODIFIED: Import your ArrowBackButton
-import ArrowBackButton from '@/components/shared/ArrowBackButton.vue' 
+// MODIFIED: Removed SpeakerWaveIcon from imports
+import { EyeIcon, EyeSlashIcon, XCircleIcon, CheckCircleIcon } from '@heroicons/vue/24/outline'
+import PrimaryButton from '@/components/shared/PrimaryButton.vue' 
+import { ArrowLeftIcon } from '@heroicons/vue/24/solid' 
 
 const router = useRouter()
 const route = useRoute()
+
+// --- Notification State ---
+const showToast = ref(false)
+const toastMessage = ref('')
+const isSuccess = ref(false)
 
 const pin = ref('')
 const confirmPin = ref('')
@@ -24,6 +30,17 @@ const PIN_LENGTH = 4
 const showPin = ref(false)
 let fullResidentData = null; 
 
+// --- Helper to show custom notification instead of alert() ---
+const triggerToast = (message, success = false) => {
+  toastMessage.value = message
+  isSuccess.value = success
+  showToast.value = true
+  
+  setTimeout(() => {
+    showToast.value = false
+  }, 3000)
+}
+
 onMounted(async () => {
   mode.value = route.query.mode || 'user'
   
@@ -34,8 +51,8 @@ onMounted(async () => {
     residentName.value = route.query.name || 'Resident' 
     
     if (!residentId.value) {
-      alert('No user ID found. Please scan RFID again.')
-      router.push('/login-rfid')
+      triggerToast('No user ID found. Please scan RFID again.')
+      setTimeout(() => router.push('/login-rfid'), 2000)
       return
     }
 
@@ -47,9 +64,8 @@ onMounted(async () => {
       const userRes = await api.get(`/users/${residentId.value}`)
       fullResidentData = userRes.data; 
       
-    } catch (err)
- {
-      alert('Error checking user data. Please try again.')
+    } catch (err) {
+      triggerToast('Error checking user data. Please try again.')
     }
   }
 })
@@ -89,26 +105,30 @@ const subtitle = computed(() => {
 })
 
 const pinDisplay = computed(() => {
+  if (pin.value.length === 0) return ''; 
   if (showPin.value) return pin.value;
-  let display = '• '.repeat(pin.value.length);
-  display += '– '.repeat(PIN_LENGTH - pin.value.length);
-  return display.trim();
+  return '• '.repeat(pin.value.length).trim();
 });
 
 const confirmPinDisplay = computed(() => {
+  if (confirmPin.value.length === 0) return '';
   if (showPin.value) return confirmPin.value;
-  let display = '• '.repeat(confirmPin.value.length);
-  display += '– '.repeat(PIN_LENGTH - confirmPin.value.length);
-  return display.trim();
+  return '• '.repeat(confirmPin.value.length).trim();
+});
+
+const isPinComplete = computed(() => {
+  if (mode.value === 'admin') return pin.value.length === PIN_LENGTH;
+  
+  if (isSettingPin.value) {
+    return pin.value.length === PIN_LENGTH && confirmPin.value.length === PIN_LENGTH;
+  }
+  return pin.value.length === PIN_LENGTH;
 });
 
 // --- Submit Logic ---
 const submitPin = async () => {
-  if (pin.value.length !== PIN_LENGTH) {
-    return alert(`PIN must be ${PIN_LENGTH} digits.`);
-  }
+  if (!isPinComplete.value) return;
 
-  // Admin Mode
   if (mode.value === 'admin') {
     if (pin.value === ADMIN_PIN) {
       const userData = { name: 'Admin', isAdmin: true }
@@ -117,29 +137,29 @@ const submitPin = async () => {
       const uid = route.query.uid
       router.replace(`/register?uid=${uid}`)
     } else {
-      alert('❌ Invalid Admin PIN')
+      triggerToast('Invalid Admin PIN')
       onClear();
     }
     return
   }
 
-  // User Mode
   try {
     if (isSettingPin.value) {
       if (pin.value !== confirmPin.value) {
-        alert('PINs do not match. Please try again.');
+        triggerToast('PINs do not match. Please try again.');
         onClear();
         return;
       }
       await api.post(`/users/${residentId.value}/pin`, { pin: pin.value })
-      alert('✅ PIN set successfully!')
+      triggerToast('PIN set successfully!', true)
     } else {
       const res = await api.post(`/users/${residentId.value}/pin/verify`, { pin: pin.value })
       if (!res.data.valid) {
-        alert('❌ Invalid PIN');
+        triggerToast('Invalid PIN');
         onClear();
         return;
       }
+      triggerToast('Login successful!', true);
     }
 
     if (fullResidentData) {
@@ -148,28 +168,40 @@ const submitPin = async () => {
     
     login(fullResidentData)
     localStorage.setItem("auth_user", JSON.stringify({ user: fullResidentData, isGuest: false }));
-    router.replace('/home')
+    
+    if (isSettingPin.value) {
+      setTimeout(() => router.replace('/home'), 1000);
+    } else {
+      router.replace('/home');
+    }
 
   } catch (err) {
-    alert('An error occurred. Please try again.');
+    triggerToast('An error occurred. Please try again.');
     onClear();
   }
 }
 
 const goBack = () => {
-  router.push('/login-rfid'); // Go back to the scan page
+  router.push('/login-rfid');
 }
 </script>
 
 <template>
   <div class="h-screen w-screen bg-gradient-to-br from-[#003A6B] to-[#89CFF1] flex justify-center items-center font-poppins">
     
-    <div class="bg-white w-[974px] h-[550px] rounded-lg shadow-2xl flex p-10 relative">
+    <div class="bg-white w-[974px] h-[550px] rounded-lg shadow-2xl relative flex p-10">
       
-      <ArrowBackButton 
-        @click="goBack"
-        class="absolute top-6 left-6" 
-      />
+      <PrimaryButton 
+        @click="goBack" 
+        bgColor="bg-transparent"
+        textColor="text-[#013C6D]"
+        class="absolute bottom-10 left-10 w-auto px-4 text-[14px] rounded-[20px] h-[40px] border-2 border-[#013C6D] hover:bg-gray-100 transition-colors"
+      >
+        <span class="flex items-center gap-x-2">
+            <ArrowLeftIcon class="h-5 w-5" />
+            Go Back
+          </span>
+      </PrimaryButton>
 
       <div class="w-1/2 flex flex-col text-[#013C6D] pr-12">
         <div class="flex items-center gap-3 mb-10">
@@ -181,19 +213,18 @@ const goBack = () => {
         </div>
 
         <div class="flex-grow flex flex-col justify-center items-center text-center">
-          <h2 class="text-4xl font-bold truncate">{{ title }}</h2>
-          <p class="text-xl text-gray-500 mt-2">{{ subtitle }}</p>
+          <div class="mb-20"> 
+            <h2 class="text-4xl font-bold truncate mb-1 leading-tight">{{ title }}</h2> 
+            <p class="text-xl text-gray-500 leading-tight">{{ subtitle }}</p> 
+          </div>
           
-          <button v-if="mode === 'admin'" class="w-16 h-16 rounded-full border-2 border-gray-400 text-gray-500 flex items-center justify-center mt-8 hover:bg-gray-100 transition-colors">
-            <SpeakerWaveIcon class="w-8 h-8" />
-          </button>
-        </div>
+          </div>
       </div>
 
-      <div class="w-1/2 flex flex-col items-center justify-between pl-12 border-l border-gray-200">
+      <div class="w-1/2 flex flex-col items-center justify-center pl-12 border-l border-gray-200">
         <div class="w-full max-w-xs">
           <label class="text-sm font-medium text-gray-500 self-start mb-1">
-            {{ isSettingPin ? 'Enter 4-digit PIN' : 'Enter 4-digit PIN' }}
+            {{ isSettingPin ? 'Enter New 4-digit PIN' : 'Enter 4-digit PIN' }}
           </label>
           <div class="relative w-full">
             <input
@@ -202,7 +233,7 @@ const goBack = () => {
               readonly
               class="w-full h-14 bg-gray-50 border border-gray-300 rounded-lg text-3xl text-center font-light focus:outline-none focus:ring-2 focus:ring-blue-500"
               :class="showPin ? 'tracking-normal' : 'tracking-widest'"
-              placeholder="– – – –"
+              placeholder="" 
             />
             <button @click="showPin = !showPin" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
               <EyeIcon v-if="!showPin" class="w-6 h-6" />
@@ -222,7 +253,7 @@ const goBack = () => {
                   showPin ? 'tracking-normal' : 'tracking-widest',
                   confirmPin.length > 0 && pin !== confirmPin ? 'border-red-500' : ''
                 ]"
-                placeholder="– – – –"
+                placeholder="" 
               />
             </div>
           </template>
@@ -233,7 +264,13 @@ const goBack = () => {
           
           <button 
             @click="submitPin" 
-            class="btn-primary w-full h-14 text-xl font-semibold rounded-lg mt-4 bg-[#013C6D] text-white hover:bg-blue-800"
+            :disabled="!isPinComplete"
+            :class="[
+                'w-full h-14 text-xl font-semibold rounded-lg mt-4 transition-colors text-white',
+                isPinComplete 
+                  ? 'bg-[#013C6D] hover:bg-blue-800' 
+                  : 'bg-gray-400 cursor-not-allowed'
+            ]"
           >
             Authenticate
           </button>
@@ -241,16 +278,31 @@ const goBack = () => {
       </div>
 
     </div>
+
+    <Transition name="toast">
+      <div v-if="showToast" class="fixed top-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg border-l-4 bg-white"
+           :class="isSuccess ? 'border-green-500' : 'border-red-500'">
+        <CheckCircleIcon v-if="isSuccess" class="w-6 h-6 text-green-500" />
+        <XCircleIcon v-else class="w-6 h-6 text-red-500" />
+        <span class="text-gray-700 font-medium">{{ toastMessage }}</span>
+      </div>
+    </Transition>
+
   </div>
 </template>
 
 <style scoped>
-/* Scoping placeholder styles to this component */
 input::placeholder {
-  color: #d1d5db; /* gray-300 */
-  letter-spacing: 0.5em; 
-  font-weight: 300;
-  text-align: center;
-  padding-left: 0.5em; /* Adjusts for centering */
+  color: transparent;
+}
+
+.toast-enter-active,
+.toast-leave-active {
+  transition: all 0.3s ease;
+}
+.toast-enter-from,
+.toast-leave-to {
+  opacity: 0;
+  transform: translateY(-20px);
 }
 </style>
