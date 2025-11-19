@@ -5,11 +5,26 @@ from models import Announcement
 from datetime import date
 from typing import List
 import io
+import base64
 
 router = APIRouter(
     prefix="/announcements",
     tags=["Announcements"]
 )
+
+def serialize_announcement(a):
+    return {
+        "id": a.id,
+        "title": a.title,
+        "description": a.description,
+        "event_date": a.event_date,
+        "event_day": a.event_day,
+        "event_time": a.event_time,
+        "location": a.location,
+        "image": base64.b64encode(a.image).decode("utf-8") if a.image else None,
+        "image_name": a.image_name,
+        "created_at": a.created_at,
+    }
 
 # CREATE
 @router.post("/")
@@ -43,7 +58,7 @@ async def create_announcement(
 @router.get("/")
 def get_announcements(db: Session = Depends(get_db)):
     announcements = db.query(Announcement).order_by(Announcement.event_date.desc()).all()
-    return announcements
+    return [serialize_announcement(a) for a in announcements]
 
 # READ SINGLE
 @router.get("/{announcement_id}")
@@ -51,7 +66,7 @@ def get_announcement(announcement_id: int, db: Session = Depends(get_db)):
     announcement = db.query(Announcement).filter(Announcement.id == announcement_id).first()
     if not announcement:
         raise HTTPException(status_code=404, detail="Announcement not found")
-    return announcement
+    return serialize_announcement(announcement)
 
 # DELETE
 @router.delete("/{announcement_id}")
