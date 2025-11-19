@@ -4,7 +4,6 @@ import { useRouter, useRoute } from 'vue-router'
 import api from '@/api/api'
 import { login } from '@/stores/auth'
 import Keypad from '@/components/shared/Keypad.vue'
-// MODIFIED: Removed SpeakerWaveIcon from imports
 import { EyeIcon, EyeSlashIcon, XCircleIcon, CheckCircleIcon } from '@heroicons/vue/24/outline'
 import PrimaryButton from '@/components/shared/PrimaryButton.vue' 
 import { ArrowLeftIcon } from '@heroicons/vue/24/solid' 
@@ -38,7 +37,7 @@ const triggerToast = (message, success = false) => {
   
   setTimeout(() => {
     showToast.value = false
-  }, 3000)
+  }, 1500) // Changed duration to 1.5 seconds
 }
 
 onMounted(async () => {
@@ -221,7 +220,7 @@ const goBack = () => {
           </div>
       </div>
 
-      <div class="w-1/2 flex flex-col items-center justify-center pl-12 border-l border-gray-200">
+      <div class="w-1/2 flex flex-col items-center justify-center pl-12 border-l border-gray-200 relative">
         <div class="w-full max-w-xs">
           <label class="text-sm font-medium text-gray-500 self-start mb-1">
             {{ isSettingPin ? 'Enter New 4-digit PIN' : 'Enter 4-digit PIN' }}
@@ -275,18 +274,19 @@ const goBack = () => {
             Authenticate
           </button>
         </div>
+
+        <Transition name="toast">
+          <div v-if="showToast" 
+               class="absolute top-1/2 left-[55%] transform -translate-x-1/2 -translate-y-1/2 z-50 flex items-center gap-3 px-6 py-4 rounded-lg shadow-2xl border bg-white min-w-[260px] justify-center"
+               :class="isSuccess ? 'border-green-500' : 'border-red-500 text-red-600'">
+            <CheckCircleIcon v-if="isSuccess" class="w-8 h-8 text-green-500" />
+            <XCircleIcon v-else class="w-8 h-8 text-red-500" />
+            <span class="text-gray-800 font-semibold text-lg">{{ toastMessage }}</span>
+          </div>
+        </Transition>
       </div>
 
     </div>
-
-    <Transition name="toast">
-      <div v-if="showToast" class="fixed top-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg border-l-4 bg-white"
-           :class="isSuccess ? 'border-green-500' : 'border-red-500'">
-        <CheckCircleIcon v-if="isSuccess" class="w-6 h-6 text-green-500" />
-        <XCircleIcon v-else class="w-6 h-6 text-red-500" />
-        <span class="text-gray-700 font-medium">{{ toastMessage }}</span>
-      </div>
-    </Transition>
 
   </div>
 </template>
@@ -296,13 +296,17 @@ input::placeholder {
   color: transparent;
 }
 
+/* Updated Transition: Fade and Scale instead of Slide */
 .toast-enter-active,
 .toast-leave-active {
-  transition: all 0.3s ease;
+  transition: all 0.2s ease-out;
 }
+
 .toast-enter-from,
 .toast-leave-to {
   opacity: 0;
-  transform: translateY(-20px);
+  transform: translate(-50%, -50%) scale(0.90); /* Starts slightly smaller */
 }
+
+/* The standard state is implicitly transform: translate(-50%, -50%) scale(1) due to the class usage */
 </style>
