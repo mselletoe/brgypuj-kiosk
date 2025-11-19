@@ -76,8 +76,23 @@ const handleReject = async (id) => {
 }
 
 // --- VIEW / DOWNLOAD / DETAILS ---
-const handleDownloadDocument = (id) => {
-  console.log(`Downloading document for request ${id}`)
+const handleViewDocument = async (id) => {
+  try {
+    // Open PDF in new browser tab using blob URL for better preview
+    const response = await api.get(`/requests/${id}/download-pdf`, {
+      responseType: 'blob'
+    })
+    
+    const blob = new Blob([response.data], { type: 'application/pdf' })
+    const url = URL.createObjectURL(blob)
+    window.open(url, '_blank')
+    
+    // Clean up blob URL after a delay
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+  } catch (error) {
+    console.error('Error opening PDF:', error)
+    alert('Failed to load document. Please try again.')
+  }
 }
 
 const handleProcessingDetails = (id) => {
@@ -186,10 +201,10 @@ onMounted(fetchProcessingRequests)
         </button>
         
         <button 
-          @click="handleDownloadDocument(request.id)"
+          @click="handleViewDocument(request.id)"
           class="flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
         >
-          Download Document
+          View Document
         </button>
         
         <button 

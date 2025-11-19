@@ -1,3 +1,14 @@
+/*
+ * =================================================================================
+ * File: router/index.js
+ * Description: 
+ * Main routing configuration for the Vue.js application.
+ * - Defines all accessible URL paths (routes).
+ * - Manages access control (Navigation Guards) to protect admin pages.
+ * - Redirects unauthenticated users to the login page.
+ * =================================================================================
+ */
+
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuth } from '@/stores/authStore'
 
