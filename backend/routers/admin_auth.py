@@ -78,13 +78,24 @@ def login(request: schemas.LoginRequest, db: Session = Depends(get_db)):
 # ==========================
 # Register route (UPDATED)
 # ==========================
+# ==========================
+# Register route (FIXED)
+# ==========================
 @router.post("/register", response_model=schemas.StaffDisplay, status_code=status.HTTP_201_CREATED)
 def register_staff(staff: schemas.StaffCreate, db: Session = Depends(get_db)):
     """
-    Register a new barangay staff member.
+    Register a new barangay staff member safely.
     """
-    
-    # 1. Check if resident is already a staff member
+
+    # 1. Ensure the resident exists
+    resident = db.query(models.Resident).get(staff.resident_id)
+    if not resident:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Selected resident does not exist."
+        )
+
+    # 2. Check if this resident is already a staff member
     existing_staff_resident = db.query(models.BrgyStaff).filter(
         models.BrgyStaff.resident_id == staff.resident_id
     ).first()
@@ -94,45 +105,35 @@ def register_staff(staff: schemas.StaffCreate, db: Session = Depends(get_db)):
             detail="This resident is already registered as a staff member."
         )
 
-    # 2. Check if email is already in use (case-insensitive)
+    # 3. Check if email is already in use (case-insensitive)
     existing_staff_email = db.query(models.BrgyStaff).filter(
         models.BrgyStaff.email.ilike(staff.email)
     ).first()
-    
     if existing_staff_email:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="This email address is already in use."
         )
 
-    # 3. Hash the password
+    # 4. Hash the password
     hashed_password = utils.hash_password(staff.password)
 
-    # 4. Create the new staff member object
+    # 5. Create the staff_name from resident's name (optional)
+    staff_name = f"{resident.first_name} {resident.last_name}"
+
+    # 6. Create new staff object
     new_staff = models.BrgyStaff(
-        resident_id=staff.resident_id, # <-- Using resident_id
+        resident_id=int(staff.resident_id),  # ensure integer
+        staff_name=staff_name,
         email=staff.email,
-        password=hashed_password, # <-- Using hashed password
-        role=staff.role, # <-- Using role from frontend
-        is_active=True 
+        password=hashed_password,
+        role=staff.role,
+        is_active=True
     )
 
-    # 5. Add to database
-    try:
-        db.add(new_staff)
-        db.commit()
-        db.refresh(new_staff)
-    except IntegrityError:
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Database error occurred. Could not create account."
-        )
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An unexpected error occurred: {str(e)}"
-        )
+    # 7. Add to database
+    db.add(new_staff)
+    db.commit()
+    db.refresh(new_staff)
 
     return new_staff
