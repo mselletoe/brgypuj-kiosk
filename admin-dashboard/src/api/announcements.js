@@ -11,7 +11,7 @@ export const getAnnouncements = async () => {
   const transformed = rawData.map(a => ({
     id: a.id,
     title: a.title,
-    date: a.event_date,      // <-- matches database
+    date: a.event_date ? new Date(a.event_date).toISOString().split("T")[0] : "",
     location: a.location,
     start: a.event_time?.split(' - ')[0] ?? '',
     end: a.event_time?.split(' - ')[1] ?? '',

@@ -1,3 +1,26 @@
+"""
+================================================================================
+File: requests.py
+Description:
+    This router manages document requests (e.g., Barangay Clearance, Indigency).
+    It handles the full lifecycle from creation to document generation and completion.
+
+    Key Features:
+    1. Automated Document Generation:
+       - Uses 'docxtpl' to fill MS Word templates with user submitted form data.
+       - Uses 'LibreOffice' (headless mode) to convert the filled DOCX to PDF.
+       - Stores the generated PDF binary directly in the database.
+
+    2. Request Lifecycle Management:
+       - Tracks status (Pending, Processing, Released, etc.).
+       - Manages Payment Status (Paid/Unpaid).
+       - Enforces rules (e.g., cannot approve if unpaid).
+
+    3. File Delivery:
+       - Provides an endpoint to download the generated PDF directly.
+================================================================================
+"""
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
 from database import get_db

@@ -1,7 +1,19 @@
 """
 ================================================================================
 File: schemas.py
-...
+Description:
+    This module defines the Pydantic models (Schemas) used for API data validation.
+    It acts as the "contract" between the Frontend and Backend.
+
+    Key Responsibilities:
+    1. Input Validation (Request Bodies):
+       - Ensures incoming data (like login credentials or registration info) 
+         matches the expected format (e.g., valid email, required fields).
+       
+    2. Output Serialization (Response Models):
+       - Defines exactly what data is sent back to the client.
+       - Filters out sensitive data (e.g., removing passwords from user details).
+================================================================================
 """
 
 from pydantic import BaseModel, EmailStr
