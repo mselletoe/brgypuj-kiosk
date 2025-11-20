@@ -1,8 +1,27 @@
+The issue is that your `Announcements.vue` is using `window.location.href = "/home"`.
+
+**Why this breaks it:**
+
+1.  `window.location` causes a **Full Page Reload**.
+2.  This bypasses the smooth "Single Page App" transition.
+3.  Because the page reloads, the browser resets everything. By the time the new page loads, your finger might still be registering a click, or the browser behavior causes the "Ghost Click" protection in `Login.vue` to be ineffective (because the timer resets on reload).
+4.  Also, you have `Idle.vue` listening for clicks AND `Announcements.vue` listening for clicks. This causes conflicts.
+
+**The Fix:**
+
+1.  Use `useRouter` instead of `window.location`.
+2.  Use `.stop` on the main click to ensure only ONE start command fires.
+
+Here is the fixed **`Announcements.vue`**:
+
+```vue
 <script setup>
 import { ref, onMounted } from "vue";
+import { useRouter } from "vue-router"; // Import router
 import api from "@/api/api";
 import Pob1Logo from "@/assets/images/Pob1Logo.svg";
 
+const router = useRouter(); // Initialize router
 const announcements = ref([]);
 const current = ref(0);
 let autoSlide = null;
@@ -47,7 +66,9 @@ const formatDate = (date) => {
 
 // Navigate to login
 const start = () => {
-  window.location.href = "/home"; // change if needed
+  // FIX: Use router.push instead of window.location
+  // This keeps the app loaded and lets Login.vue's safety timer work correctly.
+  router.push("/login"); 
 };
 
 onMounted(async () => {
@@ -59,9 +80,8 @@ onMounted(async () => {
 <template>
   <div
     class="relative h-screen w-full overflow-hidden"
-    @click="start"
+    @click.stop="start"
   >
-    <!-- Background Image -->
     <div
       v-if="announcements.length"
       class="absolute inset-0 bg-cover bg-center transition-all duration-700 pointer-events-none"
@@ -72,10 +92,8 @@ onMounted(async () => {
       }"
     ></div>
 
-    <!-- Blue overlay -->
     <div class="absolute inset-0 bg-[#00325D] opacity-70 pointer-events-none"></div>
 
-    <!-- Slider Content -->
     <div class="relative z-10 h-full flex flex-col justify-center px-20 pointer-events-auto">
       <div class="flex items-center gap-4 mb-6
                   absolute top-6 left-6 z-20">
@@ -112,7 +130,6 @@ onMounted(async () => {
       </div>
     </div>
 
-    <!-- Left Button -->
     <button
       @click.stop.prevent="prevSlide"
       class="absolute top-1/2 left-6 -translate-y-1/2 text-white text-6xl opacity-80 hover:opacity-100 z-20 pointer-events-auto"
@@ -120,7 +137,6 @@ onMounted(async () => {
       ‹
     </button>
 
-    <!-- Right Button -->
     <button
       @click.stop.prevent="nextSlide"
       class="absolute top-1/2 right-6 -translate-y-1/2 text-white text-6xl opacity-80 hover:opacity-100 z-20 pointer-events-auto"
@@ -128,7 +144,6 @@ onMounted(async () => {
       ›
     </button>
 
-    <!-- Pagination Dots -->
     <div class="absolute bottom-24 w-full flex justify-center space-x-3 z-20 pointer-events-auto">
       <span
         v-for="(a, i) in announcements"
@@ -149,3 +164,4 @@ onMounted(async () => {
   transition: background-image 0.6s ease-in-out;
 }
 </style>
+```
