@@ -1,8 +1,12 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
 import PageTitle from '@/components/shared/PageTitle.vue'
-import { getAnnouncements, createAnnouncement, deleteAnnouncement as deleteAnnouncementApi } from '@/api/announcements.js'
-
+import { 
+  getAnnouncements, 
+  createAnnouncement, 
+  updateAnnouncement,         // ✔ added
+  deleteAnnouncement as deleteAnnouncementApi 
+} from '@/api/announcements.js'
 
 // Load announcements from localStorage (or start with empty array)
 const announcements = ref([])
@@ -21,11 +25,11 @@ onMounted(async () => {
       announcements.value = data.map(a => ({
         id: a.id,
         title: a.title,
-        date: a.date,     // already ISO yyyy-mm-dd
-        start: a.start,   // already split
-        end: a.end,       // already split
+        date: a.date,
+        start: a.start,
+        end: a.end,
         location: a.location,
-        image: a.image    // already a working URL
+        image: a.image
       }))
     }
   } catch (err) {
@@ -105,26 +109,32 @@ const addAnnouncement = async () => {
     })
   }
 
-  // Also send to backend
-try {
-  const formData = new FormData()
-  formData.append('title', newAnnouncement.value.title)
-  formData.append('event_date', newAnnouncement.value.date)
-  formData.append('event_day', new Date(newAnnouncement.value.date).toLocaleDateString(undefined, { weekday: 'long' }))
-  formData.append('event_time', `${newAnnouncement.value.start} - ${newAnnouncement.value.end}`)
-  formData.append('location', newAnnouncement.value.location)
+  // Backend sync
+  try {
+    const formData = new FormData()
+    formData.append('title', newAnnouncement.value.title)
+    formData.append('event_date', newAnnouncement.value.date)
+    formData.append('event_day', new Date(newAnnouncement.value.date).toLocaleDateString(undefined, { weekday: 'long' }))
+    formData.append('event_time', `${newAnnouncement.value.start} - ${newAnnouncement.value.end}`)
+    formData.append('location', newAnnouncement.value.location)
 
-  // If the image is from a file input, convert URL back to File
-  const inputEl = document.querySelector('input[type="file"]')
-  if (inputEl && inputEl.files[0]) {
-    formData.append('image', inputEl.files[0])
+    const inputEl = document.querySelector('input[type="file"]')
+    if (inputEl && inputEl.files[0]) {
+      formData.append('image', inputEl.files[0])
+    }
+
+    // ✔ FIXED — update uses correct API call
+    if (editMode.value) {
+      await updateAnnouncement(editId.value, formData)
+      console.log('Announcement updated in backend.')
+    } else {
+      await createAnnouncement(formData)
+      console.log('Announcement created in backend.')
+    }
+
+  } catch (error) {
+    console.error('Failed to sync with backend:', error)
   }
-
-  await createAnnouncement(formData)
-  console.log('Announcement synced to backend.')
-} catch (error) {
-  console.error('Failed to sync with backend:', error)
-}
 
   showModal.value = false
   editMode.value = false
