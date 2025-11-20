@@ -112,7 +112,7 @@ onUnmounted(() => {
         
       </div>
 
-      <p class="mt-2 text-gray-400 text-xs font-light tracking-wide">
+      <p class="mt-[20px] text-gray-400 text-xs font-light tracking-wide">
         Screen will close in {{ timeLeft }} seconds...
       </p>
 
