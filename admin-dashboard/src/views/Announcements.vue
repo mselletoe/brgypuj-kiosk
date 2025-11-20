@@ -21,11 +21,11 @@ onMounted(async () => {
       announcements.value = data.map(a => ({
         id: a.id,
         title: a.title,
-        date: a.event_date,
-        start: a.event_time, // or start/end if you split time
-        end: a.event_time,
+        date: a.date,     // already ISO yyyy-mm-dd
+        start: a.start,   // already split
+        end: a.end,       // already split
         location: a.location,
-        image: a.image ? `data:image/jpeg;base64,${arrayBufferToBase64(a.image.data)}` : ''
+        image: a.image    // already a working URL
       }))
     }
   } catch (err) {
