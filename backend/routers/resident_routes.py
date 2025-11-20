@@ -1,7 +1,20 @@
 """
 ================================================================================
 File: resident_routes.py
-...
+Description:
+    This router handles API endpoints related to general Resident operations.
+    It provides utilities for searching residents and filtering data for specific
+    system functions like RFID assignment and Staff account creation.
+
+    Key Features:
+    1. Resident Search/Filter:
+       - Filters residents by first and last name initials.
+       - Checks RFID assignment status (used to prevent duplicate tags).
+
+    2. Staff Candidate Selection:
+       - Returns a list of residents who are NOT yet registered as staff.
+       - Used to populate the "Select Resident" dropdown in the Create Account page.
+================================================================================
 """
 
 from fastapi import APIRouter, Depends, Query

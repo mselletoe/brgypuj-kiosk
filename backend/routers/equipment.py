@@ -1,3 +1,29 @@
+"""
+================================================================================
+File: equipment.py
+Description:
+    This router manages the complete Equipment Borrowing System.
+    It handles inventory management, request processing, and the borrowing lifecycle.
+
+    Key Features:
+    1. Inventory Management:
+       - View all equipment items and their stock levels.
+       - Update item details (total quantity, available stock, rental rates).
+
+    2. Request Management (Admin Side):
+       - View all requests with optional status filtering.
+       - Create single-item requests manually for walk-in residents.
+
+    3. Kiosk Integration (Public Side):
+       - specialized endpoint (`/kiosk/request`) to handle multi-item requests 
+       - Deducts stock immediately upon request creation.
+
+    4. Request Lifecycle Workflow:
+       - Manages status transitions: Pending -> Paid -> Approved -> Picked-Up -> Returned.
+       - Automatically adjusts inventory stock when items are Returned or Rejected.
+================================================================================
+"""
+
 from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.orm import Session
 from database import get_db

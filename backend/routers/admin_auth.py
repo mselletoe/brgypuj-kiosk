@@ -1,7 +1,21 @@
 """
 ================================================================================
 File: admin_auth.py
-...
+Description:
+    This module handles authentication for Barangay staff (admin users).
+    It provides secure endpoints for:
+    
+    1. Staff Login (/login): 
+       - Verifies email and HASHED password.
+       - Checks if the account is active.
+       - Returns a JWT (JSON Web Token) containing the user's role and name.
+       
+    2. Staff Registration (/register):
+       - Validates that the Staff ID links to a real Resident.
+       - Ensures the email is unique (case-insensitive).
+       - Hashes the password before saving to the database (using bcrypt).
+       - Automatically pulls the name from the Resident record.    
+================================================================================
 """
 
 from fastapi import APIRouter, HTTPException, Depends, status
