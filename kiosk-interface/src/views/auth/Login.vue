@@ -1,19 +1,42 @@
 <script setup>
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { disableTouchToStart } from '@/composables/touchToStart'
-import ArrowBackButton from '@/components/shared/ArrowBackButton.vue'
 import PrimaryButton from '@/components/shared/PrimaryButton.vue'
 import { SignalIcon } from '@heroicons/vue/24/solid'
-import { login, auth } from '@/stores/auth'
+import { auth } from '@/stores/auth'
 
 const router = useRouter()
 
+// --- State ---
+const timeLeft = ref(10)
+let timerInterval = null
+let mountTime = 0 // Variable to store exactly when the page opened
+
+// --- Navigation Handlers ---
+
 const handleRfidLogin = () => {
+  // === GHOST CLICK FIX ===
+  // Calculate how long the page has been open
+  const timeSinceMount = Date.now() - mountTime;
+
+  // If the page has been open for less than 800ms (0.8 seconds),
+  // assume this is a ghost click from the previous screen and IGNORE it.
+  if (timeSinceMount < 500) {
+    return;
+  }
+
   disableTouchToStart()
   router.push('/login-rfid')
 }
 
 const continueAsGuest = () => {
+  // Apply the same safety check for the Guest button
+  const timeSinceMount = Date.now() - mountTime;
+  if (timeSinceMount < 800) {
+    return;
+  }
+
   const guestUser = { name: "Guest User" };
   auth.user = guestUser;
   auth.isGuest = true;
@@ -21,20 +44,43 @@ const continueAsGuest = () => {
   router.replace('/home')
 }
 
-const goBack = () => {
-  router.back()
+// --- Timer Logic ---
+const startCountdown = () => {
+  if (timerInterval) clearInterval(timerInterval)
+  timeLeft.value = 10
+  timerInterval = setInterval(() => {
+    timeLeft.value--
+    if (timeLeft.value <= 0) {
+      clearInterval(timerInterval)
+      router.replace('/idle')
+    }
+  }, 1000)
 }
+
+const resetTimer = () => {
+  startCountdown()
+}
+
+onMounted(() => {
+  // 1. Capture the exact time the component mounted
+  mountTime = Date.now()
+  
+  // 2. Start the idle countdown
+  startCountdown()
+})
+
+onUnmounted(() => {
+  if (timerInterval) clearInterval(timerInterval)
+})
 </script>
 
 <template>
-  <div class="h-screen w-screen bg-gradient-to-br from-[#003A6B] to-[#89CFF1] flex justify-center items-center font-poppins">
+  <div 
+    @click="resetTimer"
+    class="h-screen w-screen bg-gradient-to-br from-[#003A6B] to-[#89CFF1] flex justify-center items-center font-poppins"
+  >
     <div class="bg-white w-[974px] h-[550px] rounded-lg shadow-2xl relative flex flex-col justify-center items-center p-8">
       
-      <ArrowBackButton 
-        @click="goBack"
-        class="absolute top-6 left-6" 
-      />
-
       <img src="@/assets/images/Pob1Logo.svg" alt="Barangay Logo" class="h-[140px] w-[140px] mb-0 drop-shadow-lg">
       
       <div class="text-center text-gray-800">
@@ -46,7 +92,7 @@ const goBack = () => {
       <div class="mt-5 flex flex-col gap-y-5">
         
         <PrimaryButton 
-          @click="handleRfidLogin" 
+          @click.stop="handleRfidLogin" 
           class="w-96 h-[80px] text-[25px] font-bold"
         >
           <span class="flex items-center justify-center gap-x-3">
@@ -56,7 +102,7 @@ const goBack = () => {
         </PrimaryButton>
 
         <PrimaryButton 
-          @click="continueAsGuest()"
+          @click.stop="continueAsGuest()"
           bgColor="bg-transparent"
           textColor="text-[#013C6D]"
           class="w-96 h-[45px] text-[15px]"
@@ -65,6 +111,11 @@ const goBack = () => {
         </PrimaryButton>
         
       </div>
+
+      <p class="mt-2 text-gray-400 text-xs font-light tracking-wide">
+        Screen will close in {{ timeLeft }} seconds...
+      </p>
+
     </div>
   </div>
 </template>
