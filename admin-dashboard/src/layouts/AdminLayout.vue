@@ -8,17 +8,17 @@ import logo from '@/assets/logo.svg'
   <div class="flex h-screen">
 
     <!-- Sidebar -->
-    <div class="w-72 flex flex-col p-8">
+    <div class="w-72 flex flex-col p-6">
 
-      <div class="mb-8 border-b">
-        <img :src="logo" alt="Logo" class="h-100 object-contain" />
+      <div class="mb-6 border-b">
+        <img :src="logo" alt="Logo" class="h-[115px] object-contain mx-auto" />
       </div>
       
       <Drawer />
     </div>
 
     <!-- Main content -->
-    <div class="flex flex-col flex-1 p-8">
+    <div class="flex flex-col flex-1 p-6">
       <Header />
 
       <main class="flex-1 overflow-auto">
