@@ -30,13 +30,13 @@ const menuItems = [
 
 <template>
   <div class="w-full h-full">
-    <ul class="w-full space-y-2">
+    <ul class="w-full space-y-1">
       <li v-for="item in menuItems" :key="item.to" class="w-full">
         <n-button
           quaternary
           block
           size="medium"
-          class="!justify-start !px-4 !py-3 !rounded-md !w-full transition-all duration-200 text-sm"
+          class="!justify-start !px-4 !py-4 !rounded-md !w-full transition-all duration-200 text-sm"
           :style="route.path === item.to
             ? 'background-color: #0957FF; color: white; font-weight: 600;'
             : 'background-color: transparent; color: #535353; font-weight: 500;'"

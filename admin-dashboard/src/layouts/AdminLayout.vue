@@ -18,7 +18,7 @@ import logo from '@/assets/logo.svg'
     </div>
 
     <!-- Main content -->
-    <div class="flex flex-col flex-1 p-6">
+    <div class="flex flex-col flex-1 p-6 pl-4">
       <Header />
 
       <main class="flex-1 overflow-auto">
