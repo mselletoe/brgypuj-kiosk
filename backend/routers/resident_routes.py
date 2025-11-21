@@ -2,22 +2,27 @@
 ================================================================================
 File: resident_routes.py
 Description:
-    This module defines backend API routes for fetching filtered resident data.
+    This router handles API endpoints related to general Resident operations.
+    It provides utilities for searching residents and filtering data for specific
+    system functions like RFID assignment and Staff account creation.
 
-    It provides an endpoint that allows filtering residents by the first and
-    last letters of their names. The route is primarily used for search or
-    dropdown features where users need to quickly locate residents whose
-    names match a pattern.
+    Key Features:
+    1. Resident Search/Filter:
+       - Filters residents by first and last name initials.
+       - Checks RFID assignment status (used to prevent duplicate tags).
 
-    Each result also indicates whether the resident already has an assigned
-    RFID tag, which helps prevent duplicate assignments in RFID management.
+    2. Staff Candidate Selection:
+       - Returns a list of residents who are NOT yet registered as staff.
+       - Used to populate the "Select Resident" dropdown in the Create Account page.
 ================================================================================
 """
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
+from typing import List
 from database import get_db
-from models import Resident, RfidUID 
+import models
+import schemas
 
 # =============================================
 # Initialize Router
@@ -25,7 +30,7 @@ from models import Resident, RfidUID
 router = APIRouter(prefix="/residents", tags=["Residents"])
 
 # ==============================================================================
-# ROUTE: Filter Residents by First and Last Name Letters
+# ROUTE: Filter Residents (Your Existing Route)
 # ==============================================================================
 @router.get("/filter")
 def get_filtered_residents(
@@ -35,40 +40,24 @@ def get_filtered_residents(
 ):
     """
     Retrieve residents whose first and last names start with specific letters.
-
-    Parameters:
-        last_letter (str): First letter of the resident's last name.
-        first_letter (str): First letter of the resident's first name.
-        db (Session): Active SQLAlchemy session dependency.
-
-    Returns:
-        List[dict]: Each dictionary contains:
-            - id: Resident ID
-            - name: Full name (combined first, middle, last)
-            - birthdate: Resident’s date of birth
-            - address: Unit/Block/Street info (if available)
-            - has_rfid: Boolean indicating if the resident has an RFID tag
+    ...
     """
     
-    # --------------------------------------------
     # Query database for matching residents
-    # --------------------------------------------
     residents = (
-        db.query(Resident)
-        .filter(Resident.last_name.ilike(f"{last_letter}%"))
-        .filter(Resident.first_name.ilike(f"{first_letter}%"))
+        db.query(models.Resident)
+        .filter(models.Resident.last_name.ilike(f"{last_letter}%"))
+        .filter(models.Resident.first_name.ilike(f"{first_letter}%"))
         .all()
     )
 
-    # -------------------------------------------------------------------------
-    # Format Output: Build response data for dropdowns / search results
-    # -------------------------------------------------------------------------
+    # Format Output
     result = []
     for resident in residents:
         # Check whether this resident already has an assigned RFID
         has_rfid = (
-            db.query(RfidUID)
-            .filter(RfidUID.resident_id == resident.id)
+            db.query(models.RfidUID)
+            .filter(models.RfidUID.resident_id == resident.id)
             .first()
             is not None
         )
@@ -83,3 +72,23 @@ def get_filtered_residents(
         })
 
     return result
+
+# ==============================================================================
+# ROUTE: Get Available Residents for Staff Creation (NEW Route - Added Back)
+# ==============================================================================
+@router.get("/available-staff", response_model=List[schemas.ResidentSimple])
+def get_available_residents_for_staff(db: Session = Depends(get_db)):
+    """
+    Get a list of residents who are not already registered as BrgyStaff.
+    This is used for populating the 'Create Account' dropdown.
+    """
+    
+    # Find all resident IDs that are already in the brgy_staff table
+    staff_resident_ids_query = db.query(models.BrgyStaff.resident_id).filter(models.BrgyStaff.resident_id != None)
+    
+    # Find all residents whose IDs are NOT IN the list of staff resident IDs
+    available_residents = db.query(models.Resident).filter(
+        ~models.Resident.id.in_(staff_resident_ids_query)
+    ).all()
+    
+    return available_residents

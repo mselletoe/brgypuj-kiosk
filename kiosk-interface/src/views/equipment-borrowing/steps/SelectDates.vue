@@ -19,6 +19,19 @@ const emit = defineEmits(['update:selected-dates'])
 const borrowDate = ref(props.selectedDates?.borrow || null)
 const returnDate = ref(props.selectedDates?.return || null)
 
+// --- Date Restrictions (Philippine Time) ---
+const minBorrowDate = computed(() => {
+  // Create a date object for "now"
+  const now = new Date()
+  // Convert to Philippine Time string
+  const phTimeStr = now.toLocaleString("en-US", { timeZone: "Asia/Manila" })
+  // Create a new Date object from that string to get the correct day/month/year values
+  const phDate = new Date(phTimeStr)
+  // Reset time to midnight (00:00:00) so "today" is selectable
+  phDate.setHours(0, 0, 0, 0)
+  return phDate
+})
+
 // --- Computed Properties ---
 const numberOfDays = computed(() => {
   if (!borrowDate.value || !returnDate.value) {
@@ -49,8 +62,9 @@ const totalCost = computed(() => {
 
 // --- Methods ---
 const formatCurrency = (value) => {
-  return `$${value.toLocaleString()}`
+  return `₱${value.toLocaleString()}`
 }
+
 const handleBack = () => {
   props.goBack('select')
 }
@@ -92,6 +106,7 @@ const handleNext = () => {
                 auto-apply
                 teleport-center
                 format="MM/dd/yyyy"
+                :min-date="minBorrowDate"
                 input-class-name="w-full pl-10 pr-3 py-3 text-base border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#013C6D] focus:border-transparent"
               >
                 <template #input-icon>

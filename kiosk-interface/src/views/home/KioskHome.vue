@@ -21,7 +21,7 @@ function goTo(path) {
       </div>
       <div class="logo-section">
         <img src="@/assets/images/Pob1Logo.svg" alt="Barangay Logo" class="logo" />
-      </div>           
+      </div>          
     </div>
 
     <div class="service-container">
@@ -35,11 +35,13 @@ function goTo(path) {
         <p class="box-title">Equipment<br>Borrowing</p>
         <p class="box-subtitle">Borrow tents, chairs, and<br>other Barangay utilities</p>
       </div>
-      <div class="service-box box3" @click="goTo('appointments')">
-        <img src="@/assets/vectors/ScheduleAppointment.svg" alt="Schedule Appointment" class="box-logo" />
-        <p class="box-title">Schedule<br>Appointment</p>
-        <p class="box-subtitle">Schedule meetings with<br>Barangay Officials</p>
+      
+      <div class="service-box box3" @click="goTo('announcements')">
+        <img src="@/assets/vectors/Announcements.svg" alt="Announcements" class="box-logo" />
+        <p class="box-title">Announcements</p>
+        <p class="box-subtitle">Stay updated with the<br>latest news and events</p>
       </div>
+
       <div class="service-box box4" @click="goTo('help-and-support')">
         <img src="@/assets/vectors/HelpSupport.svg" alt="Help & Support" class="box-logo" />
         <p class="box-title">Help &<br>Support</p>
@@ -164,11 +166,15 @@ function goTo(path) {
 .box-title {
   font-family: 'Poppins', sans-serif;
   font-weight: 700;
-  font-size: 18px;
+  font-size: 17px;
   line-height: 20px;
   letter-spacing: 0;
   color: #ffffff;
   margin: 0 0 5px 0;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .box-subtitle {

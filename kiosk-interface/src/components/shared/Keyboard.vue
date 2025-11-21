@@ -4,43 +4,40 @@ import {
   ArrowUturnLeftIcon as ArrowUturnLeftIconOutline,
   BackspaceIcon as BackspaceIconOutline,
   ArrowUpIcon as ArrowUpIconOutline,
-  SquaresPlusIcon as SquaresPlusIconOutline
+  ChevronDownIcon as ChevronDownIconOutline // 1. MODIFIED: Imported ChevronDownIcon
 } from '@heroicons/vue/24/outline';
 import {
   ArrowUturnLeftIcon as ArrowUturnLeftIconSolid,
-  ArrowUpIcon as ArrowUpIconSolid,
+  ArrowUpIcon as ArrowUpIconSolid, // Using Solid for the "unpressed" state as per your original
 } from '@heroicons/vue/24/solid';
 
 const emit = defineEmits(['key-press', 'delete', 'enter', 'tab', 'layout-change', 'hide-keyboard']);
 
+// --- Layouts (No changes) ---
 const alphaLayout = [
   ['tab', 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', 'backspace'],
   ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'enter'],
   ['shift', 'z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', 'shift'],
   ['.?123', 'space', '.?123', 'hide'],
 ];
-
 const shiftedAlphaLayout = [
   ['tab', 'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', 'backspace'],
   ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', 'enter'],
   ['shift', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', ',', '.', 'shift'],
   ['.?123', 'space', '.?123', 'hide'],
 ];
-
 const numericLayout = [
   ['tab', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'backspace'],
   ['return', '@', '#', 'P', '&', '*', '(', ')', "'", '"', 'enter'],
   ['#+=', '%', '-', '+', '=', '/', ';', ':', ',', '.', '#+='],
   ['ABC', 'space', 'ABC', 'hide'],
 ];
-
 const symbolsLayout = [
   ['tab', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'backspace'],
   ['return', '$', '¥', '€', '-', '^', '[', ']', '{', '}', 'enter'],
   ['#+=', '§', '|', '~', '...', '\\', '<', '>', '!', '?', '#+='],
   ['ABC', 'space', 'ABC', 'hide'],
 ];
-
 
 const currentLayout = ref('alpha');
 const shiftActive = ref(false);
@@ -59,6 +56,7 @@ const activeLayout = computed(() => {
 
 const isAlphaLayout = computed(() => currentLayout.value === 'alpha');
 
+// --- Logic Handlers (No changes) ---
 const handleKeyPress = (key) => {
   switch (key) {
     case 'backspace': emit('delete'); break;
@@ -94,7 +92,7 @@ const getKeyStyle = (key) => {
   const functionKeys = ['tab', 'shift', 'backspace', 'enter', 'return', '.?123', '#+=', 'ABC', 'hide'];
   if (functionKeys.includes(key)) {
     if (key === 'shift' && shiftActive.value && isAlphaLayout.value) {
-       return 'bg-white text-[#013C6D]';
+       return 'bg-white text-[#013C6D]'; // This is the "active" style
     }
     return 'bg-gray-300 hover:bg-gray-400';
   }
@@ -153,13 +151,14 @@ const getKeyWidth = (key, rowIndex) => {
           ]"
         >
           <BackspaceIconOutline v-if="key === 'backspace'" class="w-5 h-5" />
-          <ArrowUpIconSolid v-else-if="key === 'shift' && shiftActive && isAlphaLayout" class="w-5 h-5" />
-          <ArrowUpIconOutline v-else-if="key === 'shift' && !shiftActive && isAlphaLayout" class="w-5 h-5 transform rotate-180" />
-          <ArrowUturnLeftIconSolid v-else-if="key === 'enter'" class="w-5 h-5" />
+          
+          <ArrowUpIconOutline v-else-if="key === 'shift' && shiftActive && isAlphaLayout" class="w-5 h-5 transform rotate-180" /> <ArrowUpIconSolid v-else-if="key === 'shift' && !shiftActive && isAlphaLayout" class="w-5 h-5" /> <ArrowUturnLeftIconSolid v-else-if="key === 'enter'" class="w-5 h-5" />
           <ArrowUturnLeftIconOutline v-else-if="key === 'return'" class="w-5 h-5" />
           <span v-else-if="key === 'space'" class="text-sm">space</span>
           <span v-else-if="key === 'tab'" class="text-sm">tab</span>
-          <SquaresPlusIconOutline v-else-if="key === 'hide'" class="w-5 h-5" />
+          
+          <ChevronDownIconOutline v-else-if="key === 'hide'" class="w-6 h-6" /> 
+          
           <span v-else>{{ key }}</span>
         </button>
       </div>

@@ -32,6 +32,7 @@ onMounted(() => {
   updateDateTime();
   interval = setInterval(updateDateTime, 1000);
 
+  // This logic is still correct.
   const stored = localStorage.getItem('auth_user');
   if (stored) {
     const parsed = JSON.parse(stored);
@@ -47,11 +48,20 @@ const logout = () => {
   window.location.href = '/idle';
 };
 
+// --- MODIFIED: This computed property is now fixed ---
 const displayName = computed(() => {
   if (auth.user?.isAdmin) return "Admin";
   if (auth.isGuest) return "Guest User";
+  
+  // Check for the full resident object's fields first
+  if (auth.user?.first_name && auth.user?.last_name) {
+    return `${auth.user.first_name} ${auth.user.last_name}`;
+  }
+  
+  // Fallback for older "Guest" or partial objects
   return auth.user?.name || "Guest";
 });
+// --- END OF MODIFICATION ---
 
 const accessType = computed(() => {
   if (auth.user?.isAdmin) return "Admin Access";
@@ -62,7 +72,6 @@ const accessType = computed(() => {
 
 <template>
   <header class="flex items-center justify-between px-5 py-2 bg-white text-[#003A6B] shadow-md border-b-2 border-[#003A6B]">
-    <!-- Left: Logo -->
     <div class="flex items-center space-x-1">
       <img src="../assets/images/Pob1Logo.svg" alt="Poblacion 1, Amadeo, Cavite" class="w-[40px] h-[40px]" />
 
@@ -72,13 +81,11 @@ const accessType = computed(() => {
       </div>
     </div>
 
-    <!-- Center: Time and Date -->
     <div class="text-center font-poppins">
       <p class="text-[14px] font-bold leading-none tracking-tight">{{ currentTime }}</p>
       <p class="text-[14px] font-light mt-1 leading-[1] tracking-tight">{{ currentDate }}</p>
     </div>
 
-    <!-- Right: Profile and Logout -->
     <div class="flex items-center space-x-4 font-poppins">
 
       <button class="px-4 py-2 bg-[#D1E5F1] border-2 border-[#003A6B] 

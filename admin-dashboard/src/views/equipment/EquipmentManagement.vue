@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'; // Import onMounted
 import EquipmentRequestsList from './EquipmentRequestsList.vue';
 import EquipmentCreateForm from './EquipmentCreateForm.vue';
 import EquipmentInventory from './EquipmentInventory.vue';
+import PageTitle from '@/components/shared/PageTitle.vue'
 import { getInventory } from '@/api/equipmentApi'; // Import the API function
 
 const mainTab = ref('manage');
@@ -54,9 +55,7 @@ async function refreshData() {
   <div class="p-6 bg-white min-h-screen rounded-md w-full space-y-5">
     
     <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
-      <h1 class="text-3xl font-bold text-gray-800">
-        Equipment Request Management
-      </h1>
+      <PageTitle title="Equipment Management" />
       
       <div class="flex space-x-2 flex-shrink-0">
         <button

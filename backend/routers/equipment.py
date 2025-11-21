@@ -1,3 +1,29 @@
+"""
+================================================================================
+File: equipment.py
+Description:
+    This router manages the complete Equipment Borrowing System.
+    It handles inventory management, request processing, and the borrowing lifecycle.
+
+    Key Features:
+    1. Inventory Management:
+       - View all equipment items and their stock levels.
+       - Update item details (total quantity, available stock, rental rates).
+
+    2. Request Management (Admin Side):
+       - View all requests with optional status filtering.
+       - Create single-item requests manually for walk-in residents.
+
+    3. Kiosk Integration (Public Side):
+       - specialized endpoint (`/kiosk/request`) to handle multi-item requests 
+       - Deducts stock immediately upon request creation.
+
+    4. Request Lifecycle Workflow:
+       - Manages status transitions: Pending -> Paid -> Approved -> Picked-Up -> Returned.
+       - Automatically adjusts inventory stock when items are Returned or Rejected.
+================================================================================
+"""
+
 from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.orm import Session
 from database import get_db
@@ -83,11 +109,14 @@ class KioskRequestInfo(BaseModel):
     contactNumber: str
     purpose: str
     notes: Optional[str] = None
+    # Add optional fields for the logged-in user
+    resident_id: Optional[int] = None 
+    rfid: Optional[str] = None
 
 class KioskRequestCreate(BaseModel):
     equipment: List[KioskRequestItem]
     dates: KioskRequestDates
-    info: KioskRequestInfo
+    info: KioskRequestInfo # This now includes the new optional fields
     total: float
 # --- END OF NEW SCHEMAS ---
 
@@ -259,7 +288,7 @@ def issue_request_refund(request_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Request marked as refunded"}
 
-# --- NEW ENDPOINT FOR KIOSK ---
+# --- ENDPOINT FOR KIOSK ---
 @router.post("/kiosk/request", status_code=201)
 def create_kiosk_request(request_data: KioskRequestCreate, db: Session = Depends(get_db)):
     """
@@ -267,7 +296,7 @@ def create_kiosk_request(request_data: KioskRequestCreate, db: Session = Depends
     This handles multiple items in a single request.
     """
     
-    # 1. Check stock for ALL items before doing anything
+    # 1. Check stock
     for item_data in request_data.equipment:
         db_item = db.query(models.EquipmentInventory).filter(models.EquipmentInventory.id == item_data.id).first()
         if not db_item:
@@ -275,7 +304,17 @@ def create_kiosk_request(request_data: KioskRequestCreate, db: Session = Depends
         if item_data.quantity > db_item.available_quantity:
             raise HTTPException(status_code=400, detail=f"Not enough stock for {db_item.name}")
 
-    # 2. All items are in stock. Create the main request.
+    # 2. Determine user
+    resident_id_to_save = None
+    
+    # --- MODIFIED: This logic is now simpler ---
+    if request_data.info.resident_id:
+        resident_id_to_save = request_data.info.resident_id
+        
+    requested_via_str = "Kiosk" # Always set to "Kiosk"
+    # --- END MODIFICATION ---
+        
+    # 3. Create the main request
     new_request = models.EquipmentRequest(
         borrower_name=request_data.info.contactPerson,
         contact_number=request_data.info.contactNumber,
@@ -284,7 +323,8 @@ def create_kiosk_request(request_data: KioskRequestCreate, db: Session = Depends
         purpose=request_data.info.purpose,
         notes=request_data.info.notes,
         total_cost=request_data.total,
-        requested_via="Kiosk - Guest", # Set the source
+        resident_id=resident_id_to_save,
+        requested_via=requested_via_str,
         status="Pending",
         paid=False
     )
@@ -292,9 +332,8 @@ def create_kiosk_request(request_data: KioskRequestCreate, db: Session = Depends
     db.commit()
     db.refresh(new_request)
 
-    # 3. Create join table entries and update inventory
+    # 4. Create join table entries and update inventory
     for item_data in request_data.equipment:
-        # Create the link
         new_request_item = models.EquipmentRequestItem(
             request_id=new_request.id,
             item_id=item_data.id,
@@ -302,7 +341,6 @@ def create_kiosk_request(request_data: KioskRequestCreate, db: Session = Depends
         )
         db.add(new_request_item)
         
-        # Update the inventory count
         db_item = db.query(models.EquipmentInventory).filter(models.EquipmentInventory.id == item_data.id).first()
         if db_item:
             db_item.available_quantity -= item_data.quantity

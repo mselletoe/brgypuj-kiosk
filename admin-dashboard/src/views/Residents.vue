@@ -1,7 +1,7 @@
 <script setup>
 import PageTitle from '@/components/shared/PageTitle.vue'
 import ResidentsTable from '@/components/ResidentsTable.vue'
-import { NInput, NPagination, NSelect } from 'naive-ui'
+import { NInput, NPagination, NSelect, NModal, NCard } from 'naive-ui'
 import { ref, onMounted, watch } from 'vue'
 import { fetchResidents, fetchPuroks } from '@/api/residents'
 
@@ -17,6 +17,9 @@ const searchFilter = ref('all')
 const selectedValues = ref([])
 const optionsRef = ref([])
 const loadingSelect = ref(false)
+
+const showModal = ref(false)
+const residentData = ref(null)
 
 const searchOptions = [
   { label: 'All', value: 'all' },
@@ -61,6 +64,11 @@ const loadPuroks = async () => {
   } finally {
     loadingSelect.value = false
   }
+}
+
+const handleView = (resident) => {
+  residentData.value = resident // Store the resident's data
+  showModal.value = true       // Show the modal
 }
 
 onMounted(() => {
@@ -112,10 +120,10 @@ watch([page, query, searchFilter, selectedValues], loadResidents)
     </header>
 
     <!-- Residents Table -->
-    <ResidentsTable :residents="residents" :loading="loading" />
+    <ResidentsTable :residents="residents" :loading="loading" @view="handleView"/>
 
     <!-- Pagination -->
-    <div class="mt-auto flex items-center justify-between text-sm text-gray-600">
+    <div class="mt-auto flex items-center justify-between text-xs text-gray-600">
       <p>Showing {{ residents.length }} of {{ total }}</p>
       <NPagination
         v-model:page="page"
@@ -124,5 +132,22 @@ watch([page, query, searchFilter, selectedValues], loadResidents)
         simple
       />
     </div>
+
+    <NModal v-model:show="showModal" preset="card" style="width: 600px" :title="residentData ? `Viewing Resident: ${residentData.first_name} ${residentData.last_name}` : 'Resident Details'" :bordered="false" :mask-closable="true">
+        <div v-if="residentData" class="space-y-3">
+            <h3 class="text-lg font-semibold">Personal Information</h3>
+            <p><strong>Full Name:</strong> {{ residentData.first_name }} {{ residentData.middle_name }} {{ residentData.last_name }} {{ residentData.suffix }}</p>
+            <p><strong>RFID UID:</strong> <NTag :type="residentData.rfid_uid ? 'success' : 'warning'" size="small">{{ residentData.rfid_uid || 'Not Assigned' }}</NTag></p>
+            <p><strong>Contact:</strong> {{ residentData.phone_number || 'N/A' }}</p>
+            
+            <h3 class="text-lg font-semibold pt-2">Address</h3>
+            <p><strong>Unit/Blk/Street:</strong> {{ residentData.unit_blk_street || 'N/A' }}</p>
+            <p><strong>Purok:</strong> {{ residentData.purok || 'N/A' }}</p>
+            <p><strong>City/Barangay:</strong> {{ residentData.barangay || 'N/A' }}, {{ residentData.city || 'N/A' }}</p>
+            </div>
+        <div v-else>
+            <p>No resident data available.</p>
+        </div>
+    </NModal>
   </div>
 </template>

@@ -1,6 +1,8 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
 import PageTitle from '@/components/shared/PageTitle.vue'
+import { getAnnouncements, createAnnouncement, deleteAnnouncement as deleteAnnouncementApi } from '@/api/announcements.js'
+
 
 // Load announcements from localStorage (or start with empty array)
 const announcements = ref([])
@@ -11,6 +13,35 @@ onMounted(() => {
     announcements.value = JSON.parse(saved)
   }
 })
+
+onMounted(async () => {
+  try {
+    const data = await getAnnouncements()
+    if (data && data.length) {
+      announcements.value = data.map(a => ({
+        id: a.id,
+        title: a.title,
+        date: a.date,     // already ISO yyyy-mm-dd
+        start: a.start,   // already split
+        end: a.end,       // already split
+        location: a.location,
+        image: a.image    // already a working URL
+      }))
+    }
+  } catch (err) {
+    console.error('Error fetching announcements:', err)
+  }
+})
+
+// helper: converts backend binary to base64 image
+const arrayBufferToBase64 = (buffer) => {
+  if (!buffer) return ''
+  let binary = ''
+  const bytes = new Uint8Array(buffer)
+  const len = bytes.byteLength
+  for (let i = 0; i < len; i++) binary += String.fromCharCode(bytes[i])
+  return window.btoa(binary)
+}
 
 // Automatically save announcements to localStorage whenever they change
 watch(announcements, (newVal) => {
@@ -53,7 +84,7 @@ const openAddModal = () => {
   imagePreview.value = null
 }
 
-const addAnnouncement = () => {
+const addAnnouncement = async () => {
   if (!newAnnouncement.value.title || !newAnnouncement.value.image) {
     alert('Please fill out all required fields.')
     return
@@ -74,6 +105,27 @@ const addAnnouncement = () => {
     })
   }
 
+  // Also send to backend
+try {
+  const formData = new FormData()
+  formData.append('title', newAnnouncement.value.title)
+  formData.append('event_date', newAnnouncement.value.date)
+  formData.append('event_day', new Date(newAnnouncement.value.date).toLocaleDateString(undefined, { weekday: 'long' }))
+  formData.append('event_time', `${newAnnouncement.value.start} - ${newAnnouncement.value.end}`)
+  formData.append('location', newAnnouncement.value.location)
+
+  // If the image is from a file input, convert URL back to File
+  const inputEl = document.querySelector('input[type="file"]')
+  if (inputEl && inputEl.files[0]) {
+    formData.append('image', inputEl.files[0])
+  }
+
+  await createAnnouncement(formData)
+  console.log('Announcement synced to backend.')
+} catch (error) {
+  console.error('Failed to sync with backend:', error)
+}
+
   showModal.value = false
   editMode.value = false
   newAnnouncement.value = { title: '', date: '', start: '', end: '', location: '', image: '' }
@@ -88,20 +140,25 @@ const openEditModal = (announcement) => {
   showModal.value = true
 }
 
-const deleteAnnouncement = (id) => {
+const deleteAnnouncement = async (id) => {
   announcements.value = announcements.value.filter(a => a.id !== id)
+  try {
+    await deleteAnnouncementApi(id)
+    console.log('Deleted from backend.')
+  } catch (err) {
+    console.error('Failed to delete from backend:', err)
+  }
 }
 </script>
 
 <template>
-  <div class="p-6 bg-white rounded-md w-full h-full space-y-5">
+  <div class="p-6 bg-white rounded-md w-full min-h-screen space-y-5">
     <div class="flex justify-between items-center">
       <PageTitle title="Announcements" />
       <button
         @click="openAddModal"
         class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center gap-1"
-      >
-        <span>➕</span> Add Announcement
+      > Add Announcement
       </button>
     </div>
 

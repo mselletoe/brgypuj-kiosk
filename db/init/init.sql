@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS residents (
     years_residency SMALLINT CHECK (years_residency >= 0),
     email VARCHAR(64) UNIQUE,
     phone_number CHAR(11),
-    account_pin TEXT, 
+    account_pin VARCHAR(4), 
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -58,11 +58,12 @@ CREATE TABLE IF NOT EXISTS rfid_uid (
 );
 
 -- ==============================
---  TABLE: brgy_staff
+--  TABLE: brgy_staff
 -- ==============================
 CREATE TABLE IF NOT EXISTS brgy_staff (
     id SMALLSERIAL PRIMARY KEY,
-    resident_id SMALLINT REFERENCES residents(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    resident_id SMALLINT REFERENCES residents(id) ON DELETE CASCADE ON UPDATE CASCADE NULL,
+    staff_name VARCHAR(255) NULL,
     email VARCHAR(64) UNIQUE,
     password TEXT,
     role VARCHAR(128),
@@ -190,3 +191,21 @@ VALUES
     ('Folding Tables', 5, 5, 1500.00, 'day'),
     ('Sound System', 3, 2, 300.00, 'day')
 ON CONFLICT (name) DO NOTHING;
+
+-- =============================================================================
+-- Tables for Announcements
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS announcements (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    event_date DATE NOT NULL,
+    event_day VARCHAR(32),
+    event_time VARCHAR(32),
+    location VARCHAR(255) NOT NULL,
+    image BYTEA,
+    image_name VARCHAR(255),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);

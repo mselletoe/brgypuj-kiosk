@@ -1,5 +1,7 @@
 {
   "dependencies": {
-    "@vuepic/vue-datepicker": "^11.0.3"
+    "@vicons/ionicons5": "^0.13.0",
+    "@vuepic/vue-datepicker": "^11.0.3",
+    "uuid": "^13.0.0"
   }
 }

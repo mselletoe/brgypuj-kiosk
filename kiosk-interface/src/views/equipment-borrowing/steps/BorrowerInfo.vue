@@ -1,5 +1,6 @@
 <script setup>
-import { ref, computed } from 'vue';
+// 1. IMPORT nextTick
+import { ref, computed, onMounted, nextTick } from 'vue';
 import ArrowBackButton from '@/components/shared/ArrowBackButton.vue';
 import PrimaryButton from '@/components/shared/PrimaryButton.vue';
 import Keyboard from '@/components/shared/Keyboard.vue';
@@ -7,6 +8,7 @@ import { DocumentTextIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
   borrowerInfo: Object,
+  authInfo: Object,
   goNext: Function,
   goBack: Function,
 });
@@ -18,6 +20,15 @@ const localInfo = ref({
   purpose: props.borrowerInfo.purpose || null,
   notes: props.borrowerInfo.notes || ''
 });
+
+onMounted(() => {
+  if (props.authInfo) {
+    localInfo.value.contactPerson = props.authInfo.contactPerson;
+    localInfo.value.contactNumber = props.authInfo.contactNumber || '';
+  }
+});
+
+const isUserLoggedIn = computed(() => !!props.authInfo);
 
 const purposeOptions = ref([
   'Barangay Event',
@@ -41,13 +52,34 @@ const handleBack = () => {
 };
 
 const handleNext = () => {
-  emit('update:borrower-info', localInfo.value);
+  let authData = {};
+  if (isUserLoggedIn.value) {
+    authData = {
+      resident_id: props.authInfo.resident_id,
+      rfid: props.authInfo.rfid
+    };
+  }
+  const finalInfo = {
+    ...localInfo.value, 
+    ...authData
+  };
+  emit('update:borrower-info', finalInfo);
   props.goNext('review');
 };
 
-const focusInput = (fieldName) => {
+// 2. MODIFIED: focusInput now handles scrolling
+const focusInput = (elementId, fieldName) => {
   activeInput.value = fieldName;
   showKeyboard.value = true;
+
+  // Wait for Vue to update the DOM (to add padding)
+  nextTick(() => {
+    const el = document.getElementById(elementId);
+    if (el) {
+      // Scroll the element into the middle of the view
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  });
 };
 
 const handleKeyboardKeyPress = (char) => {
@@ -80,7 +112,10 @@ const inputClass = "w-full px-4 py-3 text-base border border-gray-300 rounded-lg
 </script>
 
 <template>
-  <div class="py-0 p-8">
+  <div 
+    class="py-0 p-8" 
+    :class="{ 'content-with-keyboard': showKeyboard }"
+  >
 
     <div class="flex items-center gap-4">
       <ArrowBackButton @click="handleBack" />
@@ -105,9 +140,9 @@ const inputClass = "w-full px-4 py-3 text-base border border-gray-300 rounded-lg
             v-model="localInfo.contactPerson"
             type="text"
             placeholder="Name"
-            :class="inputClass"
-            @focus="focusInput('contactPerson')"
-            readonly
+            :class="[inputClass, { 'bg-gray-100': isUserLoggedIn }]"
+            @focus="focusInput('contact-person', 'contactPerson')"
+            :readonly="!showKeyboard" 
           />
         </div>
 
@@ -120,9 +155,9 @@ const inputClass = "w-full px-4 py-3 text-base border border-gray-300 rounded-lg
             v-model="localInfo.contactNumber"
             type="tel"
             placeholder="Phone Number"
-            :class="inputClass"
-            @focus="focusInput('contactNumber')"
-            readonly
+            :class="[inputClass, { 'bg-gray-100': isUserLoggedIn }]"
+            @focus="focusInput('contact-number', 'contactNumber')"
+            :readonly="!showKeyboard" 
           />
         </div>
 
@@ -152,7 +187,7 @@ const inputClass = "w-full px-4 py-3 text-base border border-gray-300 rounded-lg
             rows="3"
             placeholder="Any additional notes or special requirements"
             :class="inputClass"
-            @focus="focusInput('notes')"
+            @focus="focusInput('notes', 'notes')"
             readonly
           ></textarea>
         </div>
@@ -208,5 +243,16 @@ select[value="null"] {
 .slide-up-enter-from,
 .slide-up-leave-to {
   transform: translateY(100%);
+}
+
+/* 5. ADDED: This class adds padding to the bottom of the page */
+.content-with-keyboard {
+  /* This value should be the height of your <Keyboard> component.
+    320px is a common height. Adjust it if your keyboard is taller/shorter.
+  */
+  padding-bottom: 320px;
+  
+  /* This makes the padding animate in sync with the keyboard slide */
+  transition: padding-bottom 0.3s ease-out;
 }
 </style>

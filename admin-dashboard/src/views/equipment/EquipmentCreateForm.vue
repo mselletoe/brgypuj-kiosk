@@ -75,7 +75,7 @@ async function handleCreateRequest() { // <-- Make async
 <template>
   <div class="bg-white p-6 rounded-lg shadow-md">
     <h2 class="text-2xl font-bold text-gray-800 mb-4">
-      Create New Request (Admin)
+      Create New Request
     </h2>
     <p class="mb-6 text-gray-600">
       Fill out the form below to manually create a new equipment request 
