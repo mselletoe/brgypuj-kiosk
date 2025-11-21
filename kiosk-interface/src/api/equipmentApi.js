@@ -1,13 +1,11 @@
-// Set this to your backend's running URL
-const API_URL = 'http://127.0.0.1:8000/equipment';
+import api from './api.js'; // Import the axios instance
 
 /**
  * Fetches the list of all available equipment from the inventory.
  */
 export async function getInventory() {
-  const response = await fetch(`${API_URL}/inventory`);
-  if (!response.ok) throw new Error('Failed to fetch inventory');
-  return response.json();
+  const response = await api.get('/equipment/inventory');
+  return response.data;
 }
 
 /**
@@ -15,15 +13,6 @@ export async function getInventory() {
  * @param {object} payload - The complete request object from ReviewRequest.vue
  */
 export async function createKioskRequest(payload) {
-  const response = await fetch(`${API_URL}/kiosk/request`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  
-  if (!response.ok) {
-     const err = await response.json();
-     throw new Error(err.detail || 'Failed to create request');
-  }
-  return response.json();
+  const response = await api.post('/equipment/kiosk/request', payload);
+  return response.data;
 }
