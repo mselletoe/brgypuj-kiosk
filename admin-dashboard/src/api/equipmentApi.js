@@ -1,89 +1,43 @@
-// Set this to your backend's running URL
-const API_URL = 'http://127.0.0.1:8000/equipment';
+import api from './api'
 
 // --- INVENTORY ---
-
 export async function getInventory() {
-  const response = await fetch(`${API_URL}/inventory`);
-  if (!response.ok) throw new Error('Failed to fetch inventory');
-  return response.json();
+  const response = await api.get('/equipment/inventory');
+  return response.data;
 }
 
 export async function updateInventory(item) {
-  // The 'item' from the frontend has different names, so we map them
   const payload = {
     name: item.name,
     total: item.total,
     available: item.available,
     rate: item.rate
   };
-  
-  const response = await fetch(`${API_URL}/inventory/${item.id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  if (!response.ok) throw new Error('Failed to update item');
-  return response.json();
+  const response = await api.put(`/equipment/inventory/${item.id}`, payload);
+  return response.data;
 }
 
 // --- REQUESTS ---
-
 export async function getRequests(status = '') {
-  const url = status ? `${API_URL}/requests?status=${status}` : `${API_URL}/requests`;
-  const response = await fetch(url);
-  if (!response.ok) throw new Error('Failed to fetch requests');
-  return response.json();
+  const url = status ? `/equipment/requests?status=${status}` : '/equipment/requests';
+  const response = await api.get(url);
+  return response.data;
 }
 
 export async function createRequest(requestData) {
-  // The 'requestData' from the form matches the Pydantic schema
-  const response = await fetch(`${API_URL}/requests`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(requestData),
-  });
-  if (!response.ok) {
-     const err = await response.json();
-     throw new Error(err.detail || 'Failed to create request');
-  }
-  return response.json();
+  const response = await api.post('/equipment/requests', requestData);
+  return response.data;
 }
 
 // --- STATUS CHANGES ---
-
-// Generic helper function
 async function updateRequestStatus(requestId, action) {
-  const response = await fetch(`${API_URL}/requests/${requestId}/${action}`, {
-    method: 'PUT',
-  });
-  if (!response.ok) {
-    const err = await response.json();
-    throw new Error(err.detail || `Failed to ${action}`);
-  }
-  return response.json();
+  const response = await api.put(`/equipment/requests/${requestId}/${action}`);
+  return response.data;
 }
 
-export function markAsPaid(requestId) {
-  return updateRequestStatus(requestId, 'pay');
-}
-
-export function approveRequest(requestId) {
-  return updateRequestStatus(requestId, 'approve');
-}
-
-export function rejectRequest(requestId) {
-  return updateRequestStatus(requestId, 'reject');
-}
-
-export function markAsPickedUp(requestId) {
-  return updateRequestStatus(requestId, 'pickup');
-}
-
-export function markAsReturned(requestId) {
-  return updateRequestStatus(requestId, 'return');
-}
-
-export function issueRefund(requestId) {
-  return updateRequestStatus(requestId, 'refund');
-}
+export const markAsPaid = (id) => updateRequestStatus(id, 'pay');
+export const approveRequest = (id) => updateRequestStatus(id, 'approve');
+export const rejectRequest = (id) => updateRequestStatus(id, 'reject');
+export const markAsPickedUp = (id) => updateRequestStatus(id, 'pickup');
+export const markAsReturned = (id) => updateRequestStatus(id, 'return');
+export const issueRefund = (id) => updateRequestStatus(id, 'refund');
