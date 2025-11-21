@@ -14,3 +14,4 @@ python-docx
 pypandoc
 requests
 aiofiles
+pydantic[email]
