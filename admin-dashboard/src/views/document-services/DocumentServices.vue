@@ -178,7 +178,7 @@ const columns = [
   {
     title: 'Actions',
     key: 'actions',
-    width: 400,
+    width: 300,
     render(row) {
       if (editingId.value === row.id) {
         return [
