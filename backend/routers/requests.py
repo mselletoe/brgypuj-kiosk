@@ -61,6 +61,7 @@ class RequestOut(BaseModel):
     requested_via: str  # "RFID" or "Guest"
     requester_name: Optional[str] = None
     rfid_uid: Optional[str] = None
+    phone_number: Optional[str] = None
 
 # Pydantic model for updating status
 class StatusUpdateSchema(BaseModel):
@@ -268,18 +269,26 @@ def get_requests(db: Session = Depends(get_db)):
         if r.resident_id:
             # RFID user - fetch their info
             resident = r.resident
-            requester_name = f"{resident.first_name} {resident.last_name}" if resident else "Unknown User"
+            if resident:
+                middle_name = resident.middle_name if resident.middle_name else ""
+                requester_name = f"{resident.first_name} {middle_name} {resident.last_name}".strip()
+            else:
+                requester_name = "Unknown User"
             requested_via = "RFID"
             
             # Get RFID UID if available
             rfid_uid = None
-            if resident and resident.rfid:
-                rfid_uid = resident.rfid.rfid_uid
+            phone_number = None  # ADD THIS LINE
+            if resident:
+                if resident.rfid:
+                    rfid_uid = resident.rfid.rfid_uid
+                phone_number = resident.phone_number
         else:
             # Guest user
             requester_name = "Guest User"
             requested_via = "Guest"
             rfid_uid = None
+            phone_number = None
         
         output.append({
             "id": r.id,
@@ -294,6 +303,7 @@ def get_requests(db: Session = Depends(get_db)):
             "requested_via": requested_via,
             "requester_name": requester_name,
             "rfid_uid": rfid_uid,
+            "phone_number": phone_number,
         })
     
     return output

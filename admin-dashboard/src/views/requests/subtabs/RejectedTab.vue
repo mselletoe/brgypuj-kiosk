@@ -158,7 +158,7 @@ onMounted(fetchRejectedRequests)
           <label class="block text-xs text-gray-500">Document Type</label>
           <span class="font-semibold text-gray-800">{{ request.documentType }}</span>
           
-          <label class="block text-xs text-gray-500 mt-2">Request from</label>
+          <label class="block text-xs text-gray-500 mt-2">Request by</label>
           <span class="font-bold text-gray-700">{{ request.borrowerName }}</span>
         </div>
 
