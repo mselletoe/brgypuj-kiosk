@@ -11,7 +11,6 @@ import { ArrowLeftIcon } from '@heroicons/vue/24/solid'
 const router = useRouter()
 const route = useRoute()
 
-// --- Notification State ---
 const showToast = ref(false)
 const toastMessage = ref('')
 const isSuccess = ref(false)
@@ -23,11 +22,12 @@ const residentName = ref('')
 const hasPin = ref(false)
 const isSettingPin = ref(false)
 const mode = ref('user')
+const rfidUid = ref(null)
 const ADMIN_PIN = '7890'
 const PIN_LENGTH = 4
 
 const showPin = ref(false)
-let fullResidentData = null; 
+// let fullResidentData = null; 
 
 // --- Helper to show custom notification instead of alert() ---
 const triggerToast = (message, success = false) => {
@@ -60,8 +60,8 @@ onMounted(async () => {
       hasPin.value = res.data.has_pin
       isSettingPin.value = !hasPin.value 
       
-      const userRes = await api.get(`/users/${residentId.value}`)
-      fullResidentData = userRes.data; 
+      // const userRes = await api.get(`/users/${residentId.value}`)
+      // fullResidentData = userRes.data; 
       
     } catch (err) {
       triggerToast('Error checking user data. Please try again.')
@@ -130,11 +130,21 @@ const submitPin = async () => {
 
   if (mode.value === 'admin') {
     if (pin.value === ADMIN_PIN) {
-      const userData = { name: 'Admin', isAdmin: true }
-      login(userData)
-      localStorage.setItem("auth_user", JSON.stringify({ user: userData, isGuest: false }));
-      const uid = route.query.uid
-      router.replace(`/register?uid=${uid}`)
+      try {
+        // Call admin login endpoint to get token
+        const response = await api.post('/users/admin/login', { 
+          pin: pin.value,
+          rfid_uid: rfidUid.value 
+        })
+        
+        // Store token and user data
+        login(response.data.user, response.data.access_token)
+        
+        router.replace(`/register?uid=${rfidUid.value}`)
+      } catch (err) {
+        triggerToast('Admin login failed')
+        onClear()
+      }
     } else {
       triggerToast('Invalid Admin PIN')
       onClear();
@@ -149,28 +159,36 @@ const submitPin = async () => {
         onClear();
         return;
       }
-      await api.post(`/users/${residentId.value}/pin`, { pin: pin.value })
+      
+      // Set PIN and receive token
+      const response = await api.post(`/users/${residentId.value}/pin`, { 
+        pin: pin.value,
+        rfid_uid: rfidUid.value 
+      })
+      
+      // Store token and user data
+      login(response.data.user, response.data.access_token)
       triggerToast('PIN set successfully!', true)
+      
+      setTimeout(() => router.replace('/home'), 1000);
+      
     } else {
-      const res = await api.post(`/users/${residentId.value}/pin/verify`, { pin: pin.value })
-      if (!res.data.valid) {
+      // Verify PIN and receive token
+      const response = await api.post(`/users/${residentId.value}/pin/verify`, { 
+        pin: pin.value,
+        rfid_uid: rfidUid.value 
+      })
+      
+      if (!response.data.valid) {
         triggerToast('Invalid PIN');
         onClear();
         return;
       }
+      
+      // Store token and user data
+      login(response.data.user, response.data.access_token)
       triggerToast('Login successful!', true);
-    }
-
-    if (fullResidentData) {
-      fullResidentData.rfid_uid = route.query.uid;
-    }
-    
-    login(fullResidentData)
-    localStorage.setItem("auth_user", JSON.stringify({ user: fullResidentData, isGuest: false }));
-    
-    if (isSettingPin.value) {
-      setTimeout(() => router.replace('/home'), 1000);
-    } else {
+      
       router.replace('/home');
     }
 

@@ -50,12 +50,17 @@ const fetchPendingRequests = async () => {
       .map(req => ({
         id: req.id,
         documentType: req.document_type || 'Unknown Document',
-        borrowerName: req.form_data?.borrowerName || 'N/A',
+        // UPDATED: Use requester_name from backend
+        borrowerName: req.requester_name || 'N/A',
         date: formatRequestDate(req.created_at),
-        via: req.form_data?.via || 'Guest User',
-        viaTag: req.form_data?.viaTag || null,
+        // UPDATED: Use requested_via from backend
+        via: req.requested_via || 'Guest',  // "RFID" or "Guest"
+        // UPDATED: Use rfid_uid from backend
+        viaTag: req.rfid_uid || null,
         amount: req.price || 0,
-        paymentStatus: req.payment_status || 'Unpaid'
+        paymentStatus: req.payment_status || 'Unpaid',
+        // NEW: Store resident_id for future use
+        residentId: req.resident_id
       }))
   } catch (error) {
     console.error('Error fetching requests:', error)
@@ -200,6 +205,13 @@ const filteredRequests = computed(() => {
               class="ml-2 px-2 py-0.5 text-xs font-semibold rounded-full bg-[#0957FF] text-white"
             >
               {{ request.viaTag }}
+            </span>
+
+            <span 
+              v-if="request.via === 'Guest'" 
+              class="px-2 py-0.5 text-xs font-semibold rounded-full bg-[#FFB109] text-white"
+            >
+              No Account
             </span>
           </div>
         </div>
