@@ -6,6 +6,7 @@ import ArrowBackButton from '@/components/shared/ArrowBackButton.vue'
 import Modal from '@/components/shared/Modal.vue'
 import { fetchRequestTypes } from '@/api/requestTypes'
 import { createRequest } from '@/api/requests'
+import { auth, isAuthenticated } from '@/stores/auth'
 
 const route = useRoute()
 const router = useRouter()
@@ -94,7 +95,7 @@ const handleSubmit = async (data) => {
       form_data: data // dynamic fields go here
     }
 
-    await createRequest(payload)
+    await createRequest(payload, auth.token)
     showSuccessModal.value = true
 
   } catch (err) {

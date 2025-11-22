@@ -1,10 +1,44 @@
-// src/services/api.js
+// src/api/api.js
 import axios from 'axios'
+import { auth } from '@/stores/auth'  // Import logout directly
 
-// Change this to match your backend URL
 const api = axios.create({
   baseURL: 'http://172.20.10.5:8000', // FastAPI backend
   timeout: 10000,
 })
+
+// Request interceptor - automatically add JWT token to all requests
+api.interceptors.request.use(
+  (config) => {
+    // Get token from auth store
+    const token = auth.token
+    
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
+    
+    return config
+  },
+  (error) => {
+    return Promise.reject(error)
+  }
+)
+
+// Response interceptor - handle token expiration
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Token expired or invalid - clear auth and redirect to login
+      logout()  // Use the imported logout function
+      
+      // Only redirect if not already on login page
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login'
+      }
+    }
+    return Promise.reject(error)
+  }
+)
 
 export default api
