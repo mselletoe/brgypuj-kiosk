@@ -1,12 +1,48 @@
+<script setup>
+import { ref, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import ArrowBackButton from '@/components/shared/ArrowBackButton.vue'
+
+const route = useRoute()
+const router = useRouter()
+const feedbackCategory = ref('')
+
+onMounted(() => {
+  if (route.query.category) {
+    feedbackCategory.value = route.query.category
+  } else {
+    feedbackCategory.value = 'Experience'
+  }
+})
+
+const handleRatingClick = (stars, text) => {
+  router.push({
+    path: '/comments',
+    query: { 
+      stars: stars,
+      ratingText: text,
+      category: feedbackCategory.value
+    }
+  })
+}
+
+const goBack = () => {
+  router.push({ path: '/feedback' })
+}
+</script>
+
 <template>
   <div class="feedback-layout">
-    <ArrowBackButton 
-      @click="goBack"
-      class="absolute top-10 left-12"
-    />
-    <h1 class="title-text">Your Feedback Matters</h1>
-    <h2 class="new-title-text">Rate our {{ feedbackCategory }}</h2>
-    <p class="subtitle-text">Tap a star to rate your experience</p>
+    <div class="header-section">
+      <ArrowBackButton @click="goBack" class="manual-back-btn" />
+      <h1 class="title-text">Your Feedback Matters</h1>
+    </div>
+
+    <div class="sub-header">
+      <h2 class="new-title-text">Rate our {{ feedbackCategory }}</h2>
+      <p class="subtitle-text">Tap a star to rate your experience</p>
+    </div>
+
     <div class="container-wrapper">
       <div class="feedback-box" @click="handleRatingClick(1, 'Very Poor')">
         <img src="@/assets/vectors/Star.svg" alt="Very Poor" class="box-logo" />
@@ -32,119 +68,35 @@
   </div>
 </template>
 
-<script setup>
-import { ref, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import ArrowBackButton from '@/components/shared/ArrowBackButton.vue'
-
-const route = useRoute()
-const router = useRouter()
-const feedbackCategory = ref('')
-
-onMounted(() => {
-  if (route.query.category) {
-    feedbackCategory.value = route.query.category
-  } else {
-    feedbackCategory.value = 'Experience'
-  }
-})
-
-/**
- * Handles the click event on a rating box and navigates to the comments page.
- * @param {number} stars - The number of stars (1 to 5).
- * @param {string} text - The rating text (e.g., 'Excellent').
- */
-const handleRatingClick = (stars, text) => {
-  router.push({
-    path: '/comments',
-    query: { 
-      stars: stars,
-      ratingText: text,
-      category: feedbackCategory.value
-    }
-  })
-}
-
-const goBack = () => {
-  router.push({ path: '/feedback' })
-}
-</script>
-
 <style scoped>
-/* --- LAYOUT CHANGES --- */
-.feedback-layout{
-  position:relative;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  width:100%;
-  min-height:100vh; /* Changed from height: 100% */
-  overflow-x:hidden; /* Changed from overflow: hidden */
-  overflow-y:auto; /* Added for scrolling on small screens */
-  background-color:#ffffff;
-  font-family:'Poppins';
-  color:#003a6b;
-  box-sizing:border-box;
-  padding:20px; /* Changed padding */
-}
-.absolute{position:absolute;}
-/* .top-0{top:0;} */ /* Removed top-0 */
-.top-6{top: 1.5rem;} /* Added top-6 */
-.left-6{left:1.5rem;}
+/* LAYOUT: Fixed position, Padding top to clear header, No Scrollbar */
+.feedback-layout { position: fixed; top: 0; left: 0; display: flex; flex-direction: column; width: 100%; height: 100vh; overflow: hidden !important; background-color: #ffffff; font-family: 'Poppins'; color: #003a6b; box-sizing: border-box; padding: 160px 2rem 2rem 2rem; -ms-overflow-style: none; scrollbar-width: none; }
+.feedback-layout::-webkit-scrollbar { display: none; }
 
-/* --- TITLE ALIGNMENT --- */
-.title-text{
-  font-size:45px;
-  font-weight:700;
-  line-height:50px;
-  letter-spacing:-0.03em;
-  color:#03335C;
-  text-shadow:3px 3px 5px rgba(0,0,0,0.3),-2px -2px 4px rgba(255,255,255,0.6);
-  margin: 1.5rem auto 50px 100px; 
-  text-align:left;
-  width:auto;
-  max-width:100%;
-}
-/* --- END TITLE ALIGNMENT --- */
+.header-section { display: flex; align-items: center; width: 100%; gap: 1.5rem; margin-bottom: 1rem; }
 
-.new-title-text{font-size:30px;font-weight:700;line-height:35px;letter-spacing:-0.03em;color:#003a6b;text-shadow:3px 3px 5px rgba(0,0,0,0.3),-2px -2px 4px rgba(255,255,255,0.6);margin:5px 0 5px 0;text-align:center;width:100%;}
-.subtitle-text{font-size:13px;text-align:center;margin-bottom:23px;color:#003a6b;font-weight:500;max-width:100%;}
+/* TITLE: Aligned with margin-left to match your Feedback.vue style */
+.title-text { font-size: 45px; font-weight: 700; line-height: 1; letter-spacing: -0.03em; color: #03335C; margin-top: -55px; margin-bottom: 44px; margin-left: 105px; }
 
-/* --- RESPONSIVE CONTAINER CHANGES --- */
-.container-wrapper{
-  display:flex;
-  gap:10px;
-  justify-content:center; /* Changed from flex-start */
-  flex-wrap:wrap; /* Changed from nowrap */
-  width:100%; /* Changed from 869px */
-  max-width: 869px; /* Added max-width */
-  /* align-self:flex-start; */ /* Removed */
-  margin-top:15px;
-}
-.feedback-box{
-  width:165px;
-  height:220px;
-  border-radius:15px;
-  box-shadow:inset 2px 2px 4px rgba(255,255,255,0.6),inset -2px -2px 6px rgba(0,0,0,0.15),4px 4px 8px rgba(0,0,0,0.25);
-  transition:transform 0.15s ease,box-shadow 0.15s ease;
-  cursor:pointer;
-  /* flex-shrink:0; */ /* Removed to allow wrapping */
-  display:flex;
-  flex-direction:column;
-  justify-content:space-evenly;
-  align-items:center;
-  text-align:center;
-  padding:10px;
-  box-sizing:border-box;
-}
-/* --- END OF RESPONSIVE CHANGES --- */
+/* SUBTITLES */
+.new-title-text { font-size: 30px; font-weight: 700; line-height: 35px; letter-spacing: -0.03em; color: #003a6b; margin: 0 0 8px 0; text-align: center; width: 100%; }
+.subtitle-text { font-size: 13px; text-align: center; margin-bottom: 17px; color: #003a6b; font-weight: 500; max-width: 100%; }
+.sub-header { display: flex; flex-direction: column; align-items: center; width: 100%; margin-bottom: 22px; }
 
-.container-wrapper .feedback-box:nth-child(1) {background-color: #3F4B55;}
-.container-wrapper .feedback-box:nth-child(2) {background-color: #475F73;}
-.container-wrapper .feedback-box:nth-child(3) {background-color: #246195;}
-.container-wrapper .feedback-box:nth-child(4) {background-color: #1574C3;}
-.container-wrapper .feedback-box:nth-child(5) {background-color: #008AFF;}
-.feedback-box:hover{transform: scale(1.05) translateY(-3px); box-shadow: inset 2px 2px 4px rgba(255, 255, 255, 0.7), inset -2px -2px 6px rgba(0, 0, 0, 0.2), 6px 6px 12px rgba(0, 0, 0, 0.35);}
-.box-logo{width:100px;height:100px;margin-bottom:5px;filter: drop-shadow(4px 4px 5px rgba(0, 0, 0, 0.4));}
-.box-title{font-family:'Poppins';font-weight:700;font-size:20px;line-height:20px;letter-spacing:0;color:#ffffff;margin:0;}
+/* BOXES */
+.container-wrapper { display: flex; gap: 17.6px; justify-content: center; flex-wrap: wrap; width: 100%; max-width: 900px; margin: 0 auto; }
+.feedback-box { width: 165px; height: 220px; border-radius: 15px; box-shadow: inset 2px 2px 4px rgba(255,255,255,0.6), inset -2px -2px 6px rgba(0,0,0,0.15), 4px 4px 8px rgba(0,0,0,0.25); transition: transform 0.15s ease, box-shadow 0.15s ease; cursor: pointer; display: flex; flex-direction: column; justify-content: space-evenly; align-items: center; text-align: center; padding: 10px; box-sizing: border-box; }
+.feedback-box:hover { transform: scale(1.05) translateY(-3px); box-shadow: inset 2px 2px 4px rgba(255, 255, 255, 0.7), inset -2px -2px 6px rgba(0, 0, 0, 0.2), 6px 6px 12px rgba(0, 0, 0, 0.35); }
+.box-logo { width: 100px; height: 100px; margin-bottom: 5px; filter: drop-shadow(4px 4px 5px rgba(0, 0, 0, 0.4)); }
+.box-title { font-family: 'Poppins'; font-weight: 700; font-size: 20px; line-height: 20px; letter-spacing: 0; color: #ffffff; margin: 0; }
+
+/* COLORS */
+.container-wrapper .feedback-box:nth-child(1) { background-color: #3F4B55; }
+.container-wrapper .feedback-box:nth-child(2) { background-color: #475F73; }
+.container-wrapper .feedback-box:nth-child(3) { background-color: #246195; }
+.container-wrapper .feedback-box:nth-child(4) { background-color: #1574C3; }
+.container-wrapper .feedback-box:nth-child(5) { background-color: #008AFF; }
+
+/* MANUAL BUTTON: Edit top/left here to match your Feedback.vue exactly */
+.manual-back-btn { position: absolute; top: 98px; left: 64px; z-index: 50; }
 </style>
