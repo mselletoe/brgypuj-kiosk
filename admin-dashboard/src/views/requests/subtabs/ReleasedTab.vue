@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import api from '@/api/api'
+import SendSMSModal from '@/components/shared/SendSMSModal.vue'
 
 // --- PROPS ---
 const props = defineProps({
@@ -14,6 +15,8 @@ const props = defineProps({
 const releasedRequests = ref([])
 const isLoading = ref(true)
 const errorMessage = ref(null)
+const showSMSModal = ref(false)
+const selectedRequest = ref(null)
 
 // --- HELPERS ---
 const formatIndex = (index) => (index + 1).toString().padStart(2, '0')
@@ -25,7 +28,6 @@ const formatCurrency = (value) => {
   }).format(value)
 }
 
-// ✅ formatRequestDate helper for consistency
 const formatRequestDate = (isoDate) => {
   if (!isoDate) return "N/A"
   const date = new Date(isoDate)
@@ -51,13 +53,15 @@ const fetchReleasedRequests = async () => {
       .map(req => ({
         id: req.id,
         documentType: req.document_type || 'Unknown Document',
-        borrowerName: req.form_data?.borrowerName || 'N/A',
+        borrowerName: req.requester_name || 'Guest',
         date: formatRequestDate(req.created_at),
-        releasedDate: formatRequestDate(req.updated_at), // Use updated_at as released date
-        via: req.form_data?.via || 'Guest User',
-        viaTag: req.form_data?.viaTag || null,
+        releasedDate: formatRequestDate(req.updated_at),
+        via: req.requested_via || 'Guest',
+        viaTag: req.rfid_uid || null,
         amount: req.price || 0,
-        paymentStatus: req.payment_status || 'Unpaid'
+        paymentStatus: req.payment_status || 'Unpaid',
+        residentId: req.resident_id,
+        phoneNumber: req.phone_number || null
       }))
   } catch (error) {
     console.error('Error fetching released requests:', error)
@@ -68,8 +72,21 @@ const fetchReleasedRequests = async () => {
 }
 
 // --- FRONT-END ACTIONS ---
-const handleSendSms = (id) => {
-  console.log(`Sending SMS for released request ${id}`)
+const handleSendSMS = (request) => {
+  selectedRequest.value = request
+  showSMSModal.value = true
+}
+
+const handleSMSSubmit = async (smsData) => {
+  try {
+    await api.post('/send-sms', {
+      requestId: selectedRequest.value.id,
+      phone: smsData.phone,
+      message: smsData.message
+    })
+  } catch (error) {
+    throw error
+  }
 }
 
 const handleViewDocument = async (id) => {
@@ -98,19 +115,16 @@ const handleProcessingDetails = (id) => {
 // --- COMPUTED: Search Filter ---
 const filteredRequests = computed(() => {
   if (!props.searchQuery) return releasedRequests.value
-
   const lowerQuery = props.searchQuery.toLowerCase().trim()
-  return releasedRequests.value.filter(req => {
-    const nameMatch = req.borrowerName.toLowerCase().includes(lowerQuery)
-    const docTypeMatch = req.documentType.toLowerCase().includes(lowerQuery)
-    const dateMatch = req.date.toLowerCase().includes(lowerQuery)
-    const releasedDateMatch = req.releasedDate.toLowerCase().includes(lowerQuery)
-    const viaMatch = req.via.toLowerCase().includes(lowerQuery)
-    const amountMatch = req.amount.toString().includes(lowerQuery)
-    const viaTagMatch = req.viaTag ? req.viaTag.toLowerCase().includes(lowerQuery) : false
-
-    return nameMatch || docTypeMatch || dateMatch || releasedDateMatch || viaMatch || amountMatch || viaTagMatch
-  })
+  return releasedRequests.value.filter(req =>
+    req.borrowerName.toLowerCase().includes(lowerQuery) ||
+    req.documentType.toLowerCase().includes(lowerQuery) ||
+    req.date.toLowerCase().includes(lowerQuery) ||
+    req.releasedDate.toLowerCase().includes(lowerQuery) ||
+    req.via.toLowerCase().includes(lowerQuery) ||
+    req.amount.toString().includes(lowerQuery) ||
+    (req.viaTag && req.viaTag.toLowerCase().includes(lowerQuery))
+  )
 })
 
 // --- Load requests on mount ---
@@ -137,14 +151,14 @@ onMounted(fetchReleasedRequests)
       class="flex items-start p-4 bg-white border border-gray-200 rounded-lg shadow-sm"
       :class="{
         'border-l-4 border-l-[#0957FF]': request.via === 'RFID', 
-        'border-l-4 border-l-[#FFB109]': request.via === 'Guest User'
+        'border-l-4 border-l-[#FFB109]': request.via === 'Guest'
       }"
     >
       <div 
         class="flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-full font-bold text-lg"
         :class="{
           'bg-[#D8E4FF] text-[#083491]': request.via === 'RFID',
-          'bg-[#FFF1D2] text-[#B67D03]': request.via === 'Guest User'
+          'bg-[#FFF1D2] text-[#B67D03]': request.via === 'Guest'
         }"
       >
         {{ formatIndex(index) }}
@@ -169,7 +183,7 @@ onMounted(fetchReleasedRequests)
             <span 
               class="font-bold" 
               :class="{
-                'text-[#B67D03]': request.via === 'Guest User', 
+                'text-[#B67D03]': request.via === 'Guest', 
                 'text-[#0957FF]': request.via === 'RFID'
               }"
             >
@@ -212,7 +226,7 @@ onMounted(fetchReleasedRequests)
         </button>
         
         <button 
-          @click="handleSendSms(request.id)"
+          @click="handleSendSMS(request)"
           class="flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 bg-[#00CA39] hover:bg-green-700 focus:ring-[#00CA39]"
         >
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
@@ -220,6 +234,14 @@ onMounted(fetchReleasedRequests)
           </svg>
           Send SMS
         </button>
+
+        <SendSMSModal
+          v-model:show="showSMSModal"
+          :recipient-name="selectedRequest?.borrowerName"
+          :recipient-phone="selectedRequest?.phoneNumber"
+          :default-message="`Your ${selectedRequest?.documentType} is ready for pickup.`"
+          @send="handleSMSSubmit"
+        />
       </div>
     </div>
   </div>

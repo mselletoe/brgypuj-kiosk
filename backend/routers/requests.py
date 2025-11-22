@@ -332,24 +332,3 @@ def update_request_status(request_id: int, payload: StatusUpdateSchema, db: Sess
     db.refresh(req)
 
     return {"message": f"Request status updated to '{payload.status_name}'", "status": payload.status_name}
-
-# ----------------------------
-# Approve Request (Move to processing)
-# ----------------------------
-@router.put("/{request_id}/approve") 
-def approve_request(request_id: int, db: Session = Depends(get_db)):
-    req = db.query(Request).filter(Request.id == request_id).first()
-    if not req:
-        raise HTTPException(status_code=404, detail="Request not found")
-
-    if req.payment_status != "Paid":
-        raise HTTPException(status_code=400, detail="Cannot approve unpaid request")
-
-    processing_status = get_status(db, "processing")
-    req.status_id = processing_status.id
-    req.updated_at = func.now()
-
-    db.commit()
-    db.refresh(req)
-
-    return {"message": "Request approved and moved to processing", "status": "processing"}

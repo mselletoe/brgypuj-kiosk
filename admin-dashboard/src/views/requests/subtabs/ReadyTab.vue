@@ -15,6 +15,8 @@ const props = defineProps({
 const readyRequests = ref([])
 const isLoading = ref(true)
 const errorMessage = ref(null)
+const showSMSModal = ref(false)
+const selectedRequest = ref(null)
 
 // --- HELPERS ---
 const formatIndex = (index) => (index + 1).toString().padStart(2, '0')
@@ -26,7 +28,7 @@ const formatCurrency = (value) => {
   }).format(value)
 }
 
-// ✅ Same formatRequestDate as Pending/Processing
+
 const formatRequestDate = (isoDate) => {
   if (!isoDate) return "N/A"
   const date = new Date(isoDate)
@@ -46,18 +48,20 @@ const formatRequestDate = (isoDate) => {
 // --- FETCH READY REQUESTS ---
 const fetchReadyRequests = async () => {
   try {
-    const response = await api.get('/requests') // fetch all requests
+    const response = await api.get('/requests')
     readyRequests.value = response.data
-      .filter(req => req.status === 'ready') // only 'ready' status
+      .filter(req => req.status === 'ready')
       .map(req => ({
         id: req.id,
         documentType: req.document_type || 'Unknown Document',
-        borrowerName: req.form_data?.borrowerName || 'N/A',
+        borrowerName: req.requester_name || 'Guest',
         date: formatRequestDate(req.created_at),
-        via: req.form_data?.via || 'Guest User',
-        viaTag: req.form_data?.viaTag || null,
+        via: req.requested_via || 'Guest',
+        viaTag: req.rfid_uid || null,
         amount: req.price || 0,
-        paymentStatus: req.payment_status || 'Unpaid'
+        paymentStatus: req.payment_status || 'Unpaid',
+        phoneNumber: req.phone_number || null,
+        residentId: req.resident_id
       }))
   } catch (error) {
     console.error('Error fetching ready requests:', error)
@@ -78,8 +82,21 @@ const handleRelease = async (id) => {
 }
 
 // --- SEND SMS ---
-const handleSendSms = (id) => {
-  console.log(`Sending SMS for request ${id}`)
+const handleSendSMS = (request) => {
+  selectedRequest.value = request
+  showSMSModal.value = true
+}
+
+const handleSMSSubmit = async (smsData) => {
+  try {
+    await api.post('/send-sms', {
+      requestId: selectedRequest.value.id,
+      phone: smsData.phone,
+      message: smsData.message
+    })
+  } catch (error) {
+    throw error
+  }
 }
 
 // --- DOWNLOAD / DETAILS ---
@@ -111,41 +128,15 @@ const filteredRequests = computed(() => {
   if (!props.searchQuery) return readyRequests.value
 
   const lowerQuery = props.searchQuery.toLowerCase().trim()
-  return readyRequests.value.filter(req => {
-    const nameMatch = req.borrowerName.toLowerCase().includes(lowerQuery)
-    const docTypeMatch = req.documentType.toLowerCase().includes(lowerQuery)
-    const dateMatch = req.date.toLowerCase().includes(lowerQuery)
-    const viaMatch = req.via.toLowerCase().includes(lowerQuery)
-    const amountMatch = req.amount.toString().includes(lowerQuery)
-    const viaTagMatch = req.viaTag ? req.viaTag.toLowerCase().includes(lowerQuery) : false
-    return nameMatch || docTypeMatch || dateMatch || viaMatch || amountMatch || viaTagMatch
-  })
+  return readyRequests.value.filter(req =>
+    req.borrowerName.toLowerCase().includes(lowerQuery) ||
+    req.documentType.toLowerCase().includes(lowerQuery) ||
+    req.date.toLowerCase().includes(lowerQuery) ||
+    req.via.toLowerCase().includes(lowerQuery) ||
+    req.amount.toString().includes(lowerQuery) ||
+    (req.viaTag && req.viaTag.toLowerCase().includes(lowerQuery))
+  )
 })
-
-// Add modal state
-const showSMSModal = ref(false)
-const selectedRequest = ref(null)
-
-// Handler to open modal
-const handleSendSMS = (request) => {
-  selectedRequest.value = request
-  showSMSModal.value = true
-}
-
-// Handler when SMS is actually sent
-const handleSMSSubmit = async (smsData) => {
-  try {
-    // Call your API to send SMS
-    await api.post('/send-sms', {
-      requestId: selectedRequest.value.id,
-      phone: smsData.phone,
-      message: smsData.message
-    })
-    // Modal will close automatically on success
-  } catch (error) {
-    throw error // Let modal handle error display
-  }
-}
 
 // --- Load requests on mount ---
 onMounted(fetchReadyRequests)
@@ -171,14 +162,14 @@ onMounted(fetchReadyRequests)
       class="flex items-start p-4 bg-white border border-gray-200 rounded-lg shadow-sm"
       :class="{
         'border-l-4 border-l-[#0957FF]': request.via === 'RFID', 
-        'border-l-4 border-l-[#FFB109]': request.via === 'Guest User'
+        'border-l-4 border-l-[#FFB109]': request.via === 'Guest'
       }"
     >
       <div 
         class="flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-full font-bold text-lg"
         :class="{
           'bg-[#D8E4FF] text-[#083491]': request.via === 'RFID',
-          'bg-[#FFF1D2] text-[#B67D03]': request.via === 'Guest User'
+          'bg-[#FFF1D2] text-[#B67D03]': request.via === 'Guest'
         }"
       >
         {{ formatIndex(index) }}
@@ -203,7 +194,7 @@ onMounted(fetchReadyRequests)
             <span 
               class="font-bold" 
               :class="{
-                'text-[#B67D03]': request.via === 'Guest User', 
+                'text-[#B67D03]': request.via === 'Guest', 
                 'text-[#0957FF]': request.via === 'RFID'
               }"
             >

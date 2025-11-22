@@ -25,7 +25,6 @@ const formatCurrency = (value) => {
   }).format(value)
 }
 
-// ✅ Same formatRequestDate helper
 const formatRequestDate = (isoDate) => {
   if (!isoDate) return "N/A"
   const date = new Date(isoDate)
@@ -51,10 +50,10 @@ const fetchRejectedRequests = async () => {
       .map(req => ({
         id: req.id,
         documentType: req.document_type || 'Unknown Document',
-        borrowerName: req.form_data?.borrowerName || 'N/A',
+        borrowerName: req.requester_name || 'Guest',
         date: formatRequestDate(req.created_at),
-        via: req.form_data?.via || 'Guest User',
-        viaTag: req.form_data?.viaTag || null,
+        via: req.requested_via || 'Guest',
+        viaTag: req.rfid_uid || null,
         amount: req.price || 0,
         paymentStatus: req.payment_status || 'Unpaid'
       }))
@@ -105,17 +104,15 @@ const handleProcessingDetails = (id) => {
 // --- COMPUTED: Search Filter ---
 const filteredRequests = computed(() => {
   if (!props.searchQuery) return rejectedRequests.value
-
   const lowerQuery = props.searchQuery.toLowerCase().trim()
-  return rejectedRequests.value.filter(req => {
-    const nameMatch = req.borrowerName.toLowerCase().includes(lowerQuery)
-    const docTypeMatch = req.documentType.toLowerCase().includes(lowerQuery)
-    const dateMatch = req.date.toLowerCase().includes(lowerQuery)
-    const viaMatch = req.via.toLowerCase().includes(lowerQuery)
-    const amountMatch = req.amount.toString().includes(lowerQuery)
-    const viaTagMatch = req.viaTag ? req.viaTag.toLowerCase().includes(lowerQuery) : false
-    return nameMatch || docTypeMatch || dateMatch || viaMatch || amountMatch || viaTagMatch
-  })
+  return rejectedRequests.value.filter(req =>
+    req.borrowerName.toLowerCase().includes(lowerQuery) ||
+    req.documentType.toLowerCase().includes(lowerQuery) ||
+    req.date.toLowerCase().includes(lowerQuery) ||
+    req.via.toLowerCase().includes(lowerQuery) ||
+    req.amount.toString().includes(lowerQuery) ||
+    (req.viaTag && req.viaTag.toLowerCase().includes(lowerQuery))
+  )
 })
 
 // --- Load requests on mount ---
@@ -142,14 +139,14 @@ onMounted(fetchRejectedRequests)
       class="flex items-start p-4 bg-white border border-gray-200 rounded-lg shadow-sm"
       :class="{
         'border-l-4 border-l-[#0957FF]': request.via === 'RFID', 
-        'border-l-4 border-l-[#FFB109]': request.via === 'Guest User'
+        'border-l-4 border-l-[#FFB109]': request.via === 'Guest'
       }"
     >
       <div 
         class="flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-full font-bold text-lg"
         :class="{
           'bg-[#D8E4FF] text-[#083491]': request.via === 'RFID',
-          'bg-[#FFF1D2] text-[#B67D03]': request.via === 'Guest User'
+          'bg-[#FFF1D2] text-[#B67D03]': request.via === 'Guest'
         }"
       >
         {{ formatIndex(index) }}
@@ -174,7 +171,7 @@ onMounted(fetchRejectedRequests)
             <span 
               class="font-bold" 
               :class="{
-                'text-[#B67D03]': request.via === 'Guest User', 
+                'text-[#B67D03]': request.via === 'Guest', 
                 'text-[#0957FF]': request.via === 'RFID'
               }"
             >
