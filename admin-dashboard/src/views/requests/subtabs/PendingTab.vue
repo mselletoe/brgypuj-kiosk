@@ -50,16 +50,16 @@ const fetchPendingRequests = async () => {
       .map(req => ({
         id: req.id,
         documentType: req.document_type || 'Unknown Document',
-        // UPDATED: Use requester_name from backend
+        
         borrowerName: req.requester_name || 'N/A',
         date: formatRequestDate(req.created_at),
-        // UPDATED: Use requested_via from backend
+        
         via: req.requested_via || 'Guest',  // "RFID" or "Guest"
-        // UPDATED: Use rfid_uid from backend
+        
         viaTag: req.rfid_uid || null,
         amount: req.price || 0,
         paymentStatus: req.payment_status || 'Unpaid',
-        // NEW: Store resident_id for future use
+        
         residentId: req.resident_id
       }))
   } catch (error) {
@@ -165,14 +165,14 @@ const filteredRequests = computed(() => {
       class="flex items-start p-4 bg-white border border-gray-200 rounded-lg shadow-sm"
       :class="{
         'border-l-4 border-l-[#0957FF]': request.via === 'RFID', 
-        'border-l-4 border-l-[#FFB109]': request.via === 'Guest User'
+        'border-l-4 border-l-[#FFB109]': request.via === 'Guest'
       }"
     >
       <div 
         class="flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-full font-bold text-lg"
         :class="{
           'bg-[#D8E4FF] text-[#083491]': request.via === 'RFID',
-          'bg-[#FFF1D2] text-[#B67D03]': request.via === 'Guest User'
+          'bg-[#FFF1D2] text-[#B67D03]': request.via === 'Guest'
         }"
       >
         {{ formatIndex(index) }}
@@ -182,7 +182,7 @@ const filteredRequests = computed(() => {
         <div class="text-sm">
           <label class="block text-xs text-gray-500">Document Type</label>
           <span class="font-semibold text-gray-800">{{ request.documentType }}</span>
-          <label class="block text-xs text-gray-500 mt-2">Request from</label>
+          <label class="block text-xs text-gray-500 mt-2">Request by</label>
           <span class="font-bold text-gray-700">{{ request.borrowerName }}</span>
         </div>
 
@@ -194,7 +194,7 @@ const filteredRequests = computed(() => {
             <span 
               class="font-bold" 
               :class="{
-                'text-[#B67D03]': request.via === 'Guest User', 
+                'text-[#B67D03]': request.via === 'Guest', 
                 'text-[#0957FF]': request.via === 'RFID'
               }"
             >
@@ -205,13 +205,6 @@ const filteredRequests = computed(() => {
               class="ml-2 px-2 py-0.5 text-xs font-semibold rounded-full bg-[#0957FF] text-white"
             >
               {{ request.viaTag }}
-            </span>
-
-            <span 
-              v-if="request.via === 'Guest'" 
-              class="px-2 py-0.5 text-xs font-semibold rounded-full bg-[#FFB109] text-white"
-            >
-              No Account
             </span>
           </div>
         </div>

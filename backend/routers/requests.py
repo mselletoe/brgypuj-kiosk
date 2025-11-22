@@ -145,7 +145,7 @@ def convert_docx_to_pdf(docx_bytes: bytes) -> bytes:
 # Create a new request and auto-fill document
 # ----------------------------
 @router.post("/", response_model=RequestOut)
-def create_request(req: RequestCreate, user = Depends(get_current_user), db: Session = Depends(get_db)):
+def create_request(req: RequestCreate, user = Depends(get_optional_user), db: Session = Depends(get_db)):
     pending_status = get_status(db, "pending") 
 
     # Verify request type exists
@@ -154,12 +154,11 @@ def create_request(req: RequestCreate, user = Depends(get_current_user), db: Ses
         raise HTTPException(status_code=404, detail="Request type not found")
 
     # Extract authentication info from token
-    resident_id = user.get("resident_id")  # None for guests
-    login_method = user.get("login_method", "guest")  # "rfid" or "guest"
-    requester_name = user.get("name", "Guest User")
-    rfid_uid = user.get("rfid_uid")
-    
-    # Determine "requested_via" for display
+    resident_id = user.get("resident_id") if user else None
+    login_method = user.get("login_method") if user else "guest"
+    requester_name = user.get("name") if user else "Guest User"
+    rfid_uid = user.get("rfid_uid") if user else None
+
     requested_via = "RFID" if login_method == "rfid" and resident_id else "Guest"
 
     # 1Create the new request
