@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import api from '@/api/api'
+import SendSMSModal from '@/components/shared/SendSMSModal.vue'
 
 // --- PROPS ---
 const props = defineProps({
@@ -121,6 +122,31 @@ const filteredRequests = computed(() => {
   })
 })
 
+// Add modal state
+const showSMSModal = ref(false)
+const selectedRequest = ref(null)
+
+// Handler to open modal
+const handleSendSMS = (request) => {
+  selectedRequest.value = request
+  showSMSModal.value = true
+}
+
+// Handler when SMS is actually sent
+const handleSMSSubmit = async (smsData) => {
+  try {
+    // Call your API to send SMS
+    await api.post('/send-sms', {
+      requestId: selectedRequest.value.id,
+      phone: smsData.phone,
+      message: smsData.message
+    })
+    // Modal will close automatically on success
+  } catch (error) {
+    throw error // Let modal handle error display
+  }
+}
+
 // --- Load requests on mount ---
 onMounted(fetchReadyRequests)
 </script>
@@ -224,7 +250,7 @@ onMounted(fetchReadyRequests)
         </button>
         
         <button 
-          @click="handleSendSms(request.id)"
+          @click="handleSendSMS(request)"
           class="flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 bg-[#00CA39] hover:bg-green-700 focus:ring-[#00CA39]"
         >
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
@@ -232,6 +258,14 @@ onMounted(fetchReadyRequests)
           </svg>
           Send SMS
         </button>
+
+        <SendSMSModal
+          v-model:show="showSMSModal"
+          :recipient-name="selectedRequest?.borrowerName"
+          :recipient-phone="selectedRequest?.phoneNumber"
+          :default-message="`Your ${selectedRequest?.documentType} is ready for pickup.`"
+          @send="handleSMSSubmit"
+        />
 
         <button 
           @click="handleRelease(request.id)"

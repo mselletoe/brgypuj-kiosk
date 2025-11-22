@@ -240,9 +240,7 @@ const filteredRequests = computed(() => {
         </button>
         <button 
           @click="handleReject(request.id)"
-          :disabled="request.paymentStatus !== 'Paid'"
           class="px-3 py-2 text-sm font-medium bg-white border rounded-md text-[#DC0000] border-[#DC0000] hover:bg-red-50"
-          :class="{ 'opacity-50 cursor-not-allowed': request.paymentStatus !== 'Paid' }"
         >
           Reject
         </button>
