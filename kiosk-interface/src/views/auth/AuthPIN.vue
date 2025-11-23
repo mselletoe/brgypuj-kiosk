@@ -42,6 +42,8 @@ const triggerToast = (message, success = false) => {
 
 onMounted(async () => {
   mode.value = route.query.mode || 'user'
+
+  rfidUid.value = route.query.uid || null;
   
   if (mode.value === 'admin') {
     residentName.value = 'Admin'
