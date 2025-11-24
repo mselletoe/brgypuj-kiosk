@@ -77,3 +77,37 @@ def delete_announcement(announcement_id: int, db: Session = Depends(get_db)):
     db.delete(announcement)
     db.commit()
     return {"message": "Announcement deleted successfully"}
+
+# UPDATE
+@router.put("/{announcement_id}")
+async def update_announcement(
+    announcement_id: int,
+    title: str = Form(...),
+    description: str = Form(None),
+    event_date: date = Form(...),
+    event_day: str = Form(None),
+    event_time: str = Form(None),
+    location: str = Form(...),
+    image: UploadFile = File(None),
+    db: Session = Depends(get_db)
+):
+    announcement = db.query(Announcement).filter(Announcement.id == announcement_id).first()
+    if not announcement:
+        raise HTTPException(status_code=404, detail="Announcement not found")
+
+    announcement.title = title
+    announcement.description = description
+    announcement.event_date = event_date
+    announcement.event_day = event_day
+    announcement.event_time = event_time
+    announcement.location = location
+
+    if image:
+      announcement.image = await image.read()
+      announcement.image_name = image.filename
+
+    db.commit()
+    db.refresh(announcement)
+
+    return {"message": "Announcement updated successfully"}
+
