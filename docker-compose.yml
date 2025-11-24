@@ -35,6 +35,10 @@ services:
     environment:
       - DATABASE_URL=postgresql://admin:admin7890@db:5432/kioskdb
       - CORS_ORIGINS=http://localhost:8080,http://localhost:8081
+      - SIM800L_PORT=${SIM800L_PORT}
+    devices:
+      - "${SIM800L_DEVICE}:${SIM800L_DEVICE}"
+    privileged: true
     # volumes:
     #   - ./backend:/app
     #   - ./backend/generated_docs:/app/generated_docs
