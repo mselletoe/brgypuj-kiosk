@@ -68,9 +68,12 @@ class SIM800LService:
                 if self.ser and self.ser.is_open and self.ser.in_waiting:
                     line = self.ser.readline().decode('utf-8', errors='ignore').strip()
                     if line:
-                        logger.debug(f"Arduino: {line}")
+                        logger.debug(f"Arduino → {line}")
                         with self.buffer_lock:
                             self.response_buffer.append(line)
+                            # Keep buffer reasonable size
+                            if len(self.response_buffer) > 100:
+                                self.response_buffer.pop(0)
                 time.sleep(0.01)
             except Exception as e:
                 if not self.stop_reading:
@@ -80,64 +83,98 @@ class SIM800LService:
     def connect(self) -> bool:
         """Establish connection with Arduino/SIM800L"""
         try:
-            self.ser = serial.Serial(self.port, self.baudrate, timeout=1)
-            time.sleep(2)  # Wait for Arduino to reset
+            logger.info(f"Attempting to connect to {self.port}...")
+            
+            # Close existing connection if any
+            if self.ser and self.ser.is_open:
+                self.ser.close()
+                time.sleep(0.5)
+            
+            # Open serial connection
+            self.ser = serial.Serial(
+                port=self.port,
+                baudrate=self.baudrate,
+                timeout=1,
+                write_timeout=1
+            )
+            
+            logger.info("Serial port opened, waiting for Arduino reset...")
+            time.sleep(3)  # Arduino resets on serial connection
+            
+            # Clear any garbage data
+            self.ser.reset_input_buffer()
+            self.ser.reset_output_buffer()
             
             # Start background reader thread
             self.stop_reading = False
-            self.reader_thread = threading.Thread(target=self._read_serial_thread, daemon=True)
-            self.reader_thread.start()
-            
-            # Clear buffer
             with self.buffer_lock:
                 self.response_buffer.clear()
             
-            # Wait for SYSTEM:READY
+            self.reader_thread = threading.Thread(target=self._read_serial_thread, daemon=True)
+            self.reader_thread.start()
+            
+            # Test connection with PING
+            logger.info("Testing connection with PING command...")
+            test_result = self._send_command("PING", timeout=5.0)
+            
+            if test_result["status"] != "OK":
+                logger.error(f"PING test failed: {test_result}")
+                logger.error("Arduino is not responding. Please check:")
+                logger.error("1. Arduino code is uploaded correctly")
+                logger.error("2. Correct port (/dev/ttyACM0)")
+                logger.error("3. Baud rate is 9600")
+                logger.error("4. Arduino is powered and not frozen")
+                return False
+            
+            logger.info("✓ Arduino responding to commands")
+            
+            # Wait for SYSTEM:READY or initialization messages
             start_time = time.time()
             system_ready = False
             
-            while time.time() - start_time < 10:
+            while time.time() - start_time < 35:
                 with self.buffer_lock:
                     for line in self.response_buffer:
-                        if line == "SYSTEM:READY":
+                        if "SYSTEM:READY" in line:
                             system_ready = True
                             break
                         
                         if line.startswith("ERROR:"):
-                            logger.error(f"Arduino reported error: {line}")
-                            return False
+                            logger.warning(f"Arduino error during init: {line}")
                 
                 if system_ready:
                     break
                 
                 time.sleep(0.1)
             
+            self.is_connected = True
+            
             if system_ready:
-                self.is_connected = True
-                logger.info("✓ SIM800L module ready")
-                
-                # Try to read signal from buffer (non-blocking)
-                with self.buffer_lock:
-                    for line in self.response_buffer:
-                        if line.startswith("SIGNAL:"):
-                            match = re.search(r'SIGNAL:(\d+)', line)
-                            if match:
-                                self.last_signal = int(match.group(1))
-                                logger.info(f"📶 Signal Quality: {self.last_signal}/31")
-                                break
-                
-                return True
+                logger.info("✓ SIM800L module fully initialized")
             else:
-                # Even if we didn't get READY, assume it's connected if serial works
-                self.is_connected = True
-                logger.warning("Did not receive READY signal, but assuming connected")
-                return True
+                logger.warning("⚠ Arduino connected but didn't confirm full initialization")
+                logger.info("Will attempt operations anyway...")
+            
+            # Try to get signal quality
+            time.sleep(1)
+            signal = self.get_signal_quality()
+            if signal is not None:
+                logger.info(f"📶 Signal Quality: {signal}/31")
+            
+            return True
                 
         except serial.SerialException as e:
             logger.error(f"Serial connection error: {e}")
+            logger.error("Possible causes:")
+            logger.error("1. Wrong port - check with: ls /dev/ttyACM* /dev/ttyUSB*")
+            logger.error("2. Permission denied - run: sudo chmod 666 /dev/ttyACM0")
+            logger.error("3. Port in use by another process")
+            logger.error("4. Arduino not connected properly")
             return False
         except Exception as e:
             logger.error(f"Unexpected error during connection: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
             return False
     
     def disconnect(self):
@@ -167,7 +204,8 @@ class SIM800LService:
                 self.response_buffer.clear()
             
             # Send command
-            self.ser.write((command + '\n').encode())
+            cmd_bytes = (command + '\n').encode('utf-8')
+            self.ser.write(cmd_bytes)
             self.ser.flush()
             logger.debug(f"→ Sent: {command}")
             
@@ -183,13 +221,11 @@ class SIM800LService:
                         if line.startswith("OK:"):
                             status = "OK"
                             message = line[3:] if len(line) > 3 else ""
-                            logger.info(f"✓ Command success: {message}")
                             return {"status": status, "message": message}
                         
                         if line.startswith("ERROR:"):
                             status = "ERROR"
                             message = line[6:] if len(line) > 6 else "Unknown error"
-                            logger.error(f"✗ Command failed: {message}")
                             return {"status": status, "message": message}
                         
                         # For STATUS and SIGNAL commands
@@ -198,11 +234,17 @@ class SIM800LService:
                 
                 time.sleep(0.05)
             
-            logger.warning(f"Command timeout after {timeout}s")
+            logger.warning(f"Command '{command}' timeout after {timeout}s")
+            
+            # Show what we did receive
+            with self.buffer_lock:
+                if self.response_buffer:
+                    logger.warning(f"Received during timeout: {self.response_buffer}")
+            
             return {"status": "ERROR", "message": "Command timeout"}
             
         except Exception as e:
-            logger.error(f"Error sending command: {e}")
+            logger.error(f"Error sending command '{command}': {e}")
             return {"status": "ERROR", "message": str(e)}
     
     def send_sms(self, phone_number: str, message: str) -> dict:
@@ -216,16 +258,22 @@ class SIM800LService:
         Returns:
             dict with success status and message
         """
+        # Auto-connect if not connected
         if not self.is_connected:
-            return {"success": False, "message": "SIM800L not connected"}
+            logger.warning("Not connected, attempting to connect...")
+            if not self.connect():
+                return {"success": False, "message": "Failed to connect to SIM800L"}
         
         try:
             # Ensure phone number has + prefix
             if not phone_number.startswith('+'):
                 phone_number = '+' + phone_number
             
-            # Clean message
+            # Clean message (remove newlines, limit length)
             message = message.replace('\n', ' ').replace('\r', '')
+            if len(message) > 160:
+                message = message[:160]
+                logger.warning("Message truncated to 160 characters")
             
             # Send command: SEND:<phone>:<message>
             command = f"SEND:{phone_number}:{message}"
@@ -234,7 +282,7 @@ class SIM800LService:
             logger.debug(f"Message: {message}")
             
             # SMS can take 10-30 seconds
-            response = self._send_command(command, timeout=40.0)
+            response = self._send_command(command, timeout=45.0)
             
             if response["status"] == "OK":
                 logger.info(f"✓ SMS sent successfully to {phone_number}")
@@ -246,6 +294,8 @@ class SIM800LService:
                 
         except Exception as e:
             logger.error(f"Exception sending SMS: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
             return {"success": False, "message": str(e)}
     
     def get_signal_quality(self) -> Optional[int]:
@@ -270,10 +320,6 @@ class SIM800LService:
             logger.error(f"Error getting signal quality: {e}")
             return None
     
-    def _update_signal_quality(self):
-        """Update cached signal quality"""
-        self.get_signal_quality()
-    
     def get_status(self) -> Dict[str, any]:
         """Get module status"""
         if not self.is_connected:
@@ -290,3 +336,10 @@ class SIM800LService:
 
 # Global instance
 sms_service = SIM800LService()
+
+# Auto-connect helper for lazy initialization
+def ensure_connected():
+    """Ensure service is connected, connect if needed"""
+    if not sms_service.is_connected:
+        return sms_service.connect()
+    return True
