@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 from database import get_db
 from models import Resident
+from auth_utils import create_access_token
 
 # FastAPI router
 router = APIRouter()
@@ -44,6 +45,8 @@ def get_user_pin(user_id: int, db: Session = Depends(get_db)):
 @router.post("/users/{user_id}/pin")
 def set_user_pin(user_id: int, data: dict, db: Session = Depends(get_db)):
     pin = data.get("pin")
+    rfid_uid = data.get("rfid_uid")
+
     if not pin:
         raise HTTPException(status_code=400, detail="PIN required")
 
@@ -54,10 +57,26 @@ def set_user_pin(user_id: int, data: dict, db: Session = Depends(get_db)):
     if resident.account_pin:
         raise HTTPException(status_code=400, detail="PIN already set")
 
-    # Directly store the PIN (not hashed)
+    # Store the PIN (consider hashing in production)
     resident.account_pin = pin
     db.commit()
-    return {"message": "PIN set successfully"}
+
+    # Generate JWT token for immediate login after PIN setup
+    token_data = {
+        "resident_id": resident.id,
+        "login_method": "rfid",
+        "name": f"{resident.first_name} {resident.last_name}",
+        "is_guest": False,
+        "rfid_uid": rfid_uid
+    }
+    access_token = create_access_token(token_data)
+    
+    return {
+        "message": "PIN set successfully",
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": token_data
+    }
 
 # ==============================================================================
 # Endpoint: Verify user PIN
@@ -65,6 +84,8 @@ def set_user_pin(user_id: int, data: dict, db: Session = Depends(get_db)):
 @router.post("/users/{user_id}/pin/verify")
 def verify_user_pin(user_id: int, data: dict, db: Session = Depends(get_db)):
     pin = data.get("pin")
+    rfid_uid = data.get("rfid_uid")
+
     if not pin:
         raise HTTPException(status_code=400, detail="PIN required")
 
@@ -73,7 +94,82 @@ def verify_user_pin(user_id: int, data: dict, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="PIN not found")
 
     valid = (pin == resident.account_pin)
-    return {"valid": valid}
+
+    if not valid:
+        return {"valid": False}
+    
+    # Generate JWT token on successful verification
+    token_data = {
+        "resident_id": resident.id,
+        "login_method": "rfid",
+        "name": f"{resident.first_name} {resident.last_name}",
+        "is_guest": False,
+        "rfid_uid": rfid_uid,
+        "email": resident.email
+    }
+    access_token = create_access_token(token_data)
+    
+    return {
+        "valid": True,
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": token_data
+    }
+
+# ==============================================================================
+# Endpoint: Guest Login (NEW)
+# ==============================================================================
+@router.post("/users/guest/login")
+def guest_login():
+    """
+    Generate a JWT token for guest users.
+    Guest users have limited access and no resident_id.
+    """
+    token_data = {
+        "resident_id": None,
+        "login_method": "guest",
+        "name": "Guest User",
+        "is_guest": True,
+        "rfid_uid": None
+    }
+    access_token = create_access_token(token_data)
+    
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": token_data
+    }
+
+# ==============================================================================
+# Endpoint: Admin Login (NEW)
+# ==============================================================================
+@router.post("/users/admin/login")
+def admin_login(data: dict):
+    """
+    Generate a JWT token for admin login via PIN.
+    """
+    pin = data.get("pin")
+    rfid_uid = data.get("rfid_uid")
+    ADMIN_PIN = "7890"  # Should be in env variables
+    
+    if pin != ADMIN_PIN:
+        raise HTTPException(status_code=401, detail="Invalid admin PIN")
+    
+    token_data = {
+        "resident_id": None,
+        "login_method": "admin",
+        "name": "Admin",
+        "is_guest": False,
+        "is_admin": True,
+        "rfid_uid": rfid_uid
+    }
+    access_token = create_access_token(token_data)
+    
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": token_data
+    }
 
 # ==============================================================================
 # Endpoint: Get user info
@@ -88,8 +184,8 @@ def get_user(user_id: int, db: Session = Depends(get_db)):
         "id": resident.id,
         "first_name": resident.first_name,
         "last_name": resident.last_name,
+        "middle_name": resident.middle_name,
+        "email": resident.email,
+        "phone_number": resident.phone_number,
         "account_pin": bool(resident.account_pin),
-        # =======================================================================
-        # Additional fields can be added here if needed
-        # =======================================================================
     }

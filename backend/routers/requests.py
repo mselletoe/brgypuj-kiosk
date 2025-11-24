@@ -34,6 +34,7 @@ import subprocess
 import tempfile
 import os
 import platform
+from auth_utils import get_current_user, get_optional_user
 
 router = APIRouter(prefix="/requests", tags=["Requests"])
 
@@ -41,7 +42,6 @@ router = APIRouter(prefix="/requests", tags=["Requests"])
 # Pydantic Schemas
 # ----------------------------
 class RequestCreate(BaseModel):
-    resident_id: Optional[int] = None
     request_type_id: int
     form_data: Optional[Dict[str, Any]] = {}
 
@@ -58,6 +58,10 @@ class RequestOut(BaseModel):
     status: str
     created_at: str
     payment_status: Optional[str] = "Unpaid"
+    requested_via: str  # "RFID" or "Guest"
+    requester_name: Optional[str] = None
+    rfid_uid: Optional[str] = None
+    phone_number: Optional[str] = None
 
 # Pydantic model for updating status
 class StatusUpdateSchema(BaseModel):
@@ -142,7 +146,7 @@ def convert_docx_to_pdf(docx_bytes: bytes) -> bytes:
 # Create a new request and auto-fill document
 # ----------------------------
 @router.post("/", response_model=RequestOut)
-def create_request(req: RequestCreate, db: Session = Depends(get_db)):
+def create_request(req: RequestCreate, user = Depends(get_optional_user), db: Session = Depends(get_db)):
     pending_status = get_status(db, "pending") 
 
     # Verify request type exists
@@ -150,9 +154,17 @@ def create_request(req: RequestCreate, db: Session = Depends(get_db)):
     if not request_type:
         raise HTTPException(status_code=404, detail="Request type not found")
 
-    # 1️⃣ Create the new request
+    # Extract authentication info from token
+    resident_id = user.get("resident_id") if user else None
+    login_method = user.get("login_method") if user else "guest"
+    requester_name = user.get("name") if user else "Guest User"
+    rfid_uid = user.get("rfid_uid") if user else None
+
+    requested_via = "RFID" if login_method == "rfid" and resident_id else "Guest"
+
+    # 1Create the new request
     new_request = Request(
-        resident_id=req.resident_id,
+        resident_id=resident_id,
         request_type_id=req.request_type_id,
         status_id=pending_status.id,
         form_data=req.form_data,
@@ -162,12 +174,20 @@ def create_request(req: RequestCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_request)
 
-    # 2️⃣ Auto-fill document template and convert to PDF
+    # Auto-fill document template and convert to PDF
     try:
         # Find template linked to request_type
         template = db.query(Template).filter(Template.request_type_id == req.request_type_id).first()
         if template and template.file:
             from docxtpl import DocxTemplate
+
+            # Merge authentication info into form_data for template
+            template_data = req.form_data.copy() if req.form_data else {}
+            template_data.update({
+                "requester_name": requester_name,
+                "requested_via": requested_via,
+                "rfid_uid": rfid_uid or "N/A",
+            })
 
             # Render the DOCX template with form data
             tpl = DocxTemplate(io.BytesIO(template.file))
@@ -198,7 +218,7 @@ def create_request(req: RequestCreate, db: Session = Depends(get_db)):
         # Don't raise exception - allow request to be created even if PDF generation fails
         # You can choose to raise HTTPException here if PDF generation is critical
 
-    # 3️⃣ Return the request info
+    # Return the request info
     return {
         "id": new_request.id,
         "resident_id": new_request.resident_id,
@@ -209,6 +229,9 @@ def create_request(req: RequestCreate, db: Session = Depends(get_db)):
         "status": pending_status.name,
         "created_at": new_request.created_at.isoformat(),
         "payment_status": new_request.payment_status,
+        "requested_via": requested_via,
+        "requester_name": requester_name,
+        "rfid_uid": rfid_uid,
     }
 
 # ----------------------------
@@ -235,9 +258,38 @@ def download_pdf(request_id: int, db: Session = Depends(get_db)):
 # ----------------------------
 @router.get("/", response_model=list[RequestOut])
 def get_requests(db: Session = Depends(get_db)):
-    results = db.query(Request).options(joinedload(Request.request_type)).all()
+    results = db.query(Request).options(
+        joinedload(Request.request_type),
+        joinedload(Request.resident),
+    ).all()
+    
     output = []
     for r in results:
+        # Determine authentication method
+        if r.resident_id:
+            # RFID user - fetch their info
+            resident = r.resident
+            if resident:
+                middle_name = resident.middle_name if resident.middle_name else ""
+                requester_name = f"{resident.first_name} {middle_name} {resident.last_name}".strip()
+            else:
+                requester_name = "Unknown User"
+            requested_via = "RFID"
+            
+            # Get RFID UID if available
+            rfid_uid = None
+            phone_number = None  # ADD THIS LINE
+            if resident:
+                if resident.rfid:
+                    rfid_uid = resident.rfid.rfid_uid
+                phone_number = resident.phone_number
+        else:
+            # Guest user
+            requester_name = "Guest User"
+            requested_via = "Guest"
+            rfid_uid = None
+            phone_number = None
+        
         output.append({
             "id": r.id,
             "resident_id": r.resident_id,
@@ -248,7 +300,12 @@ def get_requests(db: Session = Depends(get_db)):
             "status": r.status_obj.name if r.status_obj else None,
             "created_at": r.created_at.isoformat() if r.created_at else None,
             "payment_status": r.payment_status,
+            "requested_via": requested_via,
+            "requester_name": requester_name,
+            "rfid_uid": rfid_uid,
+            "phone_number": phone_number,
         })
+    
     return output
 
 # ----------------------------
@@ -285,24 +342,3 @@ def update_request_status(request_id: int, payload: StatusUpdateSchema, db: Sess
     db.refresh(req)
 
     return {"message": f"Request status updated to '{payload.status_name}'", "status": payload.status_name}
-
-# ----------------------------
-# Approve Request (Move to processing)
-# ----------------------------
-@router.put("/{request_id}/approve") 
-def approve_request(request_id: int, db: Session = Depends(get_db)):
-    req = db.query(Request).filter(Request.id == request_id).first()
-    if not req:
-        raise HTTPException(status_code=404, detail="Request not found")
-
-    if req.payment_status != "Paid":
-        raise HTTPException(status_code=400, detail="Cannot approve unpaid request")
-
-    processing_status = get_status(db, "processing")
-    req.status_id = processing_status.id
-    req.updated_at = func.now()
-
-    db.commit()
-    db.refresh(req)
-
-    return {"message": "Request approved and moved to processing", "status": "processing"}

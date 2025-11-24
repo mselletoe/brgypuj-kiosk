@@ -50,12 +50,17 @@ const fetchPendingRequests = async () => {
       .map(req => ({
         id: req.id,
         documentType: req.document_type || 'Unknown Document',
-        borrowerName: req.form_data?.borrowerName || 'N/A',
+        
+        borrowerName: req.requester_name || 'N/A',
         date: formatRequestDate(req.created_at),
-        via: req.form_data?.via || 'Guest User',
-        viaTag: req.form_data?.viaTag || null,
+        
+        via: req.requested_via || 'Guest',  // "RFID" or "Guest"
+        
+        viaTag: req.rfid_uid || null,
         amount: req.price || 0,
-        paymentStatus: req.payment_status || 'Unpaid'
+        paymentStatus: req.payment_status || 'Unpaid',
+        
+        residentId: req.resident_id
       }))
   } catch (error) {
     console.error('Error fetching requests:', error)
@@ -160,14 +165,14 @@ const filteredRequests = computed(() => {
       class="flex items-start p-4 bg-white border border-gray-200 rounded-lg shadow-sm"
       :class="{
         'border-l-4 border-l-[#0957FF]': request.via === 'RFID', 
-        'border-l-4 border-l-[#FFB109]': request.via === 'Guest User'
+        'border-l-4 border-l-[#FFB109]': request.via === 'Guest'
       }"
     >
       <div 
         class="flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-full font-bold text-lg"
         :class="{
           'bg-[#D8E4FF] text-[#083491]': request.via === 'RFID',
-          'bg-[#FFF1D2] text-[#B67D03]': request.via === 'Guest User'
+          'bg-[#FFF1D2] text-[#B67D03]': request.via === 'Guest'
         }"
       >
         {{ formatIndex(index) }}
@@ -177,7 +182,7 @@ const filteredRequests = computed(() => {
         <div class="text-sm">
           <label class="block text-xs text-gray-500">Document Type</label>
           <span class="font-semibold text-gray-800">{{ request.documentType }}</span>
-          <label class="block text-xs text-gray-500 mt-2">Request from</label>
+          <label class="block text-xs text-gray-500 mt-2">Request by</label>
           <span class="font-bold text-gray-700">{{ request.borrowerName }}</span>
         </div>
 
@@ -189,7 +194,7 @@ const filteredRequests = computed(() => {
             <span 
               class="font-bold" 
               :class="{
-                'text-[#B67D03]': request.via === 'Guest User', 
+                'text-[#B67D03]': request.via === 'Guest', 
                 'text-[#0957FF]': request.via === 'RFID'
               }"
             >
@@ -240,9 +245,7 @@ const filteredRequests = computed(() => {
         </button>
         <button 
           @click="handleReject(request.id)"
-          :disabled="request.paymentStatus !== 'Paid'"
           class="px-3 py-2 text-sm font-medium bg-white border rounded-md text-[#DC0000] border-[#DC0000] hover:bg-red-50"
-          :class="{ 'opacity-50 cursor-not-allowed': request.paymentStatus !== 'Paid' }"
         >
           Reject
         </button>
