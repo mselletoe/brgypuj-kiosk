@@ -30,31 +30,47 @@ class SIM800LService:
         
     def _auto_detect_port(self) -> Optional[str]:
         """Auto-detect Arduino port"""
-        # 1️⃣ Check environment variable
         env_port = os.getenv('SIM800L_PORT')
         if env_port:
             logger.info(f"Using port from environment: {env_port}")
             return env_port
-
-        # 2️⃣ Check /dev/serial/by-id for Arduino/USB-Serial devices
-        by_id_path = "/dev/serial/by-id/"
-        if os.path.exists(by_id_path):
-            for entry in os.listdir(by_id_path):
-                if any(keyword in entry.lower() for keyword in ['arduino', 'usb']):
-                    full_path = os.path.join(by_id_path, entry)
-                    logger.info(f"Detected stable port: {full_path}")
-                    return full_path
-
-        # 3️⃣ Fallback: scan normal tty ports
+        
+        # In Docker, serial.tools.list_ports may not work well
+        # Check for common device files directly
+        possible_ports = [
+            '/dev/ttyACM0',
+            '/dev/ttyACM1',
+            '/dev/ttyACM2',
+            '/dev/ttyUSB0',
+            '/dev/ttyUSB1',
+        ]
+        
+        for port in possible_ports:
+            if os.path.exists(port):
+                logger.info(f"Auto-detected port: {port}")
+                return port
+        
+        # Fallback to list_ports
         ports = serial.tools.list_ports.comports()
+        
         for port in ports:
             if any(keyword in port.description.lower() for keyword in 
-                ['arduino', 'ch340', 'cp210', 'usb serial', 'ftdi', 'usb-serial']):
+                   ['arduino', 'ch340', 'cp210', 'usb serial', 'ftdi', 'usb-serial']):
                 logger.info(f"Auto-detected port: {port.device} ({port.description})")
                 return port.device
-
-        logger.warning("Could not auto-detect port. Please set SIM800L_PORT in .env")
-        return None
+        
+        import platform
+        system = platform.system()
+        
+        if system == 'Windows':
+            default = 'COM5'
+        elif system == 'Linux':
+            default = '/dev/ttyACM0'
+        else:
+            default = '/dev/tty.usbserial'
+        
+        logger.warning(f"Could not auto-detect port, using default: {default}")
+        return default
     
     def _read_serial_thread(self):
         """Background thread to continuously read serial data"""
@@ -162,7 +178,7 @@ class SIM800LService:
             logger.error(f"Serial connection error: {e}")
             logger.error("Possible causes:")
             logger.error("1. Wrong port - check with: ls /dev/ttyACM* /dev/ttyUSB*")
-            logger.error(f"2. Permission denied - run: sudo chmod 666 {self.port}")
+            logger.error("2. Permission denied - run: sudo chmod 666 /dev/ttyACM0")
             logger.error("3. Port in use by another process")
             logger.error("4. Arduino not connected properly")
             return False
@@ -338,3 +354,22 @@ def ensure_connected():
     if not sms_service.is_connected:
         return sms_service.connect()
     return True
+
+# Auto-connect on module import (with proper error handling)
+def _auto_connect_on_import():
+    """Attempt to auto-connect when module is imported"""
+    try:
+        import atexit
+        logger.info("Attempting auto-connect to SIM800L...")
+        
+        if sms_service.connect():
+            logger.info("✓ SIM800L auto-connected successfully")
+            # Register cleanup on exit
+            atexit.register(sms_service.disconnect)
+        else:
+            logger.warning("⚠ Auto-connect failed. Will retry on first SMS send.")
+    except Exception as e:
+        logger.warning(f"⚠ Auto-connect error: {e}. Will retry on first SMS send.")
+
+# Run auto-connect
+_auto_connect_on_import()
