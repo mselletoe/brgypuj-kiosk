@@ -35,10 +35,10 @@ from pathlib import Path
 # ==============================================================================
 # Load Environment Variables
 # ==============================================================================
-# Load backend/.env first (application config)
+# backend/.env
 load_dotenv(dotenv_path=Path(__file__).parent / '.env')
 
-# Then try to load root .env (Docker config) - won't override existing vars
+# root .env (Docker config)
 load_dotenv(dotenv_path=Path(__file__).parent.parent / '.env', override=False)
 
 # Configure logging
@@ -63,7 +63,7 @@ async def lifespan(app: FastAPI):
     logger.info("Starting Kiosk Backend API")
     logger.info("=" * 60)
     
-    # Log configuration (don't log sensitive values in production!)
+    # Log configuration
     if os.getenv('DEBUG', 'False').lower() == 'true':
         logger.debug(f"DATABASE_URL: {os.getenv('DATABASE_URL', 'Not set')}")
         logger.debug(f"DEBUG: {os.getenv('DEBUG', 'False')}")
@@ -84,18 +84,14 @@ async def lifespan(app: FastAPI):
         if sms_service.connect():
             logger.info(f"✓ SIM800L connected successfully on {sms_service.port}")
             
-            # Get signal quality
-            signal = sms_service.get_signal_quality()
-            if signal is not None:
-                signal_bars = min(5, (signal // 6))
-                logger.info(f"📶 Signal Quality: {signal}/31 ({'▮' * signal_bars}{'▯' * (5-signal_bars)})")
-            else:
-                logger.warning("⚠ Could not read signal quality")
+            if sms_service.last_signal is not None:
+                signal_bars = min(5, (sms_service.last_signal // 6))
+                logger.info(f"Signal: {'▮' * signal_bars}{'▯' * (5-signal_bars)} ({sms_service.last_signal}/31)")
         else:
             logger.warning("⚠ SIM800L connection failed - SMS features will be disabled")
             logger.warning("  Check: Serial port, power supply, SIM card, antenna")
     except Exception as e:
-        logger.error(f"❌ Error initializing SIM800L: {e}")
+        logger.error(f"Error initializing SIM800L: {e}")
         logger.warning("  SMS features will be disabled")
     
     logger.info("=" * 60)
@@ -132,10 +128,10 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        # "http://localhost:5173",  # Vue.js dev server
+        # "http://localhost:5173",
         # "http://localhost:8080",
         # "http://localhost:8081",
-        "*"  # Remove in production, specify exact origins
+        "*"
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -180,18 +176,10 @@ def health_check():
         },
         "sms_module": {
             "connected": sms_service.is_connected,
-            "port": sms_service.port if sms_service.is_connected else None
+            "port": sms_service.port if sms_service.is_connected else None,
+            "signal_quality": sms_service.last_signal,
+            "signal_bars": min(5, (sms_service.last_signal // 6)) if sms_service.last_signal else 0
         }
     }
-    
-    # Get signal quality if connected
-    if sms_service.is_connected:
-        try:
-            signal = sms_service.get_signal_quality()
-            if signal is not None:
-                health_status["sms_module"]["signal_quality"] = signal
-                health_status["sms_module"]["signal_bars"] = min(5, (signal // 6))
-        except:
-            pass
     
     return health_status
