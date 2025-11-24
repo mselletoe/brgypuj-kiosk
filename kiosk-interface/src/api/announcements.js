@@ -1,4 +1,4 @@
-import api from './api' // ✅ Reuse the same config
+import api from './api'
 
 // ✅ Fetch all announcements (for display)
 export const getAnnouncements = async () => {

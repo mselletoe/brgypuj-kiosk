@@ -1,6 +1,6 @@
 // src/api/api.js
 import axios from 'axios'
-import { auth } from '@/stores/auth'  // Import logout directly
+import { auth, logout } from '@/stores/auth'  // Import logout directly
 
 const api = axios.create({
   baseURL: 'http://127.0.0.1:8000', // FastAPI backend

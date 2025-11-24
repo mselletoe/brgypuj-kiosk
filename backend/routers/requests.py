@@ -24,7 +24,7 @@ Description:
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
 from database import get_db
-from models import Request, RequestStatus, RequestType, Template
+from models import Request, RequestStatus, RequestType, Template, Resident, Address, Purok, RfidUID
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
 from sqlalchemy import func
@@ -66,6 +66,35 @@ class RequestOut(BaseModel):
 # Pydantic model for updating status
 class StatusUpdateSchema(BaseModel):
     status_name: str
+
+class ResidentDataOut(BaseModel):
+    # Personal Info
+    first_name: Optional[str] = None
+    middle_name: Optional[str] = None
+    last_name: Optional[str] = None
+    suffix: Optional[str] = None
+    full_name: Optional[str] = None
+    gender: Optional[str] = None
+    birthdate: Optional[str] = None
+    age: Optional[int] = None
+    years_residency: Optional[int] = None
+    email: Optional[str] = None
+    phone_number: Optional[str] = None
+    
+    # Address Info
+    unit_blk_street: Optional[str] = None
+    purok_name: Optional[str] = None
+    barangay: Optional[str] = None
+    municipality: Optional[str] = None
+    province: Optional[str] = None
+    region: Optional[str] = None
+    full_address: Optional[str] = None
+    
+    # RFID Info
+    rfid_uid: Optional[str] = None
+    
+    # Metadata
+    is_from_database: bool = True
 
 # ----------------------------
 # Helper to get or create status
@@ -342,3 +371,103 @@ def update_request_status(request_id: int, payload: StatusUpdateSchema, db: Sess
     db.refresh(req)
 
     return {"message": f"Request status updated to '{payload.status_name}'", "status": payload.status_name}
+
+# ----------------------------
+# Get Resident Data for Form Pre-filling
+# ----------------------------
+@router.get("/resident-data", response_model=ResidentDataOut)
+def get_resident_data(user = Depends(get_current_user), db: Session = Depends(get_db)):
+    """
+    Fetch resident data for pre-filling document request forms.
+    Only works for RFID-authenticated users (not guests).
+    """
+    # Check if user is authenticated via RFID
+    resident_id = user.get("resident_id")
+    login_method = user.get("login_method")
+    
+    if not resident_id or login_method != "rfid":
+        raise HTTPException(
+            status_code=403, 
+            detail="Only RFID-authenticated residents can access this endpoint"
+        )
+    
+    # Fetch resident with all relationships
+    resident = db.query(Resident).options(
+        joinedload(Resident.address).joinedload(Address.purok),
+        joinedload(Resident.rfid)
+    ).filter(Resident.id == resident_id).first()
+    
+    if not resident:
+        raise HTTPException(status_code=404, detail="Resident not found")
+    
+    # Calculate age from birthdate
+    age = None
+    if resident.birthdate:
+        from datetime import date
+        today = date.today()
+        age = today.year - resident.birthdate.year - (
+            (today.month, today.day) < (resident.birthdate.month, resident.birthdate.day)
+        )
+    
+    # Build full name
+    middle_initial = f"{resident.middle_name[0]}." if resident.middle_name else ""
+    full_name_parts = [
+        resident.first_name,
+        middle_initial,
+        resident.last_name,
+        resident.suffix
+    ]
+    full_name = " ".join(filter(None, full_name_parts))
+    
+    # Get address data
+    address = resident.address
+    unit_blk_street = address.unit_blk_street if address else None
+    purok_name = address.purok.purok_name if address and address.purok else None
+    barangay = address.barangay if address else None
+    municipality = address.municipality if address else None
+    province = address.province if address else None
+    region = address.region if address else None
+    
+    # Build full address
+    full_address_parts = [
+        unit_blk_street,
+        purok_name,
+        barangay,
+        municipality,
+        province,
+        region
+    ]
+    full_address = ", ".join(filter(None, full_address_parts))
+    
+    # Get RFID UID
+    rfid_uid = resident.rfid.rfid_uid if resident.rfid else None
+    
+    return ResidentDataOut(
+        # Personal Info
+        first_name=resident.first_name,
+        middle_name=resident.middle_name,
+        last_name=resident.last_name,
+        suffix=resident.suffix,
+        full_name=full_name,
+        gender=resident.gender,
+        birthdate=resident.birthdate.isoformat() if resident.birthdate else None,
+        age=age,
+        years_residency=resident.years_residency,
+        email=resident.email,
+        phone_number=resident.phone_number,
+        
+        # Address Info
+        unit_blk_street=unit_blk_street,
+        purok_name=purok_name,
+        barangay=barangay,
+        municipality=municipality,
+        province=province,
+        region=region,
+        full_address=full_address,
+        
+        # RFID Info
+        rfid_uid=rfid_uid,
+        
+        # Metadata
+        is_from_database=True
+    )

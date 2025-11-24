@@ -6,7 +6,8 @@ import ArrowBackButton from '@/components/shared/ArrowBackButton.vue'
 import Modal from '@/components/shared/Modal.vue'
 import { fetchRequestTypes } from '@/api/requestTypes'
 import { createRequest } from '@/api/requests'
-import { auth, isAuthenticated } from '@/stores/auth'
+import { fetchResidentData } from '@/api/residents'
+import { auth, isRfidUser, getResidentId } from '@/stores/auth'
 
 const route = useRoute()
 const router = useRouter()
@@ -15,6 +16,9 @@ const currentStep = ref('form')
 const formData = ref({})
 const showSuccessModal = ref(false)
 const isFadingOut = ref(false)
+
+const residentData = ref(null)
+const isLoadingResidentData = ref(false)
 
 // Placeholder for resident id (RFID or guest)
 const currentResidentId = ref(null)
@@ -48,7 +52,29 @@ const fetchConfigs = async () => {
   }
 }
 
-onMounted(fetchConfigs)
+// ==================================
+// Fetch resident data for RFID users
+// ==================================
+const loadResidentData = async () => {
+  // Only fetch if user is authenticated via RFID
+  if (!isRfidUser() || !auth.token) {
+    console.log('Guest user or no token - skipping resident data fetch')
+    return
+  }
+
+  isLoadingResidentData.value = true
+  try {
+    const data = await fetchResidentData(auth.token)
+    residentData.value = data
+    console.log('✅ Resident data loaded:', data)
+  } catch (err) {
+    console.error('Failed to fetch resident data:', err)
+    // Don't block the form if data fetch fails
+    residentData.value = null
+  } finally {
+    isLoadingResidentData.value = false
+  }
+}
 
 // ==================================
 // Computed current config
@@ -90,7 +116,6 @@ const handleSubmit = async (data) => {
     formData.value = data
 
     const payload = {
-      resident_id: currentResidentId.value, // null if guest
       request_type_id: config.value.id,
       form_data: data // dynamic fields go here
     }
@@ -103,6 +128,14 @@ const handleSubmit = async (data) => {
     alert('Failed to submit request.')
   }
 }
+
+// ==================================
+// Initialize on mount
+// ==================================
+onMounted(async () => {
+  await fetchConfigs()
+  await loadResidentData()
+})
 </script>
 
 <template>
@@ -125,12 +158,19 @@ const handleSubmit = async (data) => {
       </div>
     </div>
 
+    <!-- Loading indicator -->
+    <div v-if="isLoadingResidentData" class="text-center py-8">
+      <p class="text-gray-600">Loading your information...</p>
+    </div>
+
     <!-- Form Box -->
-    <div class="border-[2px] border-[#00203C] rounded-2xl p-10 shadow-md bg-white">
+    <div v-else class="border-[2px] border-[#00203C] rounded-2xl p-10 shadow-md bg-white">
       <DocumentForm
         v-if="currentStep === 'form' && config?.available"
         :config="config"
         :initial-data="formData"
+        :resident-data="residentData"
+        :is-rfid-user="isRfidUser()"
         @continue="handleSubmit"
       />
 
@@ -155,7 +195,7 @@ const handleSubmit = async (data) => {
       >
         <Modal
           title="Application Submitted!"
-          message="Your request has been successfully submitted. You will be notified once it’s processed."
+          message="Your request has been successfully submitted. You will be notified once it's processed."
           doneText="Done"
           :showNewRequest="false"
           @done="closeModal"
