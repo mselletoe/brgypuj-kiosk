@@ -1,17 +1,35 @@
+# FastAPI Core
 fastapi
-uvicorn
+uvicorn[standard]
+
+# Database
 sqlalchemy
 psycopg2-binary
+
+# Environment & Configuration
 python-dotenv
+
+# Authentication & Security
 python-jose[cryptography]
 passlib[bcrypt]==1.7.4
 bcrypt==4.0.1
+
+# File Upload & Processing
 python-multipart
+aiofiles
+
+# Document Generation
 jinja2
 docxtpl
 pdfkit
 python-docx
 pypandoc
-requests
-aiofiles
+
+# Validation
 pydantic[email]
+
+# HTTP Requests
+requests
+
+# Serial Communication (SIM800L)
+pyserial
