@@ -17,6 +17,10 @@ const props = defineProps({
   isRfidUser: {
     type: Boolean,
     default: false
+  },
+  isSubmitting: {
+    type: Boolean,
+    default: false
   }
 })
 
@@ -129,6 +133,7 @@ const validate = () => {
 }
 
 const handleContinue = () => {
+  if (props.isSubmitting) return  // ⛔ prevent double submit
   if (validate()) {
     emit('continue', formData.value)
   }
@@ -165,8 +170,8 @@ const handleContinue = () => {
           :type="field.type"
           :placeholder="formatPlaceholder(field.placeholder, field.label, isPreFilled(field.name))"
           :maxlength="field.type === 'tel' ? 11 : null"
-          :readonly="isPreFilled(field.name)"
-          :disabled="isPreFilled(field.name)"
+          :readonly="isPreFilled(field.name) || props.isSubmitting"
+          :disabled="isPreFilled(field.name) || props.isSubmitting"
           inputmode="numeric"
           pattern="[0-9]*"
           @input="(e) => {
@@ -240,9 +245,16 @@ const handleContinue = () => {
     <div class="flex justify-end">
       <button
         @click="handleContinue"
-        class="px-8 py-3 bg-[#003A6B] text-white font-semibold rounded-full hover:bg-[#001F40] transition"
+        :disabled="props.isSubmitting"
+        :class="[
+          'px-8 py-3 font-semibold rounded-full transition',
+          props.isSubmitting
+            ? 'bg-gray-400 cursor-not-allowed'
+            : 'bg-[#003A6B] text-white hover:bg-[#001F40]'
+        ]"
       >
-        Next
+        <span v-if="props.isSubmitting">Processing...</span>
+        <span v-else>Next</span>
       </button>
     </div>
   </div>

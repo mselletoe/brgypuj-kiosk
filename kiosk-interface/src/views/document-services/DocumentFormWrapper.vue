@@ -19,6 +19,7 @@ const isFadingOut = ref(false)
 
 const residentData = ref(null)
 const isLoadingResidentData = ref(false)
+const isSubmitting = ref(false)
 
 // Placeholder for resident id (RFID or guest)
 const currentResidentId = ref(null)
@@ -107,6 +108,9 @@ const closeModal = () => {
 // Form Submission
 // ==================================
 const handleSubmit = async (data) => {
+  if (isSubmitting.value) return
+  isSubmitting.value = true
+
   try {
     if (!config.value?.id) {
       alert("Invalid document type.")
@@ -117,15 +121,23 @@ const handleSubmit = async (data) => {
 
     const payload = {
       request_type_id: config.value.id,
-      form_data: data // dynamic fields go here
+      form_data: data
     }
 
-    await createRequest(payload, auth.token)
+    const res = await createRequest(payload, auth.token)
+
+    // Optional: ensure backend REALLY returned success
+    if (!res || res.error) {
+      throw new Error("Backend error")
+    }
+
     showSuccessModal.value = true
 
   } catch (err) {
     console.error('Submission failed', err)
     alert('Failed to submit request.')
+  } finally {
+    isSubmitting.value = false
   }
 }
 
@@ -171,6 +183,7 @@ onMounted(async () => {
         :initial-data="formData"
         :resident-data="residentData"
         :is-rfid-user="isRfidUser()"
+        :disabled="isSubmitting"
         @continue="handleSubmit"
       />
 
