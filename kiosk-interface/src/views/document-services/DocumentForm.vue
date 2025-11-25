@@ -249,12 +249,11 @@ const handleContinue = () => {
         :class="[
           'px-8 py-3 font-semibold rounded-full transition',
           props.isSubmitting
-            ? 'bg-gray-400 cursor-not-allowed'
+            ? 'bg-gray-400 cursor-not-allowed text-white'
             : 'bg-[#003A6B] text-white hover:bg-[#001F40]'
         ]"
       >
-        <span v-if="props.isSubmitting">Processing...</span>
-        <span v-else>Next</span>
+        Next
       </button>
     </div>
   </div>
