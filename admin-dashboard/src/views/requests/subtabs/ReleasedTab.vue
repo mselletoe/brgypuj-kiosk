@@ -79,12 +79,17 @@ const handleSendSMS = (request) => {
 
 const handleSMSSubmit = async (smsData) => {
   try {
-    await api.post('/send-sms', {
+    const response = await api.post('/sms/send', {
       requestId: selectedRequest.value.id,
       phone: smsData.phone,
       message: smsData.message
     })
+
+    if (response.data.success) {
+      console.log('SMS sent successfully')
+    }
   } catch (error) {
+    console.error('SMS error:', error)
     throw error
   }
 }
