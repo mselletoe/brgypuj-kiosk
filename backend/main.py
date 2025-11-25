@@ -24,7 +24,7 @@ from contextlib import asynccontextmanager
 from routers import (
     residents_table, rfid_uid, resident_routes, users, 
     admin_auth, request_types, templates, requests, sms,
-    equipment, announcements
+    equipment, announcements, backup_api
 )
 from services.sms_service import sms_service
 from dotenv import load_dotenv
@@ -152,6 +152,7 @@ app.include_router(equipment.router)
 app.include_router(requests.router)
 app.include_router(announcements.router)
 app.include_router(sms.router)
+app.include_router(backup_api.router)
 
 # ==============================================================================
 # Root Endpoints

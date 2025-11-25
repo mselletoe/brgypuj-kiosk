@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import api from '@/api/api'
+import SendSMSModal from '@/components/shared/SendSMSModal.vue'
 
 // --- PROPS ---
 const props = defineProps({

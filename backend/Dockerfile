@@ -7,6 +7,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     fonts-crosextra-carlito \
     fonts-crosextra-caladea \
     fonts-liberation \
+    postgresql-client \
+    zip \
+    unzip \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt ./

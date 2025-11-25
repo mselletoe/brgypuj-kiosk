@@ -8,6 +8,7 @@ import { fetchRequestTypes } from '@/api/requestTypes'
 import { createRequest } from '@/api/requests'
 import { fetchResidentData } from '@/api/residents'
 import { auth, isRfidUser, getResidentId } from '@/stores/auth'
+import Loading from '@/components/shared/Loading.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -183,7 +184,7 @@ onMounted(async () => {
         :initial-data="formData"
         :resident-data="residentData"
         :is-rfid-user="isRfidUser()"
-        :disabled="isSubmitting"
+        :is-submitting="isSubmitting"
         @continue="handleSubmit"
       />
 
@@ -199,7 +200,19 @@ onMounted(async () => {
       </div>
     </div>
 
-    <!-- ✅ Success Modal -->
+    <transition name="fade-blur">
+      <div
+        v-if="isSubmitting"
+        class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
+      >
+        <div class="bg-white rounded-2xl p-10 shadow-2xl flex flex-col items-center gap-2 min-w-[400px]">
+          <Loading color="#03335C" size="14px" spacing="70px" />
+          <p class="text-[#003A6B] text-lg font-semibold mt-6">Submitting your request...</p>
+          <p class="text-gray-500 text-sm">Please wait a moment</p>
+        </div>
+      </div>
+    </transition>
+
     <transition name="fade-blur">
       <div
         v-if="showSuccessModal"

@@ -26,6 +26,7 @@ import Residents from '@/views/Residents.vue'
 import Auth from '@/views/Auth.vue'
 import CreateAccount from '@/views/CreateAccount.vue'
 import EquipmentManagement from '@/views/equipment/EquipmentManagement.vue'
+import SystemSettings from '@/views/settings/SystemSettings.vue'
 
 
 const routes = [
@@ -56,7 +57,8 @@ const routes = [
       { path: 'community-feedback', component: CommunityFeedback },
       { path: 'information-hub', component: InformationHub },
       { path: 'residents', component: Residents },  
-      { path: 'equipment-management', component: EquipmentManagement }
+      { path: 'equipment-management', component: EquipmentManagement },
+      { path: 'system-settings', component: SystemSettings }
     ]
   }
 ]

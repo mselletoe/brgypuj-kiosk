@@ -25,7 +25,8 @@ const menuItems = [
   { label: 'Community Feedback', icon: ChatBubbleBottomCenterTextIcon, to: '/community-feedback' },
   { label: 'Residents Management', icon: UsersIcon, to: '/residents' },
   { label: 'Equipment Request', icon: DocumentCheckIcon, to: '/equipment-management' },
-  { label: 'Help & Support', icon: DocumentCheckIcon, to: '/help-support' }
+  { label: 'Help & Support', icon: DocumentCheckIcon, to: '/help-support' },
+  { label: 'System Settings', icon: DocumentCheckIcon, to: '/system-settings' }
 ]
 </script>
 
