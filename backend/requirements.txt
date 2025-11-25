@@ -26,6 +26,7 @@ python-docx
 pypandoc
 
 # Validation
+email-validator
 pydantic[email]
 
 # HTTP Requests
