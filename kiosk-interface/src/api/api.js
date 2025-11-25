@@ -3,7 +3,7 @@ import axios from 'axios'
 import { auth, logout } from '@/stores/auth'  // Import logout directly
 
 const api = axios.create({
-  baseURL: 'http://127.0.0.1:8000', // FastAPI backend
+  baseURL: 'http://172.20.10.5:8000', // FastAPI backend
   timeout: 10000,
 })
 
