@@ -17,7 +17,8 @@ import Overview from '@/views/Overview.vue'
 import Requests from '@/views/requests/RequestsManagement.vue'
 import Documenttemplates from '@/views/docutemp/DocumentTemplates.vue'
 import DocumentServices from '@/views/document-services/DocumentServices.vue'
-import Announcements from '@/views/Announcements.vue'
+import KioskAnnouncements from '@/views/announcements/KioskAnnouncements.vue'
+import SMSAnnouncements from '@/views/announcements/SMSAnnouncements.vue'
 import Appointments from '@/views/Appointments.vue'
 import CommunityFeedback from '@/views/CommunityFeedback.vue'
 import InformationHub from '@/views/InformationHub.vue'
@@ -49,7 +50,8 @@ const routes = [
       { path: 'overview', component: Overview },
       { path: 'requests', component: Requests },
       { path: 'document-services', component: DocumentServices },
-      { path: 'announcements', component: Announcements },
+      { path: 'kiosk-announcements', component: KioskAnnouncements },
+      { path: 'sms-announcements', component: SMSAnnouncements },
       { path: 'appointments', component: Appointments },
       { path: 'community-feedback', component: CommunityFeedback },
       { path: 'information-hub', component: InformationHub },

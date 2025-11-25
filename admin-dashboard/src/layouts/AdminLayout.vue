@@ -8,10 +8,10 @@ import logo from '@/assets/logo.svg'
   <div class="flex h-screen">
 
     <!-- Sidebar -->
-    <div class="w-72 flex flex-col p-6">
+    <div class="w-[260px] flex flex-col p-6">
 
       <div class="mb-6 border-b">
-        <img :src="logo" alt="Logo" class="h-[115px] object-contain mx-auto" />
+        <img :src="logo" alt="Logo" class="h-[120px] object-contain mx-auto" />
       </div>
       
       <Drawer />
