@@ -153,7 +153,7 @@ const handleContinue = () => {
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
       <div v-for="field in config.fields" :key="field.name" class="flex flex-col">
-        <label class="block mb-2 font-bold text-[#003A6B] flex items-center gap-2">
+        <label class="block mb-2 font-bold text-[#003A6B] items-center gap-2">
           {{ field.label }} 
           <span v-if="field.required" class="text-red-500">*</span>
           <LockClosedIcon 
