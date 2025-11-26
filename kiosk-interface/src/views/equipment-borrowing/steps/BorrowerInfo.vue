@@ -51,7 +51,6 @@ const activeInput = ref(null);
 
 const isFormValid = computed(() => {
   return localInfo.value.contactPerson &&
-         localInfo.value.contactNumber &&
          localInfo.value.purpose;
 });
 
@@ -161,13 +160,13 @@ const inputClass = "w-full px-4 py-3 text-base border border-gray-300 rounded-lg
 
         <div>
           <label for="contact-number" class="block text-base font-medium text-gray-700 mb-1">
-            Contact Number *
+            Contact Number
           </label>
           <input
             id="contact-number"
             v-model="localInfo.contactNumber"
             type="tel"
-            placeholder="Phone Number"
+            placeholder="Phone Number (Optional)"
             :class="[inputClass, { 'bg-gray-100 cursor-not-allowed': isUserLoggedIn }]"
             @focus="focusInput('contact-number', 'contactNumber')"
             :readonly="isUserLoggedIn || !showKeyboard" 
