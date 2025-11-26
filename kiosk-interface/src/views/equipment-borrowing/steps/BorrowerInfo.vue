@@ -1,6 +1,5 @@
 <script setup>
-// 1. IMPORT nextTick
-import { ref, computed, onMounted, nextTick } from 'vue';
+import { ref, computed, onMounted, nextTick, watch } from 'vue';
 import ArrowBackButton from '@/components/shared/ArrowBackButton.vue';
 import PrimaryButton from '@/components/shared/PrimaryButton.vue';
 import Keyboard from '@/components/shared/Keyboard.vue';
@@ -21,9 +20,18 @@ const localInfo = ref({
   notes: props.borrowerInfo.notes || ''
 });
 
+// Watch for authInfo changes and update local fields
+watch(() => props.authInfo, (newAuthInfo) => {
+  if (newAuthInfo) {
+    localInfo.value.contactPerson = newAuthInfo.contactPerson || '';
+    localInfo.value.contactNumber = newAuthInfo.contactNumber || '';
+  }
+}, { immediate: true, deep: true });
+
 onMounted(() => {
+  // Autofill if user is logged in
   if (props.authInfo) {
-    localInfo.value.contactPerson = props.authInfo.contactPerson;
+    localInfo.value.contactPerson = props.authInfo.contactPerson || '';
     localInfo.value.contactNumber = props.authInfo.contactNumber || '';
   }
 });
@@ -67,16 +75,18 @@ const handleNext = () => {
   props.goNext('review');
 };
 
-// 2. MODIFIED: focusInput now handles scrolling
 const focusInput = (elementId, fieldName) => {
+  // Don't allow editing autofilled fields for logged-in users
+  if (isUserLoggedIn.value && (fieldName === 'contactPerson' || fieldName === 'contactNumber')) {
+    return;
+  }
+  
   activeInput.value = fieldName;
   showKeyboard.value = true;
 
-  // Wait for Vue to update the DOM (to add padding)
   nextTick(() => {
     const el = document.getElementById(elementId);
     if (el) {
-      // Scroll the element into the middle of the view
       el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   });
@@ -140,10 +150,13 @@ const inputClass = "w-full px-4 py-3 text-base border border-gray-300 rounded-lg
             v-model="localInfo.contactPerson"
             type="text"
             placeholder="Name"
-            :class="[inputClass, { 'bg-gray-100': isUserLoggedIn }]"
+            :class="[inputClass, { 'bg-gray-100 cursor-not-allowed': isUserLoggedIn }]"
             @focus="focusInput('contact-person', 'contactPerson')"
-            :readonly="!showKeyboard" 
+            :readonly="isUserLoggedIn || !showKeyboard" 
           />
+          <p v-if="isUserLoggedIn" class="text-xs text-gray-500 mt-1">
+            Auto-filled from your account
+          </p>
         </div>
 
         <div>
@@ -155,10 +168,13 @@ const inputClass = "w-full px-4 py-3 text-base border border-gray-300 rounded-lg
             v-model="localInfo.contactNumber"
             type="tel"
             placeholder="Phone Number"
-            :class="[inputClass, { 'bg-gray-100': isUserLoggedIn }]"
+            :class="[inputClass, { 'bg-gray-100 cursor-not-allowed': isUserLoggedIn }]"
             @focus="focusInput('contact-number', 'contactNumber')"
-            :readonly="!showKeyboard" 
+            :readonly="isUserLoggedIn || !showKeyboard" 
           />
+          <p v-if="isUserLoggedIn" class="text-xs text-gray-500 mt-1">
+            Auto-filled from your account
+          </p>
         </div>
 
         <div>
@@ -245,14 +261,8 @@ select[value="null"] {
   transform: translateY(100%);
 }
 
-/* 5. ADDED: This class adds padding to the bottom of the page */
 .content-with-keyboard {
-  /* This value should be the height of your <Keyboard> component.
-    320px is a common height. Adjust it if your keyboard is taller/shorter.
-  */
   padding-bottom: 320px;
-  
-  /* This makes the padding animate in sync with the keyboard slide */
   transition: padding-bottom 0.3s ease-out;
 }
 </style>

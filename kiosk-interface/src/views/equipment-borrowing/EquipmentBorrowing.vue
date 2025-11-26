@@ -37,23 +37,25 @@ onActivated(() => {
   resetFormAndGoToStart();
 });
 
-// --- THIS IS THE FIX ---
+// Compute auth info for logged-in users
 const authInfo = computed(() => {
   // Check that auth.user exists and is not a guest
   if (auth.user && !auth.isGuest) { 
+    // Build the full name
+    const firstName = auth.user.first_name || '';
+    const lastName = auth.user.last_name || '';
+    const fullName = `${firstName} ${lastName}`.trim();
+    
     return {
-      resident_id: auth.user.id,
-      
-      // MODIFIED: Read the 'rfid_uid' directly from the root auth.user object
-      rfid: auth.user.rfid_uid || null, 
-      
-      contactPerson: `${auth.user.first_name} ${auth.user.last_name}`,
-      contactNumber: auth.user.phone_number
+      resident_id: auth.user.id || auth.user.resident_id,
+      rfid: auth.user.rfid_uid || auth.user.rfid || null,
+      contactPerson: fullName || auth.user.name || '',
+      // Try multiple possible field names for phone number
+      contactNumber: auth.user.phone_number || auth.user.contact_number || auth.user.phone || ''
     }
   }
   return null;
 });
-// --- END OF FIX ---
 </script>
 
 <template>
