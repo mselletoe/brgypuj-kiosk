@@ -199,9 +199,14 @@ class SIM800LService:
             self.is_connected = False
             logger.info("SIM800L disconnected")
     
-    def _send_command(self, command: str, timeout: float = 5.0) -> Dict[str, str]:
+    def _send_command(self, command: str, timeout: float = 5.0, is_sms: bool = False) -> Dict[str, str]:
         """
         Send command to Arduino and wait for response
+        
+        Args:
+            command: Command to send
+            timeout: Maximum wait time
+            is_sms: If True, wait for OK:SMS_SENT instead of just OK:
         
         Returns:
             dict with 'status' and 'message'
@@ -228,7 +233,20 @@ class SIM800LService:
                     for line in self.response_buffer:
                         logger.debug(f"← Received: {line}")
                         
-                        # Look for completion responses
+                        # For SMS commands, wait for specific completion
+                        if is_sms:
+                            if line == "OK:SMS_SENT":
+                                return {"status": "OK", "message": "SMS_SENT"}
+                            
+                            if line.startswith("ERROR:"):
+                                status = "ERROR"
+                                message = line[6:] if len(line) > 6 else "Unknown error"
+                                return {"status": status, "message": message}
+                            
+                            # Continue waiting for other STATUS messages
+                            continue
+                        
+                        # For non-SMS commands, look for completion responses
                         if line.startswith("OK:"):
                             status = "OK"
                             message = line[3:] if len(line) > 3 else ""
@@ -239,8 +257,8 @@ class SIM800LService:
                             message = line[6:] if len(line) > 6 else "Unknown error"
                             return {"status": status, "message": message}
                         
-                        # For STATUS and SIGNAL commands
-                        if line.startswith("STATUS:") or line.startswith("SIGNAL:"):
+                        # For STATUS and SIGNAL commands (non-SMS)
+                        if not is_sms and (line.startswith("STATUS:") or line.startswith("SIGNAL:")):
                             return {"status": "OK", "message": line}
                 
                 time.sleep(0.05)
@@ -292,8 +310,8 @@ class SIM800LService:
             logger.info(f"📤 Sending SMS to {phone_number}")
             logger.debug(f"Message: {message}")
             
-            # SMS can take 10-30 seconds
-            response = self._send_command(command, timeout=45.0)
+            # SMS can take 10-30 seconds, use is_sms=True flag
+            response = self._send_command(command, timeout=45.0, is_sms=True)
             
             if response["status"] == "OK":
                 logger.info(f"✓ SMS sent successfully to {phone_number}")
@@ -315,7 +333,7 @@ class SIM800LService:
             return None
         
         try:
-            response = self._send_command("SIGNAL", timeout=3.0)
+            response = self._send_command("SIGNAL", timeout=3.0, is_sms=False)
             
             if response["status"] == "OK" and "message" in response:
                 # Extract number from "SIGNAL:18"
