@@ -4,9 +4,11 @@ import subprocess
 import os
 
 # Backup folder
-BASE_DIR = Path(__file__).resolve().parent.parent
-BACKUP_DIR = BASE_DIR / "backups"
-BACKUP_DIR.mkdir(exist_ok=True)
+BACKUP_PATH_ENV = os.getenv("KIOSK_BACKUP_DIR", str(Path.home() / "pi_kiosk_backups"))
+BACKUP_DIR = Path(BACKUP_PATH_ENV)
+
+# Create the directory if it doesn't exist
+BACKUP_DIR.mkdir(parents=True, exist_ok=True)
 
 # PostgreSQL connection info
 DB_NAME = "kioskdb"

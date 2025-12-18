@@ -97,27 +97,15 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="p-6 bg-gray-50 min-h-screen space-y-6">
-    
-    <!-- Header -->
-    <div class="flex justify-between items-center">
-      <div>
-        <PageTitle title="System Overview" />
-        <p class="text-sm text-gray-500 mt-1">Overview of Barangay Kiosk System</p>
-      </div>
-      <div class="text-right">
-        <p class="text-xs text-gray-400">Last updated</p>
-        <p class="text-sm font-semibold text-gray-700">{{ new Date().toLocaleTimeString() }}</p>
-      </div>
-    </div>
+  <div class="pt-6 min-h-screen space-y-6">
 
     <!-- Key Stats Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="p-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       
       <!-- Total Requests -->
       <div 
         @click="navigateTo('/requests')"
-        class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-5 shadow-lg cursor-pointer hover:shadow-xl transition-all hover:scale-105"
+        class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-5 shadow-lg cursor-pointer hover:shadow-lg transition-all hover:scale-105"
       >
         <div class="flex items-start justify-between">
           <div class="flex-1">
@@ -184,7 +172,7 @@ onMounted(() => {
     </div>
 
     <!-- Main Content Grid -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="p-3 grid grid-cols-1 lg:grid-cols-3 gap-6">
       
       <!-- Left Column - Analytics (2/3) -->
       <div class="lg:col-span-2 space-y-6">

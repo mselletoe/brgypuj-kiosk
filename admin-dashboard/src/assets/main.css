@@ -25,4 +25,27 @@
   .n-base-select-option {
     font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif !important;
   }
+  
+  /* -------------------------------------- */
+  /* --- Custom Global Scrollbar Styles --- */
+  /* -------------------------------------- */
+
+  ::-webkit-scrollbar {
+    width: 8px; 
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: #CCCCCC; 
+    border-radius: 9999px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #EEF2F9;
+  }
+
+  * {
+    scrollbar-width: thin; 
+    scrollbar-color: #CCCCCC #EEF2F9; 
+  }
 }
