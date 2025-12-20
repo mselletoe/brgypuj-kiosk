@@ -1,0 +1,160 @@
+// Use this in dbdiagram.io to visualize your database
+
+// ========================================================
+// 1. IDENTITY & LOCATION
+// ========================================================
+
+Table puroks {
+  id smallserial [pk]
+  purok_name varchar(16) [not null, unique]
+}
+
+Table residents {
+  id serial [pk]
+  last_name varchar(128) [not null]
+  first_name varchar(128) [not null]
+  middle_name varchar(128)
+  suffix varchar(8)
+  gender varchar(10) [not null, note: 'male, female, other']
+  birthdate date [not null]
+  residency_start_date date [not null, default: `now()`]
+  email varchar(255) [unique]
+  phone_number varchar(15)
+  rfid_pin varchar(255)
+  registered_at timestamp [not null, default: `now()`]
+}
+
+Table addresses {
+  id serial [pk]
+  resident_id smallint [not null, ref: > residents.id]
+  house_no_street varchar(255) [not null]
+  purok_id smallint [not null, ref: > puroks.id]
+  barangay varchar(64) [default: 'YourBarangay']
+  municipality varchar(16) [default: 'YourCity']
+  province varchar(16) [default: 'YourProvince']
+  region varchar(64) [default: 'Region III']
+  created_at timestamp [not null, default: `now()`]
+  is_current boolean [not null, default: true]
+}
+
+// ========================================================
+// 2. CREDENTIALS & ADMINISTRATION
+// ========================================================
+
+Table resident_rfid {
+  id serial [pk]
+  resident_id smallint [not null, ref: > residents.id]
+  rfid_uid char(16) [unique, not null]
+  created_at timestamp [not null, default: `now()`]
+  is_active boolean [not null, default: true]
+}
+
+Table admin {
+  id smallserial [pk]
+  resident_id smallint [not null, ref: > residents.id]
+  username varchar(255) [unique, not null]
+  password text [not null]
+  role varchar(50) [not null]
+  is_active boolean [not null, default: true]
+  created_at timestamp [not null, default: `now()`]
+}
+
+// ========================================================
+// 3. DOCUMENT SERVICES
+// ========================================================
+
+Table document_types {
+  id smallserial [pk]
+  doctype_name varchar(255) [not null]
+  description text
+  price decimal(10,2) [default: 0.00]
+  file bytea
+  fields json [default: '[]']
+  is_available boolean [default: true]
+}
+
+Table document_requests {
+  id serial [pk]
+  transaction_no varchar(20) [unique, not null, note: 'DR-XXXXX']
+  resident_id smallint [not null, ref: > residents.id]
+  doctype_id int [not null, ref: > document_types.id]
+  processed_by smallint [ref: > admin.id]
+  status varchar(32) [default: 'Pending', note: 'Pending, Approved, Ready, Released, Rejected']
+  payment_status varchar(20) [default: 'unpaid', note: 'unpaid, paid']
+  form_data jsonb
+  request_file_path text
+  requested_at timestamptz [default: `now()`]
+}
+
+// ========================================================
+// 4. EQUIPMENT & INVENTORY
+// ========================================================
+
+Table equipment_inventory {
+  id serial [pk]
+  name varchar(128) [not null, unique]
+  total_quantity integer [not null, default: 0]
+  available_quantity integer [not null, default: 0]
+  rate_per_day decimal(10, 2) [not null, default: 0.00]
+}
+
+Table equipment_requests {
+  id serial [pk]
+  transaction_no varchar(20) [unique, not null, note: 'ER-XXXXX']
+  resident_id smallint [ref: > residents.id]
+  borrower_name varchar(255) [not null]
+  contact_person varchar(255)
+  contact_number varchar(16)
+  purpose varchar(255)
+  status varchar(32) [default: 'Pending', note: 'Pending, Approved, Picked-Up, Returned, Rejected']
+  notes text
+  borrow_date timestamptz [not null]
+  return_date timestamptz [not null]
+  returned_at timestamptz
+  total_cost decimal(10, 2) [not null, default: 0.00]
+  payment_status varchar(20) [default: 'unpaid']
+  is_refunded boolean [default: false]
+  requested_at timestamptz [default: `now()`]
+}
+
+Table equipment_request_items {
+  id serial [pk]
+  equipment_request_id integer [not null, ref: > equipment_requests.id]
+  item_id integer [not null, ref: > equipment_inventory.id]
+  quantity integer [not null, default: 1]
+}
+
+// ========================================================
+// 5. ANNOUNCEMENTS
+// ========================================================
+Table announcements {
+  id serial [pk]
+  title varchar(255) [not null]
+  description text
+  event_date date [not null]
+  event_time varchar(32)
+  location varchar(255) [not null]
+  image bytea
+  is_active boolean [default: true]
+  created_at timestamptz [default: `now()`]
+}
+
+// ========================================================
+// 6. FEEDBACK & REPORTING
+// ========================================================
+
+Table feedbacks {
+  id serial [pk]
+  resident_id smallint [null, ref: > residents.id]
+  category varchar(50) [not null]
+  rating integer [not null]
+  additional_comments text [null]
+  created_at timestamptz [default: `now()`]
+}
+
+Table rfid_reports {
+  id serial [pk]
+  resident_id smallint [null, ref: > residents.id]
+  status varchar(32) [default: 'Pending']
+  created_at timestamptz [default: `now()`]
+}

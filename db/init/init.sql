@@ -1,211 +1,264 @@
--- ==============================
---  TABLE: residents
--- ==============================
-CREATE TABLE IF NOT EXISTS residents (
-    id SMALLSERIAL PRIMARY KEY,
-    last_name VARCHAR(128),
-    first_name VARCHAR(128),
-    middle_name VARCHAR(128),
-    suffix VARCHAR(8),
-    gender TEXT CHECK (gender IN ('male', 'female')),
-    birthdate DATE,
-    years_residency SMALLINT CHECK (years_residency >= 0),
-    email VARCHAR(64) UNIQUE,
-    phone_number CHAR(11),
-    account_pin VARCHAR(4), 
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+-- ========================================================
+-- 1. SEQUENCES & INDEPENDENT TABLES (Parent Tables)
+-- ========================================================
+
+CREATE SEQUENCE IF NOT EXISTS global_transaction_seq;
 
 -- ==============================
---  TABLE: puroks
+-- puroks
 -- ==============================
 CREATE TABLE IF NOT EXISTS puroks (
     id SMALLSERIAL PRIMARY KEY,
-    purok_name VARCHAR(8) NOT NULL
+    purok_name VARCHAR(16) NOT NULL UNIQUE
 );
 
 -- ==============================
---  TABLE: addresses
+-- residents
 -- ==============================
-CREATE TABLE IF NOT EXISTS addresses (
-    id SMALLSERIAL PRIMARY KEY,
-    resident_id SMALLINT REFERENCES residents(id) ON DELETE CASCADE ON UPDATE CASCADE,
-    unit_blk_street VARCHAR(255),
-    purok_id SMALLINT CHECK (purok_id BETWEEN 1 AND 255) REFERENCES puroks(id) ON DELETE SET NULL ON UPDATE CASCADE,
-    barangay VARCHAR(64),
-    municipality VARCHAR(16),
-    province VARCHAR(16),
-    region VARCHAR(64),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    is_current BOOLEAN DEFAULT TRUE
-);
-
--- Ensure only one current address per resident
-CREATE UNIQUE INDEX IF NOT EXISTS one_current_address_per_resident
-ON addresses(resident_id)
-WHERE is_current = TRUE;
-
--- ==============================
---  TABLE: rfid_uid
--- ==============================
-CREATE TABLE IF NOT EXISTS rfid_uid (
-    id SMALLSERIAL PRIMARY KEY,
-    resident_id SMALLINT REFERENCES residents(id) ON DELETE CASCADE ON UPDATE CASCADE,
-    rfid_uid CHAR(16) UNIQUE,
-    status TEXT CHECK (status IN ('active', 'inactive')) DEFAULT 'active',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    is_active BOOLEAN DEFAULT TRUE
-);
-
--- ==============================
---  TABLE: brgy_staff
--- ==============================
-CREATE TABLE IF NOT EXISTS brgy_staff (
-    id SMALLSERIAL PRIMARY KEY,
-    resident_id SMALLINT REFERENCES residents(id) ON DELETE CASCADE ON UPDATE CASCADE NULL,
-    staff_name VARCHAR(255) NULL,
-    email VARCHAR(64) UNIQUE,
-    password TEXT,
-    role VARCHAR(128),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    is_active BOOLEAN DEFAULT TRUE
-);
-
--- ==============================
---  TABLE: request_types
--- ==============================
-CREATE TABLE IF NOT EXISTS request_types (
+CREATE TABLE IF NOT EXISTS residents (
     id SERIAL PRIMARY KEY,
-    request_type_name VARCHAR(64),
+    last_name VARCHAR(128) NOT NULL,
+    first_name VARCHAR(128) NOT NULL,
+    middle_name VARCHAR(128),
+    suffix VARCHAR(8),
+    gender VARCHAR(10) NOT NULL CHECK (gender IN ('male', 'female', 'other')),
+    birthdate DATE NOT NULL,
+    residency_start_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    email VARCHAR(255) UNIQUE,
+    phone_number VARCHAR(15),
+    rfid_pin VARCHAR(255),
+    registered_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ==============================
+-- document_types
+-- ==============================
+CREATE TABLE IF NOT EXISTS document_types (
+    id SMALLSERIAL PRIMARY KEY,
+    doctype_name VARCHAR(255) NOT NULL,
     description TEXT,
-    status TEXT CHECK (status IN ('active', 'inactive')) DEFAULT 'active',
-    price NUMERIC(10,2) DEFAULT 0,
-    fields JSON DEFAULT '[]',
-    available BOOLEAN DEFAULT true,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    price DECIMAL(10,2) DEFAULT 0.00,
+    file BYTEA, 
+    fields JSON DEFAULT '[]', 
+    is_available BOOLEAN DEFAULT TRUE
 );
 
 -- ==============================
---  TABLE: templates
+-- equipment_inventory
 -- ==============================
-CREATE TABLE IF NOT EXISTS templates (
-    id SERIAL PRIMARY KEY,
-    template_name VARCHAR(64),
-    description TEXT,
-    file BYTEA,
-    file_name VARCHAR(128),
-    request_type_id INT UNIQUE REFERENCES request_types(id) ON DELETE SET NULL ON UPDATE CASCADE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- ==============================
---  TABLE: requests_status
--- ==============================
-CREATE TABLE IF NOT EXISTS request_status (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(50) NOT NULL UNIQUE
-);
-
--- ==============================
---  TABLE: requests
--- ==============================
-CREATE TABLE IF NOT EXISTS requests (
-    id SERIAL PRIMARY KEY,
-    resident_id SMALLINT REFERENCES residents(id) ON DELETE CASCADE ON UPDATE CASCADE,
-    request_type_id INT REFERENCES request_types(id) ON DELETE CASCADE ON UPDATE CASCADE,
-    processed_by SMALLINT REFERENCES brgy_staff(id) ON DELETE SET NULL ON UPDATE CASCADE,
-    rejected_by SMALLINT REFERENCES brgy_staff(id) ON DELETE SET NULL ON UPDATE CASCADE,
-    status_id INT REFERENCES request_status(id) ON DELETE SET NULL,
-    payment_status TEXT CHECK (payment_status IN ('Paid', 'Unpaid')) DEFAULT 'Unpaid',
-    form_data JSONB,
-    request_file BYTEA,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- ==============================
---  TABLE: requests_status feed
--- ==============================
-INSERT INTO request_status (name) VALUES
-('pending'),
-('processing'),
-('ready'),
-('released'),
-('rejected'),
-('cancelled')
-ON CONFLICT (name) DO NOTHING;
-
--- =============================================================================
--- Tables for Equipment Borrowing
--- =============================================================================
-
--- 1. The master list of all borrowable equipment
 CREATE TABLE IF NOT EXISTS equipment_inventory (
     id SERIAL PRIMARY KEY,
     name VARCHAR(128) NOT NULL UNIQUE,
     total_quantity INTEGER NOT NULL DEFAULT 0,
     available_quantity INTEGER NOT NULL DEFAULT 0,
-    rate DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
-    rate_per VARCHAR(16) DEFAULT 'day'
+    rate_per_day DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+    
+    CONSTRAINT chk_available_range CHECK (available_quantity >= 0 AND available_quantity <= total_quantity)
 );
 
--- 2. The main table for each individual request
-CREATE TABLE IF NOT EXISTS equipment_requests (
-    id SERIAL PRIMARY KEY,
-    resident_id SMALLINT REFERENCES residents(id) ON DELETE SET NULL,
-    borrower_name VARCHAR(255) NOT NULL,
-    contact_number VARCHAR(16),
-    purpose VARCHAR(255),
-    notes TEXT,
-    borrow_date TIMESTAMPTZ NOT NULL,
-    return_date TIMESTAMPTZ NOT NULL,
-    total_cost DECIMAL(10, 2) NOT NULL,
-    requested_via VARCHAR(64),
-    status VARCHAR(32) DEFAULT 'Pending',
-    paid BOOLEAN DEFAULT FALSE,
-    refunded BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMPTZ DEFAULT (NOW()),
-    updated_at TIMESTAMPTZ DEFAULT (NOW())
-);
-
--- 3. The "join table" that links a request to its items
-CREATE TABLE IF NOT EXISTS equipment_request_items (
-    id SERIAL PRIMARY KEY,
-    request_id INTEGER NOT NULL REFERENCES equipment_requests(id) ON DELETE CASCADE,
-    item_id INTEGER NOT NULL REFERENCES equipment_inventory(id) ON DELETE RESTRICT,
-    quantity INTEGER NOT NULL DEFAULT 1
-);
-
--- =============================================================================
--- Pre-fill Equipment Inventory Data
--- =============================================================================
--- This will insert the 4 items from your admin panel's dummy data.
--- 'ON CONFLICT (name) DO NOTHING' prevents errors if you run the script twice.
-
-INSERT INTO equipment_inventory (name, total_quantity, available_quantity, rate, rate_per)
-VALUES
-    ('Event Tent', 10, 8, 500.00, 'day'),
-    ('Monobloc Chairs', 200, 150, 10.00, 'day'),
-    ('Folding Tables', 5, 5, 1500.00, 'day'),
-    ('Sound System', 3, 2, 300.00, 'day')
-ON CONFLICT (name) DO NOTHING;
-
--- =============================================================================
--- Tables for Announcements
--- =============================================================================
-
+-- ==============================
+-- announcements
+-- ==============================
 CREATE TABLE IF NOT EXISTS announcements (
     id SERIAL PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
     description TEXT,
     event_date DATE NOT NULL,
-    event_day VARCHAR(32),
     event_time VARCHAR(32),
     location VARCHAR(255) NOT NULL,
     image BYTEA,
-    image_name VARCHAR(255),
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+
+-- ========================================================
+-- 2. RESIDENT SUB-DATA (Dependent on Residents)
+-- ========================================================
+
+-- ==============================
+-- addresses
+-- ==============================
+CREATE TABLE IF NOT EXISTS addresses (
+    id SERIAL PRIMARY KEY,
+    resident_id SMALLINT NOT NULL,
+    house_no_street VARCHAR(255) NOT NULL,
+    purok_id SMALLINT NOT NULL,
+    barangay VARCHAR(64) DEFAULT 'YourBarangay',
+    municipality VARCHAR(16) DEFAULT 'YourCity',
+    province VARCHAR(16) DEFAULT 'YourProvince',
+    region VARCHAR(64) DEFAULT 'Region III',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    is_current BOOLEAN NOT NULL DEFAULT TRUE,
+
+    -- Foreign Keys
+    CONSTRAINT fk_resident_address FOREIGN KEY (resident_id) 
+        REFERENCES residents(id) ON DELETE CASCADE,
+    CONSTRAINT fk_purok_address FOREIGN KEY (purok_id) 
+        REFERENCES puroks(id) ON DELETE RESTRICT
+);
+
+-- ==============================
+-- resident_rfid
+-- ==============================
+CREATE TABLE IF NOT EXISTS resident_rfid (
+    id SERIAL PRIMARY KEY,
+    resident_id SMALLINT NOT NULL,
+    rfid_uid CHAR(16) UNIQUE NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+
+    -- Foreign Keys
+    CONSTRAINT fk_resident_rfid FOREIGN KEY (resident_id) 
+        REFERENCES residents(id) ON DELETE CASCADE
+);
+
+-- ==============================
+-- admin
+-- ==============================
+CREATE TABLE IF NOT EXISTS admin (
+    id SMALLSERIAL PRIMARY KEY,
+    resident_id SMALLINT NOT NULL, 
+    username VARCHAR(255) UNIQUE NOT NULL,
+    password TEXT NOT NULL,
+    role VARCHAR(50) NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    -- Foreign Keys
+    CONSTRAINT fk_admin_resident FOREIGN KEY (resident_id) 
+        REFERENCES residents(id) ON DELETE CASCADE
+);
+
+-- ==============================
+-- feedbacks
+-- ==============================
+CREATE TABLE IF NOT EXISTS feedbacks (
+    id SERIAL PRIMARY KEY,
+    resident_id SMALLINT, 
+    category VARCHAR(50) NOT NULL 
+        CHECK (category IN (
+            'Service Quality', 
+            'Interface Design', 
+            'System Speed', 
+            'Accessibility', 
+            'General Experience'
+        )),
+    rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+    additional_comments TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+
+    CONSTRAINT fk_feedback_resident FOREIGN KEY (resident_id) 
+        REFERENCES residents(id) ON DELETE SET NULL
+);
+
+-- ==============================
+-- rfid_reports
+-- ==============================
+CREATE TABLE IF NOT EXISTS rfid_reports (
+    id SERIAL PRIMARY KEY,
+    resident_id SMALLINT, 
+    status VARCHAR(32) DEFAULT 'Pending' 
+        CHECK (status IN ('Pending', 'Acknowledged')),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+
+    CONSTRAINT fk_rfid_report_resident FOREIGN KEY (resident_id) 
+        REFERENCES residents(id) ON DELETE CASCADE
+);
+
+-- ========================================================
+-- 3. REQUESTS & TRANSACTIONS
+-- ========================================================
+
+-- ==============================
+-- document_requests
+-- ==============================
+CREATE TABLE IF NOT EXISTS document_requests (
+    id SERIAL PRIMARY KEY,
+    transaction_no VARCHAR(20) UNIQUE NOT NULL 
+        DEFAULT ('DR-' || LPAD(nextval('global_transaction_seq')::text, 5, '0')),
+    resident_id SMALLINT NOT NULL,
+    doctype_id INT NOT NULL,
+    processed_by SMALLINT,
+    status VARCHAR(32) DEFAULT 'Pending' 
+        CHECK (status IN ('Pending', 'Approved', 'Ready', 'Released', 'Rejected')),
+    payment_status VARCHAR(20) DEFAULT 'unpaid' 
+        CHECK (payment_status IN ('unpaid', 'paid')),
+    form_data JSONB,
+    request_file_path TEXT,
+    requested_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+
+    -- Foreign Keys
+    CONSTRAINT fk_res_doc FOREIGN KEY (resident_id) REFERENCES residents(id) ON DELETE CASCADE,
+    CONSTRAINT fk_type_doc FOREIGN KEY (doctype_id) REFERENCES document_types(id),
+    CONSTRAINT fk_admin_doc FOREIGN KEY (processed_by) REFERENCES admin(id) ON DELETE SET NULL
+);
+
+-- ==============================
+-- equipment_requests
+-- ==============================
+CREATE TABLE IF NOT EXISTS equipment_requests (
+    id SERIAL PRIMARY KEY,
+    transaction_no VARCHAR(20) UNIQUE NOT NULL 
+        DEFAULT ('ER-' || LPAD(nextval('global_transaction_seq')::text, 5, '0')),
+    resident_id SMALLINT, 
+    borrower_name VARCHAR(255) NOT NULL,
+    contact_person VARCHAR(255),
+    contact_number VARCHAR(16),
+    purpose VARCHAR(255),
+    status VARCHAR(32) DEFAULT 'Pending' 
+        CHECK (status IN ('Pending', 'Approved', 'Picked-Up', 'Returned', 'Rejected')),
+    notes TEXT,
+    borrow_date TIMESTAMPTZ NOT NULL,
+    return_date TIMESTAMPTZ NOT NULL,
+    returned_at TIMESTAMPTZ,
+    total_cost DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+    payment_status VARCHAR(20) DEFAULT 'unpaid' 
+        CHECK (payment_status IN ('unpaid', 'paid')),
+    is_refunded BOOLEAN DEFAULT FALSE,
+    requested_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+
+    -- Foreign Keys
+    CONSTRAINT fk_res_equip FOREIGN KEY (resident_id) 
+        REFERENCES residents(id) ON DELETE SET NULL
+);
+
+-- ==============================
+-- equipment_request_items
+-- ==============================
+CREATE TABLE IF NOT EXISTS equipment_request_items (
+    id SERIAL PRIMARY KEY,
+    equipment_request_id INTEGER NOT NULL REFERENCES equipment_requests(id) ON DELETE CASCADE,
+    item_id INTEGER NOT NULL REFERENCES equipment_inventory(id) ON DELETE RESTRICT,
+    quantity INTEGER NOT NULL DEFAULT 1 CHECK (quantity > 0)
+);
+
+
+
+-- ========================================================
+-- 4. PERFORMANCE INDEXES
+-- ========================================================
+-- Search residents by name
+CREATE INDEX IF NOT EXISTS idx_residents_last_name ON residents(last_name);
+
+-- Ensure only one current address per resident
+CREATE UNIQUE INDEX IF NOT EXISTS idx_one_current_address_per_resident
+ON addresses (resident_id) WHERE is_current IS TRUE;
+
+-- Speed up RFID login
+CREATE INDEX IF NOT EXISTS idx_rfid_active_lookup ON resident_rfid(rfid_uid) WHERE is_active IS TRUE;
+
+-- Lookup admin accounts by resident
+CREATE INDEX IF NOT EXISTS idx_admin_resident_lookup ON admin(resident_id);
+
+-- Filter requests by status (for Dashboard)
+CREATE INDEX IF NOT EXISTS idx_doc_requests_status ON document_requests(status);
+CREATE INDEX IF NOT EXISTS idx_equip_req_status ON equipment_requests(status);
+
+-- Index for the Kiosk Home Screen (Upcoming events first)
+CREATE INDEX IF NOT EXISTS idx_announcements_date ON announcements(event_date) 
+WHERE is_active IS TRUE;
+
+-- Indexes for Admin Dashboard performance
+CREATE INDEX IF NOT EXISTS idx_feedback_category ON feedbacks(category);
+CREATE INDEX IF NOT EXISTS idx_rfid_report_status ON rfid_reports(status);
