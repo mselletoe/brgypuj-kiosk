@@ -14,8 +14,7 @@ import { useAuth } from '@/stores/authStore'
 
 import AdminLayout from '@/layouts/AdminLayout.vue'
 import Overview from '@/views/Overview.vue'
-import Requests from '@/views/requests/RequestsManagement.vue'
-import Documenttemplates from '@/views/docutemp/DocumentTemplates.vue'
+import DocumentRequests from '@/views/requests/document-requests/DocumentRequest.vue'
 import DocumentServices from '@/views/document-services/DocumentServices.vue'
 import KioskAnnouncements from '@/views/announcements/KioskAnnouncements.vue'
 import SMSAnnouncements from '@/views/announcements/SMSAnnouncements.vue'
@@ -27,7 +26,8 @@ import Auth from '@/views/Auth.vue'
 import CreateAccount from '@/views/CreateAccount.vue'
 import EquipmentManagement from '@/views/equipment/EquipmentManagement.vue'
 import SystemSettings from '@/views/settings/SystemSettings.vue'
-
+import EquipmentRequest from '@/views/requests/equipment-requests/EquipmentRequest.vue' 
+import FeedbackAndReports from '@/views/feedback-and-reports/FeedbackAndReports.vue'
 
 const routes = [
   {
@@ -49,16 +49,32 @@ const routes = [
     meta: { requiresAuth: true },
     children: [
       { path: 'overview', component: Overview },
-      { path: 'requests', component: Requests },
+      { 
+        path: 'document-requests/:status?', 
+        name: 'DocumentRequests', 
+        component: DocumentRequests,
+        props: true 
+      },
+      { 
+        path: 'equipment-requests/:status?', 
+        name: 'EquipmentRequest', 
+        component: EquipmentRequest,
+        props: true 
+      },
+      { 
+        path: 'feedback-and-reports/:status?', 
+        name: 'FeedbackReports', 
+        component: FeedbackAndReports,
+        props: true 
+      },
       { path: 'document-services', component: DocumentServices },
       { path: 'kiosk-announcements', component: KioskAnnouncements },
       { path: 'sms-announcements', component: SMSAnnouncements },
       { path: 'appointments', component: Appointments },
       { path: 'community-feedback', component: CommunityFeedback },
-      { path: 'information-hub', component: InformationHub },
       { path: 'residents', component: Residents },  
       { path: 'equipment-management', component: EquipmentManagement },
-      { path: 'system-settings', component: SystemSettings }
+      { path: 'system-settings', component: SystemSettings },
     ]
   }
 ]

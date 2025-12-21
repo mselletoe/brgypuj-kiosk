@@ -93,9 +93,10 @@ onUnmounted(() => {
         
         <PrimaryButton 
           @click.stop="handleRfidLogin" 
-          class="w-96 h-[80px] text-[25px] font-bold"
+          class="w-96 h-[80px] font-bold"
+          variant="primary"
         >
-          <span class="flex items-center justify-center gap-x-3">
+          <span class="flex items-center justify-center gap-x-3 text-xl">
             Use RFID
             <SignalIcon class="h-8 w-8 mt-0" />
           </span>
@@ -103,8 +104,7 @@ onUnmounted(() => {
 
         <PrimaryButton 
           @click.stop="continueAsGuest()"
-          bgColor="bg-transparent"
-          textColor="text-[#013C6D]"
+          variant="outline"
           class="w-96 h-[45px] text-[15px]"
         >
           Continue as Guest
