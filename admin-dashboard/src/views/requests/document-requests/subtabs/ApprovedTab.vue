@@ -12,7 +12,7 @@ const props = defineProps({
 })
 
 // --- REFS ---
-const rejectedRequests = ref([])
+const approvedRequests = ref([])
 const isLoading = ref(true)
 const errorMessage = ref(null)
 const selectedRequests = ref(new Set())
@@ -21,29 +21,19 @@ const selectedRequests = ref(new Set())
 const formatRequestDate = (isoDate) => {
   if (!isoDate) return "N/A"
   const date = new Date(isoDate)
-  const now = new Date()
-  const diffMs = now - date
-  const diffSec = Math.floor(diffMs / 1000)
-  const diffMin = Math.floor(diffSec / 60)
-  const diffHour = Math.floor(diffMin / 60)
-
-  if (diffMin < 1) return `${diffSec} seconds ago`
-  if (diffHour < 1) return `${diffMin} minutes ago`
-  if (diffHour < 24) return `${diffHour} hours ago`
-
   return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
 }
 
-// --- FETCH REJECTED REQUESTS ---
-const fetchRejectedRequests = async () => {
+// --- FETCH APPROVED REQUESTS ---
+const fetchApprovedRequests = async () => {
   try {
     const response = await api.get('/requests')
-    rejectedRequests.value = response.data
-      .filter(req => req.status === 'rejected')
+    approvedRequests.value = response.data
+      .filter(req => req.status === 'processing')
       .map(req => ({
         id: req.id.toString(),
         type: req.rfid_uid ? 'rfid' : 'document',
-        status: 'rejected',
+        status: 'approved',
         requestType: req.document_type || 'Unknown Document',
         requester: {
           firstName: req.requester_name?.split(' ')[0] || '',
@@ -54,12 +44,12 @@ const fetchRejectedRequests = async () => {
         requestedOn: formatRequestDate(req.created_at),
         amount: req.price ? req.price.toFixed(2) : null,
         isPaid: req.payment_status === 'Paid',
-        borrowerName: req.requester_name || 'Guest',
+        residentId: req.resident_id,
         rawData: req
       }))
   } catch (error) {
-    console.error('Error fetching rejected requests:', error)
-    errorMessage.value = 'Failed to load rejected requests.'
+    console.error('Error fetching approved requests:', error)
+    errorMessage.value = 'Failed to load approved requests.'
   } finally {
     isLoading.value = false
   }
@@ -67,7 +57,7 @@ const fetchRejectedRequests = async () => {
 
 // --- HANDLE BUTTON CLICK ---
 const handleButtonClick = async ({ action, requestId, type, status }) => {
-  const request = rejectedRequests.value.find(r => r.id === requestId)
+  const request = approvedRequests.value.find(r => r.id === requestId)
   if (!request) return
 
   try {
@@ -77,7 +67,15 @@ const handleButtonClick = async ({ action, requestId, type, status }) => {
         break
       case 'notes':
         console.log(`Opening notes for request ${requestId}`)
-        // TODO: Implement notes modal
+        break
+      case 'notify':
+        console.log(`Sending notification for request ${requestId}`)
+        break
+      case 'ready':
+        await handleMarkAsReady(requestId)
+        break
+      case 'release':
+        await handleMarkAsReleased(requestId)
         break
       case 'delete':
         await handleDelete(requestId)
@@ -111,27 +109,45 @@ const handleViewDocument = async (id) => {
   }
 }
 
+// --- MARK AS RELEASED ---
+const handleMarkAsReleased = async (id) => {
+  try {
+    await api.put(`/requests/${id}/status`, { status_name: 'released' })
+    approvedRequests.value = approvedRequests.value.filter(req => req.id !== id)
+  } catch (error) {
+    console.error('Error marking request as released:', error)
+  }
+}
+
+// --- REJECT REQUEST ---
+const handleReject = async (id) => {
+  try {
+    await api.put(`/requests/${id}/status`, { status_name: 'rejected' })
+    approvedRequests.value = approvedRequests.value.filter(req => req.id !== id)
+  } catch (error) {
+    console.error('Error rejecting request:', error)
+  }
+}
+
 // --- DELETE REQUEST ---
 const handleDelete = async (id) => {
   if (!confirm('Are you sure you want to delete this request?')) return
   
   try {
     await api.delete(`/requests/${id}`)
-    rejectedRequests.value = rejectedRequests.value.filter(req => req.id !== id)
+    approvedRequests.value = approvedRequests.value.filter(req => req.id !== id)
   } catch (error) {
     console.error('Error deleting request:', error)
   }
 }
 
-// --- UNDO (BACK TO PENDING FOR REVIEW) ---
+// --- UNDO (BACK TO PENDING) ---
 const handleUndo = async (id) => {
   try {
     await api.put(`/requests/${id}/status`, { status_name: 'pending' })
-    rejectedRequests.value = rejectedRequests.value.filter(req => req.id !== id)
-    console.log(`Request ${id} moved back to pending for review`)
+    approvedRequests.value = approvedRequests.value.filter(req => req.id !== id)
   } catch (error) {
-    console.error('Error moving request back to pending:', error)
-    errorMessage.value = 'Failed to move request back to pending.'
+    console.error('Error undoing request:', error)
   }
 }
 
@@ -145,14 +161,14 @@ const handleSelectionUpdate = (requestId, isSelected) => {
 }
 
 // --- Load on mount ---
-onMounted(fetchRejectedRequests)
+onMounted(fetchApprovedRequests)
 
 // --- COMPUTED: Search Filter ---
 const filteredRequests = computed(() => {
-  if (!props.searchQuery) return rejectedRequests.value
+  if (!props.searchQuery) return approvedRequests.value
 
   const lowerQuery = props.searchQuery.toLowerCase().trim()
-  return rejectedRequests.value.filter(req =>
+  return approvedRequests.value.filter(req =>
     req.requester.firstName.toLowerCase().includes(lowerQuery) ||
     req.requester.surname.toLowerCase().includes(lowerQuery) ||
     req.requestType.toLowerCase().includes(lowerQuery) ||
@@ -169,7 +185,7 @@ const filteredRequests = computed(() => {
       v-if="isLoading" 
       class="text-center p-10 text-gray-500"
     >
-      <p>Loading rejected requests...</p>
+      <p>Loading approved requests...</p>
     </div>
 
     <div 
@@ -183,10 +199,10 @@ const filteredRequests = computed(() => {
       v-else-if="filteredRequests.length === 0" 
       class="text-center p-10 text-gray-500"
     >
-      <h3 class="text-lg font-medium text-gray-700">No Rejected Requests</h3>
+      <h3 class="text-lg font-medium text-gray-700">No Approved Requests</h3>
       <p class="text-gray-500">
         <span v-if="searchQuery">No requests match your search.</span>
-        <span v-else>There are no rejected requests.</span>
+        <span v-else>All approved requests have been processed.</span>
       </p>
     </div>
 

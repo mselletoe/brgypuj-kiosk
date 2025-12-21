@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue';
-import { TrashIcon } from '@heroicons/vue/24/solid';
+import { TrashIcon, ArrowUturnLeftIcon } from '@heroicons/vue/24/solid';
 
 const props = defineProps({
   id: {
@@ -56,62 +56,60 @@ const accentColorClass = computed(() => {
 const buttonConfigs = {
   pending: {
     document: [
-      { id: 'view', label: 'View Document', variant: 'primary' },
-      { id: 'notes', label: 'Notes', variant: 'secondary' },
-      { id: 'approve', label: 'Approve', variant: 'success' },
-      { id: 'reject', label: 'Reject', variant: 'danger' },
-      { id: 'delete', label: '', icon: TrashIcon, variant: 'danger-ghost' }
+      { id: 'view', label: 'View File', variant: 'primary' },
+      { id: 'notes', label: 'Notes', variant: 'gray' },
+      { id: 'approve', label: 'Approve', variant: 'green' },
+      { id: 'reject', label: 'Reject', variant: 'red' },
+      { id: 'delete', label: '', icon: TrashIcon, variant: 'delete' }
     ],
     rfid: [
-      { id: 'notes', label: 'Notes', variant: 'secondary' },
-      { id: 'approve', label: 'Approve', variant: 'success' },
-      { id: 'reject', label: 'Reject', variant: 'danger' },
-      { id: 'delete', label: '', icon: TrashIcon, variant: 'danger-ghost' }
+      { id: 'notes', label: 'Notes', variant: 'gray' },
+      { id: 'approve', label: 'Approve', variant: 'green' },
+      { id: 'reject', label: 'Reject', variant: 'red' },
+      { id: 'delete', label: '', icon: TrashIcon, variant: 'delete' }
     ]
   },
   approved: {
     document: [
-      { id: 'view', label: 'View Document', variant: 'primary' },
-      { id: 'notes', label: 'Notes', variant: 'secondary' },
-      { id: 'notify', label: 'Notify', variant: 'secondary' },
-      { id: 'ready', label: 'Ready', variant: 'secondary' },
-      { id: 'release', label: 'Mark as Released', variant: 'success' },
-      { id: 'delete', label: '', icon: TrashIcon, variant: 'danger-ghost' },
-      { id: 'undo', label: 'Undo', variant: 'secondary' }
+      { id: 'view', label: 'View File', variant: 'primary' },
+      { id: 'notes', label: 'Notes', variant: 'gray' },
+      { id: 'notify', label: 'Notify', variant: 'solidgreen' },
+      { id: 'release', label: 'Release', variant: 'green' },
+      { id: 'delete', label: '', icon: TrashIcon, variant: 'delete' },
+      { id: 'undo', label: '', icon: ArrowUturnLeftIcon, variant: 'gray' }
     ],
     rfid: [
-      { id: 'notes', label: 'Notes', variant: 'secondary' },
-      { id: 'notify', label: 'Notify', variant: 'secondary' },
-      { id: 'ready', label: 'Ready', variant: 'secondary' },
-      { id: 'release', label: 'Mark as Released', variant: 'success' },
-      { id: 'delete', label: '', icon: TrashIcon, variant: 'danger-ghost' },
-      { id: 'undo', label: 'Undo', variant: 'secondary' }
+      { id: 'notes', label: 'Notes', variant: 'gray' },
+      { id: 'notify', label: 'Notify', variant: 'solidgreen' },
+      { id: 'release', label: 'Release', variant: 'green' },
+      { id: 'delete', label: '', icon: TrashIcon, variant: 'delete' },
+      { id: 'undo', label: '', icon: ArrowUturnLeftIcon, variant: 'gray' }
     ]
   },
   released: {
     document: [
-      { id: 'view', label: 'View Document', variant: 'primary' },
-      { id: 'notes', label: 'Notes', variant: 'secondary' },
-      { id: 'delete', label: '', icon: TrashIcon, variant: 'danger-ghost' },
-      { id: 'undo', label: 'Undo', variant: 'secondary' }
+      { id: 'view', label: 'View File', variant: 'primary' },
+      { id: 'notes', label: 'Notes', variant: 'gray' },
+      { id: 'delete', label: '', icon: TrashIcon, variant: 'delete' },
+      { id: 'undo', label: '', icon: ArrowUturnLeftIcon, variant: 'gray' }
     ],
     rfid: [
-      { id: 'notes', label: 'Notes', variant: 'secondary' },
-      { id: 'delete', label: '', icon: TrashIcon, variant: 'danger-ghost' },
-      { id: 'undo', label: 'Undo', variant: 'secondary' }
+      { id: 'notes', label: 'Notes', variant: 'gray' },
+      { id: 'delete', label: '', icon: TrashIcon, variant: 'delete' },
+      { id: 'undo', label: '', icon: ArrowUturnLeftIcon, variant: 'gray' }
     ]
   },
   rejected: {
     document: [
-      { id: 'view', label: 'View Document', variant: 'primary' },
-      { id: 'notes', label: 'Notes', variant: 'secondary' },
-      { id: 'delete', label: '', icon: TrashIcon, variant: 'danger-ghost' },
-      { id: 'undo', label: 'Undo', variant: 'secondary' }
+      { id: 'view', label: 'View File', variant: 'primary' },
+      { id: 'notes', label: 'Notes', variant: 'gray' },
+      { id: 'delete', label: '', icon: TrashIcon, variant: 'delete' },
+      { id: 'undo', label: '', icon: ArrowUturnLeftIcon, variant: 'gray' }
     ],
     rfid: [
-      { id: 'notes', label: 'Notes', variant: 'secondary' },
-      { id: 'delete', label: '', icon: TrashIcon, variant: 'danger-ghost' },
-      { id: 'undo', label: 'Undo', variant: 'secondary' }
+      { id: 'notes', label: 'Notes', variant: 'gray' },
+      { id: 'delete', label: '', icon: TrashIcon, variant: 'delete' },
+      { id: 'undo', label: '', icon: ArrowUturnLeftIcon, variant: 'gray' }
     ]
   }
 };
@@ -120,27 +118,39 @@ const visibleButtons = computed(() => {
   return buttonConfigs[props.status][props.type];
 });
 
+const isButtonDisabled = (btn) => {
+  if (btn.id === 'approve' && props.status === 'pending' && props.amount && !props.isPaid) {
+    return true;
+  }
+  return false;
+};
+
 const getButtonClass = (btn) => {
   const baseClasses = btn.label === '' ? 'px-2' : '';
   
-  if (btn.disabled) {
+  if (isButtonDisabled(btn)) {
     return `${baseClasses} bg-gray-100 text-gray-400 cursor-not-allowed`;
   }
   
   const variantClasses = {
-    primary: 'bg-blue-600 text-white hover:bg-[#0957FF]',
-    secondary: 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50',
-    success: 'bg-white text-green-600 border border-[#09AA44] hover:bg-green-50',
-    danger: 'bg-white text-red-600 border border-[#FF2B3A] hover:bg-red-50',
-    'danger-ghost': 'bg-white text-[#B1202A] border border-[#FBBABA] hover:bg-[#FFE6E6]'
+    primary: 'bg-[#0957FF] text-white hover:bg-white-10',
+    gray: 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50',
+    green: 'bg-white text-green-600 border border-[#09AA44] hover:bg-green-50',
+    solidgreen: 'bg-[#09AA44] text-white hover:bg-green-90',
+    red: 'bg-white text-red-600 border border-[#FF2B3A] hover:bg-red-50',
+    delete: 'bg-white text-[#B1202A] border border-[#FBBABA] hover:bg-[#FFE6E6]'
   };
   
   return `${baseClasses} ${variantClasses[btn.variant] || variantClasses.secondary}`;
 };
 
-const handleButtonClick = (buttonId) => {
+const handleButtonClick = (buttonId, btn) => {
   if (buttonId === 'payment') {
     emit('update:isPaid', !props.isPaid);
+    return;
+  }
+  
+  if (btn && isButtonDisabled(btn)) {
     return;
   }
   
@@ -165,7 +175,7 @@ const handleButtonClick = (buttonId) => {
       <div class="text-[9px] text-gray-400 font-medium">Transaction No.</div>
     </div>
 
-    <div class="flex-1 flex flex-col gap-4">
+    <div class="flex-1 flex flex-col gap-3">
       <h3 class="text-xl font-bold text-slate-800 leading-none">
         {{ requestType }}
       </h3>
@@ -232,12 +242,13 @@ const handleButtonClick = (buttonId) => {
         <button
           v-for="btn in visibleButtons"
           :key="btn.id"
-          @click="handleButtonClick(btn.id)"
+          @click="handleButtonClick(btn.id, btn)"
+          :disabled="isButtonDisabled(btn)"
           :class="[
             getButtonClass(btn),
             btn.id === 'delete' ? 'w-9 px-0' : 'px-4'
           ]"
-          class="h-9 rounded-md text-sm font-bold transition-all flex items-center justify-center"
+          class="h-9 rounded-md text-sm font-semibold transition-all flex items-center justify-center"
         >
           {{ btn.label }}
           <component v-if="!btn.label" :is="btn.icon" class="w-5 h-5" />

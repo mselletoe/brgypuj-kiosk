@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import api from '@/api/api'
+import RequestCard from '@/components/shared/RequestCard.vue'
 
 // --- PROPS ---
 const props = defineProps({
@@ -14,17 +15,9 @@ const props = defineProps({
 const pendingRequests = ref([])
 const isLoading = ref(true)
 const errorMessage = ref(null)
+const selectedRequests = ref(new Set())
 
 // --- HELPERS ---
-const formatIndex = (index) => (index + 1).toString().padStart(2, '0')
-
-const formatCurrency = (value) => {
-  return new Intl.NumberFormat('en-PH', {
-    style: 'currency',
-    currency: 'PHP'
-  }).format(value)
-}
-
 const formatRequestDate = (isoDate) => {
   if (!isoDate) return "N/A"
   const date = new Date(isoDate)
@@ -48,19 +41,21 @@ const fetchPendingRequests = async () => {
     pendingRequests.value = response.data
       .filter(req => req.status === 'pending')
       .map(req => ({
-        id: req.id,
-        documentType: req.document_type || 'Unknown Document',
-        
-        borrowerName: req.requester_name || 'N/A',
-        date: formatRequestDate(req.created_at),
-        
-        via: req.requested_via || 'Guest',  // "RFID" or "Guest"
-        
-        viaTag: req.rfid_uid || null,
-        amount: req.price || 0,
-        paymentStatus: req.payment_status || 'Unpaid',
-        
-        residentId: req.resident_id
+        id: req.id.toString(),
+        type: req.rfid_uid ? 'rfid' : 'document',
+        status: 'pending',
+        requestType: req.document_type || 'Unknown Document',
+        requester: {
+          firstName: req.requester_name?.split(' ')[0] || '',
+          middleName: req.requester_name?.split(' ')[1] || '',
+          surname: req.requester_name?.split(' ').slice(2).join(' ') || req.requester_name || 'N/A'
+        },
+        rfidNo: req.rfid_uid || 'Guest Mode',
+        requestedOn: formatRequestDate(req.created_at),
+        amount: req.price ? req.price.toFixed(2) : null,
+        isPaid: req.payment_status === 'Paid',
+        residentId: req.resident_id,
+        rawData: req
       }))
   } catch (error) {
     console.error('Error fetching requests:', error)
@@ -70,22 +65,59 @@ const fetchPendingRequests = async () => {
   }
 }
 
-// --- TOGGLE PAYMENT STATUS ---
-const togglePaymentStatus = async (request) => {
+// --- HANDLE BUTTON CLICK ---
+const handleButtonClick = async ({ action, requestId, type, status }) => {
+  const request = pendingRequests.value.find(r => r.id === requestId)
+  if (!request) return
+
   try {
-    const newStatus = request.paymentStatus === 'Paid' ? 'Unpaid' : 'Paid'
-    await api.put(`/requests/${request.id}/payment`, { payment_status: newStatus })
-    request.paymentStatus = newStatus 
+    switch (action) {
+      case 'view':
+        await handleViewDocument(requestId)
+        break
+      case 'notes':
+        console.log(`Opening notes for request ${requestId}`)
+        // TODO: Implement notes modal
+        break
+      case 'approve':
+        await handleApprove(requestId)
+        break
+      case 'reject':
+        await handleReject(requestId)
+        break
+      case 'delete':
+        await handleDelete(requestId)
+        break
+      default:
+        console.log(`Action ${action} not implemented yet`)
+    }
   } catch (error) {
-    console.error('Error toggling payment status:', error)
+    console.error(`Error handling ${action}:`, error)
+  }
+}
+
+// --- VIEW DOCUMENT ---
+const handleViewDocument = async (id) => {
+  try {
+    const response = await api.get(`/requests/${id}/download-pdf`, {
+      responseType: 'blob'
+    })
+    
+    const blob = new Blob([response.data], { type: 'application/pdf' })
+    const url = URL.createObjectURL(blob)
+    window.open(url, '_blank')
+    
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+  } catch (error) {
+    console.error('Error opening PDF:', error)
+    alert('Failed to load document. Please try again.')
   }
 }
 
 // --- APPROVE REQUEST ---
 const handleApprove = async (id) => {
   try {
-    await api.put(`/requests/${id}/status`, { status_name: 'processing' })
-    // remove from pending list
+    await api.put(`/requests/${id}/status`, { status_name: 'approved' })
     pendingRequests.value = pendingRequests.value.filter(req => req.id !== id)
   } catch (error) {
     console.error('Error approving request:', error)
@@ -102,28 +134,39 @@ const handleReject = async (id) => {
   }
 }
 
-// --- VIEW / PROCESSING ---
-const handleViewDocument = async (id) => {
+// --- DELETE REQUEST ---
+const handleDelete = async (id) => {
+  if (!confirm('Are you sure you want to delete this request?')) return
+  
   try {
-    // Open PDF in new browser tab using blob URL for better preview
-    const response = await api.get(`/requests/${id}/download-pdf`, {
-      responseType: 'blob'
-    })
-    
-    const blob = new Blob([response.data], { type: 'application/pdf' })
-    const url = URL.createObjectURL(blob)
-    window.open(url, '_blank')
-    
-    // Clean up blob URL after a delay
-    setTimeout(() => URL.revokeObjectURL(url), 1000)
+    await api.delete(`/requests/${id}`)
+    pendingRequests.value = pendingRequests.value.filter(req => req.id !== id)
   } catch (error) {
-    console.error('Error opening PDF:', error)
-    alert('Failed to load document. Please try again.')
+    console.error('Error deleting request:', error)
   }
 }
 
-const handleProcessingDetails = (id) => {
-  console.log(`Viewing processing details for request ${id}`)
+// --- TOGGLE PAYMENT STATUS ---
+const handlePaymentUpdate = async (requestId, newPaidStatus) => {
+  const request = pendingRequests.value.find(r => r.id === requestId)
+  if (!request) return
+
+  try {
+    const newStatus = newPaidStatus ? 'Paid' : 'Unpaid'
+    await api.put(`/requests/${requestId}/payment`, { payment_status: newStatus })
+    request.isPaid = newPaidStatus
+  } catch (error) {
+    console.error('Error toggling payment status:', error)
+  }
+}
+
+// --- HANDLE SELECTION ---
+const handleSelectionUpdate = (requestId, isSelected) => {
+  if (isSelected) {
+    selectedRequests.value.add(requestId)
+  } else {
+    selectedRequests.value.delete(requestId)
+  }
 }
 
 // --- Load on mount ---
@@ -135,13 +178,12 @@ const filteredRequests = computed(() => {
 
   const lowerQuery = props.searchQuery.toLowerCase().trim()
   return pendingRequests.value.filter(req =>
-    req.borrowerName.toLowerCase().includes(lowerQuery) ||
-    req.documentType.toLowerCase().includes(lowerQuery) ||
-    req.date.toLowerCase().includes(lowerQuery) ||
-    req.via.toLowerCase().includes(lowerQuery) ||
-    req.paymentStatus.toLowerCase().includes(lowerQuery) ||
-    req.amount.toString().includes(lowerQuery) ||
-    (req.viaTag && req.viaTag.toLowerCase().includes(lowerQuery))
+    req.requester.firstName.toLowerCase().includes(lowerQuery) ||
+    req.requester.surname.toLowerCase().includes(lowerQuery) ||
+    req.requestType.toLowerCase().includes(lowerQuery) ||
+    req.requestedOn.toLowerCase().includes(lowerQuery) ||
+    req.rfidNo.toLowerCase().includes(lowerQuery) ||
+    (req.amount && req.amount.includes(lowerQuery))
   )
 })
 </script>
@@ -149,7 +191,21 @@ const filteredRequests = computed(() => {
 <template>
   <div class="space-y-4">
     <div 
-      v-if="filteredRequests.length === 0" 
+      v-if="isLoading" 
+      class="text-center p-10 text-gray-500"
+    >
+      <p>Loading pending requests...</p>
+    </div>
+
+    <div 
+      v-else-if="errorMessage" 
+      class="text-center p-10 text-red-500"
+    >
+      <p>{{ errorMessage }}</p>
+    </div>
+
+    <div 
+      v-else-if="filteredRequests.length === 0" 
       class="text-center p-10 text-gray-500"
     >
       <h3 class="text-lg font-medium text-gray-700">No Pending Requests</h3>
@@ -159,105 +215,22 @@ const filteredRequests = computed(() => {
       </p>
     </div>
 
-    <div 
-      v-for="(request, index) in filteredRequests" 
-      :key="request.id" 
-      class="flex items-start p-4 bg-white border border-gray-200 rounded-lg shadow-sm"
-      :class="{
-        'border-l-4 border-l-[#0957FF]': request.via === 'RFID', 
-        'border-l-4 border-l-[#FFB109]': request.via === 'Guest'
-      }"
-    >
-      <div 
-        class="flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-full font-bold text-lg"
-        :class="{
-          'bg-[#D8E4FF] text-[#083491]': request.via === 'RFID',
-          'bg-[#FFF1D2] text-[#B67D03]': request.via === 'Guest'
-        }"
-      >
-        {{ formatIndex(index) }}
-      </div>
-
-      <div class="flex-grow grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-2 ml-4">
-        <div class="text-sm">
-          <label class="block text-xs text-gray-500">Document Type</label>
-          <span class="font-semibold text-gray-800">{{ request.documentType }}</span>
-          <label class="block text-xs text-gray-500 mt-2">Request by</label>
-          <span class="font-bold text-gray-700">{{ request.borrowerName }}</span>
-        </div>
-
-        <div class="text-sm">
-          <label class="block text-xs text-gray-500">Requested on</label>
-          <span class="font-bold text-gray-700">{{ request.date }}</span>
-          <label class="block text-xs text-gray-500 mt-2">Requested via</label>
-          <div>
-            <span 
-              class="font-bold" 
-              :class="{
-                'text-[#B67D03]': request.via === 'Guest', 
-                'text-[#0957FF]': request.via === 'RFID'
-              }"
-            >
-              {{ request.via }}
-            </span>
-            <span 
-              v-if="request.via === 'RFID'" 
-              class="ml-2 px-2 py-0.5 text-xs font-semibold rounded-full bg-[#0957FF] text-white"
-            >
-              {{ request.viaTag }}
-            </span>
-          </div>
-        </div>
-
-        <div class="text-sm">
-          <label class="block text-xs text-gray-500">Amount</label>
-          <span class="font-semibold text-[#159E03]">{{ formatCurrency(request.amount) }}</span>
-          
-          <div class="mt-2.5">
-            <!-- ✅ “Unpaid” / “Paid” are clickable buttons -->
-            <button
-              @click="togglePaymentStatus(request)"
-              :class="[ 
-                'px-3 py-1 rounded text-white text-sm font-semibold', 
-                request.paymentStatus === 'Paid' 
-                  ? 'bg-green-600 hover:bg-green-700' 
-                  : 'bg-gray-400 hover:bg-gray-500'
-              ]"
-            >
-              {{ request.paymentStatus }}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div class="flex-shrink-0 flex flex-col md:flex-row md:items-center gap-2 ml-4">
-        <button 
-          @click="handleProcessingDetails(request.id)"
-          class="px-3 py-1 text-sm text-blue-600 hover:underline"
-        >
-          Processing Details
-        </button>
-        <button 
-          @click="handleViewDocument(request.id)"
-          class="flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-md shadow-sm hover:bg-blue-700"
-        >
-          View Document
-        </button>
-        <button 
-          @click="handleReject(request.id)"
-          class="px-3 py-2 text-sm font-medium bg-white border rounded-md text-[#DC0000] border-[#DC0000] hover:bg-red-50"
-        >
-          Reject
-        </button>
-        <button 
-          @click="handleApprove(request.id)"
-          :disabled="request.paymentStatus !== 'Paid'"
-          class="px-3 py-2 text-sm font-medium bg-white border rounded-md text-[#119500] border-[#119500] hover:bg-green-50"
-          :class="{ 'opacity-50 cursor-not-allowed': request.paymentStatus !== 'Paid' }"
-        >
-          Approve
-        </button>
-      </div>
-    </div>
+    <RequestCard
+      v-for="request in filteredRequests"
+      :key="request.id"
+      :id="request.id"
+      :type="request.type"
+      :status="request.status"
+      :request-type="request.requestType"
+      :requester="request.requester"
+      :rfid-no="request.rfidNo"
+      :requested-on="request.requestedOn"
+      :amount="request.amount"
+      :is-paid="request.isPaid"
+      :is-selected="selectedRequests.has(request.id)"
+      @button-click="handleButtonClick"
+      @update:is-paid="(value) => handlePaymentUpdate(request.id, value)"
+      @update:selected="(value) => handleSelectionUpdate(request.id, value)"
+    />
   </div>
 </template>
