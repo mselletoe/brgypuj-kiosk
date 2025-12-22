@@ -26,7 +26,7 @@ import Auth from '@/views/Auth.vue'
 import CreateAccount from '@/views/CreateAccount.vue'
 import EquipmentManagement from '@/views/equipment/EquipmentManagement.vue'
 import SystemSettings from '@/views/settings/SystemSettings.vue'
-import EquipmentRequest from '@/views/requests/equipment-requests/EquipmentRequest.vue' 
+import EquipmentRequests from '@/views/requests/equipment-requests/EquipmentRequest.vue' 
 import FeedbackAndReports from '@/views/feedback-and-reports/FeedbackAndReports.vue'
 
 const routes = [
@@ -57,8 +57,8 @@ const routes = [
       },
       { 
         path: 'equipment-requests/:status?', 
-        name: 'EquipmentRequest', 
-        component: EquipmentRequest,
+        name: 'EquipmentRequests', 
+        component: EquipmentRequests,
         props: true 
       },
       { 

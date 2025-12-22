@@ -71,7 +71,6 @@ const handleFilter = () => console.log('Filter clicked');
 
 <template>
   <div class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden">
-    
     <div class="flex justify-between items-center mb-4">
       <PageTitle title="Document Requests" />
       

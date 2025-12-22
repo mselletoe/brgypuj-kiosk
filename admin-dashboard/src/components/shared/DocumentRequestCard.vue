@@ -219,7 +219,7 @@ const handleButtonClick = (buttonId, btn) => {
         />
       </div>
 
-      <div v-if="type === 'document' || amount" class="flex items-center gap-3">
+      <div v-if="amount" class="flex items-center gap-3">
         <button
           v-if="status === 'pending'"
           @click="handleButtonClick('payment')"

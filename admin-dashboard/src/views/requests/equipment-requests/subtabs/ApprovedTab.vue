@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import api from '@/api/api'
 import EquipmentRequestCard from '@/components/shared/EquipmentRequestCard.vue'
 import ConfirmModal from '@/components/shared/ConfirmationModal.vue'
+import SendSMSModal from '@/components/shared/SendSMSModal.vue'
 
 // --- PROPS ---
 const props = defineProps({
@@ -13,13 +14,15 @@ const props = defineProps({
 })
 
 // --- REFS ---
-const pendingRequests = ref([])
+const approvedRequests = ref([])
 const isLoading = ref(true)
 const errorMessage = ref(null)
 const selectedRequests = ref(new Set())
 const showConfirmModal = ref(false)
 const confirmTitle = ref('Are you sure?')
 const confirmAction = ref(null)
+const showSMSModal = ref(false)
+const selectedRequest = ref(null)
 
 const openConfirmModal = (title, action) => {
   confirmTitle.value = title
@@ -44,16 +47,6 @@ const handleCancel = () => {
 const formatRequestDate = (isoDate) => {
   if (!isoDate) return "N/A"
   const date = new Date(isoDate)
-  const now = new Date()
-  const diffMs = now - date
-  const diffSec = Math.floor(diffMs / 1000)
-  const diffMin = Math.floor(diffSec / 60)
-  const diffHour = Math.floor(diffMin / 60)
-
-  if (diffMin < 1) return `${diffSec} seconds ago`
-  if (diffHour < 1) return `${diffMin} minutes ago`
-  if (diffHour < 24) return `${diffHour} hours ago`
-
   return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
 }
 
@@ -63,15 +56,15 @@ const formatDate = (isoDate) => {
   return date.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' })
 }
 
-// --- FETCH PENDING REQUESTS ---
-const fetchPendingRequests = async () => {
+// --- FETCH APPROVED REQUESTS ---
+const fetchApprovedRequests = async () => {
   try {
     const response = await api.get('/requests')
-    pendingRequests.value = response.data
-      .filter(req => req.status === 'pending')
+    approvedRequests.value = response.data
+      .filter(req => req.status === 'approved')
       .map(req => ({
         id: req.id.toString(),
-        status: 'pending',
+        status: 'approved',
         requestType: req.equipment_name || 'Unknown Equipment',
         requester: {
           firstName: req.requester_name?.split(' ')[0] || '',
@@ -87,11 +80,13 @@ const fetchPendingRequests = async () => {
         amount: req.price ? req.price.toFixed(2) : null,
         isPaid: req.payment_status === 'Paid',
         residentId: req.resident_id,
+        phoneNumber: req.phone_number || null,
+        borrowerName: req.requester_name || 'Guest',
         rawData: req
       }))
   } catch (error) {
     console.error('Error fetching requests:', error)
-    errorMessage.value = 'Failed to load pending requests.'
+    errorMessage.value = 'Failed to load approved requests.'
   } finally {
     isLoading.value = false
   }
@@ -105,6 +100,26 @@ const deselectAll = () => {
   selectedRequests.value.clear()
 }
 
+const bulkUndo = () => {
+  if (selectedRequests.value.size === 0) return
+
+  openConfirmModal(
+    `Undo ${selectedRequests.value.size} selected requests back to pending?`,
+    async () => {
+      try {
+        const ids = Array.from(selectedRequests.value)
+        await Promise.all(ids.map(id => api.put(`/requests/${id}/status`, { status_name: 'pending' })))
+        approvedRequests.value = approvedRequests.value.filter(
+          req => !selectedRequests.value.has(req.id)
+        )
+        selectedRequests.value.clear()
+      } catch (e) {
+        console.error(e)
+      }
+    }
+  )
+}
+
 const bulkDelete = () => {
   if (selectedRequests.value.size === 0) return
 
@@ -114,7 +129,7 @@ const bulkDelete = () => {
       try {
         const ids = Array.from(selectedRequests.value)
         await Promise.all(ids.map(id => api.delete(`/requests/${id}`)))
-        pendingRequests.value = pendingRequests.value.filter(
+        approvedRequests.value = approvedRequests.value.filter(
           req => !selectedRequests.value.has(req.id)
         )
         selectedRequests.value.clear()
@@ -131,29 +146,31 @@ defineExpose({
   totalCount: computed(() => filteredRequests.value.length),
   selectAll,
   deselectAll,
+  bulkUndo,
   bulkDelete
 })
 
 // --- HANDLE BUTTON CLICK ---
 const handleButtonClick = async ({ action, requestId, status }) => {
-  const request = pendingRequests.value.find(r => r.id === requestId)
+  const request = approvedRequests.value.find(r => r.id === requestId)
   if (!request) return
 
   try {
     switch (action) {
       case 'details':
         console.log(`Opening details for request ${requestId}`)
-        // TODO: Implement details modal
         break
       case 'notes':
         console.log(`Opening notes for request ${requestId}`)
-        // TODO: Implement notes modal
         break
-      case 'approve':
-        await handleApprove(requestId)
+      case 'notify':
+        handleSendSMS(requestId)
         break
-      case 'reject':
-        await handleReject(requestId)
+      case 'release':
+        await handleRelease(requestId)
+        break
+      case 'undo':
+        await handleUndo(requestId)
         break
       case 'delete':
         await handleDelete(requestId)
@@ -166,30 +183,55 @@ const handleButtonClick = async ({ action, requestId, status }) => {
   }
 }
 
-// --- APPROVE REQUEST ---
-const handleApprove = async (id) => {
-  const request = pendingRequests.value.find(r => r.id === id)
-  
-  if (request && !request.isPaid && request.amount) {
-    return // Button should be disabled, but double check
-  }
-
-  try {
-    await api.put(`/requests/${id}/status`, { status_name: 'approved' })
-    pendingRequests.value = pendingRequests.value.filter(req => req.id !== id)
-  } catch (error) {
-    console.error('Error approving request:', error)
+// --- SEND SMS ---
+const handleSendSMS = (requestId) => {
+  const request = approvedRequests.value.find(r => r.id === requestId)
+  if (request) {
+    selectedRequest.value = request
+    showSMSModal.value = true
   }
 }
 
-// --- REJECT REQUEST ---
-const handleReject = async (id) => {
+const handleSMSSubmit = async (smsData) => {
   try {
-    await api.put(`/requests/${id}/status`, { status_name: 'rejected' })
-    pendingRequests.value = pendingRequests.value.filter(req => req.id !== id)
+    const response = await api.post('/sms/send', {
+      requestId: selectedRequest.value.id,
+      phone: smsData.phone,
+      message: smsData.message
+    })
+
+    if (response.data.success) {
+      console.log('SMS sent successfully')
+    }
   } catch (error) {
-    console.error('Error rejecting request:', error)
+    console.error('SMS error:', error)
+    throw error
   }
+}
+
+// --- RELEASE REQUEST ---
+const handleRelease = async (id) => {
+  try {
+    await api.put(`/requests/${id}/status`, { status_name: 'pickedup' })
+    approvedRequests.value = approvedRequests.value.filter(req => req.id !== id)
+  } catch (error) {
+    console.error('Error releasing request:', error)
+  }
+}
+
+// --- UNDO REQUEST ---
+const handleUndo = (id) => {
+  openConfirmModal(
+    'Move this request back to pending?',
+    async () => {
+      try {
+        await api.put(`/requests/${id}/status`, { status_name: 'pending' })
+        approvedRequests.value = approvedRequests.value.filter(req => req.id !== id)
+      } catch (error) {
+        console.error('Error undoing request:', error)
+      }
+    }
+  )
 }
 
 // --- DELETE REQUEST ---
@@ -199,26 +241,12 @@ const handleDelete = (id) => {
     async () => {
       try {
         await api.delete(`/requests/${id}`)
-        pendingRequests.value = pendingRequests.value.filter(req => req.id !== id)
+        approvedRequests.value = approvedRequests.value.filter(req => req.id !== id)
       } catch (error) {
         console.error('Error deleting request:', error)
       }
     }
   )
-}
-
-// --- TOGGLE PAYMENT STATUS ---
-const handlePaymentUpdate = async (requestId, newPaidStatus) => {
-  const request = pendingRequests.value.find(r => r.id === requestId)
-  if (!request) return
-
-  try {
-    const newStatus = newPaidStatus ? 'Paid' : 'Unpaid'
-    await api.put(`/requests/${requestId}/payment`, { payment_status: newStatus })
-    request.isPaid = newPaidStatus
-  } catch (error) {
-    console.error('Error toggling payment status:', error)
-  }
 }
 
 // --- HANDLE SELECTION ---
@@ -231,14 +259,14 @@ const handleSelectionUpdate = (requestId, isSelected) => {
 }
 
 // --- Load on mount ---
-onMounted(fetchPendingRequests)
+onMounted(fetchApprovedRequests)
 
 // --- COMPUTED: Search Filter ---
 const filteredRequests = computed(() => {
-  if (!props.searchQuery) return pendingRequests.value
+  if (!props.searchQuery) return approvedRequests.value
 
   const lowerQuery = props.searchQuery.toLowerCase().trim()
-  return pendingRequests.value.filter(req =>
+  return approvedRequests.value.filter(req =>
     req.requester.firstName.toLowerCase().includes(lowerQuery) ||
     req.requester.surname.toLowerCase().includes(lowerQuery) ||
     req.requestType.toLowerCase().includes(lowerQuery) ||
@@ -255,7 +283,7 @@ const filteredRequests = computed(() => {
       v-if="isLoading" 
       class="text-center p-10 text-gray-500"
     >
-      <p>Loading pending requests...</p>
+      <p>Loading approved requests...</p>
     </div>
 
     <div 
@@ -269,10 +297,10 @@ const filteredRequests = computed(() => {
       v-else-if="filteredRequests.length === 0" 
       class="text-center p-10 text-gray-500"
     >
-      <h3 class="text-lg font-medium text-gray-700">No Pending Requests</h3>
+      <h3 class="text-lg font-medium text-gray-700">No Approved Requests</h3>
       <p class="text-gray-500">
         <span v-if="searchQuery">No requests match your search.</span>
-        <span v-else>All pending requests have been processed.</span>
+        <span v-else>All approved requests have been processed.</span>
       </p>
     </div>
 
@@ -290,7 +318,6 @@ const filteredRequests = computed(() => {
       :is-paid="request.isPaid"
       :is-selected="selectedRequests.has(request.id)"
       @button-click="handleButtonClick"
-      @update:is-paid="(value) => handlePaymentUpdate(request.id, value)"
       @update:selected="(value) => handleSelectionUpdate(request.id, value)"
     />
   </div>
@@ -302,5 +329,13 @@ const filteredRequests = computed(() => {
     cancel-text="Cancel"
     @confirm="handleConfirm"
     @cancel="handleCancel"
+  />
+
+  <SendSMSModal
+    v-model:show="showSMSModal"
+    :recipient-name="selectedRequest?.borrowerName"
+    :recipient-phone="selectedRequest?.phoneNumber"
+    :default-message="`Your ${selectedRequest?.requestType} is approved and ready for pickup.`"
+    @send="handleSMSSubmit"
   />
 </template>

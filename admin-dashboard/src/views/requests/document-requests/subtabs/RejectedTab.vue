@@ -1,7 +1,8 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import api from '@/api/api'
-import RequestCard from '@/components/shared/RequestCard.vue'
+import RequestCard from '@/components/shared/DocumentRequestCard.vue'
+import ConfirmModal from '@/components/shared/ConfirmationModal.vue'
 
 // --- PROPS ---
 const props = defineProps({
@@ -16,6 +17,28 @@ const rejectedRequests = ref([])
 const isLoading = ref(true)
 const errorMessage = ref(null)
 const selectedRequests = ref(new Set())
+const showConfirmModal = ref(false)
+const confirmTitle = ref('Are you sure?')
+const confirmAction = ref(null)
+
+const openConfirmModal = (title, action) => {
+  confirmTitle.value = title
+  confirmAction.value = action
+  showConfirmModal.value = true
+}
+
+const handleConfirm = async () => {
+  if (confirmAction.value) {
+    await confirmAction.value()
+  }
+  showConfirmModal.value = false
+  confirmAction.value = null
+}
+
+const handleCancel = () => {
+  showConfirmModal.value = false
+  confirmAction.value = null
+}
 
 // --- HELPERS ---
 const formatRequestDate = (isoDate) => {
@@ -73,32 +96,44 @@ const deselectAll = () => {
   selectedRequests.value.clear()
 }
 
-const bulkUndo = async () => {
+const bulkUndo = () => {
   if (selectedRequests.value.size === 0) return
-  try {
-    const ids = Array.from(selectedRequests.value)
-    await Promise.all(ids.map(id => api.put(`/requests/${id}/status`, { status_name: 'pending' })))
-    
-    approvedRequests.value = approvedRequests.value.filter(req => !selectedRequests.value.has(req.id))
-    selectedRequests.value.clear()
-  } catch (e) { 
-    console.error('Bulk undo failed:', e) 
-  }
+
+  openConfirmModal(
+    `Undo ${selectedRequests.value.size} selected requests back to pending?`,
+    async () => {
+      try {
+        const ids = Array.from(selectedRequests.value)
+        await Promise.all(ids.map(id => api.put(`/requests/${id}/status`, { status_name: 'pending' })))
+        approvedRequests.value = approvedRequests.value.filter(
+          req => !selectedRequests.value.has(req.id)
+        )
+        selectedRequests.value.clear()
+      } catch (e) {
+        console.error(e)
+      }
+    }
+  )
 }
 
-const bulkDelete = async () => {
+const bulkDelete = () => {
   if (selectedRequests.value.size === 0) return
-  if (!confirm(`Are you sure you want to delete ${selectedRequests.value.size} items?`)) return
-  
-  try {
-    const ids = Array.from(selectedRequests.value)
-    await Promise.all(ids.map(id => api.delete(`/requests/${id}`)))
-    
-    approvedRequests.value = approvedRequests.value.filter(req => !selectedRequests.value.has(req.id))
-    selectedRequests.value.clear()
-  } catch (e) { 
-    console.error('Bulk delete failed:', e) 
-  }
+
+  openConfirmModal(
+    `Delete ${selectedRequests.value.size} selected requests?`,
+    async () => {
+      try {
+        const ids = Array.from(selectedRequests.value)
+        await Promise.all(ids.map(id => api.delete(`/requests/${id}`)))
+        pendingRequests.value = pendingRequests.value.filter(
+          req => !selectedRequests.value.has(req.id)
+        )
+        selectedRequests.value.clear()
+      } catch (e) {
+        console.error(e)
+      }
+    }
+  )
 }
 
 // EXPOSE TO PARENT (DocumentRequest.vue)
@@ -158,27 +193,33 @@ const handleViewDocument = async (id) => {
 }
 
 // --- DELETE REQUEST ---
-const handleDelete = async (id) => {
-  if (!confirm('Are you sure you want to delete this request?')) return
-  
-  try {
-    await api.delete(`/requests/${id}`)
-    rejectedRequests.value = rejectedRequests.value.filter(req => req.id !== id)
-  } catch (error) {
-    console.error('Error deleting request:', error)
-  }
+const handleDelete = (id) => {
+  openConfirmModal(
+    'Are you sure you want to delete this request?',
+    async () => {
+      try {
+        await api.delete(`/requests/${id}`)
+        pendingRequests.value = pendingRequests.value.filter(req => req.id !== id)
+      } catch (error) {
+        console.error('Error deleting request:', error)
+      }
+    }
+  )
 }
 
 // --- UNDO (BACK TO PENDING FOR REVIEW) ---
-const handleUndo = async (id) => {
-  try {
-    await api.put(`/requests/${id}/status`, { status_name: 'pending' })
-    rejectedRequests.value = rejectedRequests.value.filter(req => req.id !== id)
-    console.log(`Request ${id} moved back to pending for review`)
-  } catch (error) {
-    console.error('Error moving request back to pending:', error)
-    errorMessage.value = 'Failed to move request back to pending.'
-  }
+const handleUndo = (id) => {
+  openConfirmModal(
+    'Move this request back to pending?',
+    async () => {
+      try {
+        await api.put(`/requests/${id}/status`, { status_name: 'pending' })
+        returnedRequests.value = returnedRequests.value.filter(req => req.id !== id)
+      } catch (error) {
+        console.error('Error undoing request:', error)
+      }
+    }
+  )
 }
 
 // --- HANDLE SELECTION ---
@@ -253,4 +294,13 @@ const filteredRequests = computed(() => {
       @update:selected="(value) => handleSelectionUpdate(request.id, value)"
     />
   </div>
+
+  <ConfirmModal
+    :show="showConfirmModal"
+    :title="confirmTitle"
+    confirm-text="Yes"
+    cancel-text="Cancel"
+    @confirm="handleConfirm"
+    @cancel="handleCancel"
+  />
 </template>
