@@ -5,9 +5,8 @@ import { NTabs, NTabPane } from 'naive-ui';
 import { 
   BarsArrowUpIcon, 
   FunnelIcon, 
-  ArrowPathIcon, 
-  TrashIcon, 
-  MinusCircleIcon 
+  ArrowUturnLeftIcon, 
+  TrashIcon
 } from '@heroicons/vue/24/outline';
 
 import PageTitle from '@/components/shared/PageTitle.vue';
@@ -66,18 +65,14 @@ const currentTabComponent = computed(() => {
   return tabMap[activeTab.value] || PendingTab;
 });
 
-// Button Actions
 const handleSort = () => console.log('Sort clicked');
 const handleFilter = () => console.log('Filter clicked');
-const handleReset = () => console.log('Reset clicked');
-const handleDelete = () => console.log('Delete clicked');
-const handleMinimize = () => console.log('Minimize clicked');
 </script>
 
 <template>
-  <div class="p-6 bg-white rounded-md w-full h-full space-y-3 overflow-hidden">
+  <div class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden">
     
-    <div class="flex justify-between items-center">
+    <div class="flex justify-between items-center mb-4">
       <PageTitle title="Document Requests" />
       
       <div class="flex items-center space-x-2">
@@ -101,7 +96,7 @@ const handleMinimize = () => console.log('Minimize clicked');
           ]"
           class="p-2 border border-orange-400 rounded-lg transition-colors"
         >
-          <ArrowPathIcon class="w-5 h-5 text-orange-500" />
+          <ArrowUturnLeftIcon class="w-5 h-5 text-orange-500" />
         </button>
 
         <button 
@@ -155,7 +150,7 @@ const handleMinimize = () => console.log('Minimize clicked');
       </div>
     </div>
 
-    <div class="overflow-y-auto h-[calc(100vh-260px)] pr-2 pb-3">
+    <div class="overflow-y-auto h-[calc(100vh-260px)] pr-2 pt-2">
       <keep-alive>
         <component 
           :is="currentTabComponent" 

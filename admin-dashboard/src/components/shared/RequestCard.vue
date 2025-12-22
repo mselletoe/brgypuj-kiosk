@@ -75,41 +75,41 @@ const buttonConfigs = {
       { id: 'notes', label: 'Notes', variant: 'gray' },
       { id: 'notify', label: 'Notify', variant: 'solidgreen' },
       { id: 'release', label: 'Release', variant: 'green' },
-      { id: 'delete', label: '', icon: TrashIcon, variant: 'delete' },
-      { id: 'undo', label: '', icon: ArrowUturnLeftIcon, variant: 'gray' }
+      { id: 'undo', label: '', icon: ArrowUturnLeftIcon, variant: 'undo' },
+      { id: 'delete', label: '', icon: TrashIcon, variant: 'delete' }
     ],
     rfid: [
       { id: 'notes', label: 'Notes', variant: 'gray' },
       { id: 'notify', label: 'Notify', variant: 'solidgreen' },
       { id: 'release', label: 'Release', variant: 'green' },
-      { id: 'delete', label: '', icon: TrashIcon, variant: 'delete' },
-      { id: 'undo', label: '', icon: ArrowUturnLeftIcon, variant: 'gray' }
+      { id: 'undo', label: '', icon: ArrowUturnLeftIcon, variant: 'undo' },
+      { id: 'delete', label: '', icon: TrashIcon, variant: 'delete' }
     ]
   },
   released: {
     document: [
       { id: 'view', label: 'View File', variant: 'primary' },
       { id: 'notes', label: 'Notes', variant: 'gray' },
-      { id: 'delete', label: '', icon: TrashIcon, variant: 'delete' },
-      { id: 'undo', label: '', icon: ArrowUturnLeftIcon, variant: 'gray' }
+      { id: 'undo', label: '', icon: ArrowUturnLeftIcon, variant: 'undo' },
+      { id: 'delete', label: '', icon: TrashIcon, variant: 'delete' }
     ],
     rfid: [
       { id: 'notes', label: 'Notes', variant: 'gray' },
-      { id: 'delete', label: '', icon: TrashIcon, variant: 'delete' },
-      { id: 'undo', label: '', icon: ArrowUturnLeftIcon, variant: 'gray' }
+      { id: 'undo', label: '', icon: ArrowUturnLeftIcon, variant: 'undo' },
+      { id: 'delete', label: '', icon: TrashIcon, variant: 'delete' }
     ]
   },
   rejected: {
     document: [
       { id: 'view', label: 'View File', variant: 'primary' },
       { id: 'notes', label: 'Notes', variant: 'gray' },
-      { id: 'delete', label: '', icon: TrashIcon, variant: 'delete' },
-      { id: 'undo', label: '', icon: ArrowUturnLeftIcon, variant: 'gray' }
+      { id: 'undo', label: '', icon: ArrowUturnLeftIcon, variant: 'undo' },
+      { id: 'delete', label: '', icon: TrashIcon, variant: 'delete' }
     ],
     rfid: [
       { id: 'notes', label: 'Notes', variant: 'gray' },
-      { id: 'delete', label: '', icon: TrashIcon, variant: 'delete' },
-      { id: 'undo', label: '', icon: ArrowUturnLeftIcon, variant: 'gray' }
+      { id: 'undo', label: '', icon: ArrowUturnLeftIcon, variant: 'undo' },
+      { id: 'delete', label: '', icon: TrashIcon, variant: 'delete' }
     ]
   }
 };
@@ -138,7 +138,8 @@ const getButtonClass = (btn) => {
     green: 'bg-white text-green-600 border border-[#09AA44] hover:bg-green-50',
     solidgreen: 'bg-[#09AA44] text-white hover:bg-green-90',
     red: 'bg-white text-red-600 border border-[#FF2B3A] hover:bg-red-50',
-    delete: 'bg-white text-[#B1202A] border border-[#FBBABA] hover:bg-[#FFE6E6]'
+    delete: 'bg-white text-[#B1202A] border border-[#FBBABA] hover:bg-[#FFE6E6]',
+    undo: 'bg-white text-orange-500 border border-orange-400 hover:bg-orange-50'
   };
   
   return `${baseClasses} ${variantClasses[btn.variant] || variantClasses.secondary}`;
@@ -165,8 +166,11 @@ const handleButtonClick = (buttonId, btn) => {
 
 <template>
   <div 
-    class="bg-white rounded-lg border-l-[6px] border border-[#CCCCCC] p-5 flex items-start gap-4 transition-all relative"
-    :class="accentColorClass"
+    class="rounded-lg border-l-[6px] border p-5 flex items-start gap-4 transition-all relative"
+    :class="[
+      accentColorClass,
+      isSelected ? 'border-[#0957FF] ring-1 ring-[#0957FF]/10 shadow-sm bg-[#F0F5FF]' : 'border-[#CCCCCC] bg-white'
+    ]"
   >
     <div class="flex flex-col items-center justify-center space-y-1">
       <div class="flex justify-center bg-[#F0F5FF] border border-[#D4DFF6] rounded px-4 py-1 min-w-[90px]">
@@ -246,7 +250,7 @@ const handleButtonClick = (buttonId, btn) => {
           :disabled="isButtonDisabled(btn)"
           :class="[
             getButtonClass(btn),
-            btn.id === 'delete' ? 'w-9 px-0' : 'px-4'
+            ['delete', 'undo'].includes(btn.id) ? 'w-9 px-0' : 'px-4'
           ]"
           class="h-9 rounded-md text-sm font-semibold transition-all flex items-center justify-center"
         >

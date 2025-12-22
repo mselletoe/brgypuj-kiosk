@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import api from '@/api/api'
 import RequestCard from '@/components/shared/RequestCard.vue'
+import ConfirmModal from '@/components/shared/ConfirmationModal.vue'
 
 // --- PROPS ---
 const props = defineProps({
@@ -16,6 +17,28 @@ const pendingRequests = ref([])
 const isLoading = ref(true)
 const errorMessage = ref(null)
 const selectedRequests = ref(new Set())
+const showConfirmModal = ref(false)
+const confirmTitle = ref('Are you sure?')
+const confirmAction = ref(null)
+
+const openConfirmModal = (title, action) => {
+  confirmTitle.value = title
+  confirmAction.value = action
+  showConfirmModal.value = true
+}
+
+const handleConfirm = async () => {
+  if (confirmAction.value) {
+    await confirmAction.value()
+  }
+  showConfirmModal.value = false
+  confirmAction.value = null
+}
+
+const handleCancel = () => {
+  showConfirmModal.value = false
+  confirmAction.value = null
+}
 
 // --- HELPERS ---
 const formatRequestDate = (isoDate) => {
@@ -73,16 +96,24 @@ const deselectAll = () => {
   selectedRequests.value.clear()
 }
 
-const bulkDelete = async () => {
+const bulkDelete = () => {
   if (selectedRequests.value.size === 0) return
-  if (!confirm(`Are you sure you want to delete ${selectedRequests.value.size} items?`)) return
-  
-  try {
-    const ids = Array.from(selectedRequests.value)
-    await Promise.all(ids.map(id => api.delete(`/requests/${id}`)))
-    pendingRequests.value = pendingRequests.value.filter(req => !selectedRequests.value.has(req.id))
-    selectedRequests.value.clear()
-  } catch (e) { console.error(e) }
+
+  openConfirmModal(
+    `Delete ${selectedRequests.value.size} selected requests?`,
+    async () => {
+      try {
+        const ids = Array.from(selectedRequests.value)
+        await Promise.all(ids.map(id => api.delete(`/requests/${id}`)))
+        pendingRequests.value = pendingRequests.value.filter(
+          req => !selectedRequests.value.has(req.id)
+        )
+        selectedRequests.value.clear()
+      } catch (e) {
+        console.error(e)
+      }
+    }
+  )
 }
 
 // EXPOSE THESE TO THE PARENT
@@ -164,15 +195,18 @@ const handleReject = async (id) => {
 }
 
 // --- DELETE REQUEST ---
-const handleDelete = async (id) => {
-  if (!confirm('Are you sure you want to delete this request?')) return
-  
-  try {
-    await api.delete(`/requests/${id}`)
-    pendingRequests.value = pendingRequests.value.filter(req => req.id !== id)
-  } catch (error) {
-    console.error('Error deleting request:', error)
-  }
+const handleDelete = (id) => {
+  openConfirmModal(
+    'Are you sure you want to delete this request?',
+    async () => {
+      try {
+        await api.delete(`/requests/${id}`)
+        pendingRequests.value = pendingRequests.value.filter(req => req.id !== id)
+      } catch (error) {
+        console.error('Error deleting request:', error)
+      }
+    }
+  )
 }
 
 // --- TOGGLE PAYMENT STATUS ---
@@ -262,4 +296,13 @@ const filteredRequests = computed(() => {
       @update:selected="(value) => handleSelectionUpdate(request.id, value)"
     />
   </div>
+
+  <ConfirmModal
+    :show="showConfirmModal"
+    :title="confirmTitle"
+    confirm-text="Yes"
+    cancel-text="Cancel"
+    @confirm="handleConfirm"
+    @cancel="handleCancel"
+  />
 </template>
