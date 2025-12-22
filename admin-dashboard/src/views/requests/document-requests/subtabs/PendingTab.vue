@@ -65,6 +65,35 @@ const fetchPendingRequests = async () => {
   }
 }
 
+const selectAll = () => {
+  selectedRequests.value = new Set(filteredRequests.value.map(r => r.id))
+}
+
+const deselectAll = () => {
+  selectedRequests.value.clear()
+}
+
+const bulkDelete = async () => {
+  if (selectedRequests.value.size === 0) return
+  if (!confirm(`Are you sure you want to delete ${selectedRequests.value.size} items?`)) return
+  
+  try {
+    const ids = Array.from(selectedRequests.value)
+    await Promise.all(ids.map(id => api.delete(`/requests/${id}`)))
+    pendingRequests.value = pendingRequests.value.filter(req => !selectedRequests.value.has(req.id))
+    selectedRequests.value.clear()
+  } catch (e) { console.error(e) }
+}
+
+// EXPOSE THESE TO THE PARENT
+defineExpose({
+  selectedCount: computed(() => selectedRequests.value.size),
+  totalCount: computed(() => filteredRequests.value.length),
+  selectAll,
+  deselectAll,
+  bulkDelete
+})
+
 // --- HANDLE BUTTON CLICK ---
 const handleButtonClick = async ({ action, requestId, type, status }) => {
   const request = pendingRequests.value.find(r => r.id === requestId)

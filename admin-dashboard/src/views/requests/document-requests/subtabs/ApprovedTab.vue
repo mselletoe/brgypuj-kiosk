@@ -55,6 +55,52 @@ const fetchApprovedRequests = async () => {
   }
 }
 
+const selectAll = () => {
+  selectedRequests.value = new Set(filteredRequests.value.map(r => r.id))
+}
+
+const deselectAll = () => {
+  selectedRequests.value.clear()
+}
+
+const bulkUndo = async () => {
+  if (selectedRequests.value.size === 0) return
+  try {
+    const ids = Array.from(selectedRequests.value)
+    await Promise.all(ids.map(id => api.put(`/requests/${id}/status`, { status_name: 'pending' })))
+    
+    approvedRequests.value = approvedRequests.value.filter(req => !selectedRequests.value.has(req.id))
+    selectedRequests.value.clear()
+  } catch (e) { 
+    console.error('Bulk undo failed:', e) 
+  }
+}
+
+const bulkDelete = async () => {
+  if (selectedRequests.value.size === 0) return
+  if (!confirm(`Are you sure you want to delete ${selectedRequests.value.size} items?`)) return
+  
+  try {
+    const ids = Array.from(selectedRequests.value)
+    await Promise.all(ids.map(id => api.delete(`/requests/${id}`)))
+    
+    approvedRequests.value = approvedRequests.value.filter(req => !selectedRequests.value.has(req.id))
+    selectedRequests.value.clear()
+  } catch (e) { 
+    console.error('Bulk delete failed:', e) 
+  }
+}
+
+// EXPOSE TO PARENT (DocumentRequest.vue)
+defineExpose({
+  selectedCount: computed(() => selectedRequests.value.size),
+  totalCount: computed(() => filteredRequests.value.length),
+  selectAll,
+  deselectAll,
+  bulkUndo,
+  bulkDelete
+})
+
 // --- HANDLE BUTTON CLICK ---
 const handleButtonClick = async ({ action, requestId, type, status }) => {
   const request = approvedRequests.value.find(r => r.id === requestId)
