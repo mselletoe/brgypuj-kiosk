@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import api from '@/api/api'
-import RequestCard from '@/components/shared/DocumentRequestCard.vue'
+import RequestCard from '@/views/requests/document-requests/DocumentRequestCard.vue'
 import ConfirmModal from '@/components/shared/ConfirmationModal.vue'
 
 // --- PROPS ---
