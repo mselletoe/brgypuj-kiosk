@@ -132,9 +132,11 @@ const cancelDelete = () => {
 
 <template>
   <div class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden">
-    <!-- Header -->
-    <div class="flex justify-between items-center mb-4">
-      <PageTitle title="Announcements" />
+    <div class="flex mb-6 items-center justify-between">
+      <div>
+        <PageTitle title="Kiosk Announcements" />
+        <p class="text-sm text-gray-500 mt-1">Create and schedule public notices for the community information kiosks.</p>
+      </div>
       <button
         @click="startCreate"
         class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"

@@ -33,7 +33,7 @@ const menuGroups = [
     title: 'SYSTEM MANAGERS',
     items: [
       { label: 'Document Services', icon: FolderOpenIcon, to: '/document-services' },
-      { label: 'Equipment Inventory', icon: CircleStackIcon, to: '/equipment-management' },
+      { label: 'Equipment Inventory', icon: CircleStackIcon, to: '/equipment-inventory' },
       { label: 'Kiosk Announcements', icon: SpeakerWaveIcon, to: '/kiosk-announcements' },
       { label: 'FAQs Management', icon: QuestionMarkCircleIcon, to: '/faqs' },
       { label: 'Residents Information', icon: UserGroupIcon, to: '/residents' },

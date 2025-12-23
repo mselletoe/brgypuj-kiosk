@@ -18,13 +18,10 @@ import DocumentRequests from '@/views/requests/document-requests/DocumentRequest
 import DocumentServices from '@/views/document-services/DocumentServices.vue'
 import KioskAnnouncements from '@/views/announcements/KioskAnnouncements.vue'
 import SMSAnnouncements from '@/views/announcements/SMSAnnouncements.vue'
-import Appointments from '@/views/Appointments.vue'
-import CommunityFeedback from '@/views/CommunityFeedback.vue'
-import InformationHub from '@/views/InformationHub.vue'
 import Residents from '@/views/Residents.vue'
 import Auth from '@/views/Auth.vue'
 import CreateAccount from '@/views/CreateAccount.vue'
-import EquipmentManagement from '@/views/equipment/EquipmentManagement.vue'
+import EquipmentInventory from '@/views/equipment-inventory/EquipmentInventory.vue'
 import SystemSettings from '@/views/settings/SystemSettings.vue'
 import EquipmentRequests from '@/views/requests/equipment-requests/EquipmentRequest.vue' 
 import FeedbackAndReports from '@/views/feedback-and-reports/FeedbackAndReports.vue'
@@ -70,10 +67,8 @@ const routes = [
       { path: 'document-services', component: DocumentServices },
       { path: 'kiosk-announcements', component: KioskAnnouncements },
       { path: 'sms-announcements', component: SMSAnnouncements },
-      { path: 'appointments', component: Appointments },
-      { path: 'community-feedback', component: CommunityFeedback },
       { path: 'residents', component: Residents },  
-      { path: 'equipment-management', component: EquipmentManagement },
+      { path: 'equipment-inventory', component: EquipmentInventory },
       { path: 'system-settings', component: SystemSettings },
     ]
   }
