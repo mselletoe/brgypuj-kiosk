@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, Boolean, TIMESTAMP, Date
+from sqlalchemy import Column, Integer, String, Text, Boolean, TIMESTAMP, Date, LargeBinary
 from sqlalchemy.sql import func
 from app.db.base import Base
 
@@ -11,6 +11,6 @@ class Announcement(Base):
     event_date = Column(Date, nullable=False)
     event_time = Column(String(32))
     location = Column(String(255), nullable=False)
-    image = Column(String)
-    is_active = Column(Boolean, default=True)
-    created_at = Column(TIMESTAMP, server_default=func.now())
+    image = Column(LargeBinary)
+    is_active = Column(Boolean, nullable=False, server_default="true")
+    created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now())

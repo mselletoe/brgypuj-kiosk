@@ -2,7 +2,7 @@
 -- 1. SEQUENCES & INDEPENDENT TABLES (Parent Tables)
 -- ========================================================
 
-CREATE SEQUENCE IF NOT EXISTS global_transaction_seq;
+CREATE SEQUENCE IF NOT EXISTS global_transaction_seq START 1;
 
 -- ==============================
 -- puroks
@@ -67,8 +67,8 @@ CREATE TABLE IF NOT EXISTS announcements (
     event_time VARCHAR(32),
     location VARCHAR(255) NOT NULL,
     image BYTEA,
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 
@@ -104,7 +104,7 @@ CREATE TABLE IF NOT EXISTS addresses (
 CREATE TABLE IF NOT EXISTS resident_rfid (
     id SERIAL PRIMARY KEY,
     resident_id INTEGER NOT NULL,
-    rfid_uid CHAR(16) UNIQUE NOT NULL,
+    rfid_uid VARCHAR(16) UNIQUE NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
 

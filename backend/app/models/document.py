@@ -1,4 +1,5 @@
-from sqlalchemy import Column, SmallInteger, Integer, String, Text, TIMESTAMP, ForeignKey, Boolean
+from sqlalchemy import Column, SmallInteger, Integer, String, Text, TIMESTAMP, ForeignKey, Boolean, Numeric, LargeBinary, FetchedValue, CheckConstraint, JSON
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.base import Base
@@ -9,10 +10,10 @@ class DocumentType(Base):
     id = Column(SmallInteger, primary_key=True)
     doctype_name = Column(String(255), nullable=False)
     description = Column(Text)
-    price = Column(String, default="0.00")  # can be DECIMAL
-    file = Column(String)  # BYTEA if needed
-    fields = Column(String, default="[]")
-    is_available = Column(Boolean, default=True)
+    price = Column(Numeric(10, 2), server_default="0.00")
+    file = Column(LargeBinary)
+    fields = Column(JSON, server_default="'[]'")
+    is_available = Column(Boolean, nullable=False, server_default="true")
 
     document_requests = relationship("DocumentRequest", back_populates="doctype")
 
@@ -21,15 +22,25 @@ class DocumentRequest(Base):
     __tablename__ = "document_requests"
 
     id = Column(Integer, primary_key=True)
-    transaction_no = Column(String(20), unique=True)
+    transaction_no = Column(String(20), unique=True, nullable=False, server_default=FetchedValue())
     resident_id = Column(Integer, ForeignKey("residents.id", ondelete="CASCADE"), nullable=False)
-    doctype_id = Column(Integer, ForeignKey("document_types.id"))
+    doctype_id = Column(SmallInteger, ForeignKey("document_types.id"), nullable=False)
     processed_by = Column(SmallInteger, ForeignKey("admin.id", ondelete="SET NULL"))
-    status = Column(String(32), default="Pending")
-    payment_status = Column(String(20), default="unpaid")
-    form_data = Column(String)  # JSONB in DB
+    status = Column(
+        String(32), 
+        CheckConstraint("status IN ('Pending', 'Approved', 'Ready', 'Released', 'Rejected')"),
+        nullable=False, 
+        server_default="Pending"
+    )
+    payment_status = Column(
+        String(20), 
+        CheckConstraint("payment_status IN ('unpaid', 'paid')"),
+        nullable=False, 
+        server_default="unpaid"
+    )
+    form_data = Column(JSONB)
     request_file_path = Column(Text)
-    requested_at = Column(TIMESTAMP, server_default=func.now())
+    requested_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now())
 
     resident = relationship("Resident", back_populates="document_requests")
     doctype = relationship("DocumentType", back_populates="document_requests")

@@ -11,8 +11,8 @@ class Admin(Base):
     username = Column(String(255), unique=True, nullable=False)
     password = Column(Text, nullable=False)
     role = Column(String(50), nullable=False)
-    is_active = Column(Boolean, default=True)
-    created_at = Column(TIMESTAMP, server_default=func.current_timestamp())
-
-    resident = relationship("Resident", back_populates="admin_account")
+    is_active = Column(Boolean, nullable=False, server_default="true")
+    created_at = Column(TIMESTAMP, nullable=False, server_default=func.current_timestamp())
+    
+    resident = relationship("Resident", back_populates="admin_accounts")
     document_requests_processed = relationship("DocumentRequest", back_populates="processed_by_admin")
