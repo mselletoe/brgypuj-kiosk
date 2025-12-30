@@ -98,7 +98,7 @@ const handleToggle = () => {
               class="bg-white w-full text-lg font-bold p-2 border border-gray-200 rounded-md focus:border-blue-500 outline-none"
             />
           </div>
-          
+
           <div class="grid grid-cols-2 gap-4">
             <div class="space-y-1">
               <label class="text-[10px] font-bold text-gray-400 uppercase">Total Owned</label>
