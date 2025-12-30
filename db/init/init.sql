@@ -81,7 +81,7 @@ CREATE TABLE IF NOT EXISTS announcements (
 -- ==============================
 CREATE TABLE IF NOT EXISTS addresses (
     id SERIAL PRIMARY KEY,
-    resident_id SMALLINT NOT NULL,
+    resident_id INTEGER NOT NULL,
     house_no_street VARCHAR(255) NOT NULL,
     purok_id SMALLINT NOT NULL,
     barangay VARCHAR(64) DEFAULT 'YourBarangay',
@@ -103,7 +103,7 @@ CREATE TABLE IF NOT EXISTS addresses (
 -- ==============================
 CREATE TABLE IF NOT EXISTS resident_rfid (
     id SERIAL PRIMARY KEY,
-    resident_id SMALLINT NOT NULL,
+    resident_id INTEGER NOT NULL,
     rfid_uid CHAR(16) UNIQUE NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
@@ -118,7 +118,7 @@ CREATE TABLE IF NOT EXISTS resident_rfid (
 -- ==============================
 CREATE TABLE IF NOT EXISTS admin (
     id SMALLSERIAL PRIMARY KEY,
-    resident_id SMALLINT NOT NULL, 
+    resident_id INTEGER NOT NULL, 
     username VARCHAR(255) UNIQUE NOT NULL,
     password TEXT NOT NULL,
     role VARCHAR(50) NOT NULL,
@@ -135,7 +135,7 @@ CREATE TABLE IF NOT EXISTS admin (
 -- ==============================
 CREATE TABLE IF NOT EXISTS feedbacks (
     id SERIAL PRIMARY KEY,
-    resident_id SMALLINT, 
+    resident_id INTEGER, 
     category VARCHAR(50) NOT NULL 
         CHECK (category IN (
             'Service Quality', 
@@ -157,7 +157,7 @@ CREATE TABLE IF NOT EXISTS feedbacks (
 -- ==============================
 CREATE TABLE IF NOT EXISTS rfid_reports (
     id SERIAL PRIMARY KEY,
-    resident_id SMALLINT, 
+    resident_id INTEGER, 
     status VARCHAR(32) DEFAULT 'Pending' 
         CHECK (status IN ('Pending', 'Acknowledged')),
     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -177,7 +177,7 @@ CREATE TABLE IF NOT EXISTS document_requests (
     id SERIAL PRIMARY KEY,
     transaction_no VARCHAR(20) UNIQUE NOT NULL 
         DEFAULT ('DR-' || LPAD(nextval('global_transaction_seq')::text, 5, '0')),
-    resident_id SMALLINT NOT NULL,
+    resident_id INTEGER NOT NULL,
     doctype_id INT NOT NULL,
     processed_by SMALLINT,
     status VARCHAR(32) DEFAULT 'Pending' 
@@ -201,7 +201,7 @@ CREATE TABLE IF NOT EXISTS equipment_requests (
     id SERIAL PRIMARY KEY,
     transaction_no VARCHAR(20) UNIQUE NOT NULL 
         DEFAULT ('ER-' || LPAD(nextval('global_transaction_seq')::text, 5, '0')),
-    resident_id SMALLINT, 
+    resident_id INTEGER, 
     borrower_name VARCHAR(255) NOT NULL,
     contact_person VARCHAR(255),
     contact_number VARCHAR(16),
