@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import ArrowBackButton from '@/components/shared/ArrowBackButton.vue'
-import PrimaryButton from '@/components/shared/PrimaryButton.vue'
+import PrimaryButton from '@/components/shared/Button.vue'
 import { CalendarIcon } from '@heroicons/vue/24/outline'
 import VueDatePicker from '@vuepic/vue-datepicker'
 import '@vuepic/vue-datepicker/dist/main.css'

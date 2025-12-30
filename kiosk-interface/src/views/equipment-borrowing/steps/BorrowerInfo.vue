@@ -2,7 +2,7 @@
 // 1. IMPORT nextTick
 import { ref, computed, onMounted, nextTick } from 'vue';
 import ArrowBackButton from '@/components/shared/ArrowBackButton.vue';
-import PrimaryButton from '@/components/shared/PrimaryButton.vue';
+import PrimaryButton from '@/components/shared/Button.vue';
 import Keyboard from '@/components/shared/Keyboard.vue';
 import { DocumentTextIcon } from '@heroicons/vue/24/outline';
 

@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue';
 import ArrowBackButton from '@/components/shared/ArrowBackButton.vue';
-import PrimaryButton from '@/components/shared/PrimaryButton.vue';
+import PrimaryButton from '@/components/shared/Button.vue';
 import Modal from '@/components/shared/Modal.vue';
 import { MagnifyingGlassIcon } from '@heroicons/vue/24/outline';
 import { useRouter } from 'vue-router';

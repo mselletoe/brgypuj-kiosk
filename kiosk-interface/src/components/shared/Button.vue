@@ -4,7 +4,7 @@ import { computed } from 'vue'
 const props = defineProps({
   variant: {
     type: String,
-    default: 'primary', // primary, outline, secondary, ghost
+    default: 'primary',
   },
   size: {
     type: String,
@@ -37,7 +37,7 @@ const buttonClass = computed(() => {
     'inline-flex items-center justify-center font-bold rounded-xl transition-all duration-200 select-none active:scale-95',
     variants[props.variant] || variants.primary,
     sizes[props.size],
-    props.disabled ? 'opacity-50 cursor-not-allowed active:scale-100' : ''
+    props.disabled ? 'cursor-not-allowed active:scale-100' : ''
   ]
 })
 </script>

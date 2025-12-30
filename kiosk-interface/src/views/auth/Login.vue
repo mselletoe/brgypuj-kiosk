@@ -2,7 +2,7 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { disableTouchToStart } from '@/composables/touchToStart'
-import PrimaryButton from '@/components/shared/PrimaryButton.vue'
+import PrimaryButton from '@/components/shared/Button.vue'
 import { SignalIcon } from '@heroicons/vue/24/solid'
 import { auth } from '@/stores/auth'
 

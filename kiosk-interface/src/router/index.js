@@ -18,7 +18,7 @@ import HelpAndSupport from '@/views/help-and-support/HelpAndSupport.vue'
 import Feedback from '@/views/feedback/Feedback.vue'
 import Rating from '@/views/feedback/Rating.vue'
 import Comments from '@/views/feedback/Comments.vue'
-import Appointments from '@/views/appointments/Appointments.vue'
+import ComponentShowcase from '../components/ComponentShowcase.vue'
 
 const routes = [
   { path: '/', redirect: '/idle' },
@@ -46,8 +46,8 @@ const routes = [
       { path: 'feedback', component: Feedback, meta: { requiresAuth: true } },
       { path: 'rating', component: Rating, meta: { requiresAuth: true } },
       { path: 'comments', component: Comments, meta: { requiresAuth: true } },
-      { path: 'appointments', component: Appointments, meta: { requiresAuth: true } },
-      { path: 'register', component: Register }
+      { path: 'register', component: Register },
+      { path: 'component-showcase', component: ComponentShowcase, meta: { requiresAuth: true } },
     ]
   },
   { path: '/:pathMatch(.*)*', redirect: '/idle' },

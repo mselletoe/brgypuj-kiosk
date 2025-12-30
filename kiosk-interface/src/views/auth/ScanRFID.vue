@@ -2,7 +2,7 @@
 import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { ArrowLeftIcon, SignalIcon } from '@heroicons/vue/24/solid'
-import PrimaryButton from '@/components/shared/PrimaryButton.vue'
+import PrimaryButton from '@/components/shared/Button.vue'
 import api from '@/api/api'
 
 const router = useRouter()

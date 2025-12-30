@@ -5,7 +5,7 @@ import api from '@/api/api'
 import { login } from '@/stores/auth'
 import Keypad from '@/components/shared/Keypad.vue'
 import { EyeIcon, EyeSlashIcon, XCircleIcon, CheckCircleIcon } from '@heroicons/vue/24/outline'
-import PrimaryButton from '@/components/shared/PrimaryButton.vue' 
+import PrimaryButton from '@/components/shared/Button.vue' 
 import { ArrowLeftIcon } from '@heroicons/vue/24/solid' 
 
 const router = useRouter()
