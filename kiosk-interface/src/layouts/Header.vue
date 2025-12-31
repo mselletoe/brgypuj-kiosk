@@ -1,26 +1,54 @@
 <script setup>
+/**
+ * @file Header.vue
+ * @description Global navigation component for the Barangay Kiosk System.
+ * Displays real-time clock, branding, and dynamic user authentication status.
+ * Interacts with the Pinia Auth Store to reflect live user data and handle session termination.
+ */
+
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import '../assets/images/Pob1Logo.svg';
 import '../assets/vectors/Logout.svg';
 
+// --- Component State & Composables ---
 const router = useRouter();
 const authStore = useAuthStore();
+
+/** @type {import('vue').Ref<string>} Reactive string for formatted 12-hour time */
 const currentTime = ref("");
+
+/** @type {import('vue').Ref<string>} Reactive string for the full formatted date */
 const currentDate = ref("");
 
+// --- Computed Properties (Auth State) ---
+
+/** @returns {boolean} True if the current session is in Guest mode */
 const isGuest = computed(() => authStore.isGuest);
+
+/** @returns {string} The name of the authenticated resident or 'Guest' */
 const displayName = computed(() => authStore.userName);
 
+/** @returns {string} Contextual string describing the current auth method for UI feedback */
 const userDetail = computed(() => 
   authStore.isRFID ? "Authenticated via RFID" : "Logged in as Guest User"
 );
 
+// --- Logic & Handlers ---
+
+/**
+ * Manually reloads the application state.
+ * Used as a fallback/reset mechanism for the Kiosk UI.
+ */
 const handleRefresh = () => {
   window.location.reload();
 };
 
+/**
+ * Updates the reactive date and time refs with current system values.
+ * Formats time to 'HH:MM:SS AM/PM' and date to 'Weekday, Month Day, Year'.
+ */
 const updateDateTime = () => {
   const now = new Date();
   currentTime.value = now.toLocaleTimeString([], {
@@ -39,14 +67,26 @@ const updateDateTime = () => {
   });
 };
 
+/** @type {ReturnType<typeof setInterval> | null} Reference to the clock sync timer */
 let interval;
+
+// --- Lifecycle Hooks ---
+
 onMounted(() => {
   updateDateTime();
+  // Start 1-second interval for the real-time clock
   interval = setInterval(updateDateTime, 1000);
 });
 
-onUnmounted(() => clearInterval(interval));
+onUnmounted(() => {
+  // Clear clock interval to prevent background memory leaks
+  if (interval) clearInterval(interval);
+});
 
+/**
+ * Terminates the user session.
+ * Clears global auth state (Pinia + LocalStorage) and redirects to the idle screen.
+ */
 const logout = () => {
   authStore.logout(); //
   router.push('/idle');

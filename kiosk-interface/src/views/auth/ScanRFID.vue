@@ -1,4 +1,11 @@
 <script setup>
+/**
+ * @file ScanRFID.vue
+ * @description Handles the hardware interface for RFID scanning.
+ * Captures keyboard-emulated input from hardware scanners, validates the UID 
+ * against the backend, and manages the routing flow based on the resident's security status (PIN).
+ */
+
 import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { ArrowLeftIcon, SignalIcon } from '@heroicons/vue/24/solid'
@@ -6,14 +13,31 @@ import Button from '@/components/shared/Button.vue'
 import { useAuthStore } from '@/stores/auth'
 import api from '@/api/http'
 
+// --- Component State & Composables ---
 const router = useRouter()
 const authStore = useAuthStore()
+
+/** @type {import('vue').Ref<string>} Reactive binding for the hidden input field */
 const scannedUID = ref('')
+
+/** @type {import('vue').Ref<boolean>} UI state toggle for processing feedback */
 const isProcessing = ref(false)
+
+/** @type {import('vue').Ref<HTMLInputElement|null>} Template ref for the auto-focus input */
 const hiddenInput = ref(null)
+
+/** @type {string} Buffer to accumulate individual keystrokes from the scanner */
 let inputBuffer = ''
+
+/** @type {ReturnType<typeof setTimeout> | null} Timer to clear the buffer on slow/manual input */
 let timeout = null
 
+// --- Logic & Handlers ---
+
+/**
+ * Resets the scanner state, buffer, and input field.
+ * Prepared for subsequent scans or error recovery.
+ */
 const resetScanner = () => {
   isProcessing.value = false
   inputBuffer = ''
@@ -21,16 +45,24 @@ const resetScanner = () => {
   if (hiddenInput.value) hiddenInput.value.value = ''
 }
 
+/**
+ * Communicates with the backend to authenticate the scanned RFID UID.
+ * * @param {string} uid - The unique identifier captured from the RFID card.
+ * @returns {Promise<void>}
+ * @flow 
+ * 1. Request status from backend.
+ * 2. If 'has_pin' is true, move to PIN verification.
+ * 3. If 'has_pin' is false, grant immediate access to home.
+ */
 const authenticateRFID = async (uid) => {
   try {
     isProcessing.value = true
 
-    // 1. Backend Call
     const res = await api.post('kiosk/auth/rfid', { rfid_uid: uid })
     const data = res.data
 
     if (data.has_pin) {
-      // 2. PIN exists: Store temporary data and redirect to PIN page
+      // Residents with security enabled are stored in a temporary state
       authStore.setTemporaryRFIDData({
         resident: {
           id: data.resident_id,
@@ -41,7 +73,7 @@ const authenticateRFID = async (uid) => {
       })
       router.push('/auth-pin')
     } else {
-      // 3. Handle residents with no PIN (Security Policy)
+      // Residents without security are logged in directly
       authStore.setRFID(
         {
           id: data.resident_id,
@@ -50,39 +82,58 @@ const authenticateRFID = async (uid) => {
         },
         uid
       )
-      
       router.replace('/home')
     }
   } catch (err) {
+    // Standard error handling for inactive/unrecognized tags
     alert('Invalid or inactive RFID card.')
     resetScanner()
   }
 }
 
+/**
+ * Global Keyboard Event Listener.
+ * Intercepts keyboard-emulated input from hardware scanners.
+ * * @param {KeyboardEvent} event - The raw keyboard event.
+ */
 const handleRFIDInput = async (event) => {
   if (isProcessing.value) return
+
+  // Scanners typically append an 'Enter' key at the end of a UID string
   if (event.key === 'Enter') {
     const uid = inputBuffer.trim()
     if (uid) await authenticateRFID(uid)
     inputBuffer = ''
-  } else if (/^[0-9A-Za-z]$/.test(event.key)) {
+  } 
+  // Accept alphanumeric characters only to prevent buffer pollution
+  else if (/^[0-9A-Za-z]$/.test(event.key)) {
     inputBuffer += event.key
   }
+  // Clear buffer if scanning takes longer than 200ms 
+  // (Prevents manual typing and ensures input comes from a fast hardware scanner)
   clearTimeout(timeout)
   timeout = setTimeout(() => { inputBuffer = '' }, 200)
 }
 
+/**
+ * Returns user to the primary login selection screen.
+ */
 const goBack = () => {
   router.replace('/login')
 }
 
+// --- Lifecycle Hooks ---
+
+
 onMounted(async () => {
+  // Ensure the hidden input is focused immediately for hardware capture
   await nextTick()
   hiddenInput.value?.focus()
   window.addEventListener('keydown', handleRFIDInput)
 })
 
 onUnmounted(() => {
+  // Cleanup listeners and timers to prevent memory leaks and unexpected behavior
   window.removeEventListener('keydown', handleRFIDInput)
   clearTimeout(timeout)
 })

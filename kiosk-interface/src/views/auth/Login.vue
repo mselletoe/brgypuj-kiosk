@@ -1,4 +1,11 @@
 <script setup>
+/**
+ * @file Login.vue
+ * @description Main entry point for the Kiosk authentication selection. 
+ * Allows users to choose between RFID authentication or Guest access.
+ * Includes an automated session timeout to return the kiosk to the Idle state.
+ */
+
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { disableTouchToStart } from '@/composables/touchToStart'
@@ -6,16 +13,29 @@ import Button from '@/components/shared/Button.vue'
 import { SignalIcon } from '@heroicons/vue/24/solid'
 import { useAuthStore } from '@/stores/auth'
 
+// --- Component State & Composables ---
 const router = useRouter()
 const authStore = useAuthStore()
 
+/** @type {import('vue').Ref<number>} Seconds remaining before auto-redirect */
 const timeLeft = ref(10)
+
+/** @type {ReturnType<typeof setInterval> | null} Reference to the countdown timer */
 let timerInterval = null
+
+/** @type {number} Timestamp used to prevent accidental double-clicks during transition */
 let mountTime = 0
 
+// --- Logic & Handlers ---
+
+/**
+ * Handles navigation to the RFID scanning interface.
+ * Implements a 500ms debounce to prevent "ghost touches" from the Idle screen.
+ */
 const handleRfidLogin = () => {
   const timeSinceMount = Date.now() - mountTime;
 
+  // Prevent immediate execution if triggered too fast after mount
   if (timeSinceMount < 500) {
     return;
   }
@@ -24,11 +44,19 @@ const handleRfidLogin = () => {
   router.push('/login-rfid')
 }
 
+/**
+ * Initializes a Guest session.
+ * Bypasses RFID authentication and sets the global auth mode to 'guest'.
+ */
 const continueAsGuest = () => {
   authStore.setGuest()
   router.replace('/home')
 }
 
+/**
+ * Manages the inactivity countdown.
+ * Automatically redirects the application to the Idle screen if no action is taken.
+ */
 const startCountdown = () => {
   if (timerInterval) clearInterval(timerInterval)
   timeLeft.value = 10
@@ -41,9 +69,15 @@ const startCountdown = () => {
   }, 1000)
 }
 
+/**
+ * Resets the inactivity timer. 
+ * Invoked on user interaction to prevent premature session termination.
+ */
 const resetTimer = () => {
   startCountdown()
 }
+
+// --- Lifecycle Hooks ---
 
 onMounted(() => {
   mountTime = Date.now()
@@ -51,6 +85,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  // Ensure background intervals are cleared to prevent memory leaks
   if (timerInterval) clearInterval(timerInterval)
 })
 </script>

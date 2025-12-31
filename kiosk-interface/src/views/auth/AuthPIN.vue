@@ -1,28 +1,55 @@
 <script setup>
+/**
+ * @file AuthPIN.vue
+ * @description Secure PIN entry interface for resident authentication.
+ * Handles two primary workflows:
+ * 1. Initial PIN Setup: For residents without a registered PIN.
+ * 2. PIN Verification: For standard authenticated access.
+ * Utilizes a temporary global state (Pinia) to bridge data between Scan and Home.
+ */
+
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import Keypad from '@/components/shared/Keypad.vue'
 import { EyeIcon, EyeSlashIcon, XCircleIcon, CheckCircleIcon } from '@heroicons/vue/24/outline'
-import PrimaryButton from '@/components/shared/Button.vue' 
+import Button from '@/components/shared/Button.vue' 
 import { ArrowLeftIcon } from '@heroicons/vue/24/solid' 
-import { useAuthStore } from '@/stores/auth' // Added
-import api from '@/api/http' // Ensure this is correctly imported
+import { useAuthStore } from '@/stores/auth'
+import api from '@/api/http'
 
+// --- Component State & Composables ---
 const router = useRouter()
-const authStore = useAuthStore() // Access the temp data here
+const authStore = useAuthStore()
 
+
+/** @type {import('vue').Ref<boolean>} Visibility toggle for custom toast notifications */
 const showToast = ref(false)
+
+/** @type {import('vue').Ref<string>} Message content for the toast notification */
 const toastMessage = ref('')
+
+/** @type {import('vue').Ref<boolean>} Success/Failure state for toast styling */
 const isSuccess = ref(false)
 
+/** @type {import('vue').Ref<string>} Buffer for the primary 4-digit PIN */
 const pin = ref('')
+
+/** @type {import('vue').Ref<string>} Buffer for PIN confirmation (used during setup only) */
 const confirmPin = ref('')
 
 // Constants
 const PIN_LENGTH = 4
+
+/** @type {import('vue').Ref<boolean>} Toggle for masking/unmasking PIN characters */
 const showPin = ref(false)
 
-// --- Helper to show custom notification ---
+// --- Logic & Helpers ---
+
+/**
+ * Triggers a visual feedback notification (Toast).
+ * @param {string} message - Text to display.
+ * @param {boolean} [success=false] - If true, displays green/check icon; else red/X icon.
+ */
 const triggerToast = (message, success = false) => {
   toastMessage.value = message
   isSuccess.value = success
@@ -30,29 +57,28 @@ const triggerToast = (message, success = false) => {
   setTimeout(() => { showToast.value = false }, 1500)
 }
 
-onMounted(() => {
-  // Security check: If no temporary data exists, user shouldn't be here
-  if (!authStore.tempResident && !authStore.tempUid) {
-    triggerToast('No session found. Please scan again.')
-    setTimeout(() => router.push('/login-rfid'), 1500)
-  }
-})
-
-// --- Keypad Handlers ---
+/**
+ * Keypad Input Handler.
+ * Directs numerical input to either the primary PIN or Confirmation buffer.
+ * @param {string} key - The numerical character pressed on the keypad.
+ */
 const onKeypress = (key) => {
-  // Logic to decide which field to fill if setting a new PIN
   const isSettingPin = !authStore.tempHasPin;
+  // If setting PIN, switch to 'confirmPin' once 'pin' reaches full length
   const targetPin = isSettingPin && pin.value.length === PIN_LENGTH ? confirmPin : pin;
+
   if (targetPin.value.length < PIN_LENGTH) {
     targetPin.value += key;
   }
 }
 
+/** Resets all PIN buffers */
 const onClear = () => {
   pin.value = ''
   confirmPin.value = ''
 }
 
+/** Handles digit deletion with support for confirmation buffer */
 const onBackspace = () => {
   if (!authStore.tempHasPin && confirmPin.value.length > 0) {
     confirmPin.value = confirmPin.value.slice(0, -1);
@@ -61,29 +87,35 @@ const onBackspace = () => {
   }
 }
 
-// --- Computed properties for display ---
+// --- Computed Properties ---
+
+/** @returns {string} Dynamic header title using resident data from store */
 const title = computed(() => {
   const firstName = authStore.tempResident?.first_name || 'Resident'
   return `Welcome, ${firstName}`
 })
 
+/** @returns {string} Contextual instruction based on PIN registration status */
 const subtitle = computed(() => {
   if (!authStore.tempHasPin) return 'Please set your 4-digit PIN'
   return 'Please enter your PIN to continue'
 })
 
+/** @returns {string} Formatted display of the PIN (Masked or Unmasked) */
 const pinDisplay = computed(() => {
   if (pin.value.length === 0) return ''; 
   if (showPin.value) return pin.value;
   return '• '.repeat(pin.value.length).trim();
 });
 
+/** @returns {string} Formatted display of the confirmation PIN (Masked or Unmasked) */
 const confirmPinDisplay = computed(() => {
   if (confirmPin.value.length === 0) return '';
   if (showPin.value) return confirmPin.value;
   return '• '.repeat(confirmPin.value.length).trim();
 });
 
+/** @returns {boolean} True if required buffers are filled according to current mode */
 const isPinComplete = computed(() => {
   if (!authStore.tempHasPin) {
     return pin.value.length === PIN_LENGTH && confirmPin.value.length === PIN_LENGTH;
@@ -91,13 +123,17 @@ const isPinComplete = computed(() => {
   return pin.value.length === PIN_LENGTH;
 });
 
-// --- Submit Logic ---
+
+/**
+ * Final Submission Handler.
+ * Routes to either 'set-pin' or 'verify-pin' endpoints based on store state.
+ */
 const submitPin = async () => {
   if (!isPinComplete.value) return;
 
   try {
+    // WORKFLOW: PIN Registration
     if (!authStore.tempHasPin) {
-      // Logic for Setting a PIN (If has_pin was false)
       if (pin.value !== confirmPin.value) {
         triggerToast('PINs do not match.');
         onClear();
@@ -114,8 +150,9 @@ const submitPin = async () => {
       triggerToast('PIN set successfully!', true)
       setTimeout(() => router.replace('/home'), 1000);
       
-    } else {
-      // Logic for Verifying a PIN (The most common path)
+    }
+    // WORKFLOW: Standard Authentication
+    else {
       const response = await api.post(`/kiosk/auth/verify-pin`, { 
         resident_id: authStore.tempResident.id,
         pin: pin.value
@@ -127,7 +164,7 @@ const submitPin = async () => {
         return;
       }
       
-      authStore.confirmRFIDLogin() // Promotes temp data to active data
+      authStore.confirmRFIDLogin()
       triggerToast('Login successful!', true);
       router.replace('/home');
     }
@@ -138,16 +175,26 @@ const submitPin = async () => {
   }
 }
 
+/** Navigates back to the scanning interface */
 const goBack = () => {
   router.push('/login-rfid');
 }
+
+// --- Lifecycle Hooks ---
+onMounted(() => {
+  // Security Guard: Redirect if no resident data exists in temp store
+  if (!authStore.tempResident && !authStore.tempUid) {
+    triggerToast('No session found. Please scan again.')
+    setTimeout(() => router.push('/login-rfid'), 1500)
+  }
+})
 </script>
 
 <template>
   <div class="h-screen w-screen bg-gradient-to-br from-[#003A6B] to-[#89CFF1] flex justify-center items-center font-poppins">
     <div class="bg-white w-[974px] h-[550px] rounded-lg shadow-2xl relative flex p-10">
       
-      <PrimaryButton 
+      <Button 
         @click="goBack" 
         bgColor="bg-transparent"
         textColor="text-[#013C6D]"
@@ -157,7 +204,7 @@ const goBack = () => {
           <ArrowLeftIcon class="h-5 w-5" />
           Go Back
         </span>
-      </PrimaryButton>
+      </Button>
 
       <div class="w-1/2 flex flex-col text-[#013C6D] pr-12">
         <div class="flex items-center gap-3 mb-10">

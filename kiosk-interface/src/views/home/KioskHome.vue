@@ -1,20 +1,45 @@
 <script setup>
+/**
+ * @file KioskHome.vue
+ * @description Central Dashboard of the Kiosk. 
+ * Provides navigation to various Barangay services. Implements session recovery 
+ * and authentication guards to ensure only authorized users access the dashboard.
+ */
+
 import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import BaseButton from '@/components/shared/Button.vue'
+import Button from '@/components/shared/Button.vue'
 
+// --- Component State & Composables ---
 const router = useRouter()
 const auth = useAuthStore()
 
+// --- Lifecycle Hooks ---
+
 onMounted(() => {
+  /** * Attempt to restore session from LocalStorage (persistance).
+   * This handles page refreshes or unexpected app restarts.
+   */
   auth.restore()
 
+  /**
+   * Authentication Guard:
+   * If no valid session is found after restoration, redirect to the login entry point.
+   */
   if (!auth.isAuthenticated) {
     router.replace('/login')
   }
 })
 
+// --- Navigation Logic ---
+
+/**
+ * Navigates to a specific service route.
+ * Uses 'replace' instead of 'push' for kiosk environments to prevent 
+ * extensive back-stack history accumulation.
+ * @param {string} path - The target route name or path.
+ */
 function goTo(path) {
   router.replace(path)
 }
@@ -92,7 +117,7 @@ function goTo(path) {
       </div>
 
       <div class="mt-8 flex gap-5 w-full">
-        <BaseButton 
+        <Button 
           v-if="!auth.isGuest"
           variant="outline" 
           size="md" 
@@ -100,16 +125,16 @@ function goTo(path) {
           @click="goTo('transactions')"
         >
           Transactions
-        </BaseButton>
+        </Button>
 
-        <BaseButton 
+        <Button 
           variant="outline" 
           size="md" 
           class="flex-1 shadow-[4px_4px_8px_rgba(0,0,0,0.15)]"
           @click="goTo('announcements')"
         >
           Announcements
-        </BaseButton>
+        </Button>
       </div>
     </div>
   </div>

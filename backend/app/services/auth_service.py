@@ -1,7 +1,33 @@
+"""
+Authentication Service Layer
+---------------------------
+Contains the core business logic for resident authentication.
+Separates database query complexity from the API routing layer.
+"""
 from sqlalchemy.orm import Session
 from app.models.resident import Resident, ResidentRFID
 
 def rfid_login(db: Session, rfid_uid: str):
+    """
+    Validates an RFID UID and retrieves the associated Resident profile.
+    
+    This function performs a relational join between the Residents and ResidentRFIDs 
+    tables to ensure the card is both recognized and currently active.
+    
+    Args:
+        db (Session): The active SQLAlchemy database session.
+        rfid_uid (str): The unique hex or decimal string from the RFID hardware.
+        
+    Returns:
+        Optional[Resident]: The Resident model instance with an injected 'has_pin' 
+                           attribute if found and active; otherwise None.
+                           
+    Note:
+        The 'has_pin' attribute is dynamically attached to the Resident object 
+        to assist the frontend in determining the security challenge flow.
+    """
+
+    # Execute a joined query to fetch both Resident details and RFID status in one trip
     result = (
         db.query(Resident, ResidentRFID)
         .join(ResidentRFID, Resident.id == ResidentRFID.resident_id)
@@ -12,11 +38,16 @@ def rfid_login(db: Session, rfid_uid: str):
         .first()
     )
 
+    # Return None if no active record matches the scanned UID
     if not result:
         return None
 
+    # Unpack the tuple returned by the joined query
     resident, rfid = result
 
+    # Business Logic: Determine if the resident has already configured a security PIN.
+    # Checks the 'rfid_pin' column in the Resident table.
+    # This boolean flag is used by the Pydantic schema for serialization.
     resident.has_pin = resident.rfid_pin is not None
     
     return resident
