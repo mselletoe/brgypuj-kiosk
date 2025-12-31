@@ -5,9 +5,6 @@ import EquipmentSelectDates from './steps/SelectDates.vue';
 import EquipmentForm from './steps/BorrowerInfo.vue';
 import EquipmentReviewRequest from './steps/ReviewRequest.vue';
 
-// Import the auth store
-import { auth } from '@/stores/auth.js'; 
-
 const selectedEquipment = ref([]);
 const selectedDates = ref(null);
 const borrowerInfo = ref({});

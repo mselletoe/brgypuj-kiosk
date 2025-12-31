@@ -1,8 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { auth } from '@/stores/auth'
 import UserLayout from '@/layouts/UserLayout.vue'
 
-// views
+// Views
 import Display from '@/views/idle/Display.vue'
 import Idle from '@/views/idle/Idle.vue'
 import Announcements from '@/views/idle/Announcements.vue'
@@ -21,76 +20,47 @@ import Comments from '@/views/feedback/Comments.vue'
 import ComponentShowcase from '../components/ComponentShowcase.vue'
 
 const routes = [
+  // Start with idle screen
   { path: '/', redirect: '/idle' },
-
-  { path: '/display', component: Display},
+  
+  // Public routes (no authentication needed)
+  { path: '/display', component: Display },
   { path: '/idle', component: Idle },
   { path: '/announcements', component: Announcements },
   { path: '/login', component: Login },
   { path: '/login-rfid', component: ScanRFID },
   { path: '/auth-pin', component: AuthPIN },
-
-  // Authenticated & Inside-layout routes 
+  
+  // Layout routes (all pages inside the user layout)
   {
     path: '/',
     component: UserLayout,
     children: [
-      { path: 'home', component: KioskHome, meta: { requiresAuth: true } },
-      { path: 'document-services', component: DocumentServices, meta: { requiresAuth: true },
+      { path: 'home', component: KioskHome },
+      { 
+        path: 'document-services', 
+        component: DocumentServices,
         children: [
-          { path: ':docType', component: DocumentFormWrapper, meta: { requiresAuth: true } }
+          { path: ':docType', component: DocumentFormWrapper }
         ]
       },
-      { path: 'equipment-borrowing', component: EquipmentBorrowing, meta: { requiresAuth: true } },
-      { path: 'help-and-support', component: HelpAndSupport, meta: { requiresAuth: true } },
-      { path: 'feedback', component: Feedback, meta: { requiresAuth: true } },
-      { path: 'rating', component: Rating, meta: { requiresAuth: true } },
-      { path: 'comments', component: Comments, meta: { requiresAuth: true } },
+      { path: 'equipment-borrowing', component: EquipmentBorrowing },
+      { path: 'help-and-support', component: HelpAndSupport },
+      { path: 'feedback', component: Feedback },
+      { path: 'rating', component: Rating },
+      { path: 'comments', component: Comments },
       { path: 'register', component: Register },
-      { path: 'component-showcase', component: ComponentShowcase, meta: { requiresAuth: true } },
+      { path: 'component-showcase', component: ComponentShowcase },
     ]
   },
+  
+  // Catch all - redirect to idle
   { path: '/:pathMatch(.*)*', redirect: '/idle' },
 ]
 
 const router = createRouter({
   history: createWebHistory(),
   routes,
-})
-
-
-// Global guard
-router.beforeEach((to, from, next) => {
-  const stored = localStorage.getItem('auth_user')
-  if (stored) {
-    const parsed = JSON.parse(stored)
-    auth.user = parsed.user
-    auth.isGuest = parsed.isGuest
-  }
-
-  const loggedIn = !!auth.user
-  const isGuest = auth.isGuest
-  const loginPaths = ['/login', '/login-rfid']
-  const nonAuthPaths = ['/login', '/login-rfid', '/auth-pin', '/idle', '/display', '/announcements']
-
-  // Guests
-  if (isGuest && loginPaths.includes(to.path)) return next('/home')
-
-  // Logged-in users
-  if (loggedIn && loginPaths.includes(to.path)) return next('/home')
-
-  // Protect routes with requiresAuth
-  if (!loggedIn && !isGuest && to.meta.requiresAuth) {
-    if (to.path === '/register' && to.query.uid) return next()
-    return next('/login-rfid')
-  }
-
-  // Prevent logged-in or guest from going back to non-auth pages
-  if ((loggedIn || isGuest) && nonAuthPaths.includes(to.path)) {
-    return next('/home') // always redirect to home
-  }
-
-  next()
 })
 
 export default router

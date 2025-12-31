@@ -1,8 +1,6 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import api from '@/api/api'
-import { login } from '@/stores/auth'
 import Keypad from '@/components/shared/Keypad.vue'
 import { EyeIcon, EyeSlashIcon, XCircleIcon, CheckCircleIcon } from '@heroicons/vue/24/outline'
 import PrimaryButton from '@/components/shared/Button.vue' 

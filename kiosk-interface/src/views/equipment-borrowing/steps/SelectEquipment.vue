@@ -5,8 +5,7 @@ import { useRouter } from 'vue-router';
 import ArrowBackButton from '@/components/shared/ArrowBackButton.vue';
 import PrimaryButton from '@/components/shared/Button.vue';
 import { PlusIcon, MinusIcon } from '@heroicons/vue/24/solid';
-import { getInventory } from '@/api/equipmentApi';
-import Keyboard from '@/components/shared/Keyboard.vue'; // 1. IMPORT Keyboard
+import Keyboard from '@/components/shared/Keyboard.vue';
 
 // --- Props & Emits ---
 const props = defineProps({

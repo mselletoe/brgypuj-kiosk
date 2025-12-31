@@ -4,10 +4,6 @@ import { useRoute, useRouter } from 'vue-router'
 import DocumentForm from './DocumentForm.vue'
 import ArrowBackButton from '@/components/shared/ArrowBackButton.vue' 
 import Modal from '@/components/shared/Modal.vue'
-import { fetchRequestTypes } from '@/api/requestTypes'
-import { createRequest } from '@/api/requests'
-import { fetchResidentData } from '@/api/residents'
-import { auth, isRfidUser, getResidentId } from '@/stores/auth'
 import Loading from '@/components/shared/Loading.vue'
 
 const route = useRoute()

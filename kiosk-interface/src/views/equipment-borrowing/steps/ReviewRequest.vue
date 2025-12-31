@@ -5,7 +5,6 @@ import PrimaryButton from '@/components/shared/Button.vue';
 import Modal from '@/components/shared/Modal.vue';
 import { MagnifyingGlassIcon } from '@heroicons/vue/24/outline';
 import { useRouter } from 'vue-router';
-import { createKioskRequest } from '@/api/equipmentApi'; // <-- Import API
 
 const props = defineProps({
   selectedEquipment: Array,

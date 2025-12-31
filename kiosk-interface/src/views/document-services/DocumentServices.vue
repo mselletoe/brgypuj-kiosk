@@ -2,7 +2,6 @@
 import { useRoute, useRouter } from 'vue-router'
 import { ref, onMounted } from 'vue'
 import ArrowBackButton from '@/components/shared/ArrowBackButton.vue'
-import { fetchRequestTypes } from '@/api/requestTypes'
 import SuccessModal from '@/components/shared/Modal.vue'
 
 const route = useRoute()

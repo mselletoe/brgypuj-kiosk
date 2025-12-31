@@ -1,24 +1,6 @@
-The issue is that your `Announcements.vue` is using `window.location.href = "/home"`.
-
-**Why this breaks it:**
-
-1.  `window.location` causes a **Full Page Reload**.
-2.  This bypasses the smooth "Single Page App" transition.
-3.  Because the page reloads, the browser resets everything. By the time the new page loads, your finger might still be registering a click, or the browser behavior causes the "Ghost Click" protection in `Login.vue` to be ineffective (because the timer resets on reload).
-4.  Also, you have `Idle.vue` listening for clicks AND `Announcements.vue` listening for clicks. This causes conflicts.
-
-**The Fix:**
-
-1.  Use `useRouter` instead of `window.location`.
-2.  Use `.stop` on the main click to ensure only ONE start command fires.
-
-Here is the fixed **`Announcements.vue`**:
-
-```vue
 <script setup>
 import { ref, onMounted } from "vue";
-import { useRouter } from "vue-router"; // Import router
-import api from "@/api/api";
+import { useRouter } from "vue-router"; 
 import Pob1Logo from "@/assets/images/Pob1Logo.svg";
 
 const router = useRouter(); // Initialize router

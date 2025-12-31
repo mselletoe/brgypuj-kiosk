@@ -4,7 +4,6 @@ import { useRouter } from 'vue-router'
 import { disableTouchToStart } from '@/composables/touchToStart'
 import PrimaryButton from '@/components/shared/Button.vue'
 import { SignalIcon } from '@heroicons/vue/24/solid'
-import { auth } from '@/stores/auth'
 
 const router = useRouter()
 
