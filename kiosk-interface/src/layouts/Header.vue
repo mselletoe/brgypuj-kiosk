@@ -1,24 +1,21 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from "vue";
-import { useRouter, useRoute } from "vue-router";
+import { useRouter } from "vue-router";
+import { useAuthStore } from "@/stores/auth";
 import '../assets/images/Pob1Logo.svg';
 import '../assets/vectors/Logout.svg';
 
 const router = useRouter();
-const route = useRoute();
+const authStore = useAuthStore();
 const currentTime = ref("");
 const currentDate = ref("");
 
-// Hardcoded logic for display based on URL: ?mode=guest
-const isGuest = computed(() => route.query.mode === 'guest');
+const isGuest = computed(() => authStore.isGuest);
+const displayName = computed(() => authStore.userName);
 
-// Data for Guest Tag
-const guestName = "Guest User";
-const guestDetail = "Logged in as Guest User";
-
-// Data for RFID Tag
-const rfidName = "Angela Dela Cruz";
-const rfidDetail = "Authenticated via RFID";
+const userDetail = computed(() => 
+  authStore.isRFID ? "Authenticated via RFID" : "Logged in as Guest User"
+);
 
 const handleRefresh = () => {
   window.location.reload();
@@ -51,7 +48,7 @@ onMounted(() => {
 onUnmounted(() => clearInterval(interval));
 
 const logout = () => {
-  // Simple logout - just redirect to idle
+  authStore.logout(); //
   router.push('/idle');
 };
 </script>
@@ -60,7 +57,6 @@ const logout = () => {
   <header class="flex items-center justify-between px-5 py-2 bg-white text-[#003A6B] shadow-md border-b-2 border-[#003A6B]">
     <div class="flex items-center space-x-1">
       <img src="../assets/images/Pob1Logo.svg" alt="Poblacion 1, Amadeo, Cavite" class="w-[40px] h-[40px]" />
-
       <div class="flex flex-col">
         <h1 class="text-[14px] font-bold leading-[1] tracking-tight">Brgy. Poblacion 1</h1> <br/>
         <h2 class="text-[14px] font-light -mt-5 leading-[1] tracking-tight">Amadeo, Cavite - Kiosk System</h2>
@@ -84,20 +80,21 @@ const logout = () => {
           <path d="M3 21v-5h5"></path>
         </svg>
       </button>
+
       <div 
         v-if="isGuest"
         class="flex flex-col items-center justify-center rounded-lg border-2 border-[#E8C462] bg-[#FFF9E5] px-4 py-1 min-w-[160px] leading-tight"
       >
-        <span class="text-[13px] font-black text-[#7A5C00]">{{ guestName }}</span>
-        <span class="text-[9px] italic font-medium text-[#7A5C00]">{{ guestDetail }}</span>
+        <span class="text-[13px] font-black text-[#7A5C00]">{{ displayName }}</span>
+        <span class="text-[9px] italic font-medium text-[#7A5C00]">{{ userDetail }}</span>
       </div>
 
       <div 
         v-else
         class="flex flex-col items-center justify-center rounded-lg border-2 border-[#003A6B] bg-[#D1E5F1] px-4 py-1 min-w-[160px] leading-tight"
       >
-        <span class="text-[13px] font-black text-[#003A6B]">{{ rfidName }}</span>
-        <span class="text-[9px] italic font-medium text-[#003A6B]">{{ rfidDetail }}</span>
+        <span class="text-[13px] font-black text-[#003A6B]">{{ displayName }}</span>
+        <span class="text-[9px] italic font-medium text-[#003A6B]">{{ userDetail }}</span>
       </div>
 
       <button @click="logout" class="px-4 py-2 bg-[#FF2B3A] border-2 border-[#FF2B3A] 

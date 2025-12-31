@@ -2,25 +2,20 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { disableTouchToStart } from '@/composables/touchToStart'
-import PrimaryButton from '@/components/shared/Button.vue'
+import Button from '@/components/shared/Button.vue'
 import { SignalIcon } from '@heroicons/vue/24/solid'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const authStore = useAuthStore()
 
-// --- State ---
 const timeLeft = ref(10)
 let timerInterval = null
-let mountTime = 0 // Variable to store exactly when the page opened
-
-// --- Navigation Handlers ---
+let mountTime = 0
 
 const handleRfidLogin = () => {
-  // === GHOST CLICK FIX ===
-  // Calculate how long the page has been open
   const timeSinceMount = Date.now() - mountTime;
 
-  // If the page has been open for less than 800ms (0.8 seconds),
-  // assume this is a ghost click from the previous screen and IGNORE it.
   if (timeSinceMount < 500) {
     return;
   }
@@ -30,20 +25,10 @@ const handleRfidLogin = () => {
 }
 
 const continueAsGuest = () => {
-  // Apply the same safety check for the Guest button
-  const timeSinceMount = Date.now() - mountTime;
-  if (timeSinceMount < 800) {
-    return;
-  }
-
-  const guestUser = { name: "Guest User" };
-  auth.user = guestUser;
-  auth.isGuest = true;
-  localStorage.setItem('auth_user', JSON.stringify({ user: guestUser, isGuest: true }));
+  authStore.setGuest()
   router.replace('/home')
 }
 
-// --- Timer Logic ---
 const startCountdown = () => {
   if (timerInterval) clearInterval(timerInterval)
   timeLeft.value = 10
@@ -61,10 +46,7 @@ const resetTimer = () => {
 }
 
 onMounted(() => {
-  // 1. Capture the exact time the component mounted
   mountTime = Date.now()
-  
-  // 2. Start the idle countdown
   startCountdown()
 })
 
@@ -90,7 +72,7 @@ onUnmounted(() => {
 
       <div class="mt-5 flex flex-col gap-y-5">
         
-        <PrimaryButton 
+        <Button 
           @click.stop="handleRfidLogin" 
           class="w-96 h-[80px] font-bold"
           variant="primary"
@@ -99,15 +81,15 @@ onUnmounted(() => {
             Use RFID
             <SignalIcon class="h-8 w-8 mt-0" />
           </span>
-        </PrimaryButton>
+        </Button>
 
-        <PrimaryButton 
+        <Button 
           @click.stop="continueAsGuest()"
           variant="outline"
           class="w-96 h-[45px] text-[15px]"
         >
           Continue as Guest
-        </PrimaryButton>
+        </Button>
         
       </div>
 

@@ -1,19 +1,18 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 import BaseButton from '@/components/shared/Button.vue'
 
 const router = useRouter()
-const route = useRoute()
-
-// Check URL parameter: ?mode=guest or ?mode=auth
-const isGuest = ref(route.query.mode === 'guest')
+const auth = useAuthStore()
 
 onMounted(() => {
-  if (route.query.mode) {
-    isGuest.value = route.query.mode === 'guest'
+  auth.restore()
+
+  if (!auth.isAuthenticated) {
+    router.replace('/login')
   }
-  // Later replace with: isGuest.value = authStore.isGuest
 })
 
 function goTo(path) {
@@ -45,7 +44,7 @@ function goTo(path) {
       <div class="mt-12 flex w-full flex-wrap justify-between gap-4">
         
         <div 
-          v-if="!isGuest"
+          v-if="!auth.isGuest"
           class="flex h-[220px] min-w-[165px] flex-1 cursor-pointer flex-col items-center justify-center rounded-[15px] bg-[#2C67E7] p-[10px] text-center shadow-[4px_4px_8px_rgba(0,0,0,0.25),inset_2px_2px_4px_rgba(255,255,255,0.6),inset_-2px_-2px_6px_rgba(0,0,0,0.15)] transition-all duration-150 hover:-translate-y-[3px] hover:scale-105 active:scale-[0.97]"
           @click="goTo('document-services')"
         >
@@ -55,7 +54,7 @@ function goTo(path) {
         </div>
 
         <div 
-          v-if="!isGuest"
+          v-if="!auth.isGuest"
           class="flex h-[220px] min-w-[165px] flex-1 cursor-pointer flex-col items-center justify-center rounded-[15px] bg-[#F16C14] p-[10px] text-center shadow-[4px_4px_8px_rgba(0,0,0,0.25),inset_2px_2px_4px_rgba(255,255,255,0.6),inset_-2px_-2px_6px_rgba(0,0,0,0.15)] transition-all duration-150 hover:-translate-y-[3px] hover:scale-105 active:scale-[0.97]"
           @click="goTo('equipment-borrowing')"
         >
@@ -94,7 +93,7 @@ function goTo(path) {
 
       <div class="mt-8 flex gap-5 w-full">
         <BaseButton 
-          v-if="!isGuest"
+          v-if="!auth.isGuest"
           variant="outline" 
           size="md" 
           class="flex-1 shadow-[4px_4px_8px_rgba(0,0,0,0.15)]"

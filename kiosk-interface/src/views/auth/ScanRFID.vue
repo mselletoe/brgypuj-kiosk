@@ -2,81 +2,83 @@
 import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { ArrowLeftIcon, SignalIcon } from '@heroicons/vue/24/solid'
-import PrimaryButton from '@/components/shared/Button.vue'
+import Button from '@/components/shared/Button.vue'
+import { useAuthStore } from '@/stores/auth'
+import api from '@/api/http'
 
 const router = useRouter()
+const authStore = useAuthStore()
 const scannedUID = ref('')
 const isProcessing = ref(false)
+const hiddenInput = ref(null)
 let inputBuffer = ''
 let timeout = null
-const hiddenInput = ref(null)
 
-const checkRFID = async (uid) => {
+const resetScanner = () => {
+  isProcessing.value = false
+  inputBuffer = ''
+  scannedUID.value = ''
+  if (hiddenInput.value) hiddenInput.value.value = ''
+}
+
+const authenticateRFID = async (uid) => {
   try {
-    const { data } = await api.get(`/rfid/check/${uid}`)
+    isProcessing.value = true
 
-    if (data.exists) {
-      // --- MODIFIED: Fetch user data here to get the name ---
-      const userRes = await api.get(`/users/${data.resident_id}`);
-      const userName = `${userRes.data.first_name} ${userRes.data.last_name}`;
-      // --- END MODIFICATION ---
+    // 1. Backend Call
+    const res = await api.post('kiosk/auth/rfid', { rfid_uid: uid })
+    const data = res.data
 
-      router.replace({
-        path: '/auth-pin',
-        // --- MODIFIED: Pass the name to the route ---
-        query: { mode: 'user', resident_id: data.resident_id, uid: uid, name: userName },
-      });
+    if (data.has_pin) {
+      // 2. PIN exists: Store temporary data and redirect to PIN page
+      authStore.setTemporaryRFIDData({
+        resident: {
+          id: data.resident_id,
+          first_name: data.first_name,
+          last_name: data.last_name
+        },
+        uid: uid
+      })
+      router.push('/auth-pin')
     } else {
-      router.replace({
-        path: '/auth-pin',
-        query: { mode: 'admin', uid: uid }, // Admin mode, pass the new UID
-      });
+      // 3. Handle residents with no PIN (Security Policy)
+      authStore.setRFID(
+        {
+          id: data.resident_id,
+          first_name: data.first_name,
+          last_name: data.last_name
+        },
+        uid
+      )
+      
+      router.replace('/home')
     }
-  } catch (error) {
-    console.error("Error checking RFID", error);
-    // Reset on error
-    isProcessing.value = false;
-    inputBuffer = '';
-    if (hiddenInput.value) hiddenInput.value.value = '';
-    alert("An error occurred. Please try scanning again.");
+  } catch (err) {
+    alert('Invalid or inactive RFID card.')
+    resetScanner()
   }
 }
 
 const handleRFIDInput = async (event) => {
-  const key = event.key
-
   if (isProcessing.value) return
-
-  if (key === 'Enter') {
+  if (event.key === 'Enter') {
     const uid = inputBuffer.trim()
-    if (!uid) return
-
-    scannedUID.value = uid
-    isProcessing.value = true
-
-    await checkRFID(uid) // Let checkRFID handle success/failure
-
-    // Reset buffer
+    if (uid) await authenticateRFID(uid)
     inputBuffer = ''
-    if (hiddenInput.value) hiddenInput.value.value = ''
-  } 
-  else if (/^[0-9A-Za-z]$/.test(key)) {
-    inputBuffer += key
+  } else if (/^[0-9A-Za-z]$/.test(event.key)) {
+    inputBuffer += event.key
   }
-
   clearTimeout(timeout)
-  timeout = setTimeout(() => {
-    inputBuffer = ''
-  }, 1000)
+  timeout = setTimeout(() => { inputBuffer = '' }, 200)
 }
 
 const goBack = () => {
-  router.push('/login')
+  router.replace('/login')
 }
 
 onMounted(async () => {
   await nextTick()
-  if (hiddenInput.value) hiddenInput.value.focus()
+  hiddenInput.value?.focus()
   window.addEventListener('keydown', handleRFIDInput)
 })
 
@@ -115,7 +117,7 @@ onUnmounted(() => {
         class="absolute opacity-0 pointer-events-none"
       />
 
-      <PrimaryButton 
+      <Button 
         @click="goBack"
         class="absolute bottom-8 left-8 w-auto px-3 text-[14px] rounded-[40px] h-[40px]"
         variant="outline"
@@ -124,7 +126,7 @@ onUnmounted(() => {
           <ArrowLeftIcon class="h-5 w-5" />
           Go Back
         </span>
-      </PrimaryButton>
+      </Button>
     </div>
   </div>
 </template>

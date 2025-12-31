@@ -2,36 +2,36 @@ import { defineStore } from "pinia"
 
 export const useAuthStore = defineStore("auth", {
   state: () => ({
-    mode: "guest",
+    mode: null,
     resident: null,
-    rfidUid: null,
-    authenticated: false
+    rfidUid: null
   }),
 
   getters: {
     isGuest: (s) => s.mode === "guest",
     isRFID: (s) => s.mode === "rfid",
+    isAuthenticated: (s) => !!s.mode,
+
     residentId: (s) => s.resident?.id || null,
+
     userName: (s) =>
-      s.isRFID
+      s.mode === "rfid"
         ? `${s.resident.first_name} ${s.resident.last_name}`
         : "Guest"
   },
 
   actions: {
-    continueAsGuest() {
+    setGuest() {
       this.mode = "guest"
       this.resident = null
       this.rfidUid = null
-      this.authenticated = true
       this.persist()
     },
 
-    loginWithRFID(resident, uid) {
+    setRFID(resident, uid) {
       this.mode = "rfid"
       this.resident = resident
       this.rfidUid = uid
-      this.authenticated = true
       this.persist()
     },
 
@@ -51,8 +51,7 @@ export const useAuthStore = defineStore("auth", {
         JSON.stringify({
           mode: this.mode,
           resident: this.resident,
-          rfidUid: this.rfidUid,
-          authenticated: this.authenticated
+          rfidUid: this.rfidUid
         })
       )
     }
