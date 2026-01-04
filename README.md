@@ -9,12 +9,6 @@ A kiosk and admin dashboard system designed for use on a Raspberry Pi (kiosk sid
 - **Backend API:** FastAPI (Python) acting as the bridge between UIs and Database.
 - **Database:** PostgreSQL storing resident data, requests, and inventory.
 
-## ✅ Tech Stack
-- **Frontend:** Vue 3, Vite, TailwindCSS, NaiveUI
-- **Backend:** FastAPI (Python), SQLAlchemy/Psycopg2
-- **Database:** PostgreSQL
-- **Deployment:** Docker, Docker Compose
-
 ---
 
 ## 🚀 Getting Started
