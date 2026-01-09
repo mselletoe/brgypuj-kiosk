@@ -7,7 +7,7 @@ to provide a unified entry point for the frontend Kiosk application.
 """
 
 from fastapi import APIRouter
-from app.api.kiosk import auth
+from app.api.kiosk import auth, document
 
 # Initialize the master Kiosk router
 # Developers can add 'dependencies' or 'responses' here that apply to all kiosk routes
@@ -18,6 +18,7 @@ router = APIRouter()
 # Authentication routes are isolated in 'auth.py' for maintainability.
 # Registered here to be accessible under the parent path.
 router.include_router(auth.router)
+router.include_router(document.router)
 
 @router.get("/health")
 def kiosk_health():
