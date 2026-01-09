@@ -1,6 +1,5 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import api from '@/api/api'
 import EquipmentRequestCard from '@/views/requests/equipment-requests/EquipmentRequestCard.vue'
 import ConfirmModal from '@/components/shared/ConfirmationModal.vue'
 

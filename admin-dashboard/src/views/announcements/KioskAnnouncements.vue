@@ -4,12 +4,6 @@ import PageTitle from '@/components/shared/PageTitle.vue'
 import KioskAnnouncementCard from '@/views/announcements/KioskAnnouncementCard.vue'
 import ConfirmModal from '@/components/shared/ConfirmationModal.vue'
 
-import {
-  getAnnouncements,
-  createAnnouncement,
-  updateAnnouncement,
-  deleteAnnouncement as deleteAnnouncementApi
-} from '@/api/announcements.js'
 
 /* -------------------- STATE -------------------- */
 const announcements = ref([])

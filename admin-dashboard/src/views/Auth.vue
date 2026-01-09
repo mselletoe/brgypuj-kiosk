@@ -4,7 +4,6 @@ import { NInput, useMessage } from 'naive-ui' // Added useMessage
 import logo from '@/assets/logo.svg'
 import { useRouter } from 'vue-router'
 import { useAuth } from '@/stores/authStore'
-import { loginStaff } from '@/api/authApi'
 
 const email = ref('')
 const password = ref('')

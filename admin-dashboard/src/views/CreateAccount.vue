@@ -3,9 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { NSelect, NInput, NSpin, useMessage, NIcon } from 'naive-ui'
 import logo from '@/assets/logo.svg'
-import { registerStaff, loginStaff } from '@/api/authApi' 
-import { useAuth } from '@/stores/authStore' 
-import { getAvailableResidents } from '@/api/residentsApi'
+import { useAuth } from '@/stores/authStore'
 import { CheckmarkCircleOutline, CloseCircleOutline } from '@vicons/ionicons5'
 
 const router = useRouter()

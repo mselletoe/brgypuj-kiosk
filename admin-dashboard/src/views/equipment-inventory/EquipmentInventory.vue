@@ -1,6 +1,5 @@
 <script setup>
 import { ref, onMounted } from 'vue';
-import { getInventory, updateInventory } from '@/api/equipmentApi';
 import EquipmentInventoryCard from './EquipmentInventoryCard.vue';
 import { useMessage } from 'naive-ui';
 import PageTitle from '@/components/shared/PageTitle.vue'

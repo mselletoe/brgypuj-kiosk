@@ -1,6 +1,5 @@
 <script setup>
 import { ref } from 'vue'
-import api from '@/api/api'  // your existing Axios instance
 
 const isBackingUp = ref(false)
 const backupMessage = ref(null)

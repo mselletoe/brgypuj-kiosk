@@ -3,7 +3,6 @@ import PageTitle from '@/components/shared/PageTitle.vue'
 import ResidentsTable from '@/components/ResidentsTable.vue'
 import { NInput, NPagination, NSelect, NModal, NCard } from 'naive-ui'
 import { ref, onMounted, watch } from 'vue'
-import { fetchResidents, fetchPuroks } from '@/api/residents'
 
 // state
 const residents = ref([])

@@ -3,7 +3,6 @@ import { ref, onMounted, h, computed } from 'vue'
 import { NDataTable, NInput, NButton, NCheckbox, useMessage, NUpload, NUploadDragger } from 'naive-ui'
 import { PencilSquareIcon, TrashIcon, XMarkIcon, CheckIcon, MinusIcon } from '@heroicons/vue/24/outline'
 import PageTitle from '@/components/shared/PageTitle.vue'
-import requestTypesApi from '@/api/requestTypes'
 import FieldEditor from './FieldEditor.vue'
 import ConfirmModal from '@/components/shared/ConfirmationModal.vue'
 
