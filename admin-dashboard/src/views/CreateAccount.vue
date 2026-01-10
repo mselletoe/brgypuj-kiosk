@@ -1,35 +1,52 @@
 <script setup>
+  /**
+ * @file CreateAccount.vue
+ * @description Administrative Account Registration Interface.
+ * This component facilitates the promotion of an existing resident to an 
+ * administrative role. It includes real-time password strength validation, 
+ * credential matching, and dynamic resident fetching from the database.
+ */
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { NSelect, NInput, NSpin, useMessage, NIcon } from 'naive-ui'
 import logo from '@/assets/logo.svg'
 import { CheckmarkCircleOutline, CloseCircleOutline } from '@vicons/ionicons5'
+import { registerAdmin, fetchResidents } from '@/api/authService'
 
 const router = useRouter()
 const message = useMessage()
 
-// Form state
+// --- Form State ---
 const selectedResident = ref(null)
-const email = ref('')
+const username = ref('')
 const password = ref('')
 const confirmPassword = ref('')
 const loadingSubmit = ref(false)
 
-// Frontend-only resident list (mock data)
+// --- Data Fetching State ---
 const residents = ref([])
 const loadingResidents = ref(true)
 
-// Mock residents on mount
-onMounted(() => {
-  residents.value = [
-    { label: 'Juan Dela Cruz', value: 1 },
-    { label: 'Maria Santos', value: 2 },
-    { label: 'Pedro Reyes', value: 3 }
-  ]
-  loadingResidents.value = false
+/**
+ * Initial component setup.
+ * Fetches the list of residents to populate the "Staff Name" selection dropdown.
+ */
+onMounted(async () => {
+  try {
+    const res = await fetchResidents()
+    residents.value = res.map(r => ({ label: `${r.first_name} ${r.last_name}`, value: r.id }))
+  } catch (err) {
+    message.error('Failed to load residents.')
+    console.error(err)
+  } finally {
+    loadingResidents.value = false
+  }
 })
 
-// Password validation
+/**
+ * Reactive password strength validation object.
+ * Evaluates the current password string against organizational security requirements.
+ */
 const passValidation = computed(() => {
   return {
     minLength: password.value.length >= 8,
@@ -39,23 +56,33 @@ const passValidation = computed(() => {
   }
 })
 
+/**
+ * Validates that the password and confirmation strings are identical.
+ */
 const passwordsMatch = computed(() => {
   return password.value === confirmPassword.value && password.value.length > 0
 })
 
-function handleRegister() {
+/**
+ * Handles the administrative registration submission.
+ * Validates requirements and invokes the remote registration service.
+ */
+const handleRegister = async () => {
   const { minLength, hasNumber, hasUpper, hasLower } = passValidation.value
 
-  if (!selectedResident.value || !email.value || !password.value || !confirmPassword.value) {
+  // 1. Check for empty fields
+  if (!selectedResident.value || !username.value || !password.value || !confirmPassword.value) {
     message.error('Please fill out all fields.')
     return
   }
 
+  // 2. Enforce complexity requirements
   if (!minLength || !hasNumber || !hasUpper || !hasLower) {
     message.error('Password does not meet requirements.')
     return
   }
 
+  // 3. Verify credential matching
   if (!passwordsMatch.value) {
     message.error('Passwords do not match.')
     return
@@ -63,12 +90,24 @@ function handleRegister() {
 
   loadingSubmit.value = true
 
-  // Frontend-only success simulation
-  setTimeout(() => {
-    loadingSubmit.value = false
+  try {
+    // 4. Submit to Backend Service
+    await registerAdmin({
+      resident_id: selectedResident.value,
+      username: username.value,
+      password: password.value,
+      role: 'Admin'
+    })
+
     message.success('Account created successfully!')
+    // 5. Navigate to Dashboard Overview
     router.push('/overview')
-  }, 600)
+  } catch (err) {
+    const errorMsg = err.response?.data?.detail || 'Failed to create account'
+    message.error(errorMsg)
+  } finally {
+    loadingSubmit.value = false
+  }
 }
 </script>
 
@@ -109,9 +148,9 @@ function handleRegister() {
         />
 
         <NInput
-          v-model:value="email"
-          type="email"
-          placeholder="Email"
+          v-model:value="username"
+          type="text"
+          placeholder="Username"
           size="large"
           class="text-left shadow-[4px_4px_10px_rgba(128,128,128,0.15)]"
         />

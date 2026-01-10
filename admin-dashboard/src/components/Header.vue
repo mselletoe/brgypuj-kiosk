@@ -1,13 +1,31 @@
 <script setup>
-import { h, ref, onMounted } from 'vue'
+/**
+ * @file Header.vue
+ * @description Administrative dashboard header component.
+ * Provides the top navigation bar containing the global search placeholder
+ * and the user profile dropdown. Integrates with the Admin Auth store
+ * to display current session metadata and handle logout procedures.
+ */
+import { h, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { NDropdown } from 'naive-ui'
 import { UserCircleIcon, Cog6ToothIcon, LockClosedIcon, ArrowLeftOnRectangleIcon } from '@heroicons/vue/24/solid'
+import { useAdminAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const adminAuth = useAdminAuthStore()
 
+/**
+ * Utility function to render Heroicons within Naive UI components.
+ * @param {Component} icon - The Heroicon component to be rendered.
+ * @returns {Function} A VNode rendering function.
+ */
 const renderIcon = (icon) => () => h(icon, { class: 'h-5 w-5' })
 
+/**
+ * Configuration for the user profile dropdown menu.
+ * Includes labels, keys for event handling, and rendered icons.
+ */
 const dropdownOptions = [
   { label: 'My Profile', key: 'profile', icon: renderIcon(UserCircleIcon) },
   { label: 'Dashboard Settings', key: 'settings', icon: renderIcon(Cog6ToothIcon) },
@@ -16,7 +34,10 @@ const dropdownOptions = [
   { label: 'Log Out', key: 'logout', icon: renderIcon(ArrowLeftOnRectangleIcon) }
 ]
 
-// Handle dropdown selection
+/**
+ * Orchestrates navigation and session actions based on dropdown selection.
+ * @param {string} key - The unique identifier of the selected menu item.
+ */
 const handleSelect = (key) => {
   switch(key) {
     case 'profile':
@@ -29,12 +50,18 @@ const handleSelect = (key) => {
       console.log('Navigate to Password and Security')
       break
     case 'logout':
-      console.log('Logging out...')
-      auth.logout()
+      adminAuth.logout()
       router.replace('/auth')
       break
   }
 }
+
+/**
+ * Reactive computed properties to display administrator metadata.
+ * Fallbacks are provided for scenarios where the auth store is still rehydrating.
+ */
+const username = computed(() => adminAuth.user?.username || 'Admin')
+const role = computed(() => adminAuth.user?.role || 'Administrator')
 </script>
 
 <template>
@@ -55,8 +82,8 @@ const handleSelect = (key) => {
               </svg>
             </div>
             <div class="flex flex-col">
-              <span class="text-sm font-bold text-gray-800"></span>
-              <span class="text-xs text-gray-500"></span>
+              <span class="text-sm font-bold text-gray-800">{{ username }}</span>
+              <span class="text-xs text-gray-500">{{ role }}</span>
             </div>
           </div>
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -1,19 +1,35 @@
 <script setup>
+  /**
+ * @file Auth.vue
+ * @description Administrative Authentication Gateway.
+ * Provides the primary login interface for the Admin Dashboard.
+ * Handles credential validation, JWT acquisition via the auth service,
+ * and session initialization within the global Pinia store.
+ */
 import { ref } from 'vue'
 import { NInput, useMessage } from 'naive-ui'
 import logo from '@/assets/logo.svg'
 import { useRouter } from 'vue-router'
-import api from '@/api/http'
+import { loginAdmin } from '@/api/authService'
 import { useAdminAuthStore } from '@/stores/auth'
 
+// --- State Management ---
 const username = ref('')
 const password = ref('')
 const loading = ref(false)
+
+// --- Composition Utilities ---
 const router = useRouter()
 const message = useMessage()
 const adminAuth = useAdminAuthStore()
 
+/**
+ * Orchestrates the administrative login process.
+ * Validates local input, performs remote authentication, 
+ * and handles UI feedback for success or failure states.
+ */
 const handleLogin = async () => {
+  // 1. Basic Client-Side Validation
   if (!username.value || !password.value) {
     message.warning('Please enter your username and password.')
     return
@@ -22,17 +38,19 @@ const handleLogin = async () => {
   loading.value = true
 
   try {
-    const res = await api.post('/admin/auth/login', {
-      username: username.value,
-      password: password.value
-    })
+    // 2. Request JWT from Backend Service
+    const data = await loginAdmin(username.value, password.value)
 
-    // Store token in auth store
-    adminAuth.setAuth(res.data.access_token, { username: username.value })
+    // 3. Initialize Session: Store token and basic user metadata
+    // This triggers the persist() logic to save the token to LocalStorage
+    adminAuth.setAuth(data.access_token, { username: username.value })
 
     message.success('Login successful')
+
+    // 4. Redirect to the Dashboard Overview
     router.push('/overview')
   } catch (err) {
+    // 5. Error Handling: Extract backend detail or provide generic fallback
     const errorMsg = err.response?.data?.detail || 'Invalid username or password'
     message.error(errorMsg)
   } finally {
@@ -40,7 +58,9 @@ const handleLogin = async () => {
   }
 }
 
-// Navigate to create account page
+/**
+ * Navigates to the administrative registration flow.
+ */
 function goToCreateAccount() {
   router.push('/create-account')
 }
