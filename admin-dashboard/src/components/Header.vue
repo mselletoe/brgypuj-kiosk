@@ -2,15 +2,9 @@
 import { h, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { NDropdown } from 'naive-ui'
-import { useAuth } from '@/stores/authStore'
 import { UserCircleIcon, Cog6ToothIcon, LockClosedIcon, ArrowLeftOnRectangleIcon } from '@heroicons/vue/24/solid'
 
 const router = useRouter()
-const auth = useAuth()
-auth.loadToken()
-
-console.log('Auth user:', auth.user)
-console.log('Token:', auth.token)
 
 const renderIcon = (icon) => () => h(icon, { class: 'h-5 w-5' })
 
@@ -61,8 +55,8 @@ const handleSelect = (key) => {
               </svg>
             </div>
             <div class="flex flex-col">
-              <span class="text-sm font-bold text-gray-800">{{ auth.user?.first_name }} {{ auth.user?.last_name }}</span>
-              <span class="text-xs text-gray-500">{{ auth.user?.role }}</span>
+              <span class="text-sm font-bold text-gray-800"></span>
+              <span class="text-xs text-gray-500"></span>
             </div>
           </div>
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">

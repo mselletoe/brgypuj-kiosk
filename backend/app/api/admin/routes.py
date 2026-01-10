@@ -8,7 +8,7 @@ resident management, and system configuration.
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.api.deps import get_db
-from app.api.admin import document
+from app.api.admin import document, auth
 
 # Initialize the master Admin router
 # Developers can add 'dependencies' or 'responses' here that apply to all admin routes
@@ -16,6 +16,7 @@ router = APIRouter()
 
 # Sub-Router Registration
 # -----------------------
+router.include_router(auth.router)
 router.include_router(document.router)
 
 @router.get("/health")

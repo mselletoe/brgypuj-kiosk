@@ -5,7 +5,12 @@ Contains the core business logic for resident authentication.
 Separates database query complexity from the API routing layer.
 """
 from sqlalchemy.orm import Session
+from fastapi import HTTPException, status
+from passlib.context import CryptContext
 from app.models.resident import Resident, ResidentRFID
+from app.models.admin import Admin
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def rfid_login(db: Session, rfid_uid: str):
     """
@@ -51,3 +56,66 @@ def rfid_login(db: Session, rfid_uid: str):
     resident.has_pin = resident.rfid_pin is not None
     
     return resident
+
+# ================================================================
+# ADMIN
+# ================================================================ 
+
+def hash_password(password: str) -> str:
+    return pwd_context.hash(password)
+
+
+def verify_password(plain: str, hashed: str) -> bool:
+    return pwd_context.verify(plain, hashed)
+
+
+def authenticate_admin(db: Session, username: str, password: str) -> Admin:
+    admin = db.query(Admin).filter(Admin.username == username).first()
+
+    if not admin:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid username or password"
+        )
+
+    if not admin.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin account is inactive"
+        )
+
+    if not verify_password(password, admin.password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid username or password"
+        )
+
+    return admin
+
+
+def create_admin_account(
+    db: Session,
+    resident_id: int,
+    username: str,
+    password: str,
+    role: str
+) -> Admin:
+    existing = db.query(Admin).filter(Admin.username == username).first()
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username already exists"
+        )
+
+    admin = Admin(
+        resident_id=resident_id,
+        username=username,
+        password=hash_password(password),
+        role=role
+    )
+
+    db.add(admin)
+    db.commit()
+    db.refresh(admin)
+
+    return admin

@@ -1,16 +1,5 @@
-/*
- * =================================================================================
- * File: router/index.js
- * Description: 
- * Main routing configuration for the Vue.js application.
- * - Defines all accessible URL paths (routes).
- * - Manages access control (Navigation Guards) to protect admin pages.
- * - Redirects unauthenticated users to the login page.
- * =================================================================================
- */
-
 import { createRouter, createWebHistory } from 'vue-router'
-import { useAuth } from '@/stores/authStore'
+import { useAdminAuthStore } from '@/stores/auth'
 
 import AdminLayout from '@/layouts/AdminLayout.vue'
 import Overview from '@/views/Overview.vue'
@@ -23,8 +12,9 @@ import Auth from '@/views/Auth.vue'
 import CreateAccount from '@/views/CreateAccount.vue'
 import EquipmentInventory from '@/views/equipment-inventory/EquipmentInventory.vue'
 import SystemSettings from '@/views/settings/SystemSettings.vue'
-import EquipmentRequests from '@/views/requests/equipment-requests/EquipmentRequest.vue' 
+import EquipmentRequests from '@/views/requests/equipment-requests/EquipmentRequest.vue'
 import FeedbackAndReports from '@/views/feedback-and-reports/FeedbackAndReports.vue'
+import ComponentShowcase from '@/components/ComponentShowcase.vue'
 
 const routes = [
   {
@@ -46,30 +36,33 @@ const routes = [
     meta: { requiresAuth: true },
     children: [
       { path: 'overview', component: Overview },
-      { 
-        path: 'document-requests/:status?', 
-        name: 'DocumentRequests', 
+
+      {
+        path: 'document-requests/:status?',
+        name: 'DocumentRequests',
         component: DocumentRequests,
-        props: true 
+        props: true
       },
-      { 
-        path: 'equipment-requests/:status?', 
-        name: 'EquipmentRequests', 
+      {
+        path: 'equipment-requests/:status?',
+        name: 'EquipmentRequests',
         component: EquipmentRequests,
-        props: true 
+        props: true
       },
-      { 
-        path: 'feedback-and-reports/:status?', 
-        name: 'FeedbackReports', 
+      {
+        path: 'feedback-and-reports/:status?',
+        name: 'FeedbackReports',
         component: FeedbackAndReports,
-        props: true 
+        props: true
       },
+
       { path: 'document-services', component: DocumentServices },
       { path: 'kiosk-announcements', component: KioskAnnouncements },
       { path: 'sms-announcements', component: SMSAnnouncements },
-      { path: 'residents', component: Residents },  
+      { path: 'residents', component: Residents },
       { path: 'equipment-inventory', component: EquipmentInventory },
       { path: 'system-settings', component: SystemSettings },
+      { path: 'component-showcase', component: ComponentShowcase }
     ]
   }
 ]
@@ -79,24 +72,20 @@ const router = createRouter({
   routes
 })
 
-router.beforeEach((to, from, next) => {
-  const auth = useAuth()
-  
-  if (!auth.token) {
-    auth.loadToken()
-  }
 
-  const isAuthenticated = !!auth.token
+router.beforeEach((to, from, next) => {
+  const auth = useAdminAuthStore()
+  auth.loadAuth()
+
+  const isAuthenticated = auth.isAuthenticated
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
   const requiresGuest = to.matched.some(record => record.meta.requiresGuest)
 
   if (requiresAuth && !isAuthenticated) {
     next('/auth')
-  }
-  else if (requiresGuest && isAuthenticated) {
-    next('/overview')
-  }
-  else {
+  } else if (requiresGuest && isAuthenticated) {
+    next('/overview') 
+  } else {
     next()
   }
 })
