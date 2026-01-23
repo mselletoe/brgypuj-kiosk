@@ -60,8 +60,8 @@ const handleSelect = (key) => {
  * Reactive computed properties to display administrator metadata.
  * Fallbacks are provided for scenarios where the auth store is still rehydrating.
  */
-const username = computed(() => adminAuth.user?.username || 'Admin')
-const role = computed(() => adminAuth.user?.role || 'Administrator')
+const username = computed(() => adminAuth.admin?.username || 'Admin')
+const role = computed(() => adminAuth.admin?.role || 'Administrator')
 </script>
 
 <template>
