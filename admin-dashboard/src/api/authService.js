@@ -35,8 +35,8 @@ export const getCurrentAdmin = async () => {
  * @param {string} [params.role='Admin'] - The administrative role/permissions level.
  * @returns {Promise<Object>} The created admin record.
  */
-export const registerAdmin = async ({ resident_id, email, password, role = 'Admin' }) => {
-  const res = await api.post('/admin/auth/register', { resident_id, email, password, role })
+export const registerAdmin = async ({ resident_id, username, password, role = 'Admin' }) => {
+  const res = await api.post('/admin/auth/register', { resident_id, username, password, role })
   return res.data
 }
 
