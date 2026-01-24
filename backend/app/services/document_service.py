@@ -215,6 +215,22 @@ def update_document_type(
     return doc_type
 
 
+def delete_document_type(db: Session, doctype_id: int):
+    """
+    Admin: Soft-deletes a document type by marking it unavailable.
+    """
+    doc_type = db.query(DocumentType).filter(DocumentType.id == doctype_id).first()
+
+    if not doc_type:
+        return None
+
+    doc_type.is_available = False
+    db.commit()
+    db.refresh(doc_type)
+
+    return doc_type
+
+
 def get_all_document_requests(db: Session):
     """
     Admin: Monitors all incoming document requests.
@@ -235,3 +251,24 @@ def get_document_request_by_id(db: Session, request_id: int,):
         .filter(DocumentRequest.id == request_id)
         .first()
     )
+
+def get_document_type_with_file(db: Session, doctype_id: int):
+    return (
+        db.query(DocumentType)
+        .filter(DocumentType.id == doctype_id)
+        .first()
+    )
+
+
+def upload_document_type_file(
+    db: Session,
+    doctype_id: int,
+    file_bytes: bytes,
+):
+    doc = db.query(DocumentType).filter(DocumentType.id == doctype_id).first()
+    if not doc:
+        return None
+
+    doc.file = file_bytes
+    db.commit()
+    return True

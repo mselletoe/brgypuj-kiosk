@@ -123,12 +123,12 @@ function save() {
           :key="field.id"
           style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 1rem; padding: 1.25rem; background: #fafafa; border: 1px solid #e5e5e5; border-radius: 8px; align-items: start;"
         >
-          <!-- Field Name -->
+          <!-- Label -->
           <div style="display: flex; flex-direction: column; gap: 0.5rem;">
             <label style="font-size: 13px; color: #666; font-weight: 500;">Field Name</label>
             <NInput
-              v-model:value="field.name"
-              placeholder="e.g., full_name"
+              v-model:value="field.label"
+              placeholder="e.g., Field Label"
               size="medium"
               @input="field.name = formatName(field.name)"
             />
@@ -138,8 +138,8 @@ function save() {
           <div style="display: flex; flex-direction: column; gap: 0.5rem;">
             <label style="font-size: 13px; color: #666; font-weight: 500;">Template placeholder</label>
             <NInput
-              v-model:value="field.label"
-              placeholder="e.g., Full Name"
+              v-model:value="field.name"
+              placeholder="e.g., field_label"
               size="medium"
             />
           </div>

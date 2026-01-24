@@ -67,6 +67,10 @@ class DocumentTypeAdminOut(DocumentTypeKioskOut):
     Includes availability status for management toggles.
     """
     is_available: bool
+    has_template: bool
+
+    class Config:
+        from_attributes = True
 
 
 class DocumentTypeProcessingOut(BaseModel):

@@ -4,7 +4,9 @@ Document Administration API
 Provides management endpoints for document type templates and resident 
 request monitoring within the administrative dashboard.
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from fastapi.responses import StreamingResponse
+from io import BytesIO
 from sqlalchemy.orm import Session
 from app.api.deps import get_db
 from app.schemas.document import (
@@ -13,6 +15,7 @@ from app.schemas.document import (
     DocumentTypeUpdate,
     DocumentRequestAdminOut,
     DocumentRequestAdminDetail,
+    DocumentTypeProcessingOut
 )
 from app.services.document_service import (
     get_all_document_types,
@@ -20,6 +23,9 @@ from app.services.document_service import (
     update_document_type,
     get_all_document_requests,
     get_document_request_by_id,
+    delete_document_type,
+    get_document_type_with_file,
+    upload_document_type_file,
 )
 
 router = APIRouter(prefix="/documents")
@@ -73,6 +79,77 @@ def update_type(
         )
     return updated
 
+
+@router.delete(
+    "/types/{doctype_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def delete_type(doctype_id: int, db: Session = Depends(get_db)):
+    """
+    Soft delete a document type (mark as unavailable).
+    """
+    deleted = delete_document_type(db, doctype_id)
+    if not deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document type not found",
+        )
+
+@router.get(
+    "/types/{doctype_id}/file",
+)
+def download_document_type_file(
+    doctype_id: int,
+    db: Session = Depends(get_db),
+):
+    """
+    Downloads the document template file for a specific document type.
+    """
+    doc = get_document_type_with_file(db, doctype_id)
+
+    if not doc or not doc.file:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document file not found",
+        )
+
+    return StreamingResponse(
+        BytesIO(doc.file),
+        media_type="application/octet-stream",
+        headers={
+            "Content-Disposition": f'attachment; filename="{doc.doctype_name}.docx"'
+        },
+    )
+
+@router.post(
+    "/types/{doctype_id}/file",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def upload_document_type_template(
+    doctype_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+):
+    """
+    Uploads or replaces the document template file for a document type.
+    """
+    if not file.filename.endswith((".docx", ".pdf")):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only .docx or .pdf files are allowed",
+        )
+
+    success = upload_document_type_file(
+        db=db,
+        doctype_id=doctype_id,
+        file_bytes=file.file.read(),
+    )
+
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document type not found",
+        )
 
 
 # =========================================================

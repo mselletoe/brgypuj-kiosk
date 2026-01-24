@@ -17,6 +17,10 @@ class DocumentType(Base):
 
     document_requests = relationship("DocumentRequest", back_populates="doctype")
 
+    @property
+    def has_template(self) -> bool:
+        """Check if document has an uploaded template file"""
+        return self.file is not None and len(self.file) > 0 if self.file else False
 
 class DocumentRequest(Base):
     __tablename__ = "document_requests"
