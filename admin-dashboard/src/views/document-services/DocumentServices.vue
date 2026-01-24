@@ -23,7 +23,6 @@ const services = ref([])
 const editingId = ref(null)
 const showAddForm = ref(false)
 const searchQuery = ref('')
-const uploadedFile = ref(null)
 const showDeleteModal = ref(false)
 const deleteTargetId = ref(null)
 const selectedIds = ref([])
@@ -66,10 +65,6 @@ async function addService() {
     return message.warning('Please enter a service name.')
   }
 
-  if (!uploadedFile.value) {
-    return message.warning('Please upload a template file.')
-  }
-
   try {
     const { data } = await createDocumentType({
       doctype_name: newService.value.request_type_name,
@@ -79,10 +74,6 @@ async function addService() {
       is_available: newService.value.available
     })
 
-    if (uploadedFile.value) {
-      await uploadDocumentTemplate(data.id, uploadedFile.value)
-    }
-
     services.value.push({
       id: data.id,
       request_type_name: data.doctype_name,
@@ -90,13 +81,12 @@ async function addService() {
       price: Number(data.price),
       available: data.is_available,
       fields: data.fields || [],
-      has_template: !!uploadedFile.value
+      has_template: false
     })
 
-    message.success('Document type created successfully.')
+    message.success('Document type created successfully. You can now upload a template.')
 
     showAddForm.value = false
-    uploadedFile.value = null
     newService.value = {
       request_type_name: '',
       description: '',
@@ -105,8 +95,11 @@ async function addService() {
       fields: []
     }
   } catch (error) {
-    console.error(error)
-    message.error('Failed to add document type.')
+    console.error('Full error:', error)
+    console.error('Error response:', error.response)
+    
+    const errorMsg = error.response?.data?.detail || 'Failed to add document type.'
+    message.error(errorMsg)
   }
 }
 
@@ -142,6 +135,25 @@ async function updateService(service) {
 }
 
 // ======================================
+// Toggle Availability
+// ======================================
+async function toggleAvailability(service) {
+  try {
+    const newStatus = !service.available
+    
+    const { data } = await updateDocumentType(service.id, {
+      is_available: newStatus
+    })
+
+    service.available = data.is_available
+    message.success(`Service ${newStatus ? 'enabled' : 'disabled'} successfully.`)
+  } catch (err) {
+    console.error(err)
+    message.error('Failed to update availability.')
+  }
+}
+
+// ======================================
 // Delete Logic (Single & Bulk)
 // ======================================
 function requestDelete(id) {
@@ -159,7 +171,7 @@ function bulkDelete() {
 async function confirmDelete() {
   try {
     if (isBulkDelete.value) {
-      await Promise.all(selectedIds.value.map(deleteDocumentType))
+      await Promise.all(selectedIds.value.map(id => deleteDocumentType(id)))
       services.value = services.value.filter(s => !selectedIds.value.includes(s.id))
       message.success(`${selectedIds.value.length} service(s) deleted successfully.`)
       selectedIds.value = []
@@ -169,8 +181,10 @@ async function confirmDelete() {
       message.success('Service deleted successfully.')
     }
   } catch (err) {
-    console.error(err)
-    message.error('Delete failed.')
+    console.error('Delete error:', err)
+    console.error('Error response:', err.response)
+    const errorMsg = err.response?.data?.detail || 'Delete failed.'
+    message.error(errorMsg)
   } finally {
     deleteTargetId.value = null
     showDeleteModal.value = false
@@ -251,29 +265,6 @@ async function handleDownload(service) {
     console.error(err)
     message.error('Failed to download template.')
   }
-}
-
-// ======================================
-// File Upload Handler for New Service
-// ======================================
-function handleUpload({ file }) {
-  const allowed = [
-    'application/pdf',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-  ]
-
-  if (!allowed.includes(file.file.type)) {
-    message.error('Only PDF or DOCX files are allowed.')
-    return
-  }
-
-  const maxSize = 10 * 1024 * 1024 // 10MB
-  if (file.file.size > maxSize) {
-    message.error('File size must not exceed 10MB.')
-    return
-  }
-
-  uploadedFile.value = file.file
 }
 
 // ======================================
@@ -416,15 +407,20 @@ const columns = computed(() => [
     key: 'status',
     width: 140,
     render(row) {
-      return h(
-        'span',
-        {
-          class: `px-3 py-1 rounded-full text-xs font-medium ${
-            row.available ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-          }`
-        },
-        row.available ? 'Available' : 'Not Available'
-      )
+      return h('div', { class: 'flex items-center gap-2' }, [
+        h(
+          'button',
+          {
+            onClick: () => toggleAvailability(row),
+            class: `px-3 py-1 rounded-full text-xs font-medium cursor-pointer transition ${
+              row.available 
+                ? 'bg-green-100 text-green-800 hover:bg-green-200' 
+                : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+            }`
+          },
+          row.available ? 'Available' : 'Not Available'
+        )
+      ])
     }
   },
   {
@@ -596,52 +592,49 @@ onMounted(fetchServices)
         <XMarkIcon class="w-5 h-5 text-gray-600" />
       </button>
 
-      <div class="grid grid-cols-[2fr_1fr_1fr_2fr] gap-4 items-end">
-        <div class="flex flex-col gap-3">
-          <div>
-            <label class="block text-sm text-gray-600 mb-1">Document Name</label>
-            <n-input
-              v-model:value="newService.request_type_name"
-              placeholder="Enter name"
-            />
-          </div>
-          <div>
-            <label class="block text-sm text-gray-600 mb-1">Description</label>
-            <n-input
-              v-model:value="newService.description"
-              placeholder="Enter description"
-            />
-          </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">Document Name</label>
+          <n-input
+            v-model:value="newService.request_type_name"
+            placeholder="Enter name"
+          />
+        </div>
+        
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">Description</label>
+          <n-input
+            v-model:value="newService.description"
+            placeholder="Enter description"
+          />
         </div>
 
         <div>
-          <label class="block text-sm text-gray-600 mb-1">Price</label>
-          <n-input v-model:value="newService.price" type="number" placeholder="0" />
+          <label class="block text-sm text-gray-600 mb-1">Price (₱)</label>
+          <n-input 
+            v-model:value="newService.price" 
+            type="number" 
+            placeholder="0.00"
+            min="0"
+            step="0.01"
+          />
         </div>
 
-        <NCheckbox v-model:checked="newService.available" class="mb-2"
-          >Available</NCheckbox
-        >
-
-        <n-upload
-          :show-file-list="true"
-          :default-upload="false"
-          :on-change="handleUpload"
-          accept=".docx,.pdf"
-        >
-          <n-upload-dragger>
-            <div class="text-gray-500 text-xs text-center">
-              Drag file here or click to upload
-            </div>
-          </n-upload-dragger>
-        </n-upload>
+        <div class="flex items-end">
+          <NCheckbox v-model:checked="newService.available">
+            Available for Residents
+          </NCheckbox>
+        </div>
       </div>
 
       <div class="flex justify-end gap-3 mt-6">
         <n-button @click="showAddForm = false">Cancel</n-button>
-        <n-button type="primary" :disabled="!uploadedFile" @click="addService"
-          >Add Document Type</n-button
+        <n-button 
+          type="primary" 
+          @click="addService"
         >
+          Add Document Type
+        </n-button>
       </div>
     </div>
 

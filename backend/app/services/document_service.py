@@ -182,7 +182,6 @@ def create_document_type(db: Session, payload: DocumentTypeCreate,):
         description=payload.description,
         price=payload.price,
         fields=payload.fields,
-        file=payload.file,
         is_available=payload.is_available,
     )
 
@@ -217,18 +216,17 @@ def update_document_type(
 
 def delete_document_type(db: Session, doctype_id: int):
     """
-    Admin: Soft-deletes a document type by marking it unavailable.
+    Admin: Actually deletes a document type from the database.
     """
     doc_type = db.query(DocumentType).filter(DocumentType.id == doctype_id).first()
 
     if not doc_type:
         return None
 
-    doc_type.is_available = False
+    db.delete(doc_type)
     db.commit()
-    db.refresh(doc_type)
 
-    return doc_type
+    return True
 
 
 def get_all_document_requests(db: Session):
@@ -251,6 +249,7 @@ def get_document_request_by_id(db: Session, request_id: int,):
         .filter(DocumentRequest.id == request_id)
         .first()
     )
+
 
 def get_document_type_with_file(db: Session, doctype_id: int):
     return (
