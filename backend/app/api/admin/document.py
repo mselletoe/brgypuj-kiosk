@@ -85,9 +85,6 @@ def update_type(
     status_code=status.HTTP_204_NO_CONTENT,
 )
 def delete_type(doctype_id: int, db: Session = Depends(get_db)):
-    """
-    Soft delete a document type (mark as unavailable).
-    """
     deleted = delete_document_type(db, doctype_id)
     if not deleted:
         raise HTTPException(

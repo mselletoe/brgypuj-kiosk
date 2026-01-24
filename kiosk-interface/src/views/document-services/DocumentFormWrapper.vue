@@ -5,6 +5,7 @@ import DocumentForm from './DocumentForm.vue'
 import ArrowBackButton from '@/components/shared/ArrowBackButton.vue' 
 import Modal from '@/components/shared/Modal.vue'
 import Loading from '@/components/shared/Loading.vue'
+import { getDocumentTypes } from '@/api/documentService'
 
 const route = useRoute()
 const router = useRouter()
@@ -18,70 +19,41 @@ const residentData = ref(null)
 const isLoadingResidentData = ref(false)
 const isSubmitting = ref(false)
 
-// Placeholder for resident id (RFID or guest)
+const documents = ref({})
+const loadingDocuments = ref(true)
+const errorDocuments = ref(null)
+
 const currentResidentId = ref(null)
 
-// ==================================
-// Slugified route param
-// ==================================
 const docTypeSlug = computed(() =>
   route.params.docType?.toLowerCase().replace(/\s+/g, '-')
 )
+const config = computed(() => documents.value[docTypeSlug.value])
 
-// ==================================
-// Fetch dynamic configs
-// ==================================
-const documentConfigs = ref({})
-
-const fetchConfigs = async () => {
+const fetchDocuments = async () => {
+  loadingDocuments.value = true
+  errorDocuments.value = null
   try {
-    const types = await fetchRequestTypes()
-    types.forEach(type => {
-      const slug = type.request_type_name.toLowerCase().replace(/\s+/g, '-')
-      documentConfigs.value[slug] = {
-        id: type.id,
-        title: type.request_type_name,
-        fields: type.fields || [],
-        available: type.available ?? true
+    const data = await getDocumentTypes()
+    const mapping = {}
+    data.forEach(doc => {
+      const slug = doc.doctype_name.toLowerCase().replace(/\s+/g, '-')
+      mapping[slug] = {
+        id: doc.id,
+        title: doc.doctype_name,
+        fields: doc.fields || [],
+        available: true
       }
     })
+    documents.value = mapping
   } catch (err) {
-    console.error('Failed to fetch request type configs', err)
-  }
-}
-
-// ==================================
-// Fetch resident data for RFID users
-// ==================================
-const loadResidentData = async () => {
-  // Only fetch if user is authenticated via RFID
-  if (!isRfidUser() || !auth.token) {
-    console.log('Guest user or no token - skipping resident data fetch')
-    return
-  }
-
-  isLoadingResidentData.value = true
-  try {
-    const data = await fetchResidentData(auth.token)
-    residentData.value = data
-    console.log('✅ Resident data loaded:', data)
-  } catch (err) {
-    console.error('Failed to fetch resident data:', err)
-    // Don't block the form if data fetch fails
-    residentData.value = null
+    console.error(err)
+    errorDocuments.value = 'Failed to load document fields'
   } finally {
-    isLoadingResidentData.value = false
+    loadingDocuments.value = false
   }
 }
 
-// ==================================
-// Computed current config
-// ==================================
-const config = computed(() => documentConfigs.value[docTypeSlug.value])
-
-// ==================================
-// Navigation
-// ==================================
 const goBack = () => {
   if (currentStep.value === 'preview') {
     currentStep.value = 'form'
@@ -101,49 +73,37 @@ const closeModal = () => {
   }, 500)
 }
 
-// ==================================
-// Form Submission
-// ==================================
-const handleSubmit = async (data) => {
-  if (isSubmitting.value) return
-  isSubmitting.value = true
+const handleYes = () => {
+  router.push('/document-services')
+}
 
-  try {
-    if (!config.value?.id) {
-      alert("Invalid document type.")
-      return
-    }
-
-    formData.value = data
-
-    const payload = {
-      request_type_id: config.value.id,
-      form_data: data
-    }
-
-    const res = await createRequest(payload, auth.token)
-
-    // Optional: ensure backend REALLY returned success
-    if (!res || res.error) {
-      throw new Error("Backend error")
-    }
-
-    showSuccessModal.value = true
-
-  } catch (err) {
-    console.error('Submission failed', err)
-    alert('Failed to submit request.')
-  } finally {
-    isSubmitting.value = false
-  }
+const handleNo = () => {
+  closeModal()
 }
 
 // ==================================
-// Initialize on mount
+// Form Submission (frontend-only simulation)
 // ==================================
+const handleSubmit = (data) => {
+  if (isSubmitting.value) return
+  isSubmitting.value = true
+
+  if (!config.value?.id) {
+    alert("Invalid document type.")
+    isSubmitting.value = false
+    return
+  }
+
+  formData.value = data
+
+  setTimeout(() => {
+    showSuccessModal.value = true
+    isSubmitting.value = false
+  }, 500)
+}
+
 onMounted(async () => {
-  await fetchConfigs()
-  await loadResidentData()
+  await fetchDocuments()
 })
 </script>
 
@@ -156,7 +116,6 @@ onMounted(async () => {
         class="absolute top-0 left-0 mt-2 mr-6"
       />
 
-      <!-- Title and Subtext -->
       <div class="flex justify-between items-center w-full ml-20">
         <h1 class="text-[40px] font-extrabold text-[#03335C] leading-tight mt-2">
           {{ config?.title || docTypeSlug?.charAt(0).toUpperCase() + docTypeSlug?.slice(1) }}
@@ -179,7 +138,7 @@ onMounted(async () => {
         :config="config"
         :initial-data="formData"
         :resident-data="residentData"
-        :is-rfid-user="isRfidUser()"
+        :is-rfid-user="false"
         :is-submitting="isSubmitting"
         @continue="handleSubmit"
       />
@@ -218,8 +177,13 @@ onMounted(async () => {
         <Modal
           title="Application Submitted!"
           message="Your request has been successfully submitted. You will be notified once it's processed."
-          doneText="Done"
+          primaryButtonText="Yes"
+          secondaryButtonText="No"
+          :showPrimaryButton="true"
+          :showSecondaryButton="true"
           :showNewRequest="false"
+          @primary-click="handleYes"
+          @secondary-click="handleNo"
           @done="closeModal"
         />
       </div>

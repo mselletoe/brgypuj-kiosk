@@ -1,14 +1,15 @@
 <script setup>
-import { ref, watch, computed } from 'vue'
+import { ref, watch } from 'vue'
 import VueDatePicker from '@vuepic/vue-datepicker'
 import '@vuepic/vue-datepicker/dist/main.css'
 import { CalendarIcon } from '@heroicons/vue/24/outline'
+import { LockClosedIcon } from '@heroicons/vue/24/solid'
 
 const props = defineProps({
   config: Object,
   initialData: {
     type: Object,
-    default: () => ({}),
+    default: () => ({})
   },
   residentData: {
     type: Object,
@@ -32,47 +33,38 @@ const emit = defineEmits(['continue'])
 const formData = ref({})
 const errors = ref({})
 
-// Map of database field names to possible form field names
+// Map of field names to possible prefill mappings
 const fieldMapping = {
-  // Name fields
-  'full_name': ['full_name', 'name', 'resident_name', 'applicant_name'],
-  'first_name': ['first_name', 'fname'],
-  'middle_name': ['middle_name', 'mname'],
-  'last_name': ['last_name', 'lname', 'surname'],
-  'suffix': ['suffix', 'name_suffix'],
-  
-  // Personal info
-  'gender': ['gender', 'sex'],
-  'birthdate': ['birthdate', 'date_of_birth', 'birth_date', 'dob'],
-  'age': ['age'],
-  'years_residency': ['years_residency', 'years_of_residency', 'residency_years'],
-  'email': ['email', 'email_address'],
-  'phone_number': ['phone_number', 'contact_number', 'mobile_number', 'phone', 'contact'],
-  
-  // Address fields
-  'unit_blk_street': ['unit_blk_street', 'street', 'house_number'],
-  'purok_name': ['purok_name', 'purok', 'sitio'],
-  'barangay': ['barangay', 'brgy'],
-  'municipality': ['municipality', 'city'],
-  'province': ['province'],
-  'region': ['region'],
-  'full_address': ['full_address', 'address', 'complete_address'],
-  
-  // RFID
-  'rfid_uid': ['rfid_uid', 'rfid', 'card_number']
+  full_name: ['full_name', 'name', 'resident_name', 'applicant_name'],
+  first_name: ['first_name', 'fname'],
+  middle_name: ['middle_name', 'mname'],
+  last_name: ['last_name', 'lname', 'surname'],
+  suffix: ['suffix', 'name_suffix'],
+  gender: ['gender', 'sex'],
+  birthdate: ['birthdate', 'date_of_birth', 'birth_date', 'dob'],
+  age: ['age'],
+  years_residency: ['years_residency', 'years_of_residency', 'residency_years'],
+  email: ['email', 'email_address'],
+  phone_number: ['phone_number', 'contact_number', 'mobile_number', 'phone', 'contact'],
+  unit_blk_street: ['unit_blk_street', 'street', 'house_number'],
+  purok_name: ['purok_name', 'purok', 'sitio'],
+  barangay: ['barangay', 'brgy'],
+  municipality: ['municipality', 'city'],
+  province: ['province'],
+  region: ['region'],
+  full_address: ['full_address', 'address', 'complete_address'],
+  rfid_uid: ['rfid_uid', 'rfid', 'card_number']
 }
 
-// Track which fields are pre-filled from database
+// Track prefilled fields
 const preFilledFields = ref(new Set())
 
 // Initialize form with either resident data or initial data
 props.config.fields.forEach((field) => {
   let value = props.initialData[field.name] || ''
   let isPrefilled = false
-  
-  // If user is RFID authenticated and has resident data
+
   if (props.isRfidUser && props.residentData) {
-    // Try to find matching database field
     for (const [dbField, formFields] of Object.entries(fieldMapping)) {
       if (formFields.includes(field.name) && props.residentData[dbField]) {
         value = props.residentData[dbField]
@@ -82,7 +74,7 @@ props.config.fields.forEach((field) => {
       }
     }
   }
-  
+
   formData.value[field.name] = value
   errors.value[field.name] = ''
 })
@@ -90,7 +82,6 @@ props.config.fields.forEach((field) => {
 // Watch for changes in resident data
 watch(() => props.residentData, (newData) => {
   if (!newData || !props.isRfidUser) return
-  
   props.config.fields.forEach((field) => {
     for (const [dbField, formFields] of Object.entries(fieldMapping)) {
       if (formFields.includes(field.name) && newData[dbField]) {
@@ -103,22 +94,13 @@ watch(() => props.residentData, (newData) => {
 }, { immediate: true })
 
 // ==============================================
-// Helper function to check if field is pre-filled
+// Helpers
 // ==============================================
-const isPreFilled = (fieldName) => {
-  return props.isRfidUser && preFilledFields.value.has(fieldName)
-}
+const isPreFilled = (fieldName) => props.isRfidUser && preFilledFields.value.has(fieldName)
+const formatPlaceholder = (placeholder, label, isPrefilled) => isPrefilled ? 'Auto-filled from your profile' : `e.g. "${placeholder || label}"`
 
 // ==============================================
-// Helper function to format placeholder text
-// ==============================================
-const formatPlaceholder = (placeholder, label, isPrefilled) => {
-  if (isPrefilled) return 'Auto-filled from your profile'
-  return `e.g. "${placeholder || label}"`
-}
-
-// ==============================================
-// Validation
+// Validation & Submit
 // ==============================================
 const validate = () => {
   let isValid = true
@@ -133,10 +115,8 @@ const validate = () => {
 }
 
 const handleContinue = () => {
-  if (props.isSubmitting) return  // ⛔ prevent double submit
-  if (validate()) {
-    emit('continue', formData.value)
-  }
+  if (props.isSubmitting) return
+  if (validate()) emit('continue', formData.value)
 }
 </script>
 
@@ -154,32 +134,19 @@ const handleContinue = () => {
     <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
       <div v-for="field in config.fields" :key="field.name" class="flex flex-col">
         <label class="block mb-2 font-bold text-[#003A6B] items-center gap-2">
-          {{ field.label }} 
+          {{ field.label }}
           <span v-if="field.required" class="text-red-500">*</span>
-          <LockClosedIcon 
-            v-if="isPreFilled(field.name)" 
-            class="w-4 h-4 text-blue-600" 
-            title="Auto-filled from your profile"
-          />
+          <LockClosedIcon v-if="isPreFilled(field.name)" class="w-4 h-4 text-blue-600" title="Auto-filled from your profile"/>
         </label>
 
-        <!-- Text / Email / Tel / Number -->
+        <!-- Text / Email / Number / Tel -->
         <input
-          v-if="['text', 'email', 'tel', 'number'].includes(field.type)"
+          v-if="['text','email','tel','number'].includes(field.type)"
           v-model="formData[field.name]"
           :type="field.type"
           :placeholder="formatPlaceholder(field.placeholder, field.label, isPreFilled(field.name))"
-          :maxlength="field.type === 'tel' ? 11 : null"
           :readonly="isPreFilled(field.name) || props.isSubmitting"
           :disabled="isPreFilled(field.name) || props.isSubmitting"
-          inputmode="numeric"
-          pattern="[0-9]*"
-          @input="(e) => {
-            if (field.type === 'tel' && !isPreFilled(field.name)) {
-              e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 11)
-              formData[field.name] = e.target.value
-            }
-          }"
           :class="[
             errors[field.name] ? 'border-red-500 focus:ring-red-500' : 'border-[#464646] focus:ring-blue-500',
             isPreFilled(field.name) ? 'bg-gray-100 cursor-not-allowed text-gray-700' : 'bg-white',
@@ -187,7 +154,7 @@ const handleContinue = () => {
           ]"
         />
 
-        <!-- Date Picker -->
+        <!-- Date picker -->
         <VueDatePicker
           v-else-if="field.type === 'date'"
           v-model="formData[field.name]"
@@ -201,8 +168,8 @@ const handleContinue = () => {
           :input-class-name="isPreFilled(field.name) ? 'bg-gray-100 cursor-not-allowed' : ''"
         >
           <template #input-icon>
-            <LockClosedIcon v-if="isPreFilled(field.name)" class="w-5 h-5 text-blue-600 ml-3" />
-            <CalendarIcon v-else class="w-5 h-5 text-gray-400 ml-3" />
+            <LockClosedIcon v-if="isPreFilled(field.name)" class="w-5 h-5 text-blue-600 ml-3"/>
+            <CalendarIcon v-else class="w-5 h-5 text-gray-400 ml-3"/>
           </template>
         </VueDatePicker>
 
@@ -237,7 +204,6 @@ const handleContinue = () => {
           </option>
         </select>
 
-        <!-- Error message -->
         <p v-if="errors[field.name]" class="text-red-500 text-[10px] text-sm mt-1 italic">{{ errors[field.name] }}</p>
       </div>
     </div>

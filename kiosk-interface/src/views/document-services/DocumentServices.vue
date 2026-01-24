@@ -2,36 +2,19 @@
 import { useRoute, useRouter } from 'vue-router'
 import { ref, onMounted } from 'vue'
 import ArrowBackButton from '@/components/shared/ArrowBackButton.vue'
-import SuccessModal from '@/components/shared/Modal.vue'
+import { getDocumentTypes } from '@/api/documentService'
 
 const route = useRoute()
 const router = useRouter() 
 
-// ==========================================
-// Modal control
-// ==========================================
 const showModal = ref(false)
-const handleContinue = () => {
-  showModal.value = true
-}
+const handleContinue = () => { showModal.value = true }
 const handleDone = () => {
   showModal.value = false
   router.push('/home')  
 }
-
-// ==========================================
-// Go back handler
-// ==========================================
 const goBack = () => router.push('/home')
-
-// ==========================================
-// Checks if no document type selected
-// ==========================================
 const isParent = () => !route.params.docType
-
-// ==========================================
-// Documents type fetched from backend
-// ==========================================
 const documents = ref([])
 const loading = ref(false)
 const error = ref(null)
@@ -41,12 +24,17 @@ const error = ref(null)
 // ==========================================
 const fetchDocuments = async () => {
   loading.value = true
+  error.value = null
+
   try {
-    const data = await fetchRequestTypes()
-    documents.value = data.filter(item => item.status === 'active')
+    const data = await getDocumentTypes()
+    documents.value = data.map(doc => ({
+      request_type_name: doc.doctype_name,
+      description: doc.description,
+      price: doc.price
+    }))
   } catch (err) {
-    console.error('Error fetching request types:', err)
-    error.value = err.message
+    error.value = 'Failed to load documents'
   } finally {
     loading.value = false
   }
