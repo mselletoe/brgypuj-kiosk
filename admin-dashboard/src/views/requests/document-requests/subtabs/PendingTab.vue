@@ -2,8 +2,8 @@
 import { ref, computed, onMounted } from 'vue'
 import RequestCard from '@/views/requests/document-requests/DocumentRequestCard.vue'
 import ConfirmModal from '@/components/shared/ConfirmationModal.vue'
+import { getDocumentRequests } from '@/api/documentService'
 
-// --- PROPS ---
 const props = defineProps({
   searchQuery: {
     type: String,
@@ -11,7 +11,6 @@ const props = defineProps({
   }
 })
 
-// --- REFS ---
 const pendingRequests = ref([])
 const isLoading = ref(true)
 const errorMessage = ref(null)
@@ -19,6 +18,46 @@ const selectedRequests = ref(new Set())
 const showConfirmModal = ref(false)
 const confirmTitle = ref('Are you sure?')
 const confirmAction = ref(null)
+
+const fetchPendingRequests = async () => {
+  isLoading.value = true
+  errorMessage.value = null
+  
+  try {
+    const response = await getDocumentRequests()
+    
+    // Transform backend data to match card component expectations
+    const allRequests = response.data.map(req => ({
+      id: req.id,
+      transaction_no: req.transaction_no,
+      type: req.doctype_name.toUpperCase() === 'RFID' ? 'rfid' : 'document',
+      status: req.status.toLowerCase(),
+      requestType: req.doctype_name,
+      requester: {
+        firstName: req.resident_first_name || '',
+        middleName: req.resident_middle_name || '',
+        last_name: req.resident_last_name || ''
+      },
+      rfidNo: req.resident_rfid || 'Guest Mode',
+      requestedOn: new Date(req.requested_at).toLocaleDateString('en-US', {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric'
+      }),
+      amount: req.payment_status !== 'free' ? String(req.form_data?.price || '0.00') : null,
+      isPaid: req.payment_status === 'paid',
+      raw: req // Keep original data for updates
+    }))
+    
+    // Filter only pending requests
+    pendingRequests.value = allRequests.filter(req => req.status === 'pending')
+  } catch (error) {
+    console.error('Error fetching requests:', error)
+    errorMessage.value = 'Failed to load requests. Please try again.'
+  } finally {
+    isLoading.value = false
+  }
+}
 
 const openConfirmModal = (title, action) => {
   confirmTitle.value = title
@@ -39,52 +78,12 @@ const handleCancel = () => {
   confirmAction.value = null
 }
 
-// --- HELPERS ---
-const formatRequestDate = (isoDate) => {
-  if (!isoDate) return "N/A"
-  const date = new Date(isoDate)
-  const now = new Date()
-  const diffMs = now - date
-  const diffSec = Math.floor(diffMs / 1000)
-  const diffMin = Math.floor(diffSec / 60)
-  const diffHour = Math.floor(diffMin / 60)
-
-  if (diffMin < 1) return `${diffSec} seconds ago`
-  if (diffHour < 1) return `${diffMin} minutes ago`
-  if (diffHour < 24) return `${diffHour} hours ago`
-
-  return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-}
-
-// --- FETCH PENDING REQUESTS ---
-const fetchPendingRequests = async () => {
-  try {
-    const response = await api.get('/requests')
-    pendingRequests.value = response.data
-      .filter(req => req.status === 'pending')
-      .map(req => ({
-        id: req.id.toString(),
-        type: req.rfid_uid ? 'rfid' : 'document',
-        status: 'pending',
-        requestType: req.document_type || 'Unknown Document',
-        requester: {
-          firstName: req.requester_name?.split(' ')[0] || '',
-          middleName: req.requester_name?.split(' ')[1] || '',
-          surname: req.requester_name?.split(' ').slice(2).join(' ') || req.requester_name || 'N/A'
-        },
-        rfidNo: req.rfid_uid || 'Guest Mode',
-        requestedOn: formatRequestDate(req.created_at),
-        amount: req.price ? req.price.toFixed(2) : null,
-        isPaid: req.payment_status === 'Paid',
-        residentId: req.resident_id,
-        rawData: req
-      }))
-  } catch (error) {
-    console.error('Error fetching requests:', error)
-    errorMessage.value = 'Failed to load pending requests.'
-  } finally {
-    isLoading.value = false
-  }
+const formatRequestDate = (date) => {
+  return new Date(date).toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric'
+  })
 }
 
 const selectAll = () => {
@@ -100,22 +99,15 @@ const bulkDelete = () => {
 
   openConfirmModal(
     `Delete ${selectedRequests.value.size} selected requests?`,
-    async () => {
-      try {
-        const ids = Array.from(selectedRequests.value)
-        await Promise.all(ids.map(id => api.delete(`/requests/${id}`)))
-        pendingRequests.value = pendingRequests.value.filter(
-          req => !selectedRequests.value.has(req.id)
-        )
-        selectedRequests.value.clear()
-      } catch (e) {
-        console.error(e)
-      }
+    () => {
+      pendingRequests.value = pendingRequests.value.filter(
+        req => !selectedRequests.value.has(req.id)
+      )
+      selectedRequests.value.clear()
     }
   )
 }
 
-// EXPOSE THESE TO THE PARENT
 defineExpose({
   selectedCount: computed(() => selectedRequests.value.size),
   totalCount: computed(() => filteredRequests.value.length),
@@ -124,105 +116,52 @@ defineExpose({
   bulkDelete
 })
 
-// --- HANDLE BUTTON CLICK ---
-const handleButtonClick = async ({ action, requestId, type, status }) => {
+const handleButtonClick = ({ action, requestId }) => {
   const request = pendingRequests.value.find(r => r.id === requestId)
   if (!request) return
 
-  try {
-    switch (action) {
-      case 'view':
-        await handleViewDocument(requestId)
-        break
-      case 'notes':
-        console.log(`Opening notes for request ${requestId}`)
-        // TODO: Implement notes modal
-        break
-      case 'approve':
-        await handleApprove(requestId)
-        break
-      case 'reject':
-        await handleReject(requestId)
-        break
-      case 'delete':
-        await handleDelete(requestId)
-        break
-      default:
-        console.log(`Action ${action} not implemented yet`)
-    }
-  } catch (error) {
-    console.error(`Error handling ${action}:`, error)
+  switch (action) {
+    case 'view':
+      alert(`Viewing request ${requestId} (frontend only)`)
+      break
+    case 'approve':
+      handleApprove(requestId)
+      break
+    case 'reject':
+      handleReject(requestId)
+      break
+    case 'delete':
+      handleDelete(requestId)
+      break
+    default:
+      console.log(`Action ${action} not implemented`)
   }
 }
 
-// --- VIEW DOCUMENT ---
-const handleViewDocument = async (id) => {
-  try {
-    const response = await api.get(`/requests/${id}/download-pdf`, {
-      responseType: 'blob'
-    })
-    
-    const blob = new Blob([response.data], { type: 'application/pdf' })
-    const url = URL.createObjectURL(blob)
-    window.open(url, '_blank')
-    
-    setTimeout(() => URL.revokeObjectURL(url), 1000)
-  } catch (error) {
-    console.error('Error opening PDF:', error)
-    alert('Failed to load document. Please try again.')
-  }
+const handleApprove = (id) => {
+  pendingRequests.value = pendingRequests.value.filter(req => req.id !== id)
 }
 
-// --- APPROVE REQUEST ---
-const handleApprove = async (id) => {
-  try {
-    await api.put(`/requests/${id}/status`, { status_name: 'approved' })
-    pendingRequests.value = pendingRequests.value.filter(req => req.id !== id)
-  } catch (error) {
-    console.error('Error approving request:', error)
-  }
+const handleReject = (id) => {
+  pendingRequests.value = pendingRequests.value.filter(req => req.id !== id)
 }
 
-// --- REJECT REQUEST ---
-const handleReject = async (id) => {
-  try {
-    await api.put(`/requests/${id}/status`, { status_name: 'rejected' })
-    pendingRequests.value = pendingRequests.value.filter(req => req.id !== id)
-  } catch (error) {
-    console.error('Error rejecting request:', error)
-  }
-}
-
-// --- DELETE REQUEST ---
 const handleDelete = (id) => {
   openConfirmModal(
     'Are you sure you want to delete this request?',
-    async () => {
-      try {
-        await api.delete(`/requests/${id}`)
-        pendingRequests.value = pendingRequests.value.filter(req => req.id !== id)
-      } catch (error) {
-        console.error('Error deleting request:', error)
-      }
+    () => {
+      pendingRequests.value = pendingRequests.value.filter(req => req.id !== id)
     }
   )
 }
 
-// --- TOGGLE PAYMENT STATUS ---
-const handlePaymentUpdate = async (requestId, newPaidStatus) => {
+const handlePaymentUpdate = (requestId, newPaidStatus) => {
   const request = pendingRequests.value.find(r => r.id === requestId)
-  if (!request) return
-
-  try {
-    const newStatus = newPaidStatus ? 'Paid' : 'Unpaid'
-    await api.put(`/requests/${requestId}/payment`, { payment_status: newStatus })
+  if (request) {
     request.isPaid = newPaidStatus
-  } catch (error) {
-    console.error('Error toggling payment status:', error)
   }
 }
 
-// --- HANDLE SELECTION ---
 const handleSelectionUpdate = (requestId, isSelected) => {
   if (isSelected) {
     selectedRequests.value.add(requestId)
@@ -231,21 +170,18 @@ const handleSelectionUpdate = (requestId, isSelected) => {
   }
 }
 
-// --- Load on mount ---
 onMounted(fetchPendingRequests)
 
-// --- COMPUTED: Search Filter ---
 const filteredRequests = computed(() => {
   if (!props.searchQuery) return pendingRequests.value
 
-  const lowerQuery = props.searchQuery.toLowerCase().trim()
+  const q = props.searchQuery.toLowerCase()
   return pendingRequests.value.filter(req =>
-    req.requester.firstName.toLowerCase().includes(lowerQuery) ||
-    req.requester.surname.toLowerCase().includes(lowerQuery) ||
-    req.requestType.toLowerCase().includes(lowerQuery) ||
-    req.requestedOn.toLowerCase().includes(lowerQuery) ||
-    req.rfidNo.toLowerCase().includes(lowerQuery) ||
-    (req.amount && req.amount.includes(lowerQuery))
+    req.requester.firstName.toLowerCase().includes(q) ||
+    req.requester.last_name.toLowerCase().includes(q) ||
+    req.requestType.toLowerCase().includes(q) ||
+    req.rfidNo.toLowerCase().includes(q) ||
+    req.transaction_no.toLowerCase().includes(q)
   )
 })
 </script>
@@ -280,7 +216,7 @@ const filteredRequests = computed(() => {
     <RequestCard
       v-for="request in filteredRequests"
       :key="request.id"
-      :id="request.id"
+      :id="request.transaction_no"
       :type="request.type"
       :status="request.status"
       :request-type="request.requestType"

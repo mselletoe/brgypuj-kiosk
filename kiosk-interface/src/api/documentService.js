@@ -13,3 +13,18 @@ export const getDocumentTypes = async () => {
     throw err
   }
 }
+
+/**
+ * Submit a document request for the kiosk
+ * @param {Object} payload { doctype_id, form_data, resident_id }
+ * @returns {Promise<Object>} transaction number
+ */
+export const createDocumentRequest = async (payload) => {
+  try {
+    const response = await api.post('/kiosk/documents/requests', payload)
+    return response.data
+  } catch (err) {
+    console.error('Failed to create document request:', err)
+    throw err
+  }
+}

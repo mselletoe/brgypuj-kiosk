@@ -5,8 +5,10 @@ import DocumentForm from './DocumentForm.vue'
 import ArrowBackButton from '@/components/shared/ArrowBackButton.vue' 
 import Modal from '@/components/shared/Modal.vue'
 import Loading from '@/components/shared/Loading.vue'
-import { getDocumentTypes } from '@/api/documentService'
+import { useAuthStore } from '@/stores/auth'
+import { getDocumentTypes, createDocumentRequest } from '@/api/documentService'
 
+const auth = useAuthStore()
 const route = useRoute()
 const router = useRouter()
 
@@ -22,6 +24,7 @@ const isSubmitting = ref(false)
 const documents = ref({})
 const loadingDocuments = ref(true)
 const errorDocuments = ref(null)
+const transactionNo = ref('')
 
 const currentResidentId = ref(null)
 
@@ -81,10 +84,7 @@ const handleNo = () => {
   closeModal()
 }
 
-// ==================================
-// Form Submission (frontend-only simulation)
-// ==================================
-const handleSubmit = (data) => {
+const handleSubmit = async (data) => {
   if (isSubmitting.value) return
   isSubmitting.value = true
 
@@ -94,12 +94,37 @@ const handleSubmit = (data) => {
     return
   }
 
-  formData.value = data
-
-  setTimeout(() => {
-    showSuccessModal.value = true
+  // Resident ID
+  const residentId = auth.residentId
+  if (!residentId) {
+    alert("No resident found. Please log in via RFID or guest mode.")
     isSubmitting.value = false
-  }, 500)
+    return
+  }
+
+  try {
+    // Construct payload for backend
+    const payload = {
+      doctype_id: config.value.id,
+      form_data: data,
+      resident_id: residentId
+    }
+
+    // Call backend
+    const response = await createDocumentRequest(payload)
+
+    formData.value = data
+
+    // Show modal with transaction number
+    showSuccessModal.value = true
+    transactionNo.value = response.transaction_no
+
+  } catch (err) {
+    console.error(err)
+    alert(err?.response?.data?.detail || 'Failed to submit document request.')
+  } finally {
+    isSubmitting.value = false
+  }
 }
 
 onMounted(async () => {
@@ -176,7 +201,7 @@ onMounted(async () => {
       >
         <Modal
           title="Application Submitted!"
-          message="Your request has been successfully submitted. You will be notified once it's processed."
+          message="Your request has been successfully submitted. You will be notified once it's processed. Transaction No: ${transactionNo}"
           primaryButtonText="Yes"
           secondaryButtonText="No"
           :showPrimaryButton="true"

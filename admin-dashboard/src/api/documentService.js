@@ -43,3 +43,7 @@ export function downloadDocumentTemplate(id, filename = 'template') {
     return response
   })
 }
+
+export function getDocumentRequests() {
+  return api.get('/admin/documents/requests')
+}

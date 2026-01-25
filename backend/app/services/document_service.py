@@ -4,6 +4,8 @@ Document Service Layer
 Handles the business logic for document management, including administrative 
 configuration of document types and resident-facing request processing.
 """
+import random
+from datetime import datetime
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from app.models.document import DocumentType, DocumentRequest
@@ -14,6 +16,7 @@ from app.schemas.document import (
     DocumentTypeCreate,
     DocumentTypeUpdate,
 )
+
 
 # -------------------------------------------------
 # Internal Helpers
@@ -92,6 +95,18 @@ def _check_existing_pending_request(db: Session, resident_id: int):
         )
 
 
+def _generate_transaction_no(db: Session) -> str:
+    """
+    Generates a unique transaction number in the format DR-XXXX
+    """
+    while True:
+        number = random.randint(1000, 9999)
+        transaction_no = f"DR-{number}"
+        exists = db.query(DocumentRequest).filter_by(transaction_no=transaction_no).first()
+        if not exists:
+            return transaction_no
+
+
 # -------------------------------------------------
 # Kiosk Service Functions
 # -------------------------------------------------
@@ -112,28 +127,42 @@ def create_document_request(db: Session, payload: DocumentRequestCreate) -> Docu
     """
     Processes a new document request from the kiosk. Executes comprehensive 
     validation of the resident, document availability, and dynamic field data.
+    
+    Special handling for RFID requests:
+    - RFID requests can be made in guest mode (resident_id = None)
+    - All other document types require a valid resident_id
     """
 
-    # 1. Validate resident existence
-    _validate_resident(db, payload.resident_id)
-
-    # 2. Validate document availability
+    # 1. Validate document availability
     doc_type = _validate_document_type(db, payload.doctype_id)
 
-    # 3. Validate submitted dynamic fields against admin-defined requirements
+    # 2. Check if this is an RFID request
+    is_rfid_request = doc_type.doctype_name.upper() == "RFID"
+
+    # 3. Validate resident based on document type
+    if payload.resident_id is not None:
+        # If resident_id is provided, validate it exists
+        _validate_resident(db, payload.resident_id)
+    elif not is_rfid_request:
+        # If resident_id is None and it's NOT an RFID request, reject
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Guest mode is only allowed for RFID requests"
+        )
+    # If resident_id is None and it IS an RFID request, allow (guest mode)
+
+    # 4. Validate submitted dynamic fields against admin-defined requirements
     _validate_dynamic_fields(
         required_fields=doc_type.fields or [],
         submitted_data=payload.form_data
     )
 
-    # 4. Enforce single pending request policy
-    _check_existing_pending_request(db, payload.resident_id)
-
     # 5. Persist the request
     request = DocumentRequest(
         resident_id=payload.resident_id,
         doctype_id=payload.doctype_id,
-        form_data=payload.form_data
+        form_data=payload.form_data,
+        transaction_no=_generate_transaction_no(db)
     )
 
     db.add(request)
@@ -192,11 +221,7 @@ def create_document_type(db: Session, payload: DocumentTypeCreate,):
     return doc_type
 
 
-def update_document_type(
-    db: Session,
-    doctype_id: int,
-    payload: DocumentTypeUpdate,
-):
+def update_document_type( db: Session, doctype_id: int, payload: DocumentTypeUpdate,):
     """
     Admin: Updates an existing document type template.
     """
@@ -231,10 +256,16 @@ def delete_document_type(db: Session, doctype_id: int):
 
 def get_all_document_requests(db: Session):
     """
-    Admin: Monitors all incoming document requests.
+    Admin: Monitors all incoming document requests with resident information.
     """
+    from sqlalchemy.orm import joinedload
+    
     return (
         db.query(DocumentRequest)
+        .options(
+            joinedload(DocumentRequest.resident),
+            joinedload(DocumentRequest.doctype)
+        )
         .order_by(DocumentRequest.requested_at.desc())
         .all()
     )
@@ -244,8 +275,14 @@ def get_document_request_by_id(db: Session, request_id: int,):
     """
     Admin: Fetches detailed information for a specific document request.
     """
+    from sqlalchemy.orm import joinedload
+    
     return (
         db.query(DocumentRequest)
+        .options(
+            joinedload(DocumentRequest.resident),
+            joinedload(DocumentRequest.doctype)
+        )
         .filter(DocumentRequest.id == request_id)
         .first()
     )

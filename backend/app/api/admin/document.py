@@ -92,6 +92,7 @@ def delete_type(doctype_id: int, db: Session = Depends(get_db)):
             detail="Document type not found",
         )
 
+
 @router.get(
     "/types/{doctype_id}/file",
 )
@@ -117,6 +118,7 @@ def download_document_type_file(
             "Content-Disposition": f'attachment; filename="{doc.doctype_name}.docx"'
         },
     )
+
 
 @router.post(
     "/types/{doctype_id}/file",
@@ -153,15 +155,47 @@ def upload_document_type_template(
 # DOCUMENT REQUESTS 
 # =========================================================
 
+def _format_request_for_admin(request):
+    """Helper to format request with resident data"""
+    # Get the active RFID UID if resident exists
+    rfid_display = "Guest Mode"
+    if request.resident:
+        # Get the active RFID from the relationship
+        active_rfid = next(
+            (rfid.rfid_uid for rfid in request.resident.rfids if rfid.is_active),
+            None
+        )
+        rfid_display = active_rfid if active_rfid else "No RFID"
+
+    return {
+        "id": request.id,
+        "transaction_no": request.transaction_no,
+        "resident_id": request.resident_id,
+        "resident_first_name": request.resident.first_name if request.resident else None,
+        "resident_middle_name": request.resident.middle_name if request.resident else None,
+        "resident_last_name": request.resident.last_name if request.resident else None,
+        "resident_rfid": rfid_display,
+        "doctype_id": request.doctype_id,
+        "doctype_name": request.doctype.doctype_name,
+        "status": request.status,
+        "payment_status": request.payment_status,
+        "form_data": request.form_data,
+        "processed_by": request.processed_by,
+        "requested_at": request.requested_at,
+    }
+
+
 @router.get(
     "/requests",
     response_model=list[DocumentRequestAdminOut],
 )
-def list_document_requests( db: Session = Depends(get_db),):
+def list_document_requests(db: Session = Depends(get_db),):
     """
     Lists all document requests submitted by residents for administrative review.
+    Includes both regular document requests and RFID requests.
     """
-    return get_all_document_requests(db)
+    requests = get_all_document_requests(db)
+    return [_format_request_for_admin(req) for req in requests]
 
 
 @router.get(
@@ -178,4 +212,8 @@ def get_document_request(request_id: int, db: Session = Depends(get_db),):
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Request not found",
         )
-    return request
+    
+    data = _format_request_for_admin(request)
+    data["request_file_path"] = request.request_file_path
+    
+    return data
