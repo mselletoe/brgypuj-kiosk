@@ -4,6 +4,6 @@ import PageTitle from '@/components/shared/PageTitle.vue';
 
 <template>
   <div class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden">
-    <PageTitle title="System Settings" />
+    <PageTitle title="Account Settings" />
   </div>
 </template>

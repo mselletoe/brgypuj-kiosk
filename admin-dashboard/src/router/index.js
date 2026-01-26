@@ -15,6 +15,7 @@ import SystemSettings from '@/views/settings/SystemSettings.vue'
 import EquipmentRequests from '@/views/requests/equipment-requests/EquipmentRequest.vue'
 import FeedbackAndReports from '@/views/feedback-and-reports/FeedbackAndReports.vue'
 import ComponentShowcase from '@/components/ComponentShowcase.vue'
+import AccountSettings from '@/views/settings/AccountSettings.vue'
 
 const routes = [
   {
@@ -62,7 +63,8 @@ const routes = [
       { path: 'residents', component: Residents },
       { path: 'equipment-inventory', component: EquipmentInventory },
       { path: 'system-settings', component: SystemSettings },
-      { path: 'component-showcase', component: ComponentShowcase }
+      { path: 'component-showcase', component: ComponentShowcase },
+      { path: 'account-settings', component: AccountSettings }
     ]
   }
 ]

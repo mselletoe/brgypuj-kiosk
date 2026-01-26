@@ -27,9 +27,7 @@ const renderIcon = (icon) => () => h(icon, { class: 'h-5 w-5' })
  * Includes labels, keys for event handling, and rendered icons.
  */
 const dropdownOptions = [
-  { label: 'My Profile', key: 'profile', icon: renderIcon(UserCircleIcon) },
-  { label: 'Dashboard Settings', key: 'settings', icon: renderIcon(Cog6ToothIcon) },
-  { label: 'Password and Security', key: 'security', icon: renderIcon(LockClosedIcon) },
+  { label: 'Account Settings', key: 'profile', icon: renderIcon(UserCircleIcon) },
   { type: 'divider' },
   { label: 'Log Out', key: 'logout', icon: renderIcon(ArrowLeftOnRectangleIcon) }
 ]
@@ -41,13 +39,7 @@ const dropdownOptions = [
 const handleSelect = (key) => {
   switch(key) {
     case 'profile':
-      console.log('Navigate to My Profile')
-      break
-    case 'settings':
-      console.log('Navigate to Dashboard Settings')
-      break
-    case 'security':
-      console.log('Navigate to Password and Security')
+      router.push('/account-settings')
       break
     case 'logout':
       adminAuth.logout()
