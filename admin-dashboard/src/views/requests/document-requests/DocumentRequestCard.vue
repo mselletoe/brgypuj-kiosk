@@ -188,7 +188,7 @@ const handleButtonClick = (buttonId, btn) => {
         <div class="flex flex-col">
           <span class="text-[11px] text-gray-400 font-medium">Request from</span>
           <span class="text-sm text-slate-700 font-bold">
-            {{ requester.firstName }} {{ requester.middleName }} {{ requester.surname }}
+            {{ requester.firstName }} {{ requester.middleName }} {{ requester.lastName }}
           </span>
         </div>
 

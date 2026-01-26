@@ -36,7 +36,7 @@ const fetchPendingRequests = async () => {
       requester: {
         firstName: req.resident_first_name || '',
         middleName: req.resident_middle_name || '',
-        last_name: req.resident_last_name || ''
+        lastName: req.resident_last_name || ''
       },
       rfidNo: req.resident_rfid || 'Guest Mode',
       requestedOn: new Date(req.requested_at).toLocaleDateString('en-US', {
