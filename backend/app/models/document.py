@@ -29,6 +29,7 @@ class DocumentRequest(Base):
     transaction_no = Column(String(20), unique=True, nullable=False, server_default=FetchedValue())
     resident_id = Column(Integer, ForeignKey("residents.id", ondelete="CASCADE"), nullable=False)
     doctype_id = Column(SmallInteger, ForeignKey("document_types.id"), nullable=False)
+    price = Column(Numeric(10, 2), nullable=False, server_default="0.00")
     processed_by = Column(SmallInteger, ForeignKey("admin.id", ondelete="SET NULL"))
     status = Column(
         String(32), 

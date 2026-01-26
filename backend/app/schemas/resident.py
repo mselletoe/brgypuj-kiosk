@@ -26,5 +26,6 @@ class ResidentResponse(BaseModel):
     email: Optional[str]
     phone_number: Optional[str]
 
-    class Config:
-        orm_mode = True
+    model_config = {
+        "from_attributes": True
+    }

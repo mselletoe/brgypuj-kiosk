@@ -44,7 +44,7 @@ const fetchPendingRequests = async () => {
         day: 'numeric',
         year: 'numeric'
       }),
-      amount: req.payment_status !== 'free' ? String(req.form_data?.price || '0.00') : null,
+      amount: req.payment_status !== 'free' ? String(req.price ?? '0.00') : null,
       isPaid: req.payment_status === 'paid',
       raw: req // Keep original data for updates
     }))

@@ -9,7 +9,7 @@ Admin Dashboard management.
 from datetime import datetime
 from decimal import Decimal
 from typing import Any, Dict, List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 # =========================================================
@@ -57,8 +57,7 @@ class DocumentTypeKioskOut(DocumentTypeBase):
     """
     id: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class DocumentTypeAdminOut(DocumentTypeKioskOut):
@@ -69,8 +68,7 @@ class DocumentTypeAdminOut(DocumentTypeKioskOut):
     is_available: bool
     has_template: bool
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class DocumentTypeProcessingOut(BaseModel):
@@ -85,8 +83,7 @@ class DocumentTypeProcessingOut(BaseModel):
     fields: List[Dict[str, Any]]
     file: bytes
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # =========================================================
@@ -125,14 +122,14 @@ class DocumentRequestKioskOut(BaseModel):
     """
     transaction_no: str
     status: str
+    price: Decimal
     payment_status: str
     requested_at: datetime
     doctype_name: str
     price: Decimal
     form_data: Dict[str, Any]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class DocumentRequestAdminOut(BaseModel):
@@ -153,6 +150,7 @@ class DocumentRequestAdminOut(BaseModel):
     doctype_name: str
 
     status: str
+    price: Decimal
     payment_status: str
 
     form_data: Dict[str, Any]
@@ -160,8 +158,7 @@ class DocumentRequestAdminOut(BaseModel):
     processed_by: Optional[int]
     requested_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class DocumentRequestAdminDetail(DocumentRequestAdminOut):
@@ -170,4 +167,5 @@ class DocumentRequestAdminDetail(DocumentRequestAdminOut):
     Includes the resident's full name and path to generated files.
     """
     resident_name: str
+    price: Decimal
     request_file_path: Optional[str]

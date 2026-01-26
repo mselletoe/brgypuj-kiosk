@@ -177,6 +177,7 @@ def _format_request_for_admin(request):
         "resident_rfid": rfid_display,
         "doctype_id": request.doctype_id,
         "doctype_name": request.doctype.doctype_name,
+        "price": request.price,
         "status": request.status,
         "payment_status": request.payment_status,
         "form_data": request.form_data,

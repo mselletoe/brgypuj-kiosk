@@ -161,6 +161,7 @@ def create_document_request(db: Session, payload: DocumentRequestCreate) -> Docu
     request = DocumentRequest(
         resident_id=payload.resident_id,
         doctype_id=payload.doctype_id,
+        price=doc_type.price,
         form_data=payload.form_data,
         transaction_no=_generate_transaction_no(db)
     )
