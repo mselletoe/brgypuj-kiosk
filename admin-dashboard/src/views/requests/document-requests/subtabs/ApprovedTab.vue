@@ -33,7 +33,6 @@ const fetchApprovedRequests = async () => {
   try {
     const response = await getDocumentRequests()
     
-    // Transform backend data to match card component expectations
     const allRequests = response.data.map(req => ({
       id: req.id,
       transaction_no: req.transaction_no,
@@ -100,9 +99,7 @@ const bulkUndo = () => {
     `Move ${selectedRequests.value.size} selected requests back to pending?`,
     async () => {
       try {
-        await Promise.all(
-          Array.from(selectedRequests.value).map(id => undoRequest(id))
-        )
+        await bulkUndoRequests(Array.from(selectedRequests.value))
         
         approvedRequests.value = approvedRequests.value.filter(
           req => !selectedRequests.value.has(req.id)

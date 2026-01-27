@@ -218,12 +218,9 @@ const filteredRequests = computed(() => {
   return rejectedRequests.value.filter(req =>
     req.requester.firstName.toLowerCase().includes(q) ||
     req.requester.lastName.toLowerCase().includes(q) ||
-    req.requester.surname.toLowerCase().includes(q) ||
     req.requestType.toLowerCase().includes(q) ||
     req.rfidNo.toLowerCase().includes(q) ||
-    (req.transaction_no || '').toLowerCase().includes(q) ||
-    req.requestedOn.toLowerCase().includes(q) ||
-    (req.amount && req.amount.includes(q))
+    (req.transaction_no || '').toLowerCase().includes(q)
   )
 })
 </script>

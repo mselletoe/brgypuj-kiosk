@@ -34,7 +34,6 @@ const fetchPendingRequests = async () => {
   try {
     const response = await getDocumentRequests()
     
-    // Transform backend data to match card component expectations
     const allRequests = response.data.map(req => ({
       id: req.id,
       transaction_no: req.transaction_no,
@@ -54,7 +53,7 @@ const fetchPendingRequests = async () => {
       }),
       amount: req.payment_status !== 'free' ? String(req.price ?? '0.00') : null,
       isPaid: req.payment_status === 'paid',
-      raw: req // Keep original data for updates
+      raw: req
     }))
     
     // Filter only pending requests
