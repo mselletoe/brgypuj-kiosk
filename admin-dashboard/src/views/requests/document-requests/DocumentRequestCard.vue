@@ -4,6 +4,10 @@ import { TrashIcon, ArrowUturnLeftIcon } from '@heroicons/vue/24/solid';
 
 const props = defineProps({
   id: {
+    type: Number,
+    required: true
+  },
+  transactionNo: {
     type: String,
     required: true
   },
@@ -174,7 +178,7 @@ const handleButtonClick = (buttonId, btn) => {
   >
     <div class="flex flex-col items-center justify-center space-y-1">
       <div class="flex justify-center bg-[#F0F5FF] border border-[#D4DFF6] rounded px-4 py-1 min-w-[90px]">
-        <div class="text-lg font-bold text-slate-700 leading-tight">{{ id }}</div>        
+        <div class="text-lg font-bold text-slate-700 leading-tight">{{ transactionNo }}</div>        
       </div>
       <div class="text-[9px] text-gray-400 font-medium">Transaction No.</div>
     </div>

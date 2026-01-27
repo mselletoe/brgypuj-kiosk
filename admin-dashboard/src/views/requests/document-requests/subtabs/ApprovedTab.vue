@@ -3,7 +3,6 @@ import { ref, computed, onMounted } from 'vue'
 import RequestCard from '@/views/requests/document-requests/DocumentRequestCard.vue'
 import ConfirmModal from '@/components/shared/ConfirmationModal.vue'
 
-// --- PROPS ---
 const props = defineProps({
   searchQuery: {
     type: String,
@@ -11,7 +10,6 @@ const props = defineProps({
   }
 })
 
-// --- REFS ---
 const approvedRequests = ref([])
 const isLoading = ref(true)
 const errorMessage = ref(null)
@@ -39,44 +37,6 @@ const handleCancel = () => {
   confirmAction.value = null
 }
 
-// --- HELPERS ---
-const formatRequestDate = (isoDate) => {
-  if (!isoDate) return "N/A"
-  const date = new Date(isoDate)
-  return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-}
-
-// --- FETCH APPROVED REQUESTS ---
-const fetchApprovedRequests = async () => {
-  try {
-    const response = await api.get('/requests')
-    approvedRequests.value = response.data
-      .filter(req => req.status === 'processing')
-      .map(req => ({
-        id: req.id.toString(),
-        type: req.rfid_uid ? 'rfid' : 'document',
-        status: 'approved',
-        requestType: req.document_type || 'Unknown Document',
-        requester: {
-          firstName: req.requester_name?.split(' ')[0] || '',
-          middleName: req.requester_name?.split(' ')[1] || '',
-          surname: req.requester_name?.split(' ').slice(2).join(' ') || req.requester_name || 'N/A'
-        },
-        rfidNo: req.rfid_uid || 'Guest Mode',
-        requestedOn: formatRequestDate(req.created_at),
-        amount: req.price ? req.price.toFixed(2) : null,
-        isPaid: req.payment_status === 'Paid',
-        residentId: req.resident_id,
-        rawData: req
-      }))
-  } catch (error) {
-    console.error('Error fetching approved requests:', error)
-    errorMessage.value = 'Failed to load approved requests.'
-  } finally {
-    isLoading.value = false
-  }
-}
-
 const selectAll = () => {
   selectedRequests.value = new Set(filteredRequests.value.map(r => r.id))
 }
@@ -87,45 +47,30 @@ const deselectAll = () => {
 
 const bulkUndo = () => {
   if (selectedRequests.value.size === 0) return
-
   openConfirmModal(
-    `Undo ${selectedRequests.value.size} selected requests back to pending?`,
-    async () => {
-      try {
-        const ids = Array.from(selectedRequests.value)
-        await Promise.all(ids.map(id => api.put(`/requests/${id}/status`, { status_name: 'pending' })))
-        approvedRequests.value = approvedRequests.value.filter(
-          req => !selectedRequests.value.has(req.id)
-        )
-        selectedRequests.value.clear()
-      } catch (e) {
-        console.error(e)
-      }
+    `Undo ${selectedRequests.value.size} selected requests?`,
+    () => {
+      approvedRequests.value = approvedRequests.value.filter(
+        req => !selectedRequests.value.has(req.id)
+      )
+      selectedRequests.value.clear()
     }
   )
 }
 
 const bulkDelete = () => {
   if (selectedRequests.value.size === 0) return
-
   openConfirmModal(
     `Delete ${selectedRequests.value.size} selected requests?`,
-    async () => {
-      try {
-        const ids = Array.from(selectedRequests.value)
-        await Promise.all(ids.map(id => api.delete(`/requests/${id}`)))
-        pendingRequests.value = pendingRequests.value.filter(
-          req => !selectedRequests.value.has(req.id)
-        )
-        selectedRequests.value.clear()
-      } catch (e) {
-        console.error(e)
-      }
+    () => {
+      approvedRequests.value = approvedRequests.value.filter(
+        req => !selectedRequests.value.has(req.id)
+      )
+      selectedRequests.value.clear()
     }
   )
 }
 
-// EXPOSE TO PARENT (DocumentRequest.vue)
 defineExpose({
   selectedCount: computed(() => selectedRequests.value.size),
   totalCount: computed(() => filteredRequests.value.length),
@@ -135,7 +80,6 @@ defineExpose({
   bulkDelete
 })
 
-// --- HANDLE BUTTON CLICK ---
 const handleButtonClick = async ({ action, requestId, type, status }) => {
   const request = approvedRequests.value.find(r => r.id === requestId)
   if (!request) return
@@ -171,25 +115,6 @@ const handleButtonClick = async ({ action, requestId, type, status }) => {
   }
 }
 
-// --- VIEW DOCUMENT ---
-const handleViewDocument = async (id) => {
-  try {
-    const response = await api.get(`/requests/${id}/download-pdf`, {
-      responseType: 'blob'
-    })
-    
-    const blob = new Blob([response.data], { type: 'application/pdf' })
-    const url = URL.createObjectURL(blob)
-    window.open(url, '_blank')
-    
-    setTimeout(() => URL.revokeObjectURL(url), 1000)
-  } catch (error) {
-    console.error('Error opening PDF:', error)
-    alert('Failed to load document. Please try again.')
-  }
-}
-
-// --- MARK AS RELEASED ---
 const handleMarkAsReleased = async (id) => {
   try {
     await api.put(`/requests/${id}/status`, { status_name: 'released' })
@@ -199,7 +124,6 @@ const handleMarkAsReleased = async (id) => {
   }
 }
 
-// --- DELETE REQUEST ---
 const handleDelete = (id) => {
   openConfirmModal(
     'Are you sure you want to delete this request?',
@@ -214,7 +138,6 @@ const handleDelete = (id) => {
   )
 }
 
-// --- UNDO (BACK TO PENDING) ---
 const handleUndo = (id) => {
   openConfirmModal(
     'Move this request back to pending?',
@@ -229,7 +152,6 @@ const handleUndo = (id) => {
   )
 }
 
-// --- HANDLE SELECTION ---
 const handleSelectionUpdate = (requestId, isSelected) => {
   if (isSelected) {
     selectedRequests.value.add(requestId)
@@ -238,10 +160,8 @@ const handleSelectionUpdate = (requestId, isSelected) => {
   }
 }
 
-// --- Load on mount ---
 onMounted(fetchApprovedRequests)
 
-// --- COMPUTED: Search Filter ---
 const filteredRequests = computed(() => {
   if (!props.searchQuery) return approvedRequests.value
 
@@ -249,10 +169,7 @@ const filteredRequests = computed(() => {
   return approvedRequests.value.filter(req =>
     req.requester.firstName.toLowerCase().includes(lowerQuery) ||
     req.requester.surname.toLowerCase().includes(lowerQuery) ||
-    req.requestType.toLowerCase().includes(lowerQuery) ||
-    req.requestedOn.toLowerCase().includes(lowerQuery) ||
-    req.rfidNo.toLowerCase().includes(lowerQuery) ||
-    (req.amount && req.amount.includes(lowerQuery))
+    req.requestType.toLowerCase().includes(lowerQuery)
   )
 })
 </script>

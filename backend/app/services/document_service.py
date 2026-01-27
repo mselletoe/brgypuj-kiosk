@@ -255,6 +255,10 @@ def delete_document_type(db: Session, doctype_id: int):
     return True
 
 
+def _get_request(db: Session, request_id: int):
+    return db.query(DocumentRequest).filter(DocumentRequest.id == request_id).first()
+
+
 def get_all_document_requests(db: Session):
     """
     Admin: Monitors all incoming document requests with resident information.
@@ -309,3 +313,63 @@ def upload_document_type_file(
     doc.file = file_bytes
     db.commit()
     return True
+
+
+def approve_request(db: Session, request_id: int):
+    req = _get_request(db, request_id)
+    if not req:
+        return False
+    req.status = "Approved"
+    db.commit()
+    return True
+
+
+def reject_request(db: Session, request_id: int):
+    req = _get_request(db, request_id)
+    if not req:
+        return False
+    req.status = "Rejected"
+    db.commit()
+    return True
+
+
+def mark_request_paid(db: Session, request_id: int):
+    req = _get_request(db, request_id)
+    if not req:
+        return False
+    req.payment_status = "paid"
+    db.commit()
+    return True
+
+
+def mark_request_unpaid(db: Session, request_id: int):
+    req = _get_request(db, request_id)
+    if not req:
+        return False
+    req.payment_status = "unpaid"
+    db.commit()
+    return True
+
+
+def undo_request(db: Session, request_id: int):
+    req = _get_request(db, request_id)
+    if not req:
+        return False
+    req.status = "Pending"
+    db.commit()
+    return True
+
+
+def delete_request(db: Session, request_id: int):
+    req = _get_request(db, request_id)
+    if not req:
+        return False
+    db.delete(req)
+    db.commit()
+    return True
+
+
+def bulk_delete_requests(db: Session, ids: list[int]):
+    count = db.query(DocumentRequest).filter(DocumentRequest.id.in_(ids)).delete(synchronize_session=False)
+    db.commit()
+    return count

@@ -47,3 +47,31 @@ export function downloadDocumentTemplate(id, filename = 'template') {
 export function getDocumentRequests() {
   return api.get('/admin/documents/requests')
 }
+
+export function approveRequest(id) {
+  return api.post(`/admin/documents/requests/${id}/approve`)
+}
+
+export function rejectRequest(id) {
+  return api.post(`/admin/documents/requests/${id}/reject`)
+}
+
+export function markAsPaid(id) {
+  return api.post(`/admin/documents/requests/${id}/mark-paid`)
+}
+
+export function markAsUnpaid(id) {
+  return api.post(`/admin/documents/requests/${id}/mark-unpaid`)
+}
+
+export function undoRequest(id) {
+  return api.post(`/admin/documents/requests/${id}/undo`)
+}
+
+export function deleteRequest(id) {
+  return api.delete(`/admin/documents/requests/${id}`)
+}
+
+export function bulkDeleteRequests(ids) {
+  return api.post(`/admin/documents/requests/bulk-delete`, ids)
+}

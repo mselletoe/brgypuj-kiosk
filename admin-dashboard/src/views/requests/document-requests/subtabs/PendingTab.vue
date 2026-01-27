@@ -2,7 +2,15 @@
 import { ref, computed, onMounted } from 'vue'
 import RequestCard from '@/views/requests/document-requests/DocumentRequestCard.vue'
 import ConfirmModal from '@/components/shared/ConfirmationModal.vue'
-import { getDocumentRequests } from '@/api/documentService'
+import {
+  getDocumentRequests,
+  approveRequest,
+  rejectRequest,
+  deleteRequest,
+  markAsPaid,
+  markAsUnpaid,
+  bulkDeleteRequests
+} from '@/api/documentService'
 
 const props = defineProps({
   searchQuery: {
@@ -78,14 +86,6 @@ const handleCancel = () => {
   confirmAction.value = null
 }
 
-const formatRequestDate = (date) => {
-  return new Date(date).toLocaleDateString('en-US', {
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric'
-  })
-}
-
 const selectAll = () => {
   selectedRequests.value = new Set(filteredRequests.value.map(r => r.id))
 }
@@ -99,11 +99,17 @@ const bulkDelete = () => {
 
   openConfirmModal(
     `Delete ${selectedRequests.value.size} selected requests?`,
-    () => {
-      pendingRequests.value = pendingRequests.value.filter(
-        req => !selectedRequests.value.has(req.id)
-      )
-      selectedRequests.value.clear()
+    async () => {
+      try {
+        await bulkDeleteRequests(Array.from(selectedRequests.value))
+        pendingRequests.value = pendingRequests.value.filter(
+          req => !selectedRequests.value.has(req.id)
+        )
+        selectedRequests.value.clear()
+      } catch (error) {
+        console.error(error)
+        alert('Failed to delete selected requests')
+      }
     }
   )
 }
@@ -138,27 +144,53 @@ const handleButtonClick = ({ action, requestId }) => {
   }
 }
 
-const handleApprove = (id) => {
-  pendingRequests.value = pendingRequests.value.filter(req => req.id !== id)
+const handleApprove = async (id) => {
+  try {
+    await approveRequest(id)
+    pendingRequests.value = pendingRequests.value.filter(req => req.id !== id)
+  } catch (error) {
+    console.error(error)
+    alert('Failed to approve request')
+  }
 }
 
-const handleReject = (id) => {
-  pendingRequests.value = pendingRequests.value.filter(req => req.id !== id)
+const handleReject = async (id) => {
+  try {
+    await rejectRequest(id)
+    pendingRequests.value = pendingRequests.value.filter(req => req.id !== id)
+  } catch (error) {
+    console.error(error)
+    alert('Failed to reject request')
+  }
 }
 
-const handleDelete = (id) => {
+const handleDelete = async (id) => {
   openConfirmModal(
     'Are you sure you want to delete this request?',
-    () => {
-      pendingRequests.value = pendingRequests.value.filter(req => req.id !== id)
+    async () => {
+      try {
+        await deleteRequest(id)
+        pendingRequests.value = pendingRequests.value.filter(req => req.id !== id)
+      } catch (error) {
+        console.error(error)
+        alert('Failed to delete request')
+      }
     }
   )
 }
 
-const handlePaymentUpdate = (requestId, newPaidStatus) => {
-  const request = pendingRequests.value.find(r => r.id === requestId)
-  if (request) {
-    request.isPaid = newPaidStatus
+const handlePaymentUpdate = async (requestId, newPaidStatus) => {
+  try {
+    if (newPaidStatus) {
+      await markAsPaid(requestId)
+    } else {
+      await markAsUnpaid(requestId)
+    }
+    const request = pendingRequests.value.find(r => r.id === requestId)
+    if (request) request.isPaid = newPaidStatus
+  } catch (error) {
+    console.error(error)
+    alert('Failed to update payment status')
   }
 }
 
@@ -178,10 +210,10 @@ const filteredRequests = computed(() => {
   const q = props.searchQuery.toLowerCase()
   return pendingRequests.value.filter(req =>
     req.requester.firstName.toLowerCase().includes(q) ||
-    req.requester.last_name.toLowerCase().includes(q) ||
+    req.requester.lastName.toLowerCase().includes(q) ||
     req.requestType.toLowerCase().includes(q) ||
     req.rfidNo.toLowerCase().includes(q) ||
-    req.transaction_no.toLowerCase().includes(q)
+    (req.transaction_no || '').toLowerCase().includes(q)
   )
 })
 </script>
@@ -216,7 +248,8 @@ const filteredRequests = computed(() => {
     <RequestCard
       v-for="request in filteredRequests"
       :key="request.id"
-      :id="request.transaction_no"
+      :id="request.id"
+      :transaction-no="request.transaction_no"
       :type="request.type"
       :status="request.status"
       :request-type="request.requestType"

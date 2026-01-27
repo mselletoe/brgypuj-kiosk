@@ -4,7 +4,7 @@ Document Administration API
 Provides management endpoints for document type templates and resident 
 request monitoring within the administrative dashboard.
 """
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Body
 from fastapi.responses import StreamingResponse
 from io import BytesIO
 from sqlalchemy.orm import Session
@@ -26,6 +26,13 @@ from app.services.document_service import (
     delete_document_type,
     get_document_type_with_file,
     upload_document_type_file,
+    approve_request,
+    reject_request,
+    mark_request_paid,
+    mark_request_unpaid,
+    undo_request,
+    delete_request,
+    bulk_delete_requests
 )
 
 router = APIRouter(prefix="/documents")
@@ -218,3 +225,57 @@ def get_document_request(request_id: int, db: Session = Depends(get_db),):
     data["request_file_path"] = request.request_file_path
     
     return data
+
+
+@router.post("/requests/{request_id}/approve")
+def approve_document_request(request_id: int, db: Session = Depends(get_db)):
+    success = approve_request(db, request_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Request not found")
+    return {"detail": "Request approved"}
+
+
+@router.post("/requests/{request_id}/reject")
+def reject_document_request(request_id: int, db: Session = Depends(get_db)):
+    success = reject_request(db, request_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Request not found")
+    return {"detail": "Request rejected"}
+
+
+@router.post("/requests/{request_id}/mark-paid")
+def mark_request_as_paid(request_id: int, db: Session = Depends(get_db)):
+    success = mark_request_paid(db, request_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Request not found")
+    return {"detail": "Marked as paid"}
+
+
+@router.post("/requests/{request_id}/mark-unpaid")
+def mark_request_as_unpaid(request_id: int, db: Session = Depends(get_db)):
+    success = mark_request_unpaid(db, request_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Request not found")
+    return {"detail": "Marked as unpaid"}
+
+
+@router.post("/requests/{request_id}/undo")
+def undo_document_request(request_id: int, db: Session = Depends(get_db)):
+    success = undo_request(db, request_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Request not found")
+    return {"detail": "Request undone"}
+
+
+@router.delete("/requests/{request_id}")
+def delete_document_request(request_id: int, db: Session = Depends(get_db)):
+    success = delete_request(db, request_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Request not found")
+    return {"detail": "Request deleted"}
+
+
+@router.post("/requests/bulk-delete")
+def bulk_delete_document_requests(ids: list[int] = Body(...), db: Session = Depends(get_db)):
+    deleted_count = bulk_delete_requests(db, ids)
+    return {"detail": f"{deleted_count} requests deleted"}
