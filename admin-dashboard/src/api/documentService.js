@@ -83,3 +83,11 @@ export function deleteRequest(id) {
 export function bulkDeleteRequests(ids) {
   return api.post(`/admin/documents/requests/bulk-delete`, ids)
 }
+
+export function getNotes(requestId) {
+  return api.get(`/admin/documents/requests/${requestId}/notes`)
+}
+
+export function updateNotes(requestId, notes) {
+  return api.put(`/admin/documents/requests/${requestId}/notes`, { notes })
+}

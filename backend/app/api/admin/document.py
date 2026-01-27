@@ -5,6 +5,7 @@ Provides management endpoints for document type templates and resident
 request monitoring within the administrative dashboard.
 """
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Body
+from pydantic import BaseModel
 from fastapi.responses import StreamingResponse
 from io import BytesIO
 from sqlalchemy.orm import Session
@@ -36,6 +37,7 @@ from app.services.document_service import (
     delete_request,
     bulk_delete_requests
 )
+from app.models.document import DocumentRequest
 
 router = APIRouter(prefix="/documents")
 
@@ -190,6 +192,7 @@ def _format_request_for_admin(request):
         "status": request.status,
         "payment_status": request.payment_status,
         "form_data": request.form_data,
+        "notes": request.notes,
         "processed_by": request.processed_by,
         "requested_at": request.requested_at,
     }
@@ -308,3 +311,27 @@ def delete_document_request(request_id: int, db: Session = Depends(get_db)):
 def bulk_delete_document_requests(ids: list[int] = Body(...), db: Session = Depends(get_db)):
     deleted_count = bulk_delete_requests(db, ids)
     return {"detail": f"{deleted_count} requests deleted"}
+
+
+class NotesUpdateSchema(BaseModel):
+    notes: str
+
+
+@router.get("/requests/{request_id}/notes")
+def get_request_notes(request_id: int, db: Session = Depends(get_db)):
+    req = db.query(DocumentRequest).filter(DocumentRequest.id == request_id).first()
+    if not req:
+        raise HTTPException(status_code=404, detail="Request not found")
+    return {"notes": req.notes}
+
+
+@router.put("/requests/{request_id}/notes")
+def update_request_notes(request_id: int, payload: NotesUpdateSchema, db: Session = Depends(get_db)):
+    req = db.query(DocumentRequest).filter(DocumentRequest.id == request_id).first()
+    if not req:
+        raise HTTPException(status_code=404, detail="Request not found")
+
+    req.notes = payload.notes
+    db.commit()
+    db.refresh(req)
+    return {"id": req.id, "notes": req.notes}

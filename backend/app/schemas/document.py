@@ -154,6 +154,7 @@ class DocumentRequestAdminOut(BaseModel):
     payment_status: str
 
     form_data: Dict[str, Any]
+    notes: Optional[str] = None
 
     processed_by: Optional[int]
     requested_at: datetime

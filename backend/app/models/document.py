@@ -47,6 +47,8 @@ class DocumentRequest(Base):
     request_file_path = Column(Text)
     requested_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now())
 
+    notes = Column(Text, nullable=True)
+
     resident = relationship("Resident", back_populates="document_requests")
     doctype = relationship("DocumentType", back_populates="document_requests")
     processed_by_admin = relationship("Admin", back_populates="document_requests_processed")
