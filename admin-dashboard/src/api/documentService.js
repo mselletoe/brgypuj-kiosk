@@ -56,6 +56,10 @@ export function rejectRequest(id) {
   return api.post(`/admin/documents/requests/${id}/reject`)
 }
 
+export function releaseRequest(id) {
+  return api.post(`/admin/documents/requests/${id}/release`)
+}
+
 export function markAsPaid(id) {
   return api.post(`/admin/documents/requests/${id}/mark-paid`)
 }
@@ -66,6 +70,10 @@ export function markAsUnpaid(id) {
 
 export function undoRequest(id) {
   return api.post(`/admin/documents/requests/${id}/undo`)
+}
+
+export function bulkUndoRequests(ids) {
+  return api.post(`/admin/documents/requests/bulk-undo`, ids)
 }
 
 export function deleteRequest(id) {

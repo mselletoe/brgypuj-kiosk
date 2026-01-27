@@ -130,11 +130,14 @@ const handleButtonClick = ({ action, requestId }) => {
     case 'view':
       alert(`Viewing request ${requestId} (frontend only)`)
       break
+    case 'notes':
+      console.log(`Opening notes for request ${requestId}`)
+      break
     case 'approve':
-      handleApprove(requestId)
+      await handleApprove(requestId)
       break
     case 'reject':
-      handleReject(requestId)
+      await handleReject(requestId)
       break
     case 'delete':
       handleDelete(requestId)

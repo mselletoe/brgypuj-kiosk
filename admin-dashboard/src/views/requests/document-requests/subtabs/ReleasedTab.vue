@@ -3,7 +3,6 @@ import { ref, computed, onMounted } from 'vue'
 import RequestCard from '@/views/requests/document-requests/DocumentRequestCard.vue'
 import ConfirmModal from '@/components/shared/ConfirmationModal.vue'
 
-// --- PROPS ---
 const props = defineProps({
   searchQuery: {
     type: String,
@@ -11,7 +10,6 @@ const props = defineProps({
   }
 })
 
-// --- REFS ---
 const releasedRequests = ref([])
 const isLoading = ref(true)
 const errorMessage = ref(null)
@@ -39,57 +37,6 @@ const handleCancel = () => {
   confirmAction.value = null
 }
 
-// --- HELPERS ---
-const formatRequestDate = (isoDate) => {
-  if (!isoDate) return "N/A"
-  const date = new Date(isoDate)
-  const now = new Date()
-  const diffMs = now - date
-  const diffSec = Math.floor(diffMs / 1000)
-  const diffMin = Math.floor(diffSec / 60)
-  const diffHour = Math.floor(diffMin / 60)
-
-  if (diffMin < 1) return `${diffSec} seconds ago`
-  if (diffHour < 1) return `${diffMin} minutes ago`
-  if (diffHour < 24) return `${diffHour} hours ago`
-
-  return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-}
-
-// --- FETCH RELEASED REQUESTS ---
-const fetchReleasedRequests = async () => {
-  try {
-    const response = await api.get('/requests')
-    releasedRequests.value = response.data
-      .filter(req => req.status === 'released')
-      .map(req => ({
-        id: req.id.toString(),
-        type: req.rfid_uid ? 'rfid' : 'document',
-        status: 'released',
-        requestType: req.document_type || 'Unknown Document',
-        requester: {
-          firstName: req.requester_name?.split(' ')[0] || '',
-          middleName: req.requester_name?.split(' ')[1] || '',
-          surname: req.requester_name?.split(' ').slice(2).join(' ') || req.requester_name || 'N/A'
-        },
-        rfidNo: req.rfid_uid || 'Guest Mode',
-        requestedOn: formatRequestDate(req.created_at),
-        releasedDate: formatRequestDate(req.updated_at),
-        amount: req.price ? req.price.toFixed(2) : null,
-        isPaid: req.payment_status === 'Paid',
-        residentId: req.resident_id,
-        phoneNumber: req.phone_number || null,
-        borrowerName: req.requester_name || 'Guest',
-        rawData: req
-      }))
-  } catch (error) {
-    console.error('Error fetching released requests:', error)
-    errorMessage.value = 'Failed to load released requests.'
-  } finally {
-    isLoading.value = false
-  }
-}
-
 const selectAll = () => {
   selectedRequests.value = new Set(filteredRequests.value.map(r => r.id))
 }
@@ -102,18 +49,12 @@ const bulkUndo = () => {
   if (selectedRequests.value.size === 0) return
 
   openConfirmModal(
-    `Undo ${selectedRequests.value.size} selected requests back to pending?`,
+    `Undo ${selectedRequests.value.size} selected requests back to approved?`,
     async () => {
-      try {
-        const ids = Array.from(selectedRequests.value)
-        await Promise.all(ids.map(id => api.put(`/requests/${id}/status`, { status_name: 'pending' })))
-        approvedRequests.value = approvedRequests.value.filter(
-          req => !selectedRequests.value.has(req.id)
-        )
-        selectedRequests.value.clear()
-      } catch (e) {
-        console.error(e)
-      }
+      releasedRequests.value.forEach(req => {
+        if (selectedRequests.value.has(req.id)) req.status = 'approved'
+      })
+      selectedRequests.value.clear()
     }
   )
 }
@@ -124,21 +65,14 @@ const bulkDelete = () => {
   openConfirmModal(
     `Delete ${selectedRequests.value.size} selected requests?`,
     async () => {
-      try {
-        const ids = Array.from(selectedRequests.value)
-        await Promise.all(ids.map(id => api.delete(`/requests/${id}`)))
-        pendingRequests.value = pendingRequests.value.filter(
-          req => !selectedRequests.value.has(req.id)
-        )
-        selectedRequests.value.clear()
-      } catch (e) {
-        console.error(e)
-      }
+      releasedRequests.value = releasedRequests.value.filter(
+        req => !selectedRequests.value.has(req.id)
+      )
+      selectedRequests.value.clear()
     }
   )
 }
 
-// EXPOSE TO PARENT (DocumentRequest.vue)
 defineExpose({
   selectedCount: computed(() => selectedRequests.value.size),
   totalCount: computed(() => filteredRequests.value.length),
@@ -148,77 +82,43 @@ defineExpose({
   bulkDelete
 })
 
-// --- HANDLE BUTTON CLICK ---
-const handleButtonClick = async ({ action, requestId, type, status }) => {
+const handleButtonClick = async ({ action, requestId }) => {
   const request = releasedRequests.value.find(r => r.id === requestId)
   if (!request) return
 
-  try {
-    switch (action) {
-      case 'view':
-        await handleViewDocument(requestId)
+  switch (action) {
+    case 'view':
+        alert(`Viewing request ${requestId} - implement view modal`)
         break
-      case 'notes':
-        console.log(`Opening notes for request ${requestId}`)
-        break
-      case 'delete':
-        await handleDelete(requestId)
-        break
-      case 'undo':
-        await handleUndo(requestId)
-        break
-      default:
-        console.log(`Action ${action} not implemented yet`)
-    }
-  } catch (error) {
-    console.error(`Error handling ${action}:`, error)
+    case 'notes':
+      console.log(`Opening notes for request ${requestId}`)
+      break
+    case 'delete':
+      handleDelete(requestId)
+      break
+    case 'undo':
+      handleUndo(requestId)
+      break
+    default:
+      console.log(`Action ${action} not implemented yet`)
   }
 }
 
-// --- VIEW DOCUMENT ---
-const handleViewDocument = async (id) => {
-  try {
-    const response = await api.get(`/requests/${id}/download-pdf`, {
-      responseType: 'blob'
-    })
-    
-    const blob = new Blob([response.data], { type: 'application/pdf' })
-    const url = URL.createObjectURL(blob)
-    window.open(url, '_blank')
-    
-    setTimeout(() => URL.revokeObjectURL(url), 1000)
-  } catch (error) {
-    console.error('Error opening PDF:', error)
-    alert('Failed to load document. Please try again.')
-  }
-}
-
-// --- DELETE REQUEST ---
 const handleDelete = (id) => {
   openConfirmModal(
     'Are you sure you want to delete this request?',
     async () => {
-      try {
-        await api.delete(`/requests/${id}`)
-        pendingRequests.value = pendingRequests.value.filter(req => req.id !== id)
-      } catch (error) {
-        console.error('Error deleting request:', error)
-      }
+      releasedRequests.value = releasedRequests.value.filter(req => req.id !== id)
     }
   )
 }
 
-// --- UNDO (BACK TO APPROVED) ---
 const handleUndo = (id) => {
   openConfirmModal(
     'Move this request back to approved?',
     async () => {
-      try {
-        await api.put(`/requests/${id}/status`, { status_name: 'approved' })
-        returnedRequests.value = returnedRequests.value.filter(req => req.id !== id)
-      } catch (error) {
-        console.error('Error undoing request:', error)
-      }
+      const request = releasedRequests.value.find(req => req.id === id)
+      if (request) request.status = 'approved'
     }
   )
 }

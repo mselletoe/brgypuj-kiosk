@@ -107,11 +107,13 @@ const buttonConfigs = {
     document: [
       { id: 'view', label: 'View File', variant: 'primary' },
       { id: 'notes', label: 'Notes', variant: 'gray' },
+      { id: 'notify', label: 'Notify', variant: 'solidgreen' },
       { id: 'undo', label: '', icon: ArrowUturnLeftIcon, variant: 'undo' },
       { id: 'delete', label: '', icon: TrashIcon, variant: 'delete' }
     ],
     rfid: [
       { id: 'notes', label: 'Notes', variant: 'gray' },
+      { id: 'notify', label: 'Notify', variant: 'solidgreen' },
       { id: 'undo', label: '', icon: ArrowUturnLeftIcon, variant: 'undo' },
       { id: 'delete', label: '', icon: TrashIcon, variant: 'delete' }
     ]

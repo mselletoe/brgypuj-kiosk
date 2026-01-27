@@ -333,6 +333,15 @@ def reject_request(db: Session, request_id: int):
     return True
 
 
+def release_request(db: Session, request_id: int):
+    req = _get_request(db, request_id)
+    if not req:
+        return False
+    req.status = "Released"
+    db.commit()
+    return True
+
+
 def mark_request_paid(db: Session, request_id: int):
     req = _get_request(db, request_id)
     if not req:
@@ -352,12 +361,58 @@ def mark_request_unpaid(db: Session, request_id: int):
 
 
 def undo_request(db: Session, request_id: int):
+    """
+    Moves a request back to its previous status based on current status:
+    - Approved → Pending
+    - Released → Approved
+    - Rejected → Pending
+    - Pending → No change (undo disabled)
+    """
     req = _get_request(db, request_id)
     if not req:
         return False
-    req.status = "Pending"
+    
+    # Define status transitions for undo
+    status_undo_map = {
+        "Approved": "Pending",
+        "Released": "Approved",
+        "Rejected": "Pending",
+    }
+    
+    # Check if undo is allowed for current status
+    if req.status not in status_undo_map:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Undo is not available for status: {req.status}"
+        )
+    
+    # Update to previous status
+    req.status = status_undo_map[req.status]
     db.commit()
     return True
+
+
+def bulk_undo_requests(db: Session, ids: list[int]):
+    """
+    Bulk undo operation for multiple requests.
+    Only processes requests that are in undoable states.
+    """
+    requests = db.query(DocumentRequest).filter(DocumentRequest.id.in_(ids)).all()
+    
+    status_undo_map = {
+        "Approved": "Pending",
+        "Released": "Approved",
+        "Rejected": "Pending",
+    }
+    
+    updated_count = 0
+    for req in requests:
+        if req.status in status_undo_map:
+            req.status = status_undo_map[req.status]
+            updated_count += 1
+    
+    db.commit()
+    return updated_count
 
 
 def delete_request(db: Session, request_id: int):

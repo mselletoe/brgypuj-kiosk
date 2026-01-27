@@ -3,7 +3,6 @@ import { ref, computed, onMounted } from 'vue'
 import RequestCard from '@/views/requests/document-requests/DocumentRequestCard.vue'
 import ConfirmModal from '@/components/shared/ConfirmationModal.vue'
 
-// --- PROPS ---
 const props = defineProps({
   searchQuery: {
     type: String,
@@ -11,7 +10,6 @@ const props = defineProps({
   }
 })
 
-// --- REFS ---
 const rejectedRequests = ref([])
 const isLoading = ref(true)
 const errorMessage = ref(null)
@@ -39,54 +37,6 @@ const handleCancel = () => {
   confirmAction.value = null
 }
 
-// --- HELPERS ---
-const formatRequestDate = (isoDate) => {
-  if (!isoDate) return "N/A"
-  const date = new Date(isoDate)
-  const now = new Date()
-  const diffMs = now - date
-  const diffSec = Math.floor(diffMs / 1000)
-  const diffMin = Math.floor(diffSec / 60)
-  const diffHour = Math.floor(diffMin / 60)
-
-  if (diffMin < 1) return `${diffSec} seconds ago`
-  if (diffHour < 1) return `${diffMin} minutes ago`
-  if (diffHour < 24) return `${diffHour} hours ago`
-
-  return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-}
-
-// --- FETCH REJECTED REQUESTS ---
-const fetchRejectedRequests = async () => {
-  try {
-    const response = await api.get('/requests')
-    rejectedRequests.value = response.data
-      .filter(req => req.status === 'rejected')
-      .map(req => ({
-        id: req.id.toString(),
-        type: req.rfid_uid ? 'rfid' : 'document',
-        status: 'rejected',
-        requestType: req.document_type || 'Unknown Document',
-        requester: {
-          firstName: req.requester_name?.split(' ')[0] || '',
-          middleName: req.requester_name?.split(' ')[1] || '',
-          surname: req.requester_name?.split(' ').slice(2).join(' ') || req.requester_name || 'N/A'
-        },
-        rfidNo: req.rfid_uid || 'Guest Mode',
-        requestedOn: formatRequestDate(req.created_at),
-        amount: req.price ? req.price.toFixed(2) : null,
-        isPaid: req.payment_status === 'Paid',
-        borrowerName: req.requester_name || 'Guest',
-        rawData: req
-      }))
-  } catch (error) {
-    console.error('Error fetching rejected requests:', error)
-    errorMessage.value = 'Failed to load rejected requests.'
-  } finally {
-    isLoading.value = false
-  }
-}
-
 const selectAll = () => {
   selectedRequests.value = new Set(filteredRequests.value.map(r => r.id))
 }
@@ -101,16 +51,11 @@ const bulkUndo = () => {
   openConfirmModal(
     `Undo ${selectedRequests.value.size} selected requests back to pending?`,
     async () => {
-      try {
-        const ids = Array.from(selectedRequests.value)
-        await Promise.all(ids.map(id => api.put(`/requests/${id}/status`, { status_name: 'pending' })))
-        approvedRequests.value = approvedRequests.value.filter(
-          req => !selectedRequests.value.has(req.id)
-        )
-        selectedRequests.value.clear()
-      } catch (e) {
-        console.error(e)
-      }
+      // Simulate undo locally
+      rejectedRequests.value.forEach(req => {
+        if (selectedRequests.value.has(req.id)) req.status = 'pending'
+      })
+      selectedRequests.value.clear()
     }
   )
 }
@@ -121,21 +66,14 @@ const bulkDelete = () => {
   openConfirmModal(
     `Delete ${selectedRequests.value.size} selected requests?`,
     async () => {
-      try {
-        const ids = Array.from(selectedRequests.value)
-        await Promise.all(ids.map(id => api.delete(`/requests/${id}`)))
-        pendingRequests.value = pendingRequests.value.filter(
-          req => !selectedRequests.value.has(req.id)
-        )
-        selectedRequests.value.clear()
-      } catch (e) {
-        console.error(e)
-      }
+      rejectedRequests.value = rejectedRequests.value.filter(
+        req => !selectedRequests.value.has(req.id)
+      )
+      selectedRequests.value.clear()
     }
   )
 }
 
-// EXPOSE TO PARENT (DocumentRequest.vue)
 defineExpose({
   selectedCount: computed(() => selectedRequests.value.size),
   totalCount: computed(() => filteredRequests.value.length),
@@ -145,83 +83,50 @@ defineExpose({
   bulkDelete
 })
 
-// --- HANDLE BUTTON CLICK ---
-const handleButtonClick = async ({ action, requestId, type, status }) => {
+const handleButtonClick = async ({ action, requestId }) => {
   const request = rejectedRequests.value.find(r => r.id === requestId)
   if (!request) return
 
-  try {
-    switch (action) {
-      case 'view':
-        await handleViewDocument(requestId)
-        break
-      case 'notes':
-        console.log(`Opening notes for request ${requestId}`)
-        // TODO: Implement notes modal
-        break
-      case 'delete':
-        await handleDelete(requestId)
-        break
-      case 'undo':
-        await handleUndo(requestId)
-        break
-      default:
-        console.log(`Action ${action} not implemented yet`)
-    }
-  } catch (error) {
-    console.error(`Error handling ${action}:`, error)
+  switch (action) {
+    case 'view':
+      console.log(`Viewing document ${requestId}`)
+      break
+    case 'notes':
+      console.log(`Opening notes for request ${requestId}`)
+      break
+    case 'notify':
+      console.log(`Sending notification for request ${requestId}`)
+      break
+    case 'delete':
+      await handleDelete(requestId)
+      break
+    case 'undo':
+      await handleUndo(requestId)
+      break
+    default:
+      console.log(`Action ${action} not implemented yet`)
   }
 }
 
-// --- VIEW DOCUMENT ---
-const handleViewDocument = async (id) => {
-  try {
-    const response = await api.get(`/requests/${id}/download-pdf`, {
-      responseType: 'blob'
-    })
-    
-    const blob = new Blob([response.data], { type: 'application/pdf' })
-    const url = URL.createObjectURL(blob)
-    window.open(url, '_blank')
-    
-    setTimeout(() => URL.revokeObjectURL(url), 1000)
-  } catch (error) {
-    console.error('Error opening PDF:', error)
-    alert('Failed to load document. Please try again.')
-  }
-}
-
-// --- DELETE REQUEST ---
 const handleDelete = (id) => {
   openConfirmModal(
     'Are you sure you want to delete this request?',
     async () => {
-      try {
-        await api.delete(`/requests/${id}`)
-        pendingRequests.value = pendingRequests.value.filter(req => req.id !== id)
-      } catch (error) {
-        console.error('Error deleting request:', error)
-      }
+      rejectedRequests.value = rejectedRequests.value.filter(req => req.id !== id)
     }
   )
 }
 
-// --- UNDO (BACK TO PENDING FOR REVIEW) ---
 const handleUndo = (id) => {
   openConfirmModal(
     'Move this request back to pending?',
     async () => {
-      try {
-        await api.put(`/requests/${id}/status`, { status_name: 'pending' })
-        returnedRequests.value = returnedRequests.value.filter(req => req.id !== id)
-      } catch (error) {
-        console.error('Error undoing request:', error)
-      }
+      const request = rejectedRequests.value.find(req => req.id === id)
+      if (request) request.status = 'pending'
     }
   )
 }
 
-// --- HANDLE SELECTION ---
 const handleSelectionUpdate = (requestId, isSelected) => {
   if (isSelected) {
     selectedRequests.value.add(requestId)
@@ -230,10 +135,8 @@ const handleSelectionUpdate = (requestId, isSelected) => {
   }
 }
 
-// --- Load on mount ---
 onMounted(fetchRejectedRequests)
 
-// --- COMPUTED: Search Filter ---
 const filteredRequests = computed(() => {
   if (!props.searchQuery) return rejectedRequests.value
 

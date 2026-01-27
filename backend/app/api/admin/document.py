@@ -18,8 +18,10 @@ from app.schemas.document import (
     DocumentTypeProcessingOut
 )
 from app.services.document_service import (
+    bulk_undo_requests,
     get_all_document_types,
     create_document_type,
+    release_request,
     update_document_type,
     get_all_document_requests,
     get_document_request_by_id,
@@ -243,6 +245,14 @@ def reject_document_request(request_id: int, db: Session = Depends(get_db)):
     return {"detail": "Request rejected"}
 
 
+@router.post("/requests/{request_id}/release")
+def release_document_request(request_id: int, db: Session = Depends(get_db)):
+    success = release_request(db, request_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Request not found")
+    return {"detail": "Request released"}
+
+
 @router.post("/requests/{request_id}/mark-paid")
 def mark_request_as_paid(request_id: int, db: Session = Depends(get_db)):
     success = mark_request_paid(db, request_id)
@@ -261,10 +271,29 @@ def mark_request_as_unpaid(request_id: int, db: Session = Depends(get_db)):
 
 @router.post("/requests/{request_id}/undo")
 def undo_document_request(request_id: int, db: Session = Depends(get_db)):
-    success = undo_request(db, request_id)
-    if not success:
-        raise HTTPException(status_code=404, detail="Request not found")
-    return {"detail": "Request undone"}
+    """
+    Reverts a request to its previous status in the workflow:
+    - Approved → Pending
+    - Released → Approved  
+    - Rejected → Pending
+    """
+    try:
+        success = undo_request(db, request_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="Request not found")
+        return {"detail": "Request status reverted"}
+    except HTTPException:
+        raise
+
+
+@router.post("/requests/bulk-undo")
+def bulk_undo_document_requests(ids: list[int] = Body(...), db: Session = Depends(get_db)):
+    """
+    Bulk undo operation for multiple requests.
+    Returns count of successfully reverted requests.
+    """
+    updated_count = bulk_undo_requests(db, ids)
+    return {"detail": f"{updated_count} requests reverted"}
 
 
 @router.delete("/requests/{request_id}")
