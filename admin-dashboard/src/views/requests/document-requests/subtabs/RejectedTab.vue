@@ -2,6 +2,13 @@
 import { ref, computed, onMounted } from 'vue'
 import RequestCard from '@/views/requests/document-requests/DocumentRequestCard.vue'
 import ConfirmModal from '@/components/shared/ConfirmationModal.vue'
+import {
+  getDocumentRequests,
+  deleteRequest,
+  undoRequest,
+  bulkDeleteRequests,
+  bulkUndoRequests
+} from '@/api/documentService'
 
 const props = defineProps({
   searchQuery: {
@@ -17,6 +24,45 @@ const selectedRequests = ref(new Set())
 const showConfirmModal = ref(false)
 const confirmTitle = ref('Are you sure?')
 const confirmAction = ref(null)
+
+const fetchRejectedRequests = async () => {
+  isLoading.value = true
+  errorMessage.value = null
+  
+  try {
+    const response = await getDocumentRequests()
+    
+    const allRequests = response.data.map(req => ({
+      id: req.id,
+      transaction_no: req.transaction_no,
+      type: req.doctype_name.toUpperCase() === 'RFID' ? 'rfid' : 'document',
+      status: req.status.toLowerCase(),
+      requestType: req.doctype_name,
+      requester: {
+        firstName: req.resident_first_name || '',
+        middleName: req.resident_middle_name || '',
+        lastName: req.resident_last_name || ''
+      },
+      rfidNo: req.resident_rfid || 'Guest Mode',
+      requestedOn: new Date(req.requested_at).toLocaleDateString('en-US', {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric'
+      }),
+      amount: req.payment_status !== 'free' ? String(req.price ?? '0.00') : null,
+      isPaid: req.payment_status === 'paid',
+      raw: req
+    }))
+    
+    // Filter only rejected requests
+    rejectedRequests.value = allRequests.filter(req => req.status === 'rejected')
+  } catch (error) {
+    console.error('Error fetching rejected requests:', error)
+    errorMessage.value = 'Failed to load rejected requests. Please try again.'
+  } finally {
+    isLoading.value = false
+  }
+}
 
 const openConfirmModal = (title, action) => {
   confirmTitle.value = title
@@ -49,13 +95,19 @@ const bulkUndo = () => {
   if (selectedRequests.value.size === 0) return
 
   openConfirmModal(
-    `Undo ${selectedRequests.value.size} selected requests back to pending?`,
+    `Move ${selectedRequests.value.size} selected requests back to pending?`,
     async () => {
-      // Simulate undo locally
-      rejectedRequests.value.forEach(req => {
-        if (selectedRequests.value.has(req.id)) req.status = 'pending'
-      })
-      selectedRequests.value.clear()
+      try {
+        await bulkUndoRequests(Array.from(selectedRequests.value))
+        
+        rejectedRequests.value = rejectedRequests.value.filter(
+          req => !selectedRequests.value.has(req.id)
+        )
+        selectedRequests.value.clear()
+      } catch (error) {
+        console.error('Error during bulk undo:', error)
+        alert('Failed to undo some requests. Please try again.')
+      }
     }
   )
 }
@@ -66,10 +118,16 @@ const bulkDelete = () => {
   openConfirmModal(
     `Delete ${selectedRequests.value.size} selected requests?`,
     async () => {
-      rejectedRequests.value = rejectedRequests.value.filter(
-        req => !selectedRequests.value.has(req.id)
-      )
-      selectedRequests.value.clear()
+      try {
+        await bulkDeleteRequests(Array.from(selectedRequests.value))
+        rejectedRequests.value = rejectedRequests.value.filter(
+          req => !selectedRequests.value.has(req.id)
+        )
+        selectedRequests.value.clear()
+      } catch (error) {
+        console.error('Error during bulk delete:', error)
+        alert('Failed to delete selected requests. Please try again.')
+      }
     }
   )
 }
@@ -87,24 +145,29 @@ const handleButtonClick = async ({ action, requestId }) => {
   const request = rejectedRequests.value.find(r => r.id === requestId)
   if (!request) return
 
-  switch (action) {
-    case 'view':
-      console.log(`Viewing document ${requestId}`)
-      break
-    case 'notes':
-      console.log(`Opening notes for request ${requestId}`)
-      break
-    case 'notify':
-      console.log(`Sending notification for request ${requestId}`)
-      break
-    case 'delete':
-      await handleDelete(requestId)
-      break
-    case 'undo':
-      await handleUndo(requestId)
-      break
-    default:
-      console.log(`Action ${action} not implemented yet`)
+  try {
+    switch (action) {
+      case 'view':
+        alert(`Viewing request ${requestId} - implement view modal`)
+        break
+      case 'notes':
+        console.log(`Opening notes for request ${requestId}`)
+        break
+      case 'notify':
+        console.log(`Sending notification for request ${requestId}`)
+        break
+      case 'delete':
+        handleDelete(requestId)
+        break
+      case 'undo':
+        handleUndo(requestId)
+        break
+      default:
+        console.log(`Action ${action} not implemented yet`)
+    }
+  } catch (error) {
+    console.error(`Error handling ${action}:`, error)
+    alert(`Failed to ${action} request. Please try again.`)
   }
 }
 
@@ -112,7 +175,13 @@ const handleDelete = (id) => {
   openConfirmModal(
     'Are you sure you want to delete this request?',
     async () => {
-      rejectedRequests.value = rejectedRequests.value.filter(req => req.id !== id)
+      try {
+        await deleteRequest(id)
+        rejectedRequests.value = rejectedRequests.value.filter(req => req.id !== id)
+      } catch (error) {
+        console.error('Error deleting request:', error)
+        alert('Failed to delete request. Please try again.')
+      }
     }
   )
 }
@@ -121,8 +190,13 @@ const handleUndo = (id) => {
   openConfirmModal(
     'Move this request back to pending?',
     async () => {
-      const request = rejectedRequests.value.find(req => req.id === id)
-      if (request) request.status = 'pending'
+      try {
+        await undoRequest(id)
+        rejectedRequests.value = rejectedRequests.value.filter(req => req.id !== id)
+      } catch (error) {
+        console.error('Error undoing request:', error)
+        alert('Failed to undo request. Please try again.')
+      }
     }
   )
 }
@@ -140,14 +214,16 @@ onMounted(fetchRejectedRequests)
 const filteredRequests = computed(() => {
   if (!props.searchQuery) return rejectedRequests.value
 
-  const lowerQuery = props.searchQuery.toLowerCase().trim()
+  const q = props.searchQuery.toLowerCase()
   return rejectedRequests.value.filter(req =>
-    req.requester.firstName.toLowerCase().includes(lowerQuery) ||
-    req.requester.surname.toLowerCase().includes(lowerQuery) ||
-    req.requestType.toLowerCase().includes(lowerQuery) ||
-    req.requestedOn.toLowerCase().includes(lowerQuery) ||
-    req.rfidNo.toLowerCase().includes(lowerQuery) ||
-    (req.amount && req.amount.includes(lowerQuery))
+    req.requester.firstName.toLowerCase().includes(q) ||
+    req.requester.lastName.toLowerCase().includes(q) ||
+    req.requester.surname.toLowerCase().includes(q) ||
+    req.requestType.toLowerCase().includes(q) ||
+    req.rfidNo.toLowerCase().includes(q) ||
+    (req.transaction_no || '').toLowerCase().includes(q) ||
+    req.requestedOn.toLowerCase().includes(q) ||
+    (req.amount && req.amount.includes(q))
   )
 })
 </script>
@@ -183,6 +259,7 @@ const filteredRequests = computed(() => {
       v-for="request in filteredRequests"
       :key="request.id"
       :id="request.id"
+      :transaction-no="request.transaction_no"
       :type="request.type"
       :status="request.status"
       :request-type="request.requestType"
