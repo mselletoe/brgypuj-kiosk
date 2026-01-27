@@ -1,9 +1,17 @@
 <script setup>
+import { ref } from 'vue'
 import ConfirmationModal from '@/components/shared/ConfirmationModal.vue'
 import PageTitle from '@/components/shared/PageTitle.vue'
 import SendSMSModal from '@/components/shared/SendSMSModal.vue'
 import RequestCard from '@/views/requests/document-requests/DocumentRequestCard.vue'
 import BorrowingRequestCard from '@/views/requests/equipment-requests/EquipmentRequestCard.vue'
+import NotesInput from './shared/NotesInput.vue'
+
+const noteInputRef = ref(null)
+
+const handleNoteSubmit = (val) => {
+  console.log('Note received in showcase:', val)
+}
 </script>
 
 <template>
@@ -17,6 +25,31 @@ import BorrowingRequestCard from '@/views/requests/equipment-requests/EquipmentR
 
       <!-- Components Grid -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+        <div class="bg-white rounded-2xl shadow-lg p-6 border-2 border-gray-200">
+          <div class="mb-4 border-b border-gray-200 pb-3">
+            <h2 class="text-2xl font-bold text-[#013C6D] mb-1">Floating Note Popover</h2>
+            <p class="text-sm text-gray-600">Triggered by external button, closes on outside click</p>
+          </div>
+          <div class="flex flex-col items-center justify-center min-h-[200px] bg-gray-50 rounded-xl p-6">
+            
+            <button 
+              @click="noteInputRef?.toggle()"
+              class="px-5 py-2.5 bg-[#013C6D] text-white rounded-xl hover:bg-[#1B5886] transition-colors shadow-md flex items-start gap-2"
+            >
+              Add Note
+            </button>
+
+            <NotesInput 
+              ref="noteInputRef" 
+              @submit="handleNoteSubmit" 
+            />
+
+            <p class="mt-4 text-xs text-gray-400 italic text-center">
+              Click the button to open. Click anywhere outside the input box to dismiss it.
+            </p>
+          </div>
+        </div>
         
         <!-- PageTitle -->
         <div class="bg-white rounded-2xl shadow-lg p-6 border-2 border-gray-200">

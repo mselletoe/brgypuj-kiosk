@@ -5,7 +5,6 @@ Provides management endpoints for document type templates and resident
 request monitoring within the administrative dashboard.
 """
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Body
-from pydantic import BaseModel
 from fastapi.responses import StreamingResponse
 from io import BytesIO
 from sqlalchemy.orm import Session
@@ -35,9 +34,10 @@ from app.services.document_service import (
     mark_request_unpaid,
     undo_request,
     delete_request,
-    bulk_delete_requests
+    bulk_delete_requests,
+    get_request_notes, 
+    update_request_notes
 )
-from app.models.document import DocumentRequest
 
 router = APIRouter(prefix="/documents")
 
@@ -313,25 +313,13 @@ def bulk_delete_document_requests(ids: list[int] = Body(...), db: Session = Depe
     return {"detail": f"{deleted_count} requests deleted"}
 
 
-class NotesUpdateSchema(BaseModel):
-    notes: str
-
-
 @router.get("/requests/{request_id}/notes")
-def get_request_notes(request_id: int, db: Session = Depends(get_db)):
-    req = db.query(DocumentRequest).filter(DocumentRequest.id == request_id).first()
-    if not req:
-        raise HTTPException(status_code=404, detail="Request not found")
-    return {"notes": req.notes}
+def get_notes(request_id: int, db: Session = Depends(get_db)):
+    notes = get_request_notes(db, request_id)
+    return {"notes": notes}
 
 
 @router.put("/requests/{request_id}/notes")
-def update_request_notes(request_id: int, payload: NotesUpdateSchema, db: Session = Depends(get_db)):
-    req = db.query(DocumentRequest).filter(DocumentRequest.id == request_id).first()
-    if not req:
-        raise HTTPException(status_code=404, detail="Request not found")
-
-    req.notes = payload.notes
-    db.commit()
-    db.refresh(req)
-    return {"id": req.id, "notes": req.notes}
+def put_notes(request_id: int, payload: dict = Body(...), db: Session = Depends(get_db)):
+    updated_notes = update_request_notes(db, request_id, payload.get("notes", ""))
+    return {"notes": updated_notes}

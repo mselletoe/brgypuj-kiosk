@@ -428,3 +428,20 @@ def bulk_delete_requests(db: Session, ids: list[int]):
     count = db.query(DocumentRequest).filter(DocumentRequest.id.in_(ids)).delete(synchronize_session=False)
     db.commit()
     return count
+
+
+def get_request_notes(db: Session, request_id: int) -> str:
+    req = _get_request(db, request_id)
+    if not req:
+        raise HTTPException(status_code=404, detail="Request not found")
+    return req.notes or ""
+
+
+def update_request_notes(db: Session, request_id: int, notes: str) -> str:
+    req = _get_request(db, request_id)
+    if not req:
+        raise HTTPException(status_code=404, detail="Request not found")
+    req.notes = notes
+    db.commit()
+    db.refresh(req)
+    return req.notes
