@@ -134,10 +134,10 @@ const handleButtonClick = ({ action, requestId }) => {
       console.log(`Opening notes for request ${requestId}`)
       break
     case 'approve':
-      await handleApprove(requestId)
+      handleApprove(requestId)
       break
     case 'reject':
-      await handleReject(requestId)
+      handleReject(requestId)
       break
     case 'delete':
       handleDelete(requestId)
