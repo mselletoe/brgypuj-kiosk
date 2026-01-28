@@ -7,6 +7,7 @@ import Modal from '@/components/shared/Modal.vue'
 import Loading from '@/components/shared/Loading.vue'
 import { useAuthStore } from '@/stores/auth'
 import { getDocumentTypes, createDocumentRequest } from '@/api/documentService'
+import { getResidentAutofillData } from '@/api/residentService'
 
 const auth = useAuthStore()
 const route = useRoute()
@@ -33,6 +34,10 @@ const docTypeSlug = computed(() =>
 )
 const config = computed(() => documents.value[docTypeSlug.value])
 
+const isRfidUser = computed(() => {
+  return auth.isAuthenticated && auth.residentId !== null
+})
+
 const fetchDocuments = async () => {
   loadingDocuments.value = true
   errorDocuments.value = null
@@ -54,6 +59,25 @@ const fetchDocuments = async () => {
     errorDocuments.value = 'Failed to load document fields'
   } finally {
     loadingDocuments.value = false
+  }
+}
+
+const fetchResidentData = async () => {
+  if (!isRfidUser.value) {
+    residentData.value = null
+    return
+  }
+
+  isLoadingResidentData.value = true
+  try {
+    const data = await getResidentAutofillData(auth.residentId)
+    residentData.value = data
+  } catch (err) {
+    console.error('Failed to fetch resident data for autofill:', err)
+    // Don't block the form - just proceed without autofill
+    residentData.value = null
+  } finally {
+    isLoadingResidentData.value = false
   }
 }
 
@@ -94,13 +118,8 @@ const handleSubmit = async (data) => {
     return
   }
 
-  // Resident ID
-  const residentId = auth.residentId
-  if (!residentId) {
-    alert("No resident found. Please log in via RFID or guest mode.")
-    isSubmitting.value = false
-    return
-  }
+  // Resident ID - can be null for guest mode (RFID requests only)
+  const residentId = auth.residentId || null
 
   try {
     // Construct payload for backend
@@ -129,6 +148,7 @@ const handleSubmit = async (data) => {
 
 onMounted(async () => {
   await fetchDocuments()
+  await fetchResidentData()
 })
 </script>
 
@@ -153,7 +173,8 @@ onMounted(async () => {
 
     <!-- Loading indicator -->
     <div v-if="isLoadingResidentData" class="text-center py-8">
-      <p class="text-gray-600">Loading your information...</p>
+      <Loading color="#03335C" size="12px" spacing="50px" />
+      <p class="text-gray-600 mt-4">Loading your information...</p>
     </div>
 
     <!-- Form Box -->
@@ -163,7 +184,7 @@ onMounted(async () => {
         :config="config"
         :initial-data="formData"
         :resident-data="residentData"
-        :is-rfid-user="false"
+        :is-rfid-user="isRfidUser"
         :is-submitting="isSubmitting"
         @continue="handleSubmit"
       />
@@ -201,7 +222,7 @@ onMounted(async () => {
       >
         <Modal
           title="Application Submitted!"
-          message="Your request has been successfully submitted. You will be notified once it's processed. Transaction No: ${transactionNo}"
+          :message="`Your request has been successfully submitted. You will be notified once it's processed. Transaction No: ${transactionNo}`"
           primaryButtonText="Yes"
           secondaryButtonText="No"
           :showPrimaryButton="true"

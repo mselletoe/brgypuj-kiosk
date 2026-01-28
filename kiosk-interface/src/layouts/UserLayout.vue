@@ -3,7 +3,7 @@ import Header from '@/layouts/Header.vue'
 </script>
 
 <template>
-  <div class="flex h-screen flex-col items-center p-8 pb-0">
+  <div class="flex h-screen flex-col items-center p-8">
 
     <Header />
 
