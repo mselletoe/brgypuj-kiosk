@@ -249,6 +249,18 @@ def delete_document_type(db: Session, doctype_id: int):
     if not doc_type:
         return None
 
+    in_use = (
+        db.query(DocumentRequest)
+        .filter(DocumentRequest.doctype_id == doctype_id)
+        .count()
+    )
+
+    if in_use > 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot delete document type: it is used by existing requests."
+        )
+    
     db.delete(doc_type)
     db.commit()
 

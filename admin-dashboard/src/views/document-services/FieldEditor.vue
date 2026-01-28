@@ -125,7 +125,7 @@ function save() {
         >
           <!-- Label -->
           <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-            <label style="font-size: 13px; color: #666; font-weight: 500;">Field Name</label>
+            <label style="font-size: 13px; color: #666; font-weight: 500;">Field Label</label>
             <NInput
               v-model:value="field.label"
               placeholder="e.g., Field Label"
@@ -139,7 +139,7 @@ function save() {
             <label style="font-size: 13px; color: #666; font-weight: 500;">Template placeholder</label>
             <NInput
               v-model:value="field.name"
-              placeholder="e.g., field_label"
+              placeholder="e.g., field_name"
               size="medium"
             />
           </div>
