@@ -9,7 +9,7 @@
 import { h, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { NDropdown } from 'naive-ui'
-import { UserCircleIcon, Cog6ToothIcon, LockClosedIcon, ArrowLeftOnRectangleIcon } from '@heroicons/vue/24/solid'
+import { UserCircleIcon, QuestionMarkCircleIcon, BellIcon, ArrowLeftOnRectangleIcon } from '@heroicons/vue/24/solid'
 import { useAdminAuthStore } from '@/stores/auth'
 
 const router = useRouter()
@@ -48,6 +48,10 @@ const handleSelect = (key) => {
   }
 }
 
+const goToHelp = () => {
+  router.push('/help-and-support')
+}
+
 /**
  * Reactive computed properties to display administrator metadata.
  * Fallbacks are provided for scenarios where the auth store is still rehydrating.
@@ -59,7 +63,15 @@ const role = computed(() => adminAuth.admin?.role || 'Administrator')
 <template>
   <header class="pb-8 flex items-center justify-between w-[99%]">
     <div class="bg-white rounded-md w-[700px] h-[40px]"></div>
-    <div>
+
+    <div class="flex items-center gap-2">
+      <button @click="goToHelp" class="p-2 text-[#1F2937] hover:text-[#2D4465] rounded-full transition-colors">
+        <QuestionMarkCircleIcon class="h-6 w-6" />
+      </button>
+
+      <button class="p-2 text-[#1F2937] rounded-full hover:text-[#2D4465] transition-colors relative">
+        <BellIcon class="h-6 w-6" />
+      </button>
       <n-dropdown
         trigger="click"
         :options="dropdownOptions"
