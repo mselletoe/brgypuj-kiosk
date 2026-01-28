@@ -122,7 +122,7 @@ function goTo(path) {
           variant="outline" 
           size="md" 
           class="flex-1 shadow-[4px_4px_8px_rgba(0,0,0,0.15)]"
-          @click="goTo('transactions')"
+          @click="goTo('transaction-history')"
         >
           Transactions
         </Button>
