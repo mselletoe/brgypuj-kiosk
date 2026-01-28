@@ -18,6 +18,7 @@ import ComponentShowcase from '@/components/ComponentShowcase.vue'
 import AccountSettings from '@/views/settings/AccountSettings.vue'
 import HelpAndSupport from '@/views/Help&Support.vue'
 import FAQsManagement from '@/views/faqs-management/FAQsManagement.vue'
+import ResidentsManagement from '@/views/residents-management/ResidentsManagement.vue'
 
 const routes = [
   {
@@ -62,7 +63,7 @@ const routes = [
       { path: 'document-services', component: DocumentServices },
       { path: 'kiosk-announcements', component: KioskAnnouncements },
       { path: 'sms-announcements', component: SMSAnnouncements },
-      { path: 'residents', component: Residents },
+      { path: 'residents-management', component: ResidentsManagement },
       { path: 'equipment-inventory', component: EquipmentInventory },
       { path: 'system-settings', component: SystemSettings },
       { path: 'component-showcase', component: ComponentShowcase },

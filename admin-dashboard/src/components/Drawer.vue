@@ -36,7 +36,7 @@ const menuGroups = [
       { label: 'Equipment Inventory', icon: CircleStackIcon, to: '/equipment-inventory' },
       { label: 'Kiosk Announcements', icon: SpeakerWaveIcon, to: '/kiosk-announcements' },
       { label: 'FAQs Management', icon: QuestionMarkCircleIcon, to: '/faqs-management' },
-      { label: 'Residents Information', icon: UserGroupIcon, to: '/residents' },
+      { label: 'Residents Information', icon: UserGroupIcon, to: '/residents-management' },
     ]
   },
   {
