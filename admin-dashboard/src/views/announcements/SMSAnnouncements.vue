@@ -135,11 +135,9 @@ const toggleGroupSelection = (groupId) => {
 <template>
   <div class="p-6 bg-white rounded-md w-full min-h-screen space-y-6">
     <!-- Header -->
-    <div class="flex justify-between items-center">
-      <PageTitle title="Send SMS Announcement" />
-      <div class="text-sm text-gray-500">
-        Reach residents instantly via SMS
-      </div>
+    <div>
+      <PageTitle title="SMS Announcements" />
+      <p class="text-sm text-gray-500 mt-1">Send SMS announcements to residents</p>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">

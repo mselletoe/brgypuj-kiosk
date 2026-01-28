@@ -17,6 +17,7 @@ import FeedbackAndReports from '@/views/feedback-and-reports/FeedbackAndReports.
 import ComponentShowcase from '@/components/ComponentShowcase.vue'
 import AccountSettings from '@/views/settings/AccountSettings.vue'
 import HelpAndSupport from '@/views/Help&Support.vue'
+import FAQsManagement from '@/views/faqs-management/FAQsManagement.vue'
 
 const routes = [
   {
@@ -66,7 +67,8 @@ const routes = [
       { path: 'system-settings', component: SystemSettings },
       { path: 'component-showcase', component: ComponentShowcase },
       { path: 'account-settings', component: AccountSettings },
-      { path: 'help-and-support', component: HelpAndSupport }
+      { path: 'help-and-support', component: HelpAndSupport },
+      { path: 'faqs-management', component: FAQsManagement }
     ]
   }
 ]

@@ -35,7 +35,7 @@ const menuGroups = [
       { label: 'Document Services', icon: FolderOpenIcon, to: '/document-services' },
       { label: 'Equipment Inventory', icon: CircleStackIcon, to: '/equipment-inventory' },
       { label: 'Kiosk Announcements', icon: SpeakerWaveIcon, to: '/kiosk-announcements' },
-      { label: 'FAQs Management', icon: QuestionMarkCircleIcon, to: '/faqs' },
+      { label: 'FAQs Management', icon: QuestionMarkCircleIcon, to: '/faqs-management' },
       { label: 'Residents Information', icon: UserGroupIcon, to: '/residents' },
     ]
   },

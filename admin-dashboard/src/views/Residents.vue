@@ -81,7 +81,10 @@ watch([page, query, searchFilter, selectedValues], loadResidents)
 <template>
   <div class="p-6 bg-white rounded-md w-full h-full space-y-5">
     <header class="flex items-center justify-between mb-8 space-x-5">
-      <PageTitle title="Residents Information" />
+      <div>
+        <PageTitle title="Residents Information Management" />
+        <p class="text-sm text-gray-500 mt-1">Manage residents information</p>
+      </div>
 
       <!-- Search with filter -->
       <NInput

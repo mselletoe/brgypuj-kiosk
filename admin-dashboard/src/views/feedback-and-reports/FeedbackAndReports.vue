@@ -35,7 +35,10 @@ const currentTabComponent = computed(() => tabMap[activeTab.value] || AllTab);
 <template>
   <div class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden">
     <div class="flex justify-between items-center mb-4">
-      <PageTitle title="Feedback and Reports" />
+      <div>
+        <PageTitle title="Feedbacks and Reports" />
+        <p class="text-sm text-gray-500 mt-1">Manage feedbacks and reports</p>
+      </div>
       
       <div class="flex items-center space-x-2">
         <button 

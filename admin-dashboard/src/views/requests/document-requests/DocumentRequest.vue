@@ -72,7 +72,10 @@ const handleFilter = () => console.log('Filter clicked');
 <template>
   <div class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden">
     <div class="flex justify-between items-center mb-4">
-      <PageTitle title="Document Requests" />
+      <div>
+        <PageTitle title="Document Requests" />
+        <p class="text-sm text-gray-500 mt-1">Manage Document Requests submitted by residents</p>
+      </div>
       
       <div class="flex items-center space-x-2">
         <button @click="handleSort" class="flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
