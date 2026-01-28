@@ -13,18 +13,21 @@ const toggleLang = () => (currentLang.value = currentLang.value === 'FIL' ? 'ENG
 <template>
   <div class="display-page flex items-center justify-center text-center relative select-none text-[#0c2d57]">
     
-    <div class="absolute top-6 right-6 flex items-center gap-4 z-20">
-      <button @click.stop="toggleMute" class="bg-[#49759B] text-white rounded-full p-2 shadow-md hover:opacity-90 transition">
-        <component :is="isMuted ? SpeakerXMarkIcon : SpeakerWaveIcon" class="h-6 w-6" />
+    <div class="absolute top-8 right-10 flex items-center gap-4 z-20">
+      <button 
+        @click.stop="toggleMute" 
+        class="bg-[#49759B] text-white rounded-full p-2.5 shadow-lg active:scale-95 transition-all"
+      >
+        <component :is="isMuted ? SpeakerXMarkIcon : SpeakerWaveIcon" class="h-7 w-7" />
       </button>
 
       <div 
         @click.stop="toggleLang" 
-        class="relative w-36 h-10 bg-[#49759B] rounded-2xl flex items-center cursor-pointer p-1.5 shadow-md transition-all"
+        class="relative w-36 h-12 bg-[#49759B] rounded-2xl flex items-center cursor-pointer p-1.5 shadow-md transition-all"
       >
         <div 
-          class="absolute top-1 bottom-1 w-[46%] bg-white rounded-xl transition-all duration-300 ease-in-out shadow-sm"
-          :style="{ left: currentLang === 'FIL' ? '4px' : 'calc(54% - 4px)' }"
+          class="absolute h-9 w-[46%] bg-white rounded-xl transition-all duration-300 ease-in-out"
+          :style="{ transform: currentLang === 'FIL' ? 'translateX(0)' : 'translateX(105%)' }"
         ></div>
 
         <div class="relative flex w-full font-bold text-sm z-10 pointer-events-none">

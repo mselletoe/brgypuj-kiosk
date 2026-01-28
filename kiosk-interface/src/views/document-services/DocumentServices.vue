@@ -99,7 +99,7 @@ onMounted(fetchDocuments)
         <div class="mt-auto flex justify-between items-center font-semibold text-[#003A6B] group-hover:text-white 
                     transition-all duration-300 ease-in-out">
           <span>Fee:</span>
-          <span>₱{{ doc.price || 0 }}</span>
+          <span class="text-[#09AA44] group-hover:text-white transition-all">₱{{ doc.price || 0 }}</span>
         </div>
       </router-link>
     </div>

@@ -26,6 +26,7 @@ import Feedback from '@/views/feedback/Feedback.vue'
 import Rating from '@/views/feedback/Rating.vue'
 import Comments from '@/views/feedback/Comments.vue'
 import ComponentShowcase from '../components/ComponentShowcase.vue'
+import InAnnouncements from '../views/announcements/Announcement.vue'
 
 const routes = [
   // Root Redirect: Kiosk starts at the Idle/Welcome screen
@@ -41,7 +42,7 @@ const routes = [
   { path: '/login', name: 'LoginSelection', component: Login },
   { path: '/login-rfid', name: 'ScanRFID', component: ScanRFID },
   { path: '/auth-pin', name: 'VerifyPIN', component: AuthPIN },
-  
+  { path: '/inannouncements', name: 'InAnnouncements', component: InAnnouncements },
   /**
    * PROTECTED ROUTES (UserLayout)
    * Requires either Guest or RFID authentication.

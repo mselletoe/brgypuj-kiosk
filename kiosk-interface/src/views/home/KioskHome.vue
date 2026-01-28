@@ -46,7 +46,7 @@ function goTo(path) {
 </script>
 
 <template>
-  <div class="flex flex-col items-center p-8 py-0 text-[#003a6b]">
+  <div class="flex flex-col items-center text-[#003a6b] w-full">
     <div class="flex w-full justify-between">
       <div class="flex flex-col text-left">
         <h2 class="text-[50px] font-normal tracking-[-0.03em] drop-shadow-[3px_3px_5px_rgba(0,0,0,0.3)]">
@@ -131,7 +131,7 @@ function goTo(path) {
           variant="outline" 
           size="md" 
           class="flex-1 shadow-[4px_4px_8px_rgba(0,0,0,0.15)]"
-          @click="goTo('announcements')"
+          @click="goTo('inannouncements')"
         >
           Announcements
         </Button>

@@ -189,12 +189,12 @@ const goBackToHome = () => {
 </script>
 
 <template>
-  <div class="py-0 p-8" :class="{ 'content-with-keyboard': showKeyboard }">
-    <div class="flex items-start gap-4">
+  <div class="flex flex-col w-full h-full" :class="{ 'content-with-keyboard': showKeyboard }">
+    <div class="flex items-center mb-6 gap-7 flex-shrink-0">
       <ArrowBackButton @click="goBackToHome" />
       <div>
-        <h1 class="text-[40px] font-bold text-[#013C6D]">Equipment Borrowing</h1>
-        <p class="mt-0 text-lg text-gray-600">Below are list of available equipment:</p>
+        <h1 class="text-[45px] text-[#03335C] font-bold tracking-tight -mt-2">Equipment Borrowing</h1>
+        <p class="text-[#03335C] -mt-2">Below are list of available equipment:</p>
       </div>
     </div>
 
