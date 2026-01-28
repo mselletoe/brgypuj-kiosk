@@ -28,6 +28,7 @@ import Comments from '@/views/feedback/Comments.vue'
 import ComponentShowcase from '../components/ComponentShowcase.vue'
 import InAnnouncements from '../views/announcements/Announcement.vue'
 import TransactionHistory from '../views/transactions/TransactionHistory.vue'
+import IDServices from '../views/id-services/IDServices.vue'
 
 const routes = [
   // Root Redirect: Kiosk starts at the Idle/Welcome screen
@@ -69,7 +70,8 @@ const routes = [
       { path: 'comments', name: 'Comments', component: Comments },
       { path: 'register', name: 'Register', component: Register },
       { path: 'component-showcase', name: 'DevShowcase', component: ComponentShowcase },
-      { path: 'transaction-history', name: 'TransactionHistory', component: TransactionHistory }
+      { path: 'transaction-history', name: 'TransactionHistory', component: TransactionHistory },
+      { path: '/id-services', name: 'IDServices', component: IDServices }
     ]
   },
   

@@ -13,16 +13,19 @@ const goBack = () => router.push('/home')
       <ArrowBackButton @click="goBack"/>
       <div>
         <h1 class="text-[45px] text-[#03335C] font-bold tracking-tight -mt-2">
-          Transaction History
+          I.D Services
         </h1>
         <p class="text-[#03335C] -mt-2">
-          See your previous transactions here.
+          Description
         </p>
       </div>
     </div>
 
     <div>
-      <!-- Transaction history content goes here -->
+      <!-- RFID No and registered goes here -->
+    </div>
+    <div>
+        <!-- I.D Services content goes here -->
     </div>
   </div>
 </template>
