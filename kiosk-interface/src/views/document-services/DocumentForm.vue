@@ -1,10 +1,18 @@
 <script setup>
+/**
+ * @file DocumentForm.vue
+ * @description Dynamic Form Renderer for Document Requests.
+ * This component builds a form based on administrative configuration, 
+ * automatically maps and pre-fills resident data for authenticated RFID users, 
+ * and handles localized field validation.
+ */
 import { ref, watch } from 'vue'
 import VueDatePicker from '@vuepic/vue-datepicker'
 import '@vuepic/vue-datepicker/dist/main.css'
 import { CalendarIcon } from '@heroicons/vue/24/outline'
 import { LockClosedIcon } from '@heroicons/vue/24/solid'
 
+// --- Props Configuration ---
 const props = defineProps({
   config: Object,
   initialData: {
@@ -27,13 +35,15 @@ const props = defineProps({
 
 const emit = defineEmits(['continue'])
 
-// ==============================================
-// Initialize form data and errors
-// ==============================================
+// --- Form & Error States ---
 const formData = ref({})
 const errors = ref({})
 
-// Map of field names to possible prefill mappings
+/**
+ * Field Mapping Dictionary
+ * Maps standardized database keys (keys) to various potential form field 
+ * naming conventions (values) set by the admin in the dashboard.
+ */
 const fieldMapping = {
   // Name fields
   full_name: ['full_name', 'name', 'resident_name', 'applicant_name'],
@@ -68,9 +78,13 @@ const fieldMapping = {
   rfid_uid: ['rfid_uid', 'rfid', 'card_number', 'rfid_number'],
 }
 
-// Track prefilled fields
+// Tracks fields that were automatically populated from the resident profile
 const preFilledFields = ref(new Set())
 
+/**
+ * Initializes form values. 
+ * Combines initial state with profile-based autofill logic.
+ */
 const initializeFormData = () => {
   props.config.fields.forEach((field) => {
     let value = props.initialData[field.name] || ''
@@ -100,7 +114,11 @@ const initializeFormData = () => {
 
 initializeFormData()
 
-// Watch for changes in resident data (in case it loads after component mounts)
+/**
+ * Watcher: Resident Data Sync
+ * Reacts to async resident data loading. Populates empty fields if data 
+ * arrives after the component has already mounted.
+ */
 watch(() => props.residentData, (newData) => {
   if (!newData || !props.isRfidUser) return
   
@@ -125,10 +143,17 @@ watch(() => props.residentData, (newData) => {
 // ==============================================
 // Helpers
 // ==============================================
+
+/**
+ * Identifies if a field is locked based on RFID authentication.
+ */
 const isPreFilled = (fieldName) => {
   return props.isRfidUser && preFilledFields.value.has(fieldName)
 }
 
+/**
+ * Dynamically adjusts placeholders based on field status.
+ */
 const formatPlaceholder = (placeholder, label, isPrefilled) => {
   if (isPrefilled) {
     return 'Auto-filled from your profile'
@@ -136,9 +161,10 @@ const formatPlaceholder = (placeholder, label, isPrefilled) => {
   return placeholder || `Enter ${label.toLowerCase()}`
 }
 
-// ==============================================
-// Validation & Submit
-// ==============================================
+/**
+ * Validates required fields before allowing submission.
+ * @returns {boolean} True if all required fields are populated.
+ */
 const validate = () => {
   let isValid = true
   props.config.fields.forEach((field) => {
@@ -155,6 +181,9 @@ const validate = () => {
   return isValid
 }
 
+/**
+ * Emits the 'continue' event with valid form data to the parent wrapper.
+ */
 const handleContinue = () => {
   if (props.isSubmitting) return
   if (validate()) {

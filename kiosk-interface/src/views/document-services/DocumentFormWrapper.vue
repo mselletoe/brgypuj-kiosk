@@ -1,4 +1,10 @@
 <script setup>
+/**
+ * @file DocumentFormWrapper.vue
+ * @description Orchestrates the document application lifecycle.
+ * Manages dynamic form configuration fetching, resident data autofill for RFID users,
+ * and handles the multi-step submission process including loading and success states.
+ */
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import DocumentForm from './DocumentForm.vue'
@@ -9,35 +15,50 @@ import { useAuthStore } from '@/stores/auth'
 import { getDocumentTypes, createDocumentRequest } from '@/api/documentService'
 import { getResidentAutofillData } from '@/api/residentService'
 
+// --- Composition Utilities ---
 const auth = useAuthStore()
 const route = useRoute()
 const router = useRouter()
 
+// --- UI & Navigation State ---
 const currentStep = ref('form')
 const formData = ref({})
 const showSuccessModal = ref(false)
 const isFadingOut = ref(false)
 
+// --- Business Logic State ---
 const residentData = ref(null)
 const isLoadingResidentData = ref(false)
 const isSubmitting = ref(false)
 
+// --- Data Fetching State ---
 const documents = ref({})
 const loadingDocuments = ref(true)
 const errorDocuments = ref(null)
 const transactionNo = ref('')
 
-const currentResidentId = ref(null)
-
+/**
+ * Normalizes the URL parameter into a slug format for configuration lookup.
+ */
 const docTypeSlug = computed(() =>
   route.params.docType?.toLowerCase().replace(/\s+/g, '-')
 )
+
+/**
+ * Retrieves the specific configuration for the currently selected document.
+ */
 const config = computed(() => documents.value[docTypeSlug.value])
 
+/**
+ * Checks if the current session belongs to a resident identified via RFID.
+ */
 const isRfidUser = computed(() => {
   return auth.isAuthenticated && auth.residentId !== null
 })
 
+/**
+ * Fetches all document templates and maps them by slug for O(1) access.
+ */
 const fetchDocuments = async () => {
   loadingDocuments.value = true
   errorDocuments.value = null
@@ -62,6 +83,10 @@ const fetchDocuments = async () => {
   }
 }
 
+/**
+ * Retrieves resident profile data to facilitate the 'Autofill' feature.
+ * Occurs only for authenticated RFID users.
+ */
 const fetchResidentData = async () => {
   if (!isRfidUser.value) {
     residentData.value = null
@@ -81,6 +106,9 @@ const fetchResidentData = async () => {
   }
 }
 
+/**
+ * Handles backwards navigation between preview/form steps or exits to the list.
+ */
 const goBack = () => {
   if (currentStep.value === 'preview') {
     currentStep.value = 'form'
@@ -89,6 +117,9 @@ const goBack = () => {
   }
 }
 
+/**
+ * Closes the success modal with a fade-out animation and resets the session.
+ */
 const closeModal = () => {
   isFadingOut.value = true
   setTimeout(() => {
@@ -108,6 +139,10 @@ const handleNo = () => {
   closeModal()
 }
 
+/**
+ * Submits the finalized form data to the backend.
+ * Captures the transaction number for the user's reference upon success.
+ */
 const handleSubmit = async (data) => {
   if (isSubmitting.value) return
   isSubmitting.value = true
@@ -153,32 +188,29 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="py-0 p-8">
-    <!-- Header -->
-    <div class="relative flex items-center mb-10">
-      <ArrowBackButton
-        @click="goBack" 
-        class="absolute top-0 left-0 mt-2 mr-6"
-      />
+  <div class="flex flex-col w-full h-full">
+    <div class="flex items-center mb-6 gap-7 flex-shrink-0">
+      <ArrowBackButton @click="goBack"/>
 
-      <div class="flex justify-between items-center w-full ml-20">
-        <h1 class="text-[40px] font-extrabold text-[#03335C] leading-tight mt-2">
+      <div>
+        <h1 class="text-[45px] text-[#03335C] font-bold tracking-tight -mt-2">
           {{ config?.title || docTypeSlug?.charAt(0).toUpperCase() + docTypeSlug?.slice(1) }}
         </h1>
-        <p class="text-sm text-[#002B5B] text-right leading-tight mt-4 italic">
-          Kindly fill up the details needed<br />for the said document
+        <p class="text-[#03335C] -mt-2">
+          Kindly fill up the details needed for the said document
         </p>
       </div>
     </div>
 
-    <!-- Loading indicator -->
-    <div v-if="isLoadingResidentData" class="text-center py-8">
+    <div v-if="isLoadingResidentData" class="text-center py-8 flex-shrink-0">
       <Loading color="#03335C" size="12px" spacing="50px" />
       <p class="text-gray-600 mt-4">Loading your information...</p>
     </div>
 
-    <!-- Form Box -->
-    <div v-else class="border-[2px] border-[#00203C] rounded-2xl p-10 shadow-md bg-white">
+    <div 
+      v-else 
+      class="border-[2px] border-[#00203C] h-full rounded-2xl p-10 shadow-md bg-white overflow-y-auto custom-scrollbar"
+    >
       <DocumentForm
         v-if="currentStep === 'form' && config?.available"
         :config="config"
@@ -189,7 +221,6 @@ onMounted(async () => {
         @continue="handleSubmit"
       />
 
-      <!-- Not found -->
       <div v-else class="text-center py-12">
         <p class="text-[#003A6B] text-lg">The type of document you are requesting <br/> is currently unavailable.</p>
         <button 
@@ -222,7 +253,7 @@ onMounted(async () => {
       >
         <Modal
           title="Application Submitted!"
-          :message="`Your request has been successfully submitted. You will be notified once it's processed. Transaction No: ${transactionNo}`"
+          :message="`Your request has been successfully submitted. Transaction No: ${transactionNo}`"
           primaryButtonText="Yes"
           secondaryButtonText="No"
           :showPrimaryButton="true"
