@@ -409,6 +409,33 @@ def delete_equipment_inventory(db: Session, equipment_id: int):
     return True
 
 
+def bulk_delete_equipment_inventory(db: Session, ids: list[int]):
+    """
+    Admin: Bulk deletes multiple equipment items from inventory.
+    Skips items that are referenced in existing requests.
+    Returns the number of items successfully deleted.
+    """
+    equipment_items = db.query(EquipmentInventory).filter(EquipmentInventory.id.in_(ids)).all()
+    
+    deleted_count = 0
+    
+    for equipment in equipment_items:
+        # Check if equipment is used in any requests
+        in_use = (
+            db.query(EquipmentRequestItem)
+            .filter(EquipmentRequestItem.item_id == equipment.id)
+            .count()
+        )
+        
+        # Only delete if not in use
+        if in_use == 0:
+            db.delete(equipment)
+            deleted_count += 1
+    
+    db.commit()
+    return deleted_count
+
+
 # -------------------------------------------------
 # Equipment Request Management (Admin)
 # -------------------------------------------------

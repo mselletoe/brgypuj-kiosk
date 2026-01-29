@@ -96,6 +96,18 @@ def delete_equipment_item(equipment_id: int, db: Session = Depends(get_db)):
     return None
 
 
+@router.post("/inventory/bulk-delete", status_code=status.HTTP_200_OK)
+def bulk_delete_inventory(ids: List[int], db: Session = Depends(get_db)):
+    """
+    **Admin:** Bulk delete multiple equipment items from inventory.
+    
+    Skips items that are referenced in existing requests.
+    Returns the number of items successfully deleted.
+    """
+    count = equipment_service.bulk_delete_equipment_inventory(db, ids)
+    return {"message": f"{count} equipment item(s) deleted"}
+
+
 # =========================================================
 # EQUIPMENT REQUEST MANAGEMENT
 # =========================================================

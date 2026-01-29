@@ -3,6 +3,14 @@ import { ref, onMounted } from 'vue';
 import EquipmentInventoryCard from './EquipmentInventoryCard.vue';
 import { useMessage } from 'naive-ui';
 import PageTitle from '@/components/shared/PageTitle.vue'
+import ConfirmModal from '@/components/shared/ConfirmationModal.vue'
+import { 
+  getEquipmentInventory, 
+  createEquipmentItem, 
+  updateEquipmentItem, 
+  deleteEquipmentItem,
+  bulkDeleteEquipmentItems 
+} from '@/api/equipmentService';
 
 const message = useMessage();
 const emit = defineEmits(['inventory-updated']);
@@ -11,26 +19,25 @@ const emit = defineEmits(['inventory-updated']);
 const localInventory = ref([]);
 const selectedIds = ref([]);
 const isLoading = ref(false);
+const showDeleteModal = ref(false)
+const deleteTargetId = ref(null)
+const isBulkDelete = ref(false)
 
 // --- Data Fetching & Mapping ---
 async function fetchActualInventory() {
   isLoading.value = true;
   try {
-    const inventoryData = await getInventory();
+    const response = await getEquipmentInventory();
+    const inventoryData = response.data;
     
-    // Mapping backend fields to the Card Component expectations
     localInventory.value = inventoryData.map(item => ({
       id: item.id,
       item_name: item.name,            
       total_owned: item.total_quantity, 
       available: item.available_quantity,
-      rental_rate: item.rate,          
+      rental_rate: item.rate_per_day,          
       editing: false,
-      isNew: false, // Flag to distinguish existing from newly added
-      
-      name: item.name,
-      total: item.total_quantity,
-      rate: item.rate
+      isNew: false,
     }));
   } catch (error) {
     console.error('Failed to load inventory:', error);
@@ -42,12 +49,10 @@ async function fetchActualInventory() {
 
 // --- CRUD Actions ---
 function startCreate() {
-  // Prevent multiple "New" cards at once
   if (localInventory.value.some(item => item.isNew)) return;
 
-  // Add a blank template to the start of the list
   localInventory.value.unshift({
-    id: Date.now(), // temporary ID
+    id: Date.now(),
     item_name: '',
     total_owned: 0,
     available: 0,
@@ -58,28 +63,57 @@ function startCreate() {
 }
 
 async function handleSave(formData) {
+  if (!formData.item_name || formData.item_name.trim() === '') {
+    message.warning('Item name is required.');
+    return;
+  }
+
+  if (formData.total_owned < 0) {
+    message.warning('Total owned cannot be negative.');
+    return;
+  }
+
+  if (formData.available < 0) {
+    message.warning('Available quantity cannot be negative.');
+    return;
+  }
+
   if (formData.available > formData.total_owned) {
-    message.warning('"Available" count cannot be greater than "Total Owned".');
+    message.warning('Available quantity cannot be greater than total owned.');
+    return;
+  }
+
+  if (formData.rental_rate < 0) {
+    message.warning('Rental rate cannot be negative.');
     return;
   }
   
   try {
     const apiPayload = {
-      id: formData.isNew ? undefined : formData.id,
-      name: formData.item_name,
+      name: formData.item_name.trim(),
       total_quantity: formData.total_owned,
-      rate: formData.rental_rate
+      available_quantity: formData.available,
+      rate_per_day: formData.rental_rate
     };
 
-    // Note: You might need a createInventory API call here if formData.isNew is true
-    await updateInventory(apiPayload);
+    if (formData.isNew) {
+      await createEquipmentItem(apiPayload);
+      message.success(`"${formData.item_name}" added to inventory!`);
+    } else {
+      await updateEquipmentItem(formData.id, apiPayload);
+      message.success(`Changes for "${formData.item_name}" saved!`);
+    }
     
-    message.success(`Changes for "${formData.item_name}" saved!`);
-    fetchActualInventory();
+    await fetchActualInventory();
     emit('inventory-updated'); 
   } catch (error) {
     console.error('Failed to save:', error);
-    message.error('Failed to save changes.');
+    
+    if (error.response?.data?.detail) {
+      message.error(error.response.data.detail);
+    } else {
+      message.error('Failed to save changes.');
+    }
   }
 }
 
@@ -89,10 +123,10 @@ function handleEdit(item) {
 
 function handleCancel(item) {
   if (item.isNew) {
-    localInventory.value.shift(); // Remove the temp card
+    localInventory.value.shift();
   } else {
     item.editing = false;
-    fetchActualInventory(); // Revert changes
+    fetchActualInventory();
   }
 }
 
@@ -104,7 +138,51 @@ function toggleSelect(id) {
   }
 }
 
-onMounted(fetchActualInventory);
+function requestDelete(id) {
+  deleteTargetId.value = id
+  isBulkDelete.value = false
+  showDeleteModal.value = true
+}
+
+function requestBulkDelete() {
+  if (!selectedIds.value.length) return
+  isBulkDelete.value = true
+  showDeleteModal.value = true
+}
+
+async function confirmDelete() {
+  try {
+    if (isBulkDelete.value) {
+      await bulkDeleteEquipmentItems(selectedIds.value)
+      localInventory.value = localInventory.value.filter(
+        i => !selectedIds.value.includes(i.id)
+      )
+      selectedIds.value = []
+      message.success('Selected items deleted.')
+    } else {
+      await deleteEquipmentItem(deleteTargetId.value)
+      localInventory.value = localInventory.value.filter(
+        i => i.id !== deleteTargetId.value
+      )
+      message.success('Item deleted.')
+    }
+
+    emit('inventory-updated')
+  } catch (err) {
+    console.error(err)
+    message.error(err.response?.data?.detail || 'Delete failed.')
+  } finally {
+    showDeleteModal.value = false
+    deleteTargetId.value = null
+  }
+}
+
+function cancelDelete() {
+  showDeleteModal.value = false
+  deleteTargetId.value = null
+}
+
+onMounted(fetchActualInventory)
 </script>
 
 <template>
@@ -112,25 +190,38 @@ onMounted(fetchActualInventory);
     <div class="flex mb-6 items-center justify-between">
       <div>
         <PageTitle title="Equipment Inventory Management" />
-        <p class="text-sm text-gray-500 mt-1">Track community assets, update stock levels, and set rental rates.</p>
+        <p class="text-sm text-gray-500 mt-1">
+          Track community assets, update stock levels, and set rental rates.
+        </p>
       </div>
 
       <div class="flex items-center gap-3">
         <button
+          v-if="selectedIds.length"
+          @click="requestBulkDelete"
+          class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm"
+        >
+          Delete {{ selectedIds.length }} Selected
+        </button>
+
+        <button
           @click="startCreate"
-          class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+          class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm"
         >
           Add Item
         </button>
       </div>
     </div>
 
-    <div class="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+    <div class="flex-1 overflow-y-auto pr-2">
       <div v-if="isLoading" class="flex justify-center py-20">
-        <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+        <div class="animate-spin h-10 w-10 border-b-2 border-blue-600 rounded-full"></div>
       </div>
 
-      <div v-else-if="localInventory.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-6">
+      <div
+        v-else-if="localInventory.length"
+        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+      >
         <EquipmentInventoryCard
           v-for="item in localInventory"
           :key="item.id"
@@ -142,30 +233,29 @@ onMounted(fetchActualInventory);
           @cancel="handleCancel(item)"
           @save="handleSave"
           @toggle-select="toggleSelect"
-          @delete="$emit('delete-requested', item.id)"
+          @delete="requestDelete(item.id)"
         />
       </div>
 
-      <div v-if="!isLoading && localInventory.length === 0" class="text-center py-20 border-2 border-dashed border-gray-100 rounded-xl">
+      <div
+        v-if="!isLoading && !localInventory.length"
+        class="text-center py-20 border-2 border-dashed rounded-xl"
+      >
         <p class="text-gray-400">Your inventory is currently empty.</p>
       </div>
     </div>
   </div>
-</template>
 
-<style scoped>
-.custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
-}
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 10px;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #d1d5db;
-  border-radius: 10px;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
-}
-</style>
+  <ConfirmModal
+    :show="showDeleteModal"
+    :title="
+      isBulkDelete
+        ? `Delete ${selectedIds.length} item(s)?`
+        : 'Delete this item?'
+    "
+    confirm-text="Delete"
+    cancel-text="Cancel"
+    @confirm="confirmDelete"
+    @cancel="cancelDelete"
+  />
+</template>
