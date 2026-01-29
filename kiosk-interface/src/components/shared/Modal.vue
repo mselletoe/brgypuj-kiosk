@@ -29,7 +29,7 @@ const handleSecondaryClick = () => {
 <template>
   <div class="flex flex-col items-center justify-center h-full">
     <div
-      class="bg-white shadow-lg rounded-2xl p-10 text-center w-[75%]
+      class="bg-white shadow-lg rounded-2xl p-10 text-center w-[75%] min-w-[620px] max-w-[720px]
               border-[#C1C1C1] border-[2px]"
     >
       <div class="flex justify-center mb-6">
@@ -49,7 +49,7 @@ const handleSecondaryClick = () => {
         </div>
       </div>
 
-      <h1 class="text-[30px] font-extrabold tracking-tight text-[#1B5886] mb-3">
+      <h1 class="text-[30px] font-extrabold tracking-tight text-[#013C6D] mb-3">
         {{ title }}
       </h1>
 
@@ -57,9 +57,8 @@ const handleSecondaryClick = () => {
         {{ message }}
       </p>
 
-      <!-- Reference ID Box -->
       <div v-if="showReferenceId" class="mb-8 flex justify-center">
-        <div class="border-2 border-dashed border-[#1B5886] rounded-xl px-8 py-4">
+        <div class="border-2 border-dashed bg-[#E4F5FC] border-[#1B5886] rounded-xl px-8 py-4">
           <p class="text-[#1B5886] text-2xl font-bold tracking-wide">
             {{ referenceId }}
           </p>

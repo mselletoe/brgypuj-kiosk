@@ -253,7 +253,9 @@ onMounted(async () => {
       >
         <Modal
           title="Application Submitted!"
-          :message="`Your request has been successfully submitted. Transaction No: ${transactionNo}`"
+          :message="`Pay the fee at the counter and be informed of further details. Please take note of the Request ID number below for reference.`"
+          :referenceId="transactionNo"
+          :showReferenceId="true"
           primaryButtonText="Yes"
           secondaryButtonText="No"
           :showPrimaryButton="true"
