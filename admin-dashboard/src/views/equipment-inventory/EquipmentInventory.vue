@@ -1,7 +1,8 @@
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
+import { TrashIcon, CheckIcon } from '@heroicons/vue/24/outline'
 import EquipmentInventoryCard from './EquipmentInventoryCard.vue';
-import { useMessage } from 'naive-ui';
+import { useMessage, NInput } from 'naive-ui';
 import PageTitle from '@/components/shared/PageTitle.vue'
 import ConfirmModal from '@/components/shared/ConfirmationModal.vue'
 import { 
@@ -22,6 +23,7 @@ const isLoading = ref(false);
 const showDeleteModal = ref(false)
 const deleteTargetId = ref(null)
 const isBulkDelete = ref(false)
+const searchQuery = ref('')
 
 // --- Data Fetching & Mapping ---
 async function fetchActualInventory() {
@@ -138,6 +140,34 @@ function toggleSelect(id) {
   }
 }
 
+const filteredInventory = computed(() => {
+  if (!searchQuery.value) return localInventory.value
+  return localInventory.value.filter(item =>
+    item.item_name.toLowerCase().includes(searchQuery.value.toLowerCase())
+  )
+})
+
+const totalCount = computed(() => filteredInventory.value.length)
+const selectedCount = computed(() => selectedIds.value.length)
+
+const selectionState = computed(() => {
+  if (totalCount.value === 0 || selectedCount.value === 0) return 'none'
+  if (selectedCount.value < totalCount.value) return 'partial'
+  return 'all'
+})
+
+function handleMainSelectToggle() {
+  if (selectionState.value === 'all' || selectionState.value === 'partial') {
+    selectedIds.value = []
+  } else {
+    selectedIds.value = filteredInventory.value.map(i => i.id)
+  }
+}
+
+watch(searchQuery, () => {
+  selectedIds.value = []
+})
+
 function requestDelete(id) {
   deleteTargetId.value = id
   isBulkDelete.value = false
@@ -196,19 +226,73 @@ onMounted(fetchActualInventory)
       </div>
 
       <div class="flex items-center gap-3">
+        <!-- Search -->
+        <n-input
+          v-model:value="searchQuery"
+          placeholder="Search equipment"
+          style="width: 250px"
+          clearable
+        />
+
+        <!-- Bulk Delete -->
         <button
-          v-if="selectedIds.length"
           @click="requestBulkDelete"
-          class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm"
+          :disabled="selectionState === 'none'"
+          class="p-2 border border-red-700 rounded-lg transition-colors"
+          :class="
+            selectionState === 'none'
+              ? 'opacity-50 cursor-not-allowed'
+              : 'hover:bg-red-50'
+          "
         >
-          Delete {{ selectedIds.length }} Selected
+          <TrashIcon class="w-5 h-5 text-red-700" />
         </button>
 
+        <!-- Select All / Partial -->
+        <div
+          class="flex items-center border rounded-lg overflow-hidden transition-colors"
+          :class="selectionState !== 'none' ? 'border-blue-600' : 'border-gray-400'"
+        >
+          <button
+            @click="handleMainSelectToggle"
+            class="p-2 hover:bg-gray-50 flex items-center"
+          >
+            <div
+              class="w-5 h-5 border rounded flex items-center justify-center transition-colors"
+              :class="
+                selectionState !== 'none'
+                  ? 'bg-blue-600 border-blue-600'
+                  : 'border-gray-400'
+              "
+            >
+              <div
+                v-if="selectionState === 'partial'"
+                class="w-2 h-0.5 bg-white"
+              ></div>
+              <CheckIcon
+                v-if="selectionState === 'all'"
+                class="w-3 h-3 text-white"
+              />
+            </div>
+          </button>
+        </div>
+
+        <!-- Add -->
         <button
           @click="startCreate"
-          class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm"
+          class="px-4 py-2 bg-blue-600 text-white rounded-md font-medium text-sm hover:bg-blue-700 transition flex items-center gap-2"
         >
-          Add Item
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-5 w-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M12 4v16m8-8H4" />
+          </svg>
+          Add
         </button>
       </div>
     </div>

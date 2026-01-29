@@ -191,7 +191,6 @@ onMounted(async () => {
   <div class="flex flex-col w-full h-full">
     <div class="flex items-center mb-6 gap-7 flex-shrink-0">
       <ArrowBackButton @click="goBack"/>
-
       <div>
         <h1 class="text-[45px] text-[#03335C] font-bold tracking-tight -mt-2">
           {{ config?.title || docTypeSlug?.charAt(0).toUpperCase() + docTypeSlug?.slice(1) }}

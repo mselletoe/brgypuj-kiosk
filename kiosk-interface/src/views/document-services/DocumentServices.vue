@@ -75,33 +75,28 @@ onMounted(fetchDocuments)
     <div v-if="loading" class="text-center text-gray-500 py-10">Loading services...</div>
     <div v-if="error" class="text-center text-red-500 py-10">{{ error }}</div>
 
-    <div 
-      v-if="isParent() && !loading && !error" 
-      class="grid grid-cols-1 md:grid-cols-2 gap-6 overflow-y-auto custom-scrollbar pb-4"
-    >
-      <router-link
-        v-for="doc in documents"
-        :key="doc.request_type_name"
-        :to="`/document-services/${doc.request_type_name.toLowerCase().replace(/\s+/g, '-')}`"
-        class="group flex flex-col p-6 rounded-2xl border border-gray-300 shadow-md bg-white 
-               hover:bg-[#003A6B] hover:text-white transition-all duration-300 ease-in-out"
-      >
-        <h2 class="text-[30px] text-[#003A6B] font-bold mb-2 group-hover:text-white 
-                   transition-all duration-300 ease-in-out">
-          {{ doc.request_type_name }}
-        </h2>
-        
-        <p class="text-gray-500 group-hover:text-gray-100 text-sm mb-6 
-                  transition-all duration-300 ease-in-out">
-          {{ doc.description }}
-        </p>
+    <div class="flex-1 overflow-y-auto custom-scrollbar">
+      <div v-if="isParent() && !loading && !error" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <router-link
+          v-for="doc in documents"
+          :key="doc.request_type_name"
+          :to="`/document-services/${doc.request_type_name.toLowerCase().replace(/\s+/g, '-')}`"
+          class="group flex flex-col p-6 rounded-2xl border border-gray-300 shadow-md bg-white hover:bg-[#003A6B] hover:text-white transition-all duration-300 ease-in-out"
+        >
+          <h2 class="text-[30px] text-[#003A6B] font-bold mb-2 group-hover:text-white transition-all duration-300 ease-in-out">
+            {{ doc.request_type_name }}
+          </h2>
+          
+          <p class="text-gray-500 group-hover:text-gray-100 text-sm mb-6 transition-all duration-300 ease-in-out">
+            {{ doc.description }}
+          </p>
 
-        <div class="mt-auto flex justify-between items-center font-semibold text-[#003A6B] group-hover:text-white 
-                    transition-all duration-300 ease-in-out">
-          <span>Fee:</span>
-          <span class="text-[#09AA44] group-hover:text-white transition-all">₱{{ doc.price || 0 }}</span>
-        </div>
-      </router-link>
+          <div class="mt-auto flex justify-between items-center font-semibold text-[#003A6B] group-hover:text-white transition-all duration-300 ease-in-out">
+            <span>Fee:</span>
+            <span class="text-[#09AA44] group-hover:text-white transition-all">₱{{ doc.price || 0 }}</span>
+          </div>
+        </router-link>
+      </div>
     </div>
 
     <router-view v-if="!isParent()" />
