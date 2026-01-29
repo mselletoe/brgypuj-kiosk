@@ -7,7 +7,15 @@ import EquipmentReviewRequest from './steps/ReviewRequest.vue';
 
 const selectedEquipment = ref([]);
 const selectedDates = ref(null);
-const borrowerInfo = ref({});
+
+const borrowerInfo = ref({
+  contactPerson: '',
+  contactNumber: '',
+  purpose: null,
+  notes: '',
+  use_autofill: false
+});
+
 const currentStep = ref('select');
 
 const goNext = (step) => currentStep.value = step;

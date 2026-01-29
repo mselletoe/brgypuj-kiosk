@@ -5,6 +5,12 @@ import Button from '@/components/shared/Button.vue';
 import Modal from '@/components/shared/Modal.vue';
 import { MagnifyingGlassIcon } from '@heroicons/vue/24/outline';
 import { useRouter } from 'vue-router';
+import { createEquipmentRequest } from '@/api/equipmentService';
+import { useAuthStore } from '@/stores/auth';
+
+const authStore = useAuthStore();
+
+const goBackToHome = () => router.push('/home');
 
 const props = defineProps({
   selectedEquipment: Array,
@@ -53,21 +59,40 @@ const handleModalNewRequest = () => {
   emit('start-new-request');
 };
 
-const handleSubmit = () => {
+const handleSubmit = async () => {
   isSubmitting.value = true;
-  
-  // Simulate submission delay
-  setTimeout(() => {
-    console.log('Request submitted:', {
-      equipment: props.selectedEquipment,
-      dates: props.selectedDates,
-      info: props.borrowerInfo,
-      total: totalCost.value,
-    });
-    
-    isSubmitting.value = false;
+
+  try {
+    const borrowerName = authStore.isRFID && authStore.resident
+      ? `${authStore.resident.first_name} ${authStore.resident.middle_name || ''} ${authStore.resident.last_name}`
+      : props.borrowerInfo.contactPerson;
+
+    const payload = {
+      resident_id: authStore.residentId,
+      borrower_name: borrowerName,
+      contact_person: props.borrowerInfo.contactPerson,
+      contact_number: props.borrowerInfo.contactNumber,
+      purpose: props.borrowerInfo.purpose,
+      borrow_date: new Date(props.selectedDates.borrow).toISOString(),
+      return_date: new Date(props.selectedDates.return).toISOString(),
+      items: props.selectedEquipment.map(item => ({
+        item_id: item.id,
+        quantity: item.quantity
+      })),
+      use_autofill: props.borrowerInfo.use_autofill || false
+    };
+
+    const response = await createEquipmentRequest(payload);
+
+    console.log('Request created:', response);
     showModal.value = true;
-  }, 1000);
+
+  } catch (err) {
+    console.error('Failed to create request:', err);
+    alert('Failed to submit request. Please try again.');
+  } finally {
+    isSubmitting.value = false;
+  }
 };
 
 const handleModalDone = () => {

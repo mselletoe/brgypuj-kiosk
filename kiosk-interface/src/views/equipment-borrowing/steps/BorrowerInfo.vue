@@ -1,16 +1,50 @@
 <script setup>
-import { ref, computed, nextTick } from 'vue';
+import { ref, computed, nextTick, watch } from 'vue';
 import ArrowBackButton from '@/components/shared/ArrowBackButton.vue';
 import Button from '@/components/shared/Button.vue';
 import Keyboard from '@/components/shared/Keyboard.vue';
+import { useAuthStore } from '@/stores/auth';
 import { DocumentTextIcon } from '@heroicons/vue/24/outline';
+import { getAutofillData } from '@/api/equipmentService';
+
+const useAutofill = ref(false);
+const isLoadingAutofill = ref(false);
+const authStore = useAuthStore();
+const residentId = computed(() => authStore.residentId);
+const showKeyboard = ref(false);
+const activeInput = ref(null);
 
 const props = defineProps({
   borrowerInfo: Object,
   goNext: Function,
   goBack: Function,
 });
+
 const emit = defineEmits(['update:borrower-info']);
+
+const applyAutofill = async () => {
+  if (!residentId.value) return;
+
+  isLoadingAutofill.value = true;
+  try {
+    const data = await getAutofillData(residentId.value);
+    localInfo.value.contactPerson = data.contact_person || '';
+    localInfo.value.contactNumber = data.contact_number || '';
+  } catch (err) {
+    console.error(err);
+  } finally {
+    isLoadingAutofill.value = false;
+  }
+};
+
+watch(useAutofill, async (enabled) => {
+  if (enabled) {
+    await applyAutofill();
+  } else {
+    localInfo.value.contactPerson = '';
+    localInfo.value.contactNumber = '';
+  }
+});
 
 const localInfo = ref({
   contactPerson: props.borrowerInfo.contactPerson || '',
@@ -27,9 +61,6 @@ const purposeOptions = ref([
   'Other'
 ]);
 
-const showKeyboard = ref(false);
-const activeInput = ref(null);
-
 const isFormValid = computed(() => {
   return localInfo.value.contactPerson &&
          localInfo.value.contactNumber &&
@@ -41,7 +72,10 @@ const handleBack = () => {
 };
 
 const handleNext = () => {
-  emit('update:borrower-info', localInfo.value);
+  emit('update:borrower-info', {
+    ...localInfo.value,
+    use_autofill: useAutofill.value
+  });
   props.goNext('review');
 };
 
@@ -103,11 +137,23 @@ const inputClass = "w-full px-4 py-3 text-base border border-gray-300 rounded-lg
           Borrowing Information
         </h3>
 
-        <div class="mt-6 grid grid-cols-2 gap-x-6 gap-y-4">
+        <div class="mt-4 flex items-center gap-3">
+          <input
+            type="checkbox"
+            id="use-autofill"
+            v-model="useAutofill"
+            class="h-5 w-5 text-[#013C6D]"
+            :disabled="!residentId"
+          />
+          <label for="use-autofill" class="text-sm text-gray-700 italic">
+            Autofill using my saved information
+          </label>
+        </div>
 
+        <div class="mt-4 grid grid-cols-2 gap-x-6 gap-y-4">
           <div>
-            <label for="contact-person" class="block text-base font-medium text-gray-700 mb-1">
-              Contact Person *
+            <label for="contact-person" class="block text-base font-bold text-[#003A6B] mb-1">
+              Contact Person <span class="text-red-600">*</span>
             </label>
             <input
               id="contact-person"
@@ -116,13 +162,13 @@ const inputClass = "w-full px-4 py-3 text-base border border-gray-300 rounded-lg
               placeholder="Name"
               :class="inputClass"
               @focus="focusInput('contact-person', 'contactPerson')"
-              :readonly="!showKeyboard" 
+              :readonly="useAutofill" 
             />
           </div>
 
           <div>
-            <label for="contact-number" class="block text-base font-medium text-gray-700 mb-1">
-              Contact Number *
+            <label for="contact-number" class="block text-base font-bold text-[#003A6B] mb-1">
+              Contact Number <span class="text-red-600">*</span>
             </label>
             <input
               id="contact-number"
@@ -131,13 +177,13 @@ const inputClass = "w-full px-4 py-3 text-base border border-gray-300 rounded-lg
               placeholder="Phone Number"
               :class="inputClass"
               @focus="focusInput('contact-number', 'contactNumber')"
-              :readonly="!showKeyboard" 
+              :readonly="useAutofill" 
             />
           </div>
 
           <div>
-            <label for="purpose" class="block text-base font-medium text-gray-700 mb-1">
-              Purpose of Borrowing *
+            <label for="purpose" class="block text-base font-bold text-[#003A6B] mb-1">
+              Purpose of Borrowing <span class="text-red-600">*</span>
             </label>
             <select
               id="purpose"
