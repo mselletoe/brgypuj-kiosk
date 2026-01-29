@@ -1,10 +1,11 @@
 <script setup>
-import { ref, computed, nextTick } from 'vue'; 
+import { ref, computed, nextTick ,onMounted } from 'vue'; 
 import { useRouter } from 'vue-router';
 import ArrowBackButton from '@/components/shared/ArrowBackButton.vue';
 import Button from '@/components/shared/Button.vue';
 import { PlusIcon, MinusIcon } from '@heroicons/vue/24/solid';
 import Keyboard from '@/components/shared/Keyboard.vue';
+import { getAvailableEquipment } from '@/api/equipmentService'
 
 // --- Props & Emits ---
 const props = defineProps({
@@ -15,13 +16,32 @@ const emit = defineEmits(['update:selected-equipment']);
 const router = useRouter();
 
 // --- Local State ---
-const allEquipment = ref([
-  { id: 1, name: 'Projector', available: 5, total: 5, rate: 150, ratePer: 'day' },
-  { id: 2, name: 'Speaker', available: 10, total: 10, rate: 50, ratePer: 'day' },
-  { id: 3, name: 'Laptop', available: 3, total: 3, rate: 300, ratePer: 'day' },
-  { id: 4, name: 'Camera', available: 2, total: 2, rate: 250, ratePer: 'day' },
-  { id: 5, name: 'Microphone', available: 8, total: 8, rate: 75, ratePer: 'day' },
-]);
+const allEquipment = ref([])
+const loading = ref(false)
+const loadError = ref(null)
+
+const fetchEquipment = async () => {
+  loading.value = true
+  loadError.value = null
+
+  try {
+    const data = await getAvailableEquipment()
+
+    allEquipment.value = data.map(item => ({
+      id: item.id,
+      name: item.name,
+      total: item.total_quantity,
+      available: item.available_quantity,
+      rate: Number(item.rate_per_day),
+      ratePer: 'day',
+    }))
+  } catch (err) {
+    loadError.value = 'Failed to load equipment inventory'
+    console.error(err)
+  } finally {
+    loading.value = false
+  }
+}
 
 // --- Keyboard State ---
 const showKeyboard = ref(false);
@@ -111,6 +131,10 @@ const handleKeyboardHide = () => {
 const resetSelection = () => emit('update:selected-equipment', []);
 const continueStep = () => props.goNext('dates');
 const goBackToHome = () => router.push('/home');
+
+onMounted(() => {
+  fetchEquipment()
+})
 </script>
 
 <template>
