@@ -5,6 +5,7 @@ import Button from '@/components/shared/Button.vue';
 import { CalendarIcon } from '@heroicons/vue/24/outline'
 import VueDatePicker from '@vuepic/vue-datepicker'
 import '@vuepic/vue-datepicker/dist/main.css'
+import { useRouter } from 'vue-router';
 
 // --- Props & Emits ---
 const props = defineProps({
@@ -14,6 +15,7 @@ const props = defineProps({
   goBack: Function,
 })
 const emit = defineEmits(['update:selected-dates'])
+const router = useRouter();
 
 // --- Local State ---
 const borrowDate = ref(props.selectedDates?.borrow || null)
@@ -21,13 +23,9 @@ const returnDate = ref(props.selectedDates?.return || null)
 
 // --- Date Restrictions (Philippine Time) ---
 const minBorrowDate = computed(() => {
-  // Create a date object for "now"
   const now = new Date()
-  // Convert to Philippine Time string
   const phTimeStr = now.toLocaleString("en-US", { timeZone: "Asia/Manila" })
-  // Create a new Date object from that string to get the correct day/month/year values
   const phDate = new Date(phTimeStr)
-  // Reset time to midnight (00:00:00) so "today" is selectable
   phDate.setHours(0, 0, 0, 0)
   return phDate
 })
@@ -35,7 +33,7 @@ const minBorrowDate = computed(() => {
 // --- Computed Properties ---
 const numberOfDays = computed(() => {
   if (!borrowDate.value || !returnDate.value) {
-    return 1 // Default to 1 day as per the design
+    return 1
   }
   const date1 = new Date(borrowDate.value)
   const date2 = new Date(returnDate.value)
@@ -45,6 +43,7 @@ const numberOfDays = computed(() => {
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
   return diffDays + 1
 })
+
 const costBreakdown = computed(() => {
   return props.selectedEquipment.map(item => {
     const cost = item.rate * item.quantity * numberOfDays.value
@@ -56,6 +55,7 @@ const costBreakdown = computed(() => {
     }
   })
 })
+
 const totalCost = computed(() => {
   return costBreakdown.value.reduce((total, item) => total + item.cost, 0)
 })
@@ -68,6 +68,7 @@ const formatCurrency = (value) => {
 const handleBack = () => {
   props.goBack('select')
 }
+
 const handleNext = () => {
   const datesToSubmit = {
     borrow: borrowDate.value,
@@ -77,6 +78,8 @@ const handleNext = () => {
   emit('update:selected-dates', datesToSubmit)
   props.goNext('info')
 }
+
+const goBackToHome = () => router.push('/home');
 </script>
 
 <template>
@@ -85,7 +88,7 @@ const handleNext = () => {
       <ArrowBackButton @click="goBackToHome" />
       <div>
         <h1 class="text-[45px] text-[#03335C] font-bold tracking-tight -mt-2">Equipment Borrowing</h1>
-        <p class="text-[#03335C] -mt-2">Below are list of available equipment:</p>
+        <p class="text-[#03335C] -mt-2">Select your borrowing dates below.</p>
       </div>
     </div>
 
@@ -192,7 +195,7 @@ const handleNext = () => {
 /* Global style for the date picker pop-up */
 .dp__theme_light {
   --dp-font-family: 'Poppins', sans-serif;
-  --dp-border-radius: 8px; /* rounded-lg */
-  --dp-primary-color: #013C6D; /* Your main blue */
+  --dp-border-radius: 8px;
+  --dp-primary-color: #013C6D;
 }
 </style>

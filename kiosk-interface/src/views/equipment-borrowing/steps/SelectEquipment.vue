@@ -15,13 +15,12 @@ const emit = defineEmits(['update:selected-equipment']);
 const router = useRouter();
 
 // --- Local State ---
-const isLoading = ref(false);
 const allEquipment = ref([
   { id: 1, name: 'Projector', available: 5, total: 5, rate: 150, ratePer: 'day' },
   { id: 2, name: 'Speaker', available: 10, total: 10, rate: 50, ratePer: 'day' },
   { id: 3, name: 'Laptop', available: 3, total: 3, rate: 300, ratePer: 'day' },
   { id: 4, name: 'Camera', available: 2, total: 2, rate: 250, ratePer: 'day' },
-  { id: 5, name: 'Camera', available: 2, total: 2, rate: 250, ratePer: 'day' },
+  { id: 5, name: 'Microphone', available: 8, total: 8, rate: 75, ratePer: 'day' },
 ]);
 
 // --- Keyboard State ---
@@ -41,7 +40,6 @@ const getItemQuantity = (equipment) => {
 const formatCurrency = (value) => `₱${parseFloat(value).toLocaleString()}`;
 
 const hasSelection = computed(() => props.selectedEquipment.length > 0);
-const summaryItems = computed(() => props.selectedEquipment);
 
 // --- Quantity Handlers ---
 const setQuantity = (equipment, newQuantity) => {
@@ -121,7 +119,7 @@ const goBackToHome = () => router.push('/home');
       <ArrowBackButton @click="goBackToHome" />
       <div>
         <h1 class="text-[45px] text-[#03335C] font-bold tracking-tight -mt-2">Equipment Borrowing</h1>
-        <p class="text-[#03335C] -mt-2">Below are list of available equipment:</p>
+        <p class="text-[#03335C] -mt-2">Below are list of available equipment.</p>
       </div>
     </div>
 
@@ -222,7 +220,7 @@ const goBackToHome = () => router.push('/home');
 
 <style scoped>
 .content-with-keyboard {
-  padding-bottom: 320px;
+  padding-bottom: 210px;
   transition: padding-bottom 0.3s ease-out;
 }
 
