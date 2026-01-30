@@ -82,7 +82,6 @@ class EquipmentRequestBase(BaseModel):
     """
     Common fields for all equipment borrowing requests.
     """
-    borrower_name: str
     contact_person: Optional[str] = None
     contact_number: Optional[str] = None
     purpose: Optional[str] = None
@@ -105,7 +104,7 @@ class EquipmentRequestCreate(EquipmentRequestBase):
     Includes the resident_id linked to the authenticated RFID session.
     resident_id can be None for guest mode.
     """
-    resident_id: Optional[int] = None
+    resident_id: int
     use_autofill: bool = False  # Whether to use resident data for autofill
 
 
@@ -138,7 +137,6 @@ class EquipmentRequestKioskOut(BaseModel):
     """
     transaction_no: str
     status: str
-    borrower_name: str
     contact_person: Optional[str]
     contact_number: Optional[str]
     purpose: Optional[str]
@@ -166,7 +164,6 @@ class EquipmentRequestAdminOut(BaseModel):
     resident_last_name: Optional[str]
     resident_rfid: Optional[str]
 
-    borrower_name: str
     contact_person: Optional[str]
     contact_number: Optional[str]
     purpose: Optional[str]
@@ -207,6 +204,5 @@ class EquipmentAutofillData(BaseModel):
     Schema for autofill data returned to the kiosk.
     Contains resident information pre-filled for convenience.
     """
-    borrower_name: str
     contact_person: Optional[str]
     contact_number: Optional[str]

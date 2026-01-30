@@ -54,22 +54,12 @@ const handlePageBack = () => {
    props.goBack('info');
 };
 
-const handleModalNewRequest = () => {
-  showModal.value = false;
-  emit('start-new-request');
-};
-
 const handleSubmit = async () => {
   isSubmitting.value = true;
 
   try {
-    const borrowerName = authStore.isRFID && authStore.resident
-      ? `${authStore.resident.first_name} ${authStore.resident.middle_name || ''} ${authStore.resident.last_name}`
-      : props.borrowerInfo.contactPerson;
-
     const payload = {
       resident_id: authStore.residentId,
-      borrower_name: borrowerName,
       contact_person: props.borrowerInfo.contactPerson,
       contact_number: props.borrowerInfo.contactNumber,
       purpose: props.borrowerInfo.purpose,
@@ -96,9 +86,10 @@ const handleSubmit = async () => {
 };
 
 const handleModalDone = () => {
-  showModal.value = false;
-  router.push('/home');
-};
+  showModal.value = false
+  router.push('/home')
+}
+
 </script>
 
 <template>
@@ -205,10 +196,9 @@ const handleModalDone = () => {
       <Modal
         title="Request Submitted!"
         message="Your borrowing request has been submitted for approval. Pay the fee at the counter and you will be contacted for pickup details."
-        :showNewRequest="true"
-        newRequestText="New Request"
-        @done="handleModalDone"
-        @newRequest="handleModalNewRequest"
+        :showPrimaryButton="true"
+        primaryButtonText="Done"
+        @primary-click="handleModalDone"
       />
     </div>
   </div>

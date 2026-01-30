@@ -33,7 +33,6 @@ export const getAutofillData = async (residentId) => {
  * Submit an equipment borrowing request
  * @param {Object} payload - Request payload
  * @param {number|null} payload.resident_id - Resident ID (null for guest mode)
- * @param {string} payload.borrower_name - Name of borrower
  * @param {string} payload.contact_person - Contact person name
  * @param {string} payload.contact_number - Contact phone number
  * @param {string} payload.purpose - Purpose of borrowing

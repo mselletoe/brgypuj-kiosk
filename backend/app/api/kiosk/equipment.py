@@ -58,7 +58,6 @@ def create_equipment_request(
     
     Request body should include:
     - resident_id: ID of the logged-in resident (optional for guest mode)
-    - borrower_name: Name of the person borrowing
     - contact_person: Person to contact (optional)
     - contact_number: Contact phone number (optional)
     - purpose: Purpose of borrowing (optional)

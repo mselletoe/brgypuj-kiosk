@@ -22,6 +22,82 @@ router = APIRouter(prefix="/equipment")
 
 
 # =========================================================
+# HELPER FUNCTIONS FOR MANUAL SERIALIZATION
+# =========================================================
+
+def _format_equipment_item(item):
+    """Helper to format equipment request items with inventory data"""
+    return {
+        "id": item.id,
+        "item_id": item.item_id,
+        "item_name": item.inventory_item.name if item.inventory_item else "",
+        "quantity": item.quantity,
+        "rate_per_day": item.inventory_item.rate_per_day if item.inventory_item else 0,
+    }
+
+
+def _format_request_for_admin(request):
+    """Helper to format request with resident data and items"""
+    # Get the active RFID if resident exists
+    rfid_display = None
+    if request.resident and hasattr(request.resident, 'rfids'):
+        # Get the first active RFID if available
+        active_rfid = next(
+            (rfid.rfid_uid for rfid in request.resident.rfids if rfid.is_active),
+            None
+        )
+        rfid_display = active_rfid
+
+    return {
+        "id": request.id,
+        "transaction_no": request.transaction_no,
+        "resident_id": request.resident_id,
+        "resident_first_name": request.resident.first_name if request.resident else None,
+        "resident_middle_name": request.resident.middle_name if request.resident else None,
+        "resident_last_name": request.resident.last_name if request.resident else None,
+        "resident_rfid": rfid_display,
+        "contact_person": request.contact_person,
+        "contact_number": request.contact_number,
+        "purpose": request.purpose,
+        "status": request.status,
+        "borrow_date": request.borrow_date,
+        "return_date": request.return_date,
+        "returned_at": request.returned_at,
+        "total_cost": request.total_cost,
+        "payment_status": request.payment_status,
+        "is_refunded": request.is_refunded,
+        "notes": request.notes,
+        "requested_at": request.requested_at,
+        "items": [_format_equipment_item(item) for item in request.items],
+    }
+
+
+def _format_request_detail(request):
+    """Helper to format detailed request with additional computed fields"""
+    base_data = _format_request_for_admin(request)
+    
+    # Add resident_name
+    resident_name = None
+    if request.resident:
+        parts = []
+        if request.resident.first_name:
+            parts.append(request.resident.first_name)
+        if request.resident.middle_name:
+            parts.append(request.resident.middle_name)
+        if request.resident.last_name:
+            parts.append(request.resident.last_name)
+        resident_name = " ".join(parts) if parts else None
+    
+    # Add borrowing_period_days
+    borrowing_period_days = max(1, (request.return_date - request.borrow_date).days)
+    
+    base_data["resident_name"] = resident_name
+    base_data["borrowing_period_days"] = borrowing_period_days
+    
+    return base_data
+
+
+# =========================================================
 # EQUIPMENT INVENTORY MANAGEMENT
 # =========================================================
 
@@ -123,7 +199,8 @@ def get_equipment_requests(db: Session = Depends(get_db)):
     - Borrowing details (dates, items, quantities)
     - Status and payment information
     """
-    return equipment_service.get_all_equipment_requests(db)
+    requests = equipment_service.get_all_equipment_requests(db)
+    return [_format_request_for_admin(req) for req in requests]
 
 
 @router.get("/requests/{request_id}", response_model=EquipmentRequestAdminDetail)
@@ -141,7 +218,7 @@ def get_equipment_request_detail(request_id: int, db: Session = Depends(get_db))
             detail="Equipment request not found"
         )
     
-    return result
+    return _format_request_detail(result)
 
 
 # =========================================================

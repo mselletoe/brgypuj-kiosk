@@ -200,7 +200,6 @@ def get_equipment_autofill_data(db: Session, resident_id: int) -> EquipmentAutof
     
     # Map resident data to equipment form fields
     return EquipmentAutofillData(
-        borrower_name=resident_data['full_name'],
         contact_person=resident_data['full_name'],
         contact_number=resident_data['phone_number']
     )
@@ -242,7 +241,6 @@ def create_equipment_request(
     # 4. Create the equipment request
     request = EquipmentRequest(
         resident_id=payload.resident_id,
-        borrower_name=payload.borrower_name,
         contact_person=payload.contact_person,
         contact_number=payload.contact_number,
         purpose=payload.purpose,
