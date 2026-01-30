@@ -3,7 +3,6 @@ import { ref, computed, onMounted } from 'vue'
 import EquipmentRequestCard from '@/views/requests/equipment-requests/EquipmentRequestCard.vue'
 import ConfirmModal from '@/components/shared/ConfirmationModal.vue'
 
-// --- PROPS ---
 const props = defineProps({
   searchQuery: {
     type: String,
@@ -11,8 +10,33 @@ const props = defineProps({
   }
 })
 
-// --- REFS ---
-const pendingRequests = ref([])
+// Local state
+const pendingRequests = ref([
+  // Example mock data
+  {
+    id: 1,
+    status: 'pending',
+    requestType: 'Laptop',
+    requester: { firstName: 'John', surname: 'Doe' },
+    rfidNo: 'RFID123',
+    requestedOn: '2026-01-30',
+    borrowingPeriod: '1/30/26 - 2/5/26',
+    amount: '100',
+    isPaid: false
+  },
+  {
+    id: 2,
+    status: 'pending',
+    requestType: 'Projector',
+    requester: { firstName: 'Jane', surname: 'Smith' },
+    rfidNo: 'RFID456',
+    requestedOn: '2026-01-29',
+    borrowingPeriod: '1/30/26 - 2/5/26',
+    amount: '50',
+    isPaid: true
+  }
+])
+
 const isLoading = ref(true)
 const errorMessage = ref(null)
 const selectedRequests = ref(new Set())
@@ -39,63 +63,6 @@ const handleCancel = () => {
   confirmAction.value = null
 }
 
-// --- HELPERS ---
-const formatRequestDate = (isoDate) => {
-  if (!isoDate) return "N/A"
-  const date = new Date(isoDate)
-  const now = new Date()
-  const diffMs = now - date
-  const diffSec = Math.floor(diffMs / 1000)
-  const diffMin = Math.floor(diffSec / 60)
-  const diffHour = Math.floor(diffMin / 60)
-
-  if (diffMin < 1) return `${diffSec} seconds ago`
-  if (diffHour < 1) return `${diffMin} minutes ago`
-  if (diffHour < 24) return `${diffHour} hours ago`
-
-  return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-}
-
-const formatDate = (isoDate) => {
-  if (!isoDate) return "N/A"
-  const date = new Date(isoDate)
-  return date.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' })
-}
-
-// --- FETCH PENDING REQUESTS ---
-const fetchPendingRequests = async () => {
-  try {
-    const response = await api.get('/requests')
-    pendingRequests.value = response.data
-      .filter(req => req.status === 'pending')
-      .map(req => ({
-        id: req.id.toString(),
-        status: 'pending',
-        requestType: req.equipment_name || 'Unknown Equipment',
-        requester: {
-          firstName: req.requester_name?.split(' ')[0] || '',
-          middleName: req.requester_name?.split(' ')[1] || '',
-          surname: req.requester_name?.split(' ').slice(2).join(' ') || req.requester_name || 'N/A'
-        },
-        rfidNo: req.rfid_uid || 'Guest Mode',
-        requestedOn: formatRequestDate(req.created_at),
-        borrowingPeriod: {
-          from: formatDate(req.borrow_start_date),
-          to: formatDate(req.borrow_end_date)
-        },
-        amount: req.price ? req.price.toFixed(2) : null,
-        isPaid: req.payment_status === 'Paid',
-        residentId: req.resident_id,
-        rawData: req
-      }))
-  } catch (error) {
-    console.error('Error fetching requests:', error)
-    errorMessage.value = 'Failed to load pending requests.'
-  } finally {
-    isLoading.value = false
-  }
-}
-
 const selectAll = () => {
   selectedRequests.value = new Set(filteredRequests.value.map(r => r.id))
 }
@@ -110,16 +77,11 @@ const bulkDelete = () => {
   openConfirmModal(
     `Delete ${selectedRequests.value.size} selected requests?`,
     async () => {
-      try {
-        const ids = Array.from(selectedRequests.value)
-        await Promise.all(ids.map(id => api.delete(`/requests/${id}`)))
-        pendingRequests.value = pendingRequests.value.filter(
-          req => !selectedRequests.value.has(req.id)
-        )
-        selectedRequests.value.clear()
-      } catch (e) {
-        console.error(e)
-      }
+      // Remove locally instead of calling API
+      pendingRequests.value = pendingRequests.value.filter(
+        req => !selectedRequests.value.has(req.id)
+      )
+      selectedRequests.value.clear()
     }
   )
 }
@@ -133,94 +95,48 @@ defineExpose({
   bulkDelete
 })
 
-// --- HANDLE BUTTON CLICK ---
-const handleButtonClick = async ({ action, requestId, status }) => {
+const handleButtonClick = ({ action, requestId }) => {
   const request = pendingRequests.value.find(r => r.id === requestId)
   if (!request) return
 
-  try {
-    switch (action) {
-      case 'details':
-        console.log(`Opening details for request ${requestId}`)
-        // TODO: Implement details modal
-        break
-      case 'notes':
-        console.log(`Opening notes for request ${requestId}`)
-        // TODO: Implement notes modal
-        break
-      case 'approve':
-        await handleApprove(requestId)
-        break
-      case 'reject':
-        await handleReject(requestId)
-        break
-      case 'delete':
-        await handleDelete(requestId)
-        break
-      default:
-        console.log(`Action ${action} not implemented yet`)
-    }
-  } catch (error) {
-    console.error(`Error handling ${action}:`, error)
+  switch (action) {
+    case 'details':
+      console.log(`Opening details for request ${requestId}`)
+      break
+    case 'notes':
+      console.log(`Opening notes for request ${requestId}`)
+      break
+    case 'approve':
+      request.status = 'approved'
+      pendingRequests.value = pendingRequests.value.filter(req => req.id !== requestId)
+      break
+    case 'reject':
+      request.status = 'rejected'
+      pendingRequests.value = pendingRequests.value.filter(req => req.id !== requestId)
+      break
+    case 'delete':
+      handleDelete(requestId)
+      break
+    default:
+      console.log(`Action ${action} not implemented yet`)
   }
 }
 
-// --- APPROVE REQUEST ---
-const handleApprove = async (id) => {
-  const request = pendingRequests.value.find(r => r.id === id)
-  
-  if (request && !request.isPaid && request.amount) {
-    return // Button should be disabled, but double check
-  }
-
-  try {
-    await api.put(`/requests/${id}/status`, { status_name: 'approved' })
-    pendingRequests.value = pendingRequests.value.filter(req => req.id !== id)
-  } catch (error) {
-    console.error('Error approving request:', error)
-  }
-}
-
-// --- REJECT REQUEST ---
-const handleReject = async (id) => {
-  try {
-    await api.put(`/requests/${id}/status`, { status_name: 'rejected' })
-    pendingRequests.value = pendingRequests.value.filter(req => req.id !== id)
-  } catch (error) {
-    console.error('Error rejecting request:', error)
-  }
-}
-
-// --- DELETE REQUEST ---
 const handleDelete = (id) => {
   openConfirmModal(
     'Are you sure you want to delete this request?',
-    async () => {
-      try {
-        await api.delete(`/requests/${id}`)
-        pendingRequests.value = pendingRequests.value.filter(req => req.id !== id)
-      } catch (error) {
-        console.error('Error deleting request:', error)
-      }
+    () => {
+      pendingRequests.value = pendingRequests.value.filter(req => req.id !== id)
     }
   )
 }
 
-// --- TOGGLE PAYMENT STATUS ---
-const handlePaymentUpdate = async (requestId, newPaidStatus) => {
+const handlePaymentUpdate = (requestId, newPaidStatus) => {
   const request = pendingRequests.value.find(r => r.id === requestId)
   if (!request) return
-
-  try {
-    const newStatus = newPaidStatus ? 'Paid' : 'Unpaid'
-    await api.put(`/requests/${requestId}/payment`, { payment_status: newStatus })
-    request.isPaid = newPaidStatus
-  } catch (error) {
-    console.error('Error toggling payment status:', error)
-  }
+  request.isPaid = newPaidStatus
 }
 
-// --- HANDLE SELECTION ---
 const handleSelectionUpdate = (requestId, isSelected) => {
   if (isSelected) {
     selectedRequests.value.add(requestId)
@@ -229,10 +145,6 @@ const handleSelectionUpdate = (requestId, isSelected) => {
   }
 }
 
-// --- Load on mount ---
-onMounted(fetchPendingRequests)
-
-// --- COMPUTED: Search Filter ---
 const filteredRequests = computed(() => {
   if (!props.searchQuery) return pendingRequests.value
 

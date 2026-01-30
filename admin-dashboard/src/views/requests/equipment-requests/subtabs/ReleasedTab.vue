@@ -32,50 +32,6 @@ const handleCancel = () => {
   confirmAction.value = null
 }
 
-const formatRequestDate = (isoDate) => {
-  if (!isoDate) return "N/A"
-  const date = new Date(isoDate)
-  return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-}
-
-const formatDate = (isoDate) => {
-  if (!isoDate) return "N/A"
-  const date = new Date(isoDate)
-  return date.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' })
-}
-
-const fetchReturnedRequests = async () => {
-  try {
-    const response = await api.get('/requests')
-    returnedRequests.value = response.data
-      .filter(req => req.status === 'returned')
-      .map(req => ({
-        id: req.id.toString(),
-        status: 'returned',
-        requestType: req.equipment_name || 'Unknown Equipment',
-        requester: {
-          firstName: req.requester_name?.split(' ')[0] || '',
-          middleName: req.requester_name?.split(' ')[1] || '',
-          surname: req.requester_name?.split(' ').slice(2).join(' ') || req.requester_name || 'N/A'
-        },
-        rfidNo: req.rfid_uid || 'Guest Mode',
-        requestedOn: formatRequestDate(req.created_at),
-        borrowingPeriod: {
-          from: formatDate(req.borrow_start_date),
-          to: formatDate(req.borrow_end_date)
-        },
-        amount: req.price ? req.price.toFixed(2) : null,
-        isPaid: req.payment_status === 'Paid',
-        rawData: req
-      }))
-  } catch (error) {
-    console.error('Error fetching requests:', error)
-    errorMessage.value = 'Failed to load returned requests.'
-  } finally {
-    isLoading.value = false
-  }
-}
-
 const selectAll = () => {
   selectedRequests.value = new Set(filteredRequests.value.map(r => r.id))
 }
@@ -88,15 +44,11 @@ const bulkUndo = () => {
   if (selectedRequests.value.size === 0) return
   openConfirmModal(
     `Undo ${selectedRequests.value.size} selected requests back to picked up?`,
-    async () => {
-      try {
-        const ids = Array.from(selectedRequests.value)
-        await Promise.all(ids.map(id => api.put(`/requests/${id}/status`, { status_name: 'pickedup' })))
-        returnedRequests.value = returnedRequests.value.filter(req => !selectedRequests.value.has(req.id))
-        selectedRequests.value.clear()
-      } catch (e) {
-        console.error(e)
-      }
+    () => {
+      returnedRequests.value = returnedRequests.value.filter(
+        req => !selectedRequests.value.has(req.id)
+      )
+      selectedRequests.value.clear()
     }
   )
 }
@@ -105,15 +57,11 @@ const bulkDelete = () => {
   if (selectedRequests.value.size === 0) return
   openConfirmModal(
     `Delete ${selectedRequests.value.size} selected requests?`,
-    async () => {
-      try {
-        const ids = Array.from(selectedRequests.value)
-        await Promise.all(ids.map(id => api.delete(`/requests/${id}`)))
-        returnedRequests.value = returnedRequests.value.filter(req => !selectedRequests.value.has(req.id))
-        selectedRequests.value.clear()
-      } catch (e) {
-        console.error(e)
-      }
+    () => {
+      returnedRequests.value = returnedRequests.value.filter(
+        req => !selectedRequests.value.has(req.id)
+      )
+      selectedRequests.value.clear()
     }
   )
 }
@@ -127,37 +75,28 @@ defineExpose({
   bulkDelete
 })
 
-const handleButtonClick = async ({ action, requestId }) => {
-  try {
-    switch (action) {
-      case 'details':
-        console.log(`Opening details for request ${requestId}`)
-        break
-      case 'notes':
-        console.log(`Opening notes for request ${requestId}`)
-        break
-      case 'undo':
-        await handleUndo(requestId)
-        break
-      case 'delete':
-        await handleDelete(requestId)
-        break
-    }
-  } catch (error) {
-    console.error(`Error handling ${action}:`, error)
+const handleButtonClick = ({ action, requestId }) => {
+  switch (action) {
+    case 'details':
+      console.log(`Opening details for request ${requestId}`)
+      break
+    case 'notes':
+      console.log(`Opening notes for request ${requestId}`)
+      break
+    case 'undo':
+      handleUndo(requestId)
+      break
+    case 'delete':
+      handleDelete(requestId)
+      break
   }
 }
 
 const handleUndo = (id) => {
   openConfirmModal(
     'Move this request back to picked up?',
-    async () => {
-      try {
-        await api.put(`/requests/${id}/status`, { status_name: 'pickedup' })
-        returnedRequests.value = returnedRequests.value.filter(req => req.id !== id)
-      } catch (error) {
-        console.error('Error undoing request:', error)
-      }
+    () => {
+      returnedRequests.value = returnedRequests.value.filter(req => req.id !== id)
     }
   )
 }
@@ -165,27 +104,18 @@ const handleUndo = (id) => {
 const handleDelete = (id) => {
   openConfirmModal(
     'Are you sure you want to delete this request?',
-    async () => {
-      try {
-        await api.delete(`/requests/${id}`)
-        returnedRequests.value = returnedRequests.value.filter(req => req.id !== id)
-      } catch (error) {
-        console.error('Error deleting request:', error)
-      }
+    () => {
+      returnedRequests.value = returnedRequests.value.filter(req => req.id !== id)
     }
   )
 }
 
 const handleSelectionUpdate = (requestId, isSelected) => {
-  if (isSelected) {
-    selectedRequests.value.add(requestId)
-  } else {
-    selectedRequests.value.delete(requestId)
-  }
+  if (isSelected) selectedRequests.value.add(requestId)
+  else selectedRequests.value.delete(requestId)
 }
 
-onMounted(fetchReturnedRequests)
-
+// --- COMPUTED: SEARCH ---
 const filteredRequests = computed(() => {
   if (!props.searchQuery) return returnedRequests.value
   const lowerQuery = props.searchQuery.toLowerCase().trim()

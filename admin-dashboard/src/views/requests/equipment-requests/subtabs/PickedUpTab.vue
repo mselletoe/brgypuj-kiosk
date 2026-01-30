@@ -4,7 +4,6 @@ import EquipmentRequestCard from '@/views/requests/equipment-requests/EquipmentR
 import ConfirmModal from '@/components/shared/ConfirmationModal.vue'
 import SendSMSModal from '@/components/shared/SendSMSModal.vue'
 
-// --- PROPS ---
 const props = defineProps({
   searchQuery: {
     type: String,
@@ -12,7 +11,6 @@ const props = defineProps({
   }
 })
 
-// --- REFS ---
 const pickedUpRequests = ref([])
 const isLoading = ref(true)
 const errorMessage = ref(null)
@@ -42,55 +40,6 @@ const handleCancel = () => {
   confirmAction.value = null
 }
 
-// --- HELPERS ---
-const formatRequestDate = (isoDate) => {
-  if (!isoDate) return "N/A"
-  const date = new Date(isoDate)
-  return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-}
-
-const formatDate = (isoDate) => {
-  if (!isoDate) return "N/A"
-  const date = new Date(isoDate)
-  return date.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' })
-}
-
-// --- FETCH PICKEDUP REQUESTS ---
-const fetchPickedUpRequests = async () => {
-  try {
-    const response = await api.get('/requests')
-    pickedUpRequests.value = response.data
-      .filter(req => req.status === 'pickedup')
-      .map(req => ({
-        id: req.id.toString(),
-        status: 'pickedup',
-        requestType: req.equipment_name || 'Unknown Equipment',
-        requester: {
-          firstName: req.requester_name?.split(' ')[0] || '',
-          middleName: req.requester_name?.split(' ')[1] || '',
-          surname: req.requester_name?.split(' ').slice(2).join(' ') || req.requester_name || 'N/A'
-        },
-        rfidNo: req.rfid_uid || 'Guest Mode',
-        requestedOn: formatRequestDate(req.created_at),
-        borrowingPeriod: {
-          from: formatDate(req.borrow_start_date),
-          to: formatDate(req.borrow_end_date)
-        },
-        amount: req.price ? req.price.toFixed(2) : null,
-        isPaid: req.payment_status === 'Paid',
-        residentId: req.resident_id,
-        phoneNumber: req.phone_number || null,
-        borrowerName: req.requester_name || 'Guest',
-        rawData: req
-      }))
-  } catch (error) {
-    console.error('Error fetching requests:', error)
-    errorMessage.value = 'Failed to load picked up requests.'
-  } finally {
-    isLoading.value = false
-  }
-}
-
 const selectAll = () => {
   selectedRequests.value = new Set(filteredRequests.value.map(r => r.id))
 }
@@ -104,17 +53,11 @@ const bulkUndo = () => {
 
   openConfirmModal(
     `Undo ${selectedRequests.value.size} selected requests back to approved?`,
-    async () => {
-      try {
-        const ids = Array.from(selectedRequests.value)
-        await Promise.all(ids.map(id => api.put(`/requests/${id}/status`, { status_name: 'approved' })))
-        pickedUpRequests.value = pickedUpRequests.value.filter(
-          req => !selectedRequests.value.has(req.id)
-        )
-        selectedRequests.value.clear()
-      } catch (e) {
-        console.error(e)
-      }
+    () => {
+      pickedUpRequests.value = pickedUpRequests.value.filter(
+        req => !selectedRequests.value.has(req.id)
+      )
+      selectedRequests.value.clear()
     }
   )
 }
@@ -124,17 +67,11 @@ const bulkDelete = () => {
 
   openConfirmModal(
     `Delete ${selectedRequests.value.size} selected requests?`,
-    async () => {
-      try {
-        const ids = Array.from(selectedRequests.value)
-        await Promise.all(ids.map(id => api.delete(`/requests/${id}`)))
-        pickedUpRequests.value = pickedUpRequests.value.filter(
-          req => !selectedRequests.value.has(req.id)
-        )
-        selectedRequests.value.clear()
-      } catch (e) {
-        console.error(e)
-      }
+    () => {
+      pickedUpRequests.value = pickedUpRequests.value.filter(
+        req => !selectedRequests.value.has(req.id)
+      )
+      selectedRequests.value.clear()
     }
   )
 }
@@ -149,118 +86,56 @@ defineExpose({
   bulkDelete
 })
 
-// --- HANDLE BUTTON CLICK ---
-const handleButtonClick = async ({ action, requestId, status }) => {
+const handleButtonClick = ({ action, requestId }) => {
   const request = pickedUpRequests.value.find(r => r.id === requestId)
   if (!request) return
 
-  try {
-    switch (action) {
-      case 'details':
-        console.log(`Opening details for request ${requestId}`)
-        break
-      case 'notes':
-        console.log(`Opening notes for request ${requestId}`)
-        break
-      case 'notify':
-        handleSendSMS(requestId)
-        break
-      case 'returned':
-        await handleReturned(requestId)
-        break
-      case 'undo':
-        await handleUndo(requestId)
-        break
-      case 'delete':
-        await handleDelete(requestId)
-        break
-      default:
-        console.log(`Action ${action} not implemented yet`)
-    }
-  } catch (error) {
-    console.error(`Error handling ${action}:`, error)
+  switch (action) {
+    case 'details':
+      console.log(`Opening details for request ${requestId}`)
+      break
+    case 'notes':
+      console.log(`Opening notes for request ${requestId}`)
+      break
+    case 'notify':
+      console.log(`Sending notification for request ${requestId}`)
+      break
+    case 'returned':
+      handleReturned(requestId)
+      break
+    case 'undo':
+      handleUndo(requestId)
+      break
+    case 'delete':
+      handleDelete(requestId)
+      break
+    default:
+      console.log(`Action ${action} not implemented yet`)
   }
 }
 
-// --- SEND SMS ---
-const handleSendSMS = (requestId) => {
-  const request = pickedUpRequests.value.find(r => r.id === requestId)
-  if (request) {
-    selectedRequest.value = request
-    showSMSModal.value = true
-  }
+const handleReturned = (id) => {
+  pickedUpRequests.value = pickedUpRequests.value.filter(req => req.id !== id)
 }
 
-const handleSMSSubmit = async (smsData) => {
-  try {
-    const response = await api.post('/sms/send', {
-      requestId: selectedRequest.value.id,
-      phone: smsData.phone,
-      message: smsData.message
-    })
-
-    if (response.data.success) {
-      console.log('SMS sent successfully')
-    }
-  } catch (error) {
-    console.error('SMS error:', error)
-    throw error
-  }
-}
-
-// --- MARK AS RETURNED ---
-const handleReturned = async (id) => {
-  try {
-    await api.put(`/requests/${id}/status`, { status_name: 'returned' })
-    pickedUpRequests.value = pickedUpRequests.value.filter(req => req.id !== id)
-  } catch (error) {
-    console.error('Error marking as returned:', error)
-  }
-}
-
-// --- UNDO REQUEST ---
 const handleUndo = (id) => {
-  openConfirmModal(
-    'Move this request back to approved?',
-    async () => {
-      try {
-        await api.put(`/requests/${id}/status`, { status_name: 'approved' })
-        pickedUpRequests.value = pickedUpRequests.value.filter(req => req.id !== id)
-      } catch (error) {
-        console.error('Error undoing request:', error)
-      }
-    }
-  )
+  pickedUpRequests.value = pickedUpRequests.value.filter(req => req.id !== id)
 }
 
-// --- DELETE REQUEST ---
 const handleDelete = (id) => {
   openConfirmModal(
     'Are you sure you want to delete this request?',
-    async () => {
-      try {
-        await api.delete(`/requests/${id}`)
-        pickedUpRequests.value = pickedUpRequests.value.filter(req => req.id !== id)
-      } catch (error) {
-        console.error('Error deleting request:', error)
-      }
+    () => {
+      pickedUpRequests.value = pickedUpRequests.value.filter(req => req.id !== id)
     }
   )
 }
 
-// --- HANDLE SELECTION ---
 const handleSelectionUpdate = (requestId, isSelected) => {
-  if (isSelected) {
-    selectedRequests.value.add(requestId)
-  } else {
-    selectedRequests.value.delete(requestId)
-  }
+  if (isSelected) selectedRequests.value.add(requestId)
+  else selectedRequests.value.delete(requestId)
 }
 
-// --- Load on mount ---
-onMounted(fetchPickedUpRequests)
-
-// --- COMPUTED: Search Filter ---
 const filteredRequests = computed(() => {
   if (!props.searchQuery) return pickedUpRequests.value
 
