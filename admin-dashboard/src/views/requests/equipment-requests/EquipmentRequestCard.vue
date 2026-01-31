@@ -14,7 +14,7 @@ const props = defineProps({
   status: {
     type: String,
     required: true,
-    validator: (value) => ['pending', 'approved', 'pickedup', 'returned', 'released', 'rejected'].includes(value)
+    validator: (value) => ['pending', 'approved', 'pickedup', 'returned', 'rejected'].includes(value)
   },
   requestType: {
     type: String,
@@ -86,12 +86,6 @@ const buttonConfigs = {
     { id: 'delete', label: '', icon: TrashIcon, variant: 'delete' }
   ],
   returned: [
-    { id: 'details', label: 'Details', variant: 'primary' },
-    { id: 'notes', label: 'Notes', variant: 'gray' },
-    { id: 'undo', label: '', icon: ArrowUturnLeftIcon, variant: 'undo' },
-    { id: 'delete', label: '', icon: TrashIcon, variant: 'delete' }
-  ],
-  released: [
     { id: 'details', label: 'Details', variant: 'primary' },
     { id: 'notes', label: 'Notes', variant: 'gray' },
     { id: 'undo', label: '', icon: ArrowUturnLeftIcon, variant: 'undo' },
