@@ -35,7 +35,6 @@ const fetchPendingRequests = async () => {
     const response = await getEquipmentRequests()
     
     const allRequests = response.data.map(req => {
-      // Format equipment items list
       const equipmentList = req.items
         .map(item => `${item.quantity}x ${item.item_name}`)
         .join(', ')
@@ -267,7 +266,8 @@ const filteredRequests = computed(() => {
     <EquipmentRequestCard
       v-for="request in filteredRequests"
       :key="request.id"
-      :id="request.transaction_no"
+      :id="request.id"
+      :transaction-no="request.transaction_no"
       :status="request.status"
       :request-type="request.requestType"
       :requester="request.requester"

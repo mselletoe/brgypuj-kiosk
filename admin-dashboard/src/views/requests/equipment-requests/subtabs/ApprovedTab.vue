@@ -2,7 +2,14 @@
 import { ref, computed, onMounted } from 'vue'
 import EquipmentRequestCard from '@/views/requests/equipment-requests/EquipmentRequestCard.vue'
 import ConfirmModal from '@/components/shared/ConfirmationModal.vue'
-import SendSMSModal from '@/components/shared/SendSMSModal.vue'
+import {
+  getEquipmentRequests,
+  markAsPickedUp,
+  undoRequest,
+  deleteRequest,
+  bulkUndoRequests,
+  bulkDeleteRequests
+} from '@/api/equipmentService'
 
 const props = defineProps({
   searchQuery: {
@@ -11,37 +18,7 @@ const props = defineProps({
   }
 })
 
-// --- REFS ---
-const approvedRequests = ref([
-  // Mock data example
-  {
-    id: 101,
-    status: 'approved',
-    requestType: 'Laptop',
-    requester: { firstName: 'Alice', surname: 'Johnson' },
-    rfidNo: 'RFID101',
-    requestedOn: '2026-01-25',
-    borrowingPeriod: '1/30/26 - 2/5/26',
-    amount: '100',
-    isPaid: true,
-    phoneNumber: '09171234567',
-    borrowerName: 'Alice Johnson'
-  },
-  {
-    id: 102,
-    status: 'approved',
-    requestType: 'Projector',
-    requester: { firstName: 'Bob', surname: 'Lee' },
-    rfidNo: 'RFID102',
-    requestedOn: '2026-01-26',
-    borrowingPeriod: '1/30/26 - 2/5/26',
-    amount: '50',
-    isPaid: false,
-    phoneNumber: '09179876543',
-    borrowerName: 'Bob Lee'
-  }
-])
-
+const approvedRequests = ref([])
 const isLoading = ref(true)
 const errorMessage = ref(null)
 const selectedRequests = ref(new Set())
@@ -50,6 +27,65 @@ const confirmTitle = ref('Are you sure?')
 const confirmAction = ref(null)
 const showSMSModal = ref(false)
 const selectedRequest = ref(null)
+
+const fetchApprovedRequests = async () => {
+  isLoading.value = true
+  errorMessage.value = null
+
+  try {
+    const response = await getEquipmentRequests()
+
+    const allRequests = response.data.map(req => {
+      // Format equipment items list
+      const equipmentList = req.items
+        .map(item => `${item.quantity}x ${item.item_name}`)
+        .join(', ')
+
+      return {
+        id: req.id,
+        transaction_no: req.transaction_no,
+        status: req.status.toLowerCase(),
+        requestType: equipmentList,
+        requester: {
+          firstName: req.resident_first_name || '',
+          middleName: req.resident_middle_name || '',
+          lastName: req.resident_last_name || ''
+        },
+        rfidNo: req.resident_rfid,
+        requestedOn: new Date(req.requested_at).toLocaleDateString('en-US', {
+          month: 'long',
+          day: 'numeric',
+          year: 'numeric'
+        }),
+        borrowingPeriod: {
+          from: new Date(req.borrow_date).toLocaleDateString('en-US', {
+            month: '2-digit',
+            day: '2-digit',
+            year: '2-digit'
+          }),
+          to: new Date(req.return_date).toLocaleDateString('en-US', {
+            month: '2-digit',
+            day: '2-digit',
+            year: '2-digit'
+          })
+        },
+        amount: req.payment_status !== 'free' ? String(req.total_cost ?? '0.00') : null,
+        isPaid: req.payment_status === 'paid',
+        phoneNumber: req.contact_number || '',
+        borrowerName: req.contact_person || '',
+        raw: req
+      }
+    })
+
+    // Filter only approved requests
+    approvedRequests.value = allRequests.filter(req => req.status === 'approved')
+  } catch (error) {
+    console.error('Error fetching equipment requests:', error)
+    errorMessage.value = 'Failed to load approved equipment requests. Please try again.'
+  } finally {
+    isLoading.value = false
+  }
+}
 
 const openConfirmModal = (title, action) => {
   confirmTitle.value = title
@@ -83,11 +119,17 @@ const bulkUndo = () => {
 
   openConfirmModal(
     `Undo ${selectedRequests.value.size} selected requests back to pending?`,
-    () => {
-      approvedRequests.value = approvedRequests.value.filter(
-        req => !selectedRequests.value.has(req.id)
-      )
-      selectedRequests.value.clear()
+    async () => {
+      try {
+        await bulkUndoRequests(Array.from(selectedRequests.value))
+        approvedRequests.value = approvedRequests.value.filter(
+          req => !selectedRequests.value.has(req.id)
+        )
+        selectedRequests.value.clear()
+      } catch (error) {
+        console.error(error)
+        alert('Failed to undo selected requests')
+      }
     }
   )
 }
@@ -97,11 +139,17 @@ const bulkDelete = () => {
 
   openConfirmModal(
     `Delete ${selectedRequests.value.size} selected requests?`,
-    () => {
-      approvedRequests.value = approvedRequests.value.filter(
-        req => !selectedRequests.value.has(req.id)
-      )
-      selectedRequests.value.clear()
+    async () => {
+      try {
+        await bulkDeleteRequests(Array.from(selectedRequests.value))
+        approvedRequests.value = approvedRequests.value.filter(
+          req => !selectedRequests.value.has(req.id)
+        )
+        selectedRequests.value.clear()
+      } catch (error) {
+        console.error(error)
+        alert('Failed to delete selected requests')
+      }
     }
   )
 }
@@ -121,13 +169,13 @@ const handleButtonClick = ({ action, requestId }) => {
 
   switch (action) {
     case 'details':
-      console.log(`Opening details for request ${requestId}`)
+      alert(`Viewing request ${requestId} (frontend only)`)
       break
     case 'notes':
       console.log(`Opening notes for request ${requestId}`)
       break
     case 'notify':
-      console.log(`Sending notification for request ${requestId}`)
+      console.log(`Notifying borrower for request ${requestId}`)
       break
     case 'release':
       handleRelease(requestId)
@@ -143,39 +191,61 @@ const handleButtonClick = ({ action, requestId }) => {
   }
 }
 
-const handleRelease = (id) => {
-  approvedRequests.value = approvedRequests.value.filter(req => req.id !== id)
+const handleRelease = async (id) => {
+  try {
+    await markAsPickedUp(id)
+    approvedRequests.value = approvedRequests.value.filter(req => req.id !== id)
+  } catch (error) {
+    console.error(error)
+    alert('Failed to mark equipment as picked up')
+  }
 }
 
-const handleUndo = (id) => {
-  approvedRequests.value = approvedRequests.value.filter(req => req.id !== id)
+const handleUndo = async (id) => {
+  try {
+    await undoRequest(id)
+    approvedRequests.value = approvedRequests.value.filter(req => req.id !== id)
+  } catch (error) {
+    console.error(error)
+    alert('Failed to undo request')
+  }
 }
 
 const handleDelete = (id) => {
   openConfirmModal(
     'Are you sure you want to delete this request?',
-    () => {
-      approvedRequests.value = approvedRequests.value.filter(req => req.id !== id)
+    async () => {
+      try {
+        await deleteRequest(id)
+        approvedRequests.value = approvedRequests.value.filter(req => req.id !== id)
+      } catch (error) {
+        console.error(error)
+        alert('Failed to delete request')
+      }
     }
   )
 }
 
 const handleSelectionUpdate = (requestId, isSelected) => {
-  if (isSelected) selectedRequests.value.add(requestId)
-  else selectedRequests.value.delete(requestId)
+  if (isSelected) {
+    selectedRequests.value.add(requestId)
+  } else {
+    selectedRequests.value.delete(requestId)
+  }
 }
+
+onMounted(fetchApprovedRequests)
 
 const filteredRequests = computed(() => {
   if (!props.searchQuery) return approvedRequests.value
 
-  const lowerQuery = props.searchQuery.toLowerCase().trim()
+  const q = props.searchQuery.toLowerCase()
   return approvedRequests.value.filter(req =>
-    req.requester.firstName.toLowerCase().includes(lowerQuery) ||
-    req.requester.surname.toLowerCase().includes(lowerQuery) ||
-    req.requestType.toLowerCase().includes(lowerQuery) ||
-    req.requestedOn.toLowerCase().includes(lowerQuery) ||
-    req.rfidNo.toLowerCase().includes(lowerQuery) ||
-    (req.amount && req.amount.includes(lowerQuery))
+    req.requester.firstName.toLowerCase().includes(q) ||
+    req.requester.lastName.toLowerCase().includes(q) ||
+    req.requestType.toLowerCase().includes(q) ||
+    req.rfidNo.toLowerCase().includes(q) ||
+    (req.transaction_no || '').toLowerCase().includes(q)
   )
 })
 </script>
@@ -186,7 +256,7 @@ const filteredRequests = computed(() => {
       v-if="isLoading" 
       class="text-center p-10 text-gray-500"
     >
-      <p>Loading approved requests...</p>
+      <p>Loading approved equipment requests...</p>
     </div>
 
     <div 
@@ -200,10 +270,10 @@ const filteredRequests = computed(() => {
       v-else-if="filteredRequests.length === 0" 
       class="text-center p-10 text-gray-500"
     >
-      <h3 class="text-lg font-medium text-gray-700">No Approved Requests</h3>
+      <h3 class="text-lg font-medium text-gray-700">No Approved Equipment Requests</h3>
       <p class="text-gray-500">
         <span v-if="searchQuery">No requests match your search.</span>
-        <span v-else>All approved requests have been processed.</span>
+        <span v-else>All approved equipment requests have been processed.</span>
       </p>
     </div>
 
@@ -211,6 +281,7 @@ const filteredRequests = computed(() => {
       v-for="request in filteredRequests"
       :key="request.id"
       :id="request.id"
+      :transaction-no="request.transaction_no"
       :status="request.status"
       :request-type="request.requestType"
       :requester="request.requester"
@@ -232,13 +303,5 @@ const filteredRequests = computed(() => {
     cancel-text="Cancel"
     @confirm="handleConfirm"
     @cancel="handleCancel"
-  />
-
-  <SendSMSModal
-    v-model:show="showSMSModal"
-    :recipient-name="selectedRequest?.borrowerName"
-    :recipient-phone="selectedRequest?.phoneNumber"
-    :default-message="`Your ${selectedRequest?.requestType} is approved and ready for pickup.`"
-    @send="handleSMSSubmit"
   />
 </template>

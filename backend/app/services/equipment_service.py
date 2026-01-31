@@ -478,59 +478,66 @@ def undo_equipment_request(db: Session, request_id: int):
     req = _get_request(db, request_id)
     if not req:
         return False
-    
+
     status_undo_map = {
         "Approved": "Pending",
         "Picked-Up": "Approved",
         "Returned": "Picked-Up",
         "Rejected": "Pending",
     }
-    
+
     if req.status not in status_undo_map:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Undo is not available for status: {req.status}"
         )
-    
-    if req.status == "Rejected":
-        _update_equipment_availability(db, request_id, "increase")
-    elif req.status == "Returned":
-        _update_equipment_availability(db, request_id, "increase")
-    
-    req.status = status_undo_map[req.status]
-    
-    if status_undo_map[req.status] == "Picked-Up":
+
+    old_status = req.status
+    new_status = status_undo_map[old_status]
+
+    if old_status in ("Rejected", "Returned"):
+        _update_equipment_availability(db, request_id, "decrease")
+
+    req.status = new_status
+
+    if new_status == "Picked-Up":
         req.returned_at = None
-    
+
     db.commit()
     return True
 
 
 def bulk_undo_equipment_requests(db: Session, ids: list[int]):
-    requests = db.query(EquipmentRequest).filter(EquipmentRequest.id.in_(ids)).all()
-    
+    requests = db.query(EquipmentRequest).filter(
+        EquipmentRequest.id.in_(ids)
+    ).all()
+
     status_undo_map = {
         "Approved": "Pending",
         "Picked-Up": "Approved",
         "Returned": "Picked-Up",
         "Rejected": "Pending",
     }
-    
+
     updated_count = 0
+
     for req in requests:
-        if req.status in status_undo_map:
-            if req.status == "Approved":
-                _update_equipment_availability(db, req.id, "increase")
-            elif req.status == "Returned":
-                _update_equipment_availability(db, req.id, "increase")
-            
-            req.status = status_undo_map[req.status]
-            
-            if status_undo_map[req.status] == "Picked-Up":
-                req.returned_at = None
-            
-            updated_count += 1
-    
+        if req.status not in status_undo_map:
+            continue
+
+        old_status = req.status
+        new_status = status_undo_map[old_status]
+
+        if old_status in ("Rejected", "Returned"):
+            _update_equipment_availability(db, req.id, "decrease")
+
+        req.status = new_status
+
+        if new_status == "Picked-Up":
+            req.returned_at = None
+
+        updated_count += 1
+
     db.commit()
     return updated_count
 
