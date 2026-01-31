@@ -13,7 +13,7 @@ import PageTitle from '@/components/shared/PageTitle.vue';
 import PendingTab from '@/views/requests/equipment-requests/subtabs/PendingTab.vue';
 import ApprovedTab from '@/views/requests/equipment-requests/subtabs/ApprovedTab.vue';
 import PickedUpTab from '@/views/requests/equipment-requests/subtabs/PickedUpTab.vue';
-import ReleasedTab from '@/views/requests/equipment-requests/subtabs/ReleasedTab.vue';
+import ReturnedTab from '@/views/requests/equipment-requests/subtabs/ReturnedTab.vue';
 import RejectedTab from '@/views/requests/equipment-requests/subtabs/RejectedTab.vue';
 
 const route = useRoute();
@@ -52,7 +52,7 @@ const tabMap = {
   pending: PendingTab,
   approved: ApprovedTab,
   pickedup: PickedUpTab,
-  released: ReleasedTab,
+  returned: ReturnedTab,
   rejected: RejectedTab
 };
 
@@ -141,7 +141,7 @@ const handleFilter = () => console.log('Filter clicked');
         <n-tab-pane name="pending" tab="Pending" />
         <n-tab-pane name="approved" tab="Approved" />
         <n-tab-pane name="pickedup" tab="PickedUp" />
-        <n-tab-pane name="released" tab="Released" />
+        <n-tab-pane name="returned" tab="Returned" />
         <n-tab-pane name="rejected" tab="Rejected" />
       </n-tabs>
 
