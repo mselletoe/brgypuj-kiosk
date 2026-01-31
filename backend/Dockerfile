@@ -1,16 +1,18 @@
-FROM python:3.12-slim-bullseye
+# Stage 1: Build environment (optional for Python)
+FROM python:3.12-slim AS build
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libreoffice-writer-nogui \
-    && rm -rf /var/lib/apt/lists/*
-
-COPY requirements.txt ./
+# Install dependencies
+COPY backend/requirements.txt .
+RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+# Copy backend code
+COPY backend/ ./
 
+# Expose port
 EXPOSE 8000
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+# Command to run FastAPI with uvicorn
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

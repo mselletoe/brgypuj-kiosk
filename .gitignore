@@ -1,16 +1,38 @@
+# Environment Files
+.env
+.env.local
+.env.*.local
+
+# Keep environment templates
+!.env.example
+!.env.windows
+!.env.raspberry
+
+# Backend environment
+backend/.env
+backend/.env.local
+
 # Node.js / Frontend
 node_modules/
 dist/
 .vite/
+*.local
 
 # Python / Backend
 __pycache__/
 *.py[cod]
+*$py.class
+*.so
+.Python
 .venv/
+venv/
 env/
 ENV/
-*.env
-backend/.env
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+.coverage
+htmlcov/
 
 # Logs
 logs/
@@ -25,25 +47,52 @@ lerna-debug.log*
 pgdata/
 docker-compose.override.yml
 
+# Generated Documents
+backend/generated_docs/*.pdf
+backend/generated_docs/*.docx
+!backend/generated_docs/.gitkeep
+
+# Database
+*.sqlite3
+*.db
+*.sqlite
+
 # OS / IDE
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
 *.swp
 *.swo
+*~
 .idea/
 .vscode/
 .vscode/*
 !.vscode/extensions.json
-
-# Miscellaneous
-*.sqlite3
-*.db
-*.sqlite
-*.local
-
-# Editor/project files
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+
+# macOS
+.AppleDouble
+.LSOverride
+
+# Python IDEs
+.pydevproject
+.project
+.settings/
+.spyderproject
+.spyproject
+.ropeproject
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py

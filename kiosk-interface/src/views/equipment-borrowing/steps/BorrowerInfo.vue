@@ -1,18 +1,50 @@
 <script setup>
-// 1. IMPORT nextTick
-import { ref, computed, onMounted, nextTick } from 'vue';
+import { ref, computed, nextTick, watch } from 'vue';
 import ArrowBackButton from '@/components/shared/ArrowBackButton.vue';
-import PrimaryButton from '@/components/shared/PrimaryButton.vue';
+import Button from '@/components/shared/Button.vue';
 import Keyboard from '@/components/shared/Keyboard.vue';
+import { useAuthStore } from '@/stores/auth';
 import { DocumentTextIcon } from '@heroicons/vue/24/outline';
+import { getAutofillData } from '@/api/equipmentService';
+
+const useAutofill = ref(false);
+const isLoadingAutofill = ref(false);
+const authStore = useAuthStore();
+const residentId = computed(() => authStore.residentId);
+const showKeyboard = ref(false);
+const activeInput = ref(null);
 
 const props = defineProps({
   borrowerInfo: Object,
-  authInfo: Object,
   goNext: Function,
   goBack: Function,
 });
+
 const emit = defineEmits(['update:borrower-info']);
+
+const applyAutofill = async () => {
+  if (!residentId.value) return;
+
+  isLoadingAutofill.value = true;
+  try {
+    const data = await getAutofillData(residentId.value);
+    localInfo.value.contactPerson = data.contact_person || '';
+    localInfo.value.contactNumber = data.contact_number || '';
+  } catch (err) {
+    console.error(err);
+  } finally {
+    isLoadingAutofill.value = false;
+  }
+};
+
+watch(useAutofill, async (enabled) => {
+  if (enabled) {
+    await applyAutofill();
+  } else {
+    localInfo.value.contactPerson = '';
+    localInfo.value.contactNumber = '';
+  }
+});
 
 const localInfo = ref({
   contactPerson: props.borrowerInfo.contactPerson || '',
@@ -21,15 +53,6 @@ const localInfo = ref({
   notes: props.borrowerInfo.notes || ''
 });
 
-onMounted(() => {
-  if (props.authInfo) {
-    localInfo.value.contactPerson = props.authInfo.contactPerson;
-    localInfo.value.contactNumber = props.authInfo.contactNumber || '';
-  }
-});
-
-const isUserLoggedIn = computed(() => !!props.authInfo);
-
 const purposeOptions = ref([
   'Barangay Event',
   'Personal Event (Birthday, Wedding, etc.)',
@@ -37,9 +60,6 @@ const purposeOptions = ref([
   'Emergency Use',
   'Other'
 ]);
-
-const showKeyboard = ref(false);
-const activeInput = ref(null);
 
 const isFormValid = computed(() => {
   return localInfo.value.contactPerson &&
@@ -52,31 +72,20 @@ const handleBack = () => {
 };
 
 const handleNext = () => {
-  let authData = {};
-  if (isUserLoggedIn.value) {
-    authData = {
-      resident_id: props.authInfo.resident_id,
-      rfid: props.authInfo.rfid
-    };
-  }
-  const finalInfo = {
-    ...localInfo.value, 
-    ...authData
-  };
-  emit('update:borrower-info', finalInfo);
+  emit('update:borrower-info', {
+    ...localInfo.value,
+    use_autofill: useAutofill.value
+  });
   props.goNext('review');
 };
 
-// 2. MODIFIED: focusInput now handles scrolling
 const focusInput = (elementId, fieldName) => {
   activeInput.value = fieldName;
   showKeyboard.value = true;
 
-  // Wait for Vue to update the DOM (to add padding)
   nextTick(() => {
     const el = document.getElementById(elementId);
     if (el) {
-      // Scroll the element into the middle of the view
       el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   });
@@ -112,107 +121,118 @@ const inputClass = "w-full px-4 py-3 text-base border border-gray-300 rounded-lg
 </script>
 
 <template>
-  <div 
-    class="py-0 p-8" 
-    :class="{ 'content-with-keyboard': showKeyboard }"
-  >
-
-    <div class="flex items-center gap-4">
-      <ArrowBackButton @click="handleBack" />
-      <h1 class="text-[40px] font-bold text-[#013C6D]">Equipment Borrowing</h1>
+  <div class="flex flex-col w-full h-full" :class="{ 'content-with-keyboard': showKeyboard }">
+    <div class="flex items-center mb-6 gap-7 flex-shrink-0">
+      <ArrowBackButton @click="goBackToHome" />
+      <div>
+        <h1 class="text-[45px] text-[#03335C] font-bold tracking-tight -mt-2">Equipment Borrowing</h1>
+        <p class="text-[#03335C] -mt-2">Provide your borrowing information below.</p>
+      </div>
     </div>
 
-    <div class="mt-6 bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+    <div class="flex-1 overflow-y-auto custom-scrollbar">
+      <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+        <h3 class="text-2xl font-bold text-[#013C6D] flex items-center gap-2">
+          <DocumentTextIcon class="w-8 h-8" />
+          Borrowing Information
+        </h3>
 
-      <h3 class="text-2xl font-bold text-[#013C6D] flex items-center gap-2">
-        <DocumentTextIcon class="w-8 h-8" />
-        Borrowing Information
-      </h3>
-
-      <div class="mt-6 grid grid-cols-2 gap-x-6 gap-y-4">
-
-        <div>
-          <label for="contact-person" class="block text-base font-medium text-gray-700 mb-1">
-            Contact Person *
-          </label>
+        <div class="mt-4 flex items-center gap-3">
           <input
-            id="contact-person"
-            v-model="localInfo.contactPerson"
-            type="text"
-            placeholder="Name"
-            :class="[inputClass, { 'bg-gray-100': isUserLoggedIn }]"
-            @focus="focusInput('contact-person', 'contactPerson')"
-            :readonly="!showKeyboard" 
+            type="checkbox"
+            id="use-autofill"
+            v-model="useAutofill"
+            class="h-5 w-5 text-[#013C6D]"
+            :disabled="!residentId"
           />
+          <label for="use-autofill" class="text-sm text-gray-700 italic">
+            Autofill using my saved information
+          </label>
         </div>
 
-        <div>
-          <label for="contact-number" class="block text-base font-medium text-gray-700 mb-1">
-            Contact Number *
-          </label>
-          <input
-            id="contact-number"
-            v-model="localInfo.contactNumber"
-            type="tel"
-            placeholder="Phone Number"
-            :class="[inputClass, { 'bg-gray-100': isUserLoggedIn }]"
-            @focus="focusInput('contact-number', 'contactNumber')"
-            :readonly="!showKeyboard" 
-          />
-        </div>
+        <div class="mt-4 grid grid-cols-2 gap-x-6 gap-y-4">
+          <div>
+            <label for="contact-person" class="block text-base font-bold text-[#003A6B] mb-1">
+              Contact Person <span class="text-red-600">*</span>
+            </label>
+            <input
+              id="contact-person"
+              v-model="localInfo.contactPerson"
+              type="text"
+              placeholder="Name"
+              :class="inputClass"
+              @focus="focusInput('contact-person', 'contactPerson')"
+              :readonly="useAutofill" 
+            />
+          </div>
 
-        <div>
-          <label for="purpose" class="block text-base font-medium text-gray-700 mb-1">
-            Purpose of Borrowing *
-          </label>
-          <select
-            id="purpose"
-            v-model="localInfo.purpose"
-            :class="[inputClass, { 'text-gray-500': !localInfo.purpose }]"
-          >
-            <option :value="null" disabled>Select</option>
-            <option v-for="option in purposeOptions" :key="option" :value="option">
-              {{ option }}
-            </option>
-          </select>
-        </div>
+          <div>
+            <label for="contact-number" class="block text-base font-bold text-[#003A6B] mb-1">
+              Contact Number <span class="text-red-600">*</span>
+            </label>
+            <input
+              id="contact-number"
+              v-model="localInfo.contactNumber"
+              type="tel"
+              placeholder="Phone Number"
+              :class="inputClass"
+              @focus="focusInput('contact-number', 'contactNumber')"
+              :readonly="useAutofill" 
+            />
+          </div>
 
-        <div>
-          <label for="notes" class="block text-base font-medium text-gray-700 mb-1">
-            Additional Notes (Optional)
-          </label>
-          <textarea
-            id="notes"
-            v-model="localInfo.notes"
-            rows="3"
-            placeholder="Any additional notes or special requirements"
-            :class="inputClass"
-            @focus="focusInput('notes', 'notes')"
-            readonly
-          ></textarea>
+          <div>
+            <label for="purpose" class="block text-base font-bold text-[#003A6B] mb-1">
+              Purpose of Borrowing <span class="text-red-600">*</span>
+            </label>
+            <select
+              id="purpose"
+              v-model="localInfo.purpose"
+              :class="[inputClass, { 'text-gray-500': !localInfo.purpose }]"
+            >
+              <option :value="null" disabled>Select</option>
+              <option v-for="option in purposeOptions" :key="option" :value="option">
+                {{ option }}
+              </option>
+            </select>
+          </div>
+
+          <div>
+            <label for="notes" class="block text-base font-medium text-gray-700 mb-1">
+              Additional Notes (Optional)
+            </label>
+            <textarea
+              id="notes"
+              v-model="localInfo.notes"
+              rows="3"
+              placeholder="Any additional notes or special requirements"
+              :class="inputClass"
+              @focus="focusInput('notes', 'notes')"
+              readonly
+            ></textarea>
+          </div>
         </div>
       </div>
     </div>
 
-    <div class="mt-[22px] grid grid-cols-2 gap-8">
-      <PrimaryButton
+
+    <div class="flex gap-6 mt-6 justify-between items-center bottom-0 flex-shrink-0">
+      <Button
         @click="handleBack"
-        bgColor="bg-gray-400"
-        borderColor="border-gray-400"
-        class="py-3 text-lg font-bold"
+        variant="outline"
+        size="lg"
       >
         Back to Dates
-      </PrimaryButton>
+      </Button>
 
-      <PrimaryButton
+      <Button
         @click="handleNext"
-        class="py-3 text-lg font-bold"
         :disabled="!isFormValid"
-        :bgColor="!isFormValid ? 'bg-gray-400' : 'bg-[#013C6D]'"
-        :borderColor="!isFormValid ? 'border-gray-400' : 'border-[#013C6D]'"
+        :variant="!isFormValid ? 'disabled' : 'secondary'"
+        size="lg"
       >
         Review Request
-      </PrimaryButton>
+      </Button>
     </div>
   </div>
 
@@ -245,14 +265,8 @@ select[value="null"] {
   transform: translateY(100%);
 }
 
-/* 5. ADDED: This class adds padding to the bottom of the page */
 .content-with-keyboard {
-  /* This value should be the height of your <Keyboard> component.
-    320px is a common height. Adjust it if your keyboard is taller/shorter.
-  */
-  padding-bottom: 320px;
-  
-  /* This makes the padding animate in sync with the keyboard slide */
+  padding-bottom: 210px;
   transition: padding-bottom 0.3s ease-out;
 }
 </style>

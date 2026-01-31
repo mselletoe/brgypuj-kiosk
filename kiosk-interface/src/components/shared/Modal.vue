@@ -1,30 +1,35 @@
 <script setup>
+import PrimaryButton from '@/components/shared/Button.vue'
+
 const props = defineProps({
-  title: { type: String, default: 'Request Submitted!' },
-  message: {
+  title: { type: String, default: 'Modal Title' },
+  message: { 
     type: String,
-    default: 'Your borrowing request has been submitted for approval. Pay the fee at the counter and you will be contacted for pickup details.'
+    default: 'Modal message goes here. This is a sample message to demonstrate the modal component.'
   },
-  showNewRequest: { type: Boolean, default: true },
-  newRequestText: { type: String, default: 'New Request' },
-  doneText: { type: String, default: 'Done' }
+  referenceId: { type: String, default: '' },
+  showReferenceId: { type: Boolean, default: false },
+  showPrimaryButton: { type: Boolean, default: true },
+  showSecondaryButton: { type: Boolean, default: true },
+  primaryButtonText: { type: String, default: 'Yes' },
+  secondaryButtonText: { type: String, default: 'No' }
 })
 
-const emit = defineEmits(['done', 'newRequest'])
+const emit = defineEmits(['primary-click', 'secondary-click'])
 
-const handleDone = () => {
-  emit('done')
+const handlePrimaryClick = () => {
+  emit('primary-click')
 }
 
-const handleNewRequestClick = () => {
-  emit('newRequest')
+const handleSecondaryClick = () => {
+  emit('secondary-click')
 }
 </script>
 
 <template>
   <div class="flex flex-col items-center justify-center h-full">
     <div
-      class="bg-white shadow-lg rounded-2xl p-10 text-center w-[75%]
+      class="bg-white shadow-lg rounded-2xl p-10 text-center w-[75%] min-w-[620px] max-w-[720px]
               border-[#C1C1C1] border-[2px]"
     >
       <div class="flex justify-center mb-6">
@@ -44,31 +49,40 @@ const handleNewRequestClick = () => {
         </div>
       </div>
 
-      <h1 class="text-[30px] font-extrabold tracking-tight text-[#1B5886] mb-3">
+      <h1 class="text-[30px] font-extrabold tracking-tight text-[#013C6D] mb-3">
         {{ title }}
       </h1>
 
-      <p class="text-[#003A6B] mb-8">
+      <p class="text-[#003A6B] mb-6 text-[15px]">
         {{ message }}
       </p>
 
-      <div class="flex justify-center gap-4">
-        <button
-          v-if="showNewRequest"
-          @click="handleNewRequestClick"
-          class="px-7 py-3 rounded-xl border-2 border-[#1B5886] text-[#1B5886] font-semibold shadow-md
-                 hover:bg-[#1B5886] hover:text-white transition-colors duration-300 ease-in-out"
-        >
-          {{ newRequestText }}
-        </button>
+      <div v-if="showReferenceId" class="mb-8 flex justify-center">
+        <div class="border-2 border-dashed bg-[#E4F5FC] border-[#1B5886] rounded-xl px-8 py-4">
+          <p class="text-[#1B5886] text-2xl font-bold tracking-wide">
+            {{ referenceId }}
+          </p>
+        </div>
+      </div>
 
-        <button
-          @click="handleDone"
-          class="px-12 py-3 rounded-xl bg-[#1B5886] text-white font-semibold shadow-md
-                 hover:opacity-90 transition-opacity duration-300 ease-in-out" 
+      <div class="flex justify-center gap-4">
+        <PrimaryButton
+          v-if="showSecondaryButton"
+          variant="outline"
+          size="md"
+          @click="handleSecondaryClick"
         >
-          {{ doneText }}
-        </button>
+          {{ secondaryButtonText }}
+        </PrimaryButton>
+
+        <PrimaryButton
+          v-if="showPrimaryButton"
+          variant="secondary"
+          size="md"
+          @click="handlePrimaryClick"
+        >
+          {{ primaryButtonText }}
+        </PrimaryButton>
       </div>
     </div>
   </div>

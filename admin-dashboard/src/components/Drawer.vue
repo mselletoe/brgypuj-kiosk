@@ -1,58 +1,100 @@
 <script setup>
-import {
-  HomeIcon,
-  DocumentTextIcon,
-  BellIcon,
-  CalendarDaysIcon,
-  UsersIcon,
-  ChatBubbleBottomCenterTextIcon,
-  FolderIcon,
-  DocumentCheckIcon
-} from '@heroicons/vue/24/solid'
-
-import { NButton } from 'naive-ui'
 import { useRoute, useRouter } from 'vue-router'
+import { NButton } from 'naive-ui'
+import {
+  HomeIcon, // For Overview
+  DocumentTextIcon, // For Document Request
+  WrenchScrewdriverIcon, // For Equipment Request
+  ChatBubbleLeftRightIcon, // For Feedback
+  SpeakerWaveIcon, // For Announcements
+  FolderOpenIcon, // For Document Services
+  CircleStackIcon, // For Equipment Inventory
+  QuestionMarkCircleIcon, // For FAQs
+  UserGroupIcon, // For Residents
+  Cog6ToothIcon, // For Settings
+  UserCircleIcon // For Account
+} from '@heroicons/vue/24/solid'
 
 const router = useRouter()
 const route = useRoute()
 
-const menuItems = [
-  { label: 'Overview', icon: HomeIcon, to: '/overview' },
-  { label: 'Document Requests', icon: DocumentTextIcon, to: '/requests' },
-  { label: 'Document Services', icon: FolderIcon, to: '/document-services' },
-  { label: 'Announcements Manager', icon: BellIcon, to: '/announcements' },
-  { label: 'Community Feedback', icon: ChatBubbleBottomCenterTextIcon, to: '/community-feedback' },
-  { label: 'Residents Management', icon: UsersIcon, to: '/residents' },
-  { label: 'Equipment Request', icon: DocumentCheckIcon, to: '/equipment-management' },
-  { label: 'Help & Support', icon: DocumentCheckIcon, to: '/help-support' }
+const menuGroups = [
+  {
+    title: null, // Top section has no header
+    items: [
+      { label: 'Overview', icon: HomeIcon, to: '/overview' },
+      { label: 'Document Requests', icon: DocumentTextIcon, to: '/document-requests' },
+      { label: 'Equipment Requests', icon: WrenchScrewdriverIcon, to: '/equipment-requests' },
+      { label: 'Feedback and Reports', icon: ChatBubbleLeftRightIcon, to: '/feedback-and-reports' },
+      { label: 'SMS Announcements', icon: SpeakerWaveIcon, to: '/sms-announcements' },
+    ]
+  },
+  {
+    title: 'SYSTEM MANAGERS',
+    items: [
+      { label: 'Document Services', icon: FolderOpenIcon, to: '/document-services' },
+      { label: 'Equipment Inventory', icon: CircleStackIcon, to: '/equipment-inventory' },
+      { label: 'Kiosk Announcements', icon: SpeakerWaveIcon, to: '/kiosk-announcements' },
+      { label: 'FAQs Management', icon: QuestionMarkCircleIcon, to: '/faqs-management' },
+      { label: 'Residents Information', icon: UserGroupIcon, to: '/residents-management' },
+    ]
+  },
+  {
+    title: 'SETTINGS',
+    items: [
+      { label: 'System Settings', icon: Cog6ToothIcon, to: '/system-settings' },
+    ]
+  }
 ]
+
+const isActive = (path) => route.path.startsWith(path)
 </script>
 
 <template>
-  <div class="w-full h-full">
-    <ul class="w-full space-y-1">
-      <li v-for="item in menuItems" :key="item.to" class="w-full">
-        <n-button
-          quaternary
-          block
-          size="medium"
-          class="!justify-start !px-4 !py-4 !rounded-md !w-full transition-all duration-200 text-sm"
-          :style="route.path === item.to
-            ? 'background-color: #0957FF; color: white; font-weight: 600;'
-            : 'background-color: transparent; color: #535353; font-weight: 500;'"
-          @click="router.push(item.to)"
-        >
-          <component :is="item.icon" class="w-4 h-4 mr-3" />
-          {{ item.label }}
-        </n-button>
-      </li>
-    </ul>
+  <div class="w-full h-full select-none">
+    <nav class="space-y-6">
+      <div v-for="group in menuGroups" :key="group.title || 'top'">
+        <h3 v-if="group.title" class="px-3 mb-2 text-[11px] font-bold text-gray-400 tracking-wider">
+          {{ group.title }}
+        </h3>
+
+        <ul class="space-y-1">
+          <li v-for="item in group.items" :key="item.to">
+            <n-button
+              quaternary
+              block
+              class="!justify-start !px-3 !py-5 !rounded-lg !border-none transition-all duration-200"
+              :class="isActive(item.to) ? 'active-nav' : 'inactive-nav'"
+              @click="router.push(item.to)"
+            >
+              <template #icon>
+                <component :is="item.icon" class="w-5 h-5" />
+              </template>
+              <span class="font-semibold text-sm">{{ item.label }}</span>
+            </n-button>
+          </li>
+        </ul>
+      </div>
+    </nav>
   </div>
 </template>
 
 <style scoped>
-.n-button:hover {
-  background-color: rgba(9, 87, 255, 0.08);
-  transition: background-color 0.2s ease;
+.active-nav {
+  background-color: #0957FF !important;
+  color: white !important;
+}
+
+.inactive-nav {
+  color: #6b7280 !important;
+}
+
+.inactive-nav:hover {
+  background-color: #f3f4f6 !important;
+  color: #0957FF !important;
+}
+
+:deep(.n-button__icon) {
+  margin-right: 12px !important;
 }
 </style>

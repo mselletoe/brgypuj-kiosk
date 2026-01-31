@@ -1,87 +1,139 @@
 <script setup>
+/**
+ * @file ScanRFID.vue
+ * @description Handles the hardware interface for RFID scanning.
+ * Captures keyboard-emulated input from hardware scanners, validates the UID 
+ * against the backend, and manages the routing flow based on the resident's security status (PIN).
+ */
+
 import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { ArrowLeftIcon, SignalIcon } from '@heroicons/vue/24/solid'
-import PrimaryButton from '@/components/shared/PrimaryButton.vue'
-import api from '@/api/api'
+import Button from '@/components/shared/Button.vue'
+import { useAuthStore } from '@/stores/auth'
+import api from '@/api/http'
 
+// --- Component State & Composables ---
 const router = useRouter()
+const authStore = useAuthStore()
+
+/** @type {import('vue').Ref<string>} Reactive binding for the hidden input field */
 const scannedUID = ref('')
+
+/** @type {import('vue').Ref<boolean>} UI state toggle for processing feedback */
 const isProcessing = ref(false)
-let inputBuffer = ''
-let timeout = null
+
+/** @type {import('vue').Ref<HTMLInputElement|null>} Template ref for the auto-focus input */
 const hiddenInput = ref(null)
 
-const checkRFID = async (uid) => {
-  try {
-    const { data } = await api.get(`/rfid/check/${uid}`)
+/** @type {string} Buffer to accumulate individual keystrokes from the scanner */
+let inputBuffer = ''
 
-    if (data.exists) {
-      // --- MODIFIED: Fetch user data here to get the name ---
-      const userRes = await api.get(`/users/${data.resident_id}`);
-      const userName = `${userRes.data.first_name} ${userRes.data.last_name}`;
-      // --- END MODIFICATION ---
+/** @type {ReturnType<typeof setTimeout> | null} Timer to clear the buffer on slow/manual input */
+let timeout = null
 
-      router.replace({
-        path: '/auth-pin',
-        // --- MODIFIED: Pass the name to the route ---
-        query: { mode: 'user', resident_id: data.resident_id, uid: uid, name: userName },
-      });
-    } else {
-      router.replace({
-        path: '/auth-pin',
-        query: { mode: 'admin', uid: uid }, // Admin mode, pass the new UID
-      });
-    }
-  } catch (error) {
-    console.error("Error checking RFID", error);
-    // Reset on error
-    isProcessing.value = false;
-    inputBuffer = '';
-    if (hiddenInput.value) hiddenInput.value.value = '';
-    alert("An error occurred. Please try scanning again.");
-  }
+// --- Logic & Handlers ---
+
+/**
+ * Resets the scanner state, buffer, and input field.
+ * Prepared for subsequent scans or error recovery.
+ */
+const resetScanner = () => {
+  isProcessing.value = false
+  inputBuffer = ''
+  scannedUID.value = ''
+  if (hiddenInput.value) hiddenInput.value.value = ''
 }
 
-const handleRFIDInput = async (event) => {
-  const key = event.key
-
-  if (isProcessing.value) return
-
-  if (key === 'Enter') {
-    const uid = inputBuffer.trim()
-    if (!uid) return
-
-    scannedUID.value = uid
+/**
+ * Communicates with the backend to authenticate the scanned RFID UID.
+ * * @param {string} uid - The unique identifier captured from the RFID card.
+ * @returns {Promise<void>}
+ * @flow 
+ * 1. Request status from backend.
+ * 2. If 'has_pin' is true, move to PIN verification.
+ * 3. If 'has_pin' is false, grant immediate access to home.
+ */
+const authenticateRFID = async (uid) => {
+  try {
     isProcessing.value = true
 
-    await checkRFID(uid) // Let checkRFID handle success/failure
+    const res = await api.post('kiosk/auth/rfid', { rfid_uid: uid })
+    const data = res.data
 
-    // Reset buffer
-    inputBuffer = ''
-    if (hiddenInput.value) hiddenInput.value.value = ''
-  } 
-  else if (/^[0-9A-Za-z]$/.test(key)) {
-    inputBuffer += key
+    if (data.has_pin) {
+      // Residents with security enabled are stored in a temporary state
+      authStore.setTemporaryRFIDData({
+        resident: {
+          id: data.resident_id,
+          first_name: data.first_name,
+          last_name: data.last_name
+        },
+        uid: uid
+      })
+      router.push('/auth-pin')
+    } else {
+      // Residents without security are logged in directly
+      authStore.setRFID(
+        {
+          id: data.resident_id,
+          first_name: data.first_name,
+          last_name: data.last_name
+        },
+        uid
+      )
+      router.replace('/home')
+    }
+  } catch (err) {
+    // Standard error handling for inactive/unrecognized tags
+    alert('Invalid or inactive RFID card.')
+    resetScanner()
   }
+}
 
-  clearTimeout(timeout)
-  timeout = setTimeout(() => {
+/**
+ * Global Keyboard Event Listener.
+ * Intercepts keyboard-emulated input from hardware scanners.
+ * * @param {KeyboardEvent} event - The raw keyboard event.
+ */
+const handleRFIDInput = async (event) => {
+  if (isProcessing.value) return
+
+  // Scanners typically append an 'Enter' key at the end of a UID string
+  if (event.key === 'Enter') {
+    const uid = inputBuffer.trim()
+    if (uid) await authenticateRFID(uid)
     inputBuffer = ''
-  }, 1000)
+  } 
+  // Accept alphanumeric characters only to prevent buffer pollution
+  else if (/^[0-9A-Za-z]$/.test(event.key)) {
+    inputBuffer += event.key
+  }
+  // Clear buffer if scanning takes longer than 200ms 
+  // (Prevents manual typing and ensures input comes from a fast hardware scanner)
+  clearTimeout(timeout)
+  timeout = setTimeout(() => { inputBuffer = '' }, 200)
 }
 
+/**
+ * Returns user to the primary login selection screen.
+ */
 const goBack = () => {
-  router.push('/login')
+  router.replace('/login')
 }
+
+// --- Lifecycle Hooks ---
+
 
 onMounted(async () => {
+  // Ensure the hidden input is focused immediately for hardware capture
   await nextTick()
-  if (hiddenInput.value) hiddenInput.value.focus()
+  hiddenInput.value?.focus()
   window.addEventListener('keydown', handleRFIDInput)
 })
 
 onUnmounted(() => {
+  // Cleanup listeners and timers to prevent memory leaks and unexpected behavior
   window.removeEventListener('keydown', handleRFIDInput)
   clearTimeout(timeout)
 })
@@ -116,17 +168,16 @@ onUnmounted(() => {
         class="absolute opacity-0 pointer-events-none"
       />
 
-      <PrimaryButton 
-        @click="goBack" 
-        bgColor="bg-transparent"
-        textColor="text-[#013C6D]"
-        class="absolute bottom-8 left-8 w-auto px-4 text-[14px] rounded-[20px] h-[40px]"
+      <Button 
+        @click="goBack"
+        class="absolute bottom-8 left-8 w-auto px-3 text-[14px] rounded-[40px] h-[40px]"
+        variant="outline"
       >
         <span class="flex items-center gap-x-2">
           <ArrowLeftIcon class="h-5 w-5" />
           Go Back
         </span>
-      </PrimaryButton>
+      </Button>
     </div>
   </div>
 </template>

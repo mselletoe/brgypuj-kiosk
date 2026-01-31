@@ -1,30 +1,23 @@
 # 🏛️ Barangay Poblacion Uno Jasmin Kiosk System
 
-A kiosk and admin dashboard system built with **Vue 3**, **Vite**, **TailwindCSS + DaisyUI**, **FastAPI**, and **PostgreSQL**.  
-Designed for use on a Raspberry Pi (kiosk side) and external PCs (admin side). The system manages resident data, requests, and announcements through a shared backend and database.
+A kiosk and admin dashboard system designed for use on a Raspberry Pi (kiosk side) and external PCs (admin side).
+
+---
+## 🏗️ System Architecture
+- **Kiosk Interface:** Full-screen Vue 3 app running on Raspberry Pi Chromium (Kiosk Mode).
+- **Admin Dashboard:** Management UI for Barangay staff.
+- **Backend API:** FastAPI (Python) acting as the bridge between UIs and Database.
+- **Database:** PostgreSQL storing resident data, requests, and inventory.
 
 ---
 
-## ✅ Tech Stack
+## 🚀 Getting Started
 
-### Frontend (Both UIs)
-- Vue 3 + Vite  
-- TailwindCSS  
-- DaisyUI  
-- Vue Router  
-
-### Backend
-- FastAPI (Python)
-
-### Database
-- PostgreSQL
-
-### Containerization
-- Docker & Docker Compose
-
----
-
-## 🚀 Getting Started (Development)
+### Prerequisites
+- Node.js (v18+)
+- Python (3.10+)
+- PostgreSQL (15+)
+- Docker (Optional)
 
 ### 1. Clone the Repository
 ```bash
@@ -47,7 +40,10 @@ npm run dev
 ### 3. Backend Setup
 ```bash
 cd backend
+python -m venv venv
+source venv/bin/activate # or venv\Scripts\activate on Windows
 pip install -r requirements.txt
+# Configure .env file
 uvicorn app.main:app --reload
 ```
 
