@@ -2,6 +2,15 @@
 import { ref, computed, onMounted } from 'vue'
 import EquipmentRequestCard from '@/views/requests/equipment-requests/EquipmentRequestCard.vue'
 import ConfirmModal from '@/components/shared/ConfirmationModal.vue'
+import {
+  getEquipmentRequests,
+  approveRequest,
+  rejectRequest,
+  deleteRequest,
+  markAsPaid,
+  markAsUnpaid,
+  bulkDeleteRequests
+} from '@/api/equipmentService'
 
 const props = defineProps({
   searchQuery: {
@@ -10,39 +19,69 @@ const props = defineProps({
   }
 })
 
-// Local state
-const pendingRequests = ref([
-  // Example mock data
-  {
-    id: 1,
-    status: 'pending',
-    requestType: 'Laptop',
-    requester: { firstName: 'John', surname: 'Doe' },
-    rfidNo: 'RFID123',
-    requestedOn: '2026-01-30',
-    borrowingPeriod: '1/30/26 - 2/5/26',
-    amount: '100',
-    isPaid: false
-  },
-  {
-    id: 2,
-    status: 'pending',
-    requestType: 'Projector',
-    requester: { firstName: 'Jane', surname: 'Smith' },
-    rfidNo: 'RFID456',
-    requestedOn: '2026-01-29',
-    borrowingPeriod: '1/30/26 - 2/5/26',
-    amount: '50',
-    isPaid: true
-  }
-])
-
+const pendingRequests = ref([])
 const isLoading = ref(true)
 const errorMessage = ref(null)
 const selectedRequests = ref(new Set())
 const showConfirmModal = ref(false)
 const confirmTitle = ref('Are you sure?')
 const confirmAction = ref(null)
+
+const fetchPendingRequests = async () => {
+  isLoading.value = true
+  errorMessage.value = null
+  
+  try {
+    const response = await getEquipmentRequests()
+    
+    const allRequests = response.data.map(req => {
+      // Format equipment items list
+      const equipmentList = req.items
+        .map(item => `${item.quantity}x ${item.item_name}`)
+        .join(', ')
+      
+      return {
+        id: req.id,
+        transaction_no: req.transaction_no,
+        status: req.status.toLowerCase(),
+        requestType: equipmentList,
+        requester: {
+          firstName: req.resident_first_name || '',
+          middleName: req.resident_middle_name || '',
+          lastName: req.resident_last_name || ''
+        },
+        rfidNo: req.resident_rfid,
+      requestedOn: new Date(req.requested_at).toLocaleDateString('en-US', {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric'
+      }),
+      borrowingPeriod: {
+        from: new Date(req.borrow_date).toLocaleDateString('en-US', {
+          month: '2-digit',
+          day: '2-digit',
+          year: '2-digit'
+        }),
+        to: new Date(req.return_date).toLocaleDateString('en-US', {
+          month: '2-digit',
+          day: '2-digit',
+          year: '2-digit'
+        })
+      },
+      amount: req.payment_status !== 'free' ? String(req.total_cost ?? '0.00') : null,
+      isPaid: req.payment_status === 'paid',
+      raw: req
+    }})
+    
+    // Filter only pending requests
+    pendingRequests.value = allRequests.filter(req => req.status === 'pending')
+  } catch (error) {
+    console.error('Error fetching equipment requests:', error)
+    errorMessage.value = 'Failed to load equipment requests. Please try again.'
+  } finally {
+    isLoading.value = false
+  }
+}
 
 const openConfirmModal = (title, action) => {
   confirmTitle.value = title
@@ -77,16 +116,20 @@ const bulkDelete = () => {
   openConfirmModal(
     `Delete ${selectedRequests.value.size} selected requests?`,
     async () => {
-      // Remove locally instead of calling API
-      pendingRequests.value = pendingRequests.value.filter(
-        req => !selectedRequests.value.has(req.id)
-      )
-      selectedRequests.value.clear()
+      try {
+        await bulkDeleteRequests(Array.from(selectedRequests.value))
+        pendingRequests.value = pendingRequests.value.filter(
+          req => !selectedRequests.value.has(req.id)
+        )
+        selectedRequests.value.clear()
+      } catch (error) {
+        console.error(error)
+        alert('Failed to delete selected requests')
+      }
     }
   )
 }
 
-// EXPOSE THESE TO THE PARENT
 defineExpose({
   selectedCount: computed(() => selectedRequests.value.size),
   totalCount: computed(() => filteredRequests.value.length),
@@ -101,40 +144,73 @@ const handleButtonClick = ({ action, requestId }) => {
 
   switch (action) {
     case 'details':
-      console.log(`Opening details for request ${requestId}`)
+      alert(`Viewing request ${requestId} (frontend only)`)
       break
     case 'notes':
       console.log(`Opening notes for request ${requestId}`)
       break
     case 'approve':
-      request.status = 'approved'
-      pendingRequests.value = pendingRequests.value.filter(req => req.id !== requestId)
+      handleApprove(requestId)
       break
     case 'reject':
-      request.status = 'rejected'
-      pendingRequests.value = pendingRequests.value.filter(req => req.id !== requestId)
+      handleReject(requestId)
       break
     case 'delete':
       handleDelete(requestId)
       break
     default:
-      console.log(`Action ${action} not implemented yet`)
+      console.log(`Action ${action} not implemented`)
   }
 }
 
-const handleDelete = (id) => {
+const handleApprove = async (id) => {
+  try {
+    await approveRequest(id)
+    pendingRequests.value = pendingRequests.value.filter(req => req.id !== id)
+  } catch (error) {
+    console.error(error)
+    alert('Failed to approve request')
+  }
+}
+
+const handleReject = async (id) => {
+  try {
+    await rejectRequest(id)
+    pendingRequests.value = pendingRequests.value.filter(req => req.id !== id)
+  } catch (error) {
+    console.error(error)
+    alert('Failed to reject request')
+  }
+}
+
+const handleDelete = async (id) => {
   openConfirmModal(
     'Are you sure you want to delete this request?',
-    () => {
-      pendingRequests.value = pendingRequests.value.filter(req => req.id !== id)
+    async () => {
+      try {
+        await deleteRequest(id)
+        pendingRequests.value = pendingRequests.value.filter(req => req.id !== id)
+      } catch (error) {
+        console.error(error)
+        alert('Failed to delete request')
+      }
     }
   )
 }
 
-const handlePaymentUpdate = (requestId, newPaidStatus) => {
-  const request = pendingRequests.value.find(r => r.id === requestId)
-  if (!request) return
-  request.isPaid = newPaidStatus
+const handlePaymentUpdate = async (requestId, newPaidStatus) => {
+  try {
+    if (newPaidStatus) {
+      await markAsPaid(requestId)
+    } else {
+      await markAsUnpaid(requestId)
+    }
+    const request = pendingRequests.value.find(r => r.id === requestId)
+    if (request) request.isPaid = newPaidStatus
+  } catch (error) {
+    console.error(error)
+    alert('Failed to update payment status')
+  }
 }
 
 const handleSelectionUpdate = (requestId, isSelected) => {
@@ -145,17 +221,18 @@ const handleSelectionUpdate = (requestId, isSelected) => {
   }
 }
 
+onMounted(fetchPendingRequests)
+
 const filteredRequests = computed(() => {
   if (!props.searchQuery) return pendingRequests.value
 
-  const lowerQuery = props.searchQuery.toLowerCase().trim()
+  const q = props.searchQuery.toLowerCase()
   return pendingRequests.value.filter(req =>
-    req.requester.firstName.toLowerCase().includes(lowerQuery) ||
-    req.requester.surname.toLowerCase().includes(lowerQuery) ||
-    req.requestType.toLowerCase().includes(lowerQuery) ||
-    req.requestedOn.toLowerCase().includes(lowerQuery) ||
-    req.rfidNo.toLowerCase().includes(lowerQuery) ||
-    (req.amount && req.amount.includes(lowerQuery))
+    req.requester.firstName.toLowerCase().includes(q) ||
+    req.requester.lastName.toLowerCase().includes(q) ||
+    req.requestType.toLowerCase().includes(q) ||
+    req.rfidNo.toLowerCase().includes(q) ||
+    (req.transaction_no || '').toLowerCase().includes(q)
   )
 })
 </script>
@@ -166,7 +243,7 @@ const filteredRequests = computed(() => {
       v-if="isLoading" 
       class="text-center p-10 text-gray-500"
     >
-      <p>Loading pending requests...</p>
+      <p>Loading pending equipment requests...</p>
     </div>
 
     <div 
@@ -180,17 +257,17 @@ const filteredRequests = computed(() => {
       v-else-if="filteredRequests.length === 0" 
       class="text-center p-10 text-gray-500"
     >
-      <h3 class="text-lg font-medium text-gray-700">No Pending Requests</h3>
+      <h3 class="text-lg font-medium text-gray-700">No Pending Equipment Requests</h3>
       <p class="text-gray-500">
         <span v-if="searchQuery">No requests match your search.</span>
-        <span v-else>All pending requests have been processed.</span>
+        <span v-else>All pending equipment requests have been processed.</span>
       </p>
     </div>
 
     <EquipmentRequestCard
       v-for="request in filteredRequests"
       :key="request.id"
-      :id="request.id"
+      :id="request.transaction_no"
       :status="request.status"
       :request-type="request.requestType"
       :requester="request.requester"

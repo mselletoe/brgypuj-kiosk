@@ -49,7 +49,6 @@ const props = defineProps({
 
 const emit = defineEmits(['button-click', 'update:isPaid', 'update:selected']);
 
-// Check if borrowing period is past due
 const isPastDue = computed(() => {
   if (!props.borrowingPeriod?.to) return false;
   const dueDate = new Date(props.borrowingPeriod.to);
@@ -174,16 +173,13 @@ const handleButtonClick = (buttonId, btn) => {
         <div class="flex flex-col">
           <span class="text-[11px] text-gray-400 font-medium">Request from</span>
           <span class="text-sm text-slate-700 font-bold">
-            {{ requester.firstName }} {{ requester.middleName }} {{ requester.surname }}
+            {{ requester.firstName }} {{ requester.middleName }} {{ requester.lastName }}
           </span>
         </div>
 
         <div class="flex flex-col">
           <span class="text-[11px] text-gray-400 font-medium">RFID No.</span>
-          <span 
-            class="text-sm font-bold" 
-            :class="rfidNo === 'Guest Mode' ? 'text-orange-500' : 'text-blue-600'"
-          >
+          <span class="text-sm font-bold text-blue-600">
             {{ rfidNo }}
           </span>
         </div>
