@@ -1,9 +1,8 @@
 <script setup>
 import { ref, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { NTabs, NTabPane } from 'naive-ui';
-import { 
-  BarsArrowUpIcon, 
+import { NTabs, NTabPane, NPopover, NDatePicker, NInput, NSelect, NButton } from 'naive-ui';
+import {
   FunnelIcon, 
   ArrowUturnLeftIcon, 
   TrashIcon
@@ -20,6 +19,28 @@ const router = useRouter();
 const searchQuery = ref('');
 
 const tabRef = ref(null);
+const showFilterPopover = ref(false);
+
+// Filter state
+const filterState = ref({
+  requestedDate: null,
+  transactionNumber: '',
+  rfidNumber: '',
+  residentName: '',
+  equipmentItem: '',
+  documentType: null,
+  paymentStatus: null
+});
+
+const paymentStatusOptions = [
+  { label: 'All Status', value: null },
+  { label: 'Paid', value: 'paid' },
+  { label: 'Unpaid', value: 'unpaid' }
+];
+
+const documentTypeOptions = [
+  // put somethong here
+];
 
 const isPendingTab = computed(() => activeTab.value === 'pending');
 
@@ -65,8 +86,29 @@ const currentTabComponent = computed(() => {
   return tabMap[activeTab.value] || PendingTab;
 });
 
-const handleSort = () => console.log('Sort clicked');
-const handleFilter = () => console.log('Filter clicked');
+const handleFilterClear = () => {
+  filterState.value = {
+    requestedDate: null,
+    transactionNumber: '',
+    rfidNumber: '',
+    residentName: '',
+    equipmentItem: '',
+    documentType: null,
+    paymentStatus: null
+  };
+};
+
+const hasActiveFilters = computed(() => {
+  return !!(
+    filterState.value.requestedDate ||
+    filterState.value.transactionNumber ||
+    filterState.value.rfidNumber ||
+    filterState.value.residentName ||
+    filterState.value.equipmentItem ||
+    filterState.value.documentType ||
+    filterState.value.paymentStatus
+  );
+});
 </script>
 
 <template>
@@ -78,15 +120,117 @@ const handleFilter = () => console.log('Filter clicked');
       </div>
       
       <div class="flex items-center space-x-2">
-        <button @click="handleSort" class="flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-          <BarsArrowUpIcon class="w-5 h-5 mr-2 text-gray-500" />
-          Sort
-        </button>
+        <input
+          v-model="searchQuery"
+          type="text"
+          placeholder="Search requests..."
+          class="block px-4 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 transition-all"
+        />
 
-        <button @click="handleFilter" class="flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-          <FunnelIcon class="w-5 h-5 mr-2 text-gray-500" />
-          Filter
-        </button>
+        <n-popover
+          v-model:show="showFilterPopover"
+          trigger="click"
+          placement="bottom-end"
+          :show-arrow="false"
+          style="padding: 0;"
+        >
+          <template #trigger>
+            <button 
+              :class="[
+                'flex items-center px-4 py-2 border rounded-lg text-sm font-medium transition-colors',
+                hasActiveFilters 
+                  ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700' 
+                  : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+              ]"
+            >
+              <FunnelIcon class="w-5 h-5 mr-2" :class="hasActiveFilters ? 'text-white' : 'text-gray-500'" />
+              Filter
+            </button>
+          </template>
+          
+          <div class="w-[350px] max-h-[500px] bg-white rounded-lg overflow-hidden flex flex-col">
+            <div class="p-4 border-b border-gray-200">
+              <h3 class="text-[16px] font-semibold text-gray-800">Filter Equipment Request</h3>
+            </div>
+            
+            <div class="overflow-y-auto px-6 py-4 space-y-4 flex-1">
+              <!-- Requested Date -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Requested Date</label>
+                <n-date-picker
+                  v-model:value="filterState.requestedDate"
+                  type="date"
+                  clearable
+                  class="w-full"
+                  format="dd/MM/yyyy"
+                  placeholder="Start date"
+                />
+              </div>
+
+              <!-- Transaction Number -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Transaction Number</label>
+                <n-input
+                  v-model:value="filterState.transactionNumber"
+                  placeholder="e.g. DOC-2023-001"
+                  clearable
+                />
+              </div>
+
+              <!-- RFID Number -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">RFID Number</label>
+                <n-input
+                  v-model:value="filterState.rfidNumber"
+                  placeholder="e.g. 1234567890"
+                  clearable
+                />
+              </div>
+
+              <!-- Resident Name -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Resident Name</label>
+                <n-input
+                  v-model:value="filterState.residentName"
+                  placeholder="Search resident..."
+                  clearable
+                />
+              </div>
+
+              <!-- Document Type -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Equipment Item</label>
+                <n-select
+                  v-model:value="filterState.documentType"
+                  :options="documentTypeOptions"
+                  placeholder="All Status"
+                />
+              </div>
+
+              <!-- Payment Status -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Payment Status</label>
+                <n-select
+                  v-model:value="filterState.paymentStatus"
+                  :options="paymentStatusOptions"
+                  placeholder="All Status"
+                />
+              </div>
+
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex justify-end space-x-2 p-4 border-t border-gray-200">
+              <n-button
+                @click="handleFilterClear"
+                class="px-6"
+                secondary
+              >
+                Clear
+              </n-button>
+            </div>
+          </div>
+        </n-popover>
 
         <button 
           @click="triggerUndo"
@@ -141,15 +285,6 @@ const handleFilter = () => console.log('Filter clicked');
         <n-tab-pane name="released" tab="Released" />
         <n-tab-pane name="rejected" tab="Rejected" />
       </n-tabs>
-
-      <div class="w-full max-w-xs ml-4 mb-2">
-        <input
-          v-model="searchQuery"
-          type="text"
-          placeholder="Search requests..."
-          class="block w-full px-4 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 transition-all"
-        />
-      </div>
     </div>
 
     <div class="overflow-y-auto h-[calc(100vh-260px)] pr-2 pt-2">

@@ -53,12 +53,24 @@ const props = defineProps({
 
 const emit = defineEmits(['button-click', 'update:isPaid', 'update:selected']);
 
-const isPastDue = computed(() => {
-  if (!props.borrowingPeriod?.to) return false;
+const dueStatus = computed(() => {
+  if (!props.borrowingPeriod?.to) return null;
+  
   const dueDate = new Date(props.borrowingPeriod.to);
   const today = new Date();
+  
+  dueDate.setHours(0, 0, 0, 0);
   today.setHours(0, 0, 0, 0);
-  return dueDate < today;
+  
+  if (props.status === 'pickedup') {
+    if (dueDate < today) {
+      return 'overdue'; // Past due and not yet returned
+    } else if (dueDate.getTime() === today.getTime()) {
+      return 'duetoday'; // Due today
+    }
+  }
+  
+  return null;
 });
 
 const buttonConfigs = {
@@ -196,10 +208,16 @@ const handleButtonClick = (buttonId, btn) => {
               {{ borrowingPeriod.from }} - {{ borrowingPeriod.to }}
             </span>
             <span 
-              v-if="isPastDue" 
+              v-if="dueStatus === 'overdue'" 
               class="px-2 py-0.5 bg-red-100 text-red-600 rounded text-[10px] font-bold uppercase"
             >
               Past Due
+            </span>
+            <span 
+              v-else-if="dueStatus === 'duetoday'" 
+              class="px-2 py-0.5 bg-green-100 text-green-600 rounded text-[10px] font-bold uppercase"
+            >
+              Due Today
             </span>
           </div>
         </div>
