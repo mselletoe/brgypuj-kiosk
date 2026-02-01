@@ -117,26 +117,8 @@ const goBack = () => {
   }
 }
 
-/**
- * Closes the success modal with a fade-out animation and resets the session.
- */
-const closeModal = () => {
-  isFadingOut.value = true
-  setTimeout(() => {
-    showSuccessModal.value = false
-    formData.value = {}
-    currentStep.value = 'form'
-    isFadingOut.value = false
-    router.push('/home')
-  }, 500)
-}
-
-const handleYes = () => {
-  router.push('/document-services')
-}
-
-const handleNo = () => {
-  closeModal()
+const handleDone = () => {
+  router.push('/home')
 }
 
 /**
@@ -255,14 +237,11 @@ onMounted(async () => {
           :message="`Pay the fee at the counter and be informed of further details. Please take note of the Request ID number below for reference.`"
           :referenceId="transactionNo"
           :showReferenceId="true"
-          primaryButtonText="Yes"
-          secondaryButtonText="No"
+          primaryButtonText="Done"
           :showPrimaryButton="true"
-          :showSecondaryButton="true"
+          :showSecondaryButton="false"
           :showNewRequest="false"
-          @primary-click="handleYes"
-          @secondary-click="handleNo"
-          @done="closeModal"
+          @primary-click="handleDone"
         />
       </div>
     </transition>

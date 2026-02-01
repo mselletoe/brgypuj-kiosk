@@ -24,6 +24,8 @@ const emit = defineEmits(['start-new-request']);
 const router = useRouter();
 const showModal = ref(false);
 const isSubmitting = ref(false);
+const transactionNo = ref('');
+const isFadingOut = ref(false);
 
 const formatCurrency = (value) => {
   if (!value) return '₱0';
@@ -75,6 +77,8 @@ const handleSubmit = async () => {
     const response = await createEquipmentRequest(payload);
 
     console.log('Request created:', response);
+
+    transactionNo.value = response.transaction_no;
     showModal.value = true;
 
   } catch (err) {
@@ -85,11 +89,9 @@ const handleSubmit = async () => {
   }
 };
 
-const handleModalDone = () => {
-  showModal.value = false
-  router.push('/home')
-}
-
+const handleDone = () => {
+  router.push('/home');
+};
 </script>
 
 <template>
@@ -195,10 +197,14 @@ const handleModalDone = () => {
     <div v-if="showModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-8">
       <Modal
         title="Request Submitted!"
-        message="Your borrowing request has been submitted for approval. Pay the fee at the counter and you will be contacted for pickup details."
-        :showPrimaryButton="true"
+        :message="`Pay the fee at the counter and you will be contacted for pickup details. Please take note of the Request ID number below for reference.`"
+        :referenceId="transactionNo"
+        :showReferenceId="true"
         primaryButtonText="Done"
-        @primary-click="handleModalDone"
+        :showPrimaryButton="true"
+        :showSecondaryButton="false"
+        :showNewRequest="false"
+        @primary-click="handleDone"
       />
     </div>
   </div>
