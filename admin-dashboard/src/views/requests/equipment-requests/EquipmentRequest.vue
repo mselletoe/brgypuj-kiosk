@@ -25,10 +25,6 @@ const showFilterPopover = ref(false);
 // Filter state
 const filterState = ref({
   requestedDate: null,
-  transactionNumber: '',
-  rfidNumber: '',
-  residentName: '',
-  equipmentItem: '',
   borrowingPeriodStart: null,
   borrowingPeriodEnd: null,
   paymentStatus: null
@@ -88,10 +84,6 @@ const currentTabComponent = computed(() => {
 const handleFilterClear = () => {
   filterState.value = {
     requestedDate: null,
-    transactionNumber: '',
-    rfidNumber: '',
-    residentName: '',
-    equipmentItem: '',
     borrowingPeriodStart: null,
     borrowingPeriodEnd: null,
     paymentStatus: null
@@ -101,10 +93,6 @@ const handleFilterClear = () => {
 const hasActiveFilters = computed(() => {
   return !!(
     filterState.value.requestedDate ||
-    filterState.value.transactionNumber ||
-    filterState.value.rfidNumber ||
-    filterState.value.residentName ||
-    filterState.value.equipmentItem ||
     filterState.value.borrowingPeriodStart ||
     filterState.value.borrowingPeriodEnd ||
     filterState.value.paymentStatus
@@ -149,7 +137,7 @@ const hasActiveFilters = computed(() => {
             </button>
           </template>
           
-          <div class="w-[350px] max-h-[500px] bg-white rounded-lg overflow-hidden flex flex-col">
+          <div class="w-[270px] max-h-[500px] bg-white rounded-lg overflow-hidden flex flex-col">
             <div class="p-4 border-b border-gray-200">
               <h3 class="text-[16px] font-semibold text-gray-800">Filter Equipment Request</h3>
             </div>
@@ -168,50 +156,10 @@ const hasActiveFilters = computed(() => {
                 />
               </div>
 
-              <!-- Transaction Number -->
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Transaction Number</label>
-                <n-input
-                  v-model:value="filterState.transactionNumber"
-                  placeholder="e.g. DOC-2023-001"
-                  clearable
-                />
-              </div>
-
-              <!-- RFID Number -->
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">RFID Number</label>
-                <n-input
-                  v-model:value="filterState.rfidNumber"
-                  placeholder="e.g. 1234567890"
-                  clearable
-                />
-              </div>
-
-              <!-- Resident Name -->
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Resident Name</label>
-                <n-input
-                  v-model:value="filterState.residentName"
-                  placeholder="Search resident..."
-                  clearable
-                />
-              </div>
-
-              <!-- Equipment Item -->
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Equipment Item</label>
-                <n-input
-                  v-model:value="filterState.equipmentItem"
-                  placeholder="All Types"
-                  clearable
-                />
-              </div>
-
               <!-- Borrowing Period -->
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Requested Date Range</label>
-                <div class="grid grid-cols-2 gap-2">
+                <div class="flex flex-col gap-2">
                   <n-date-picker
                     v-model:value="filterState.borrowingPeriodStart"
                     type="date"

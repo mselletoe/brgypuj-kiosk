@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router';
 import { NTabs, NTabPane, NPopover, NDatePicker, NInput, NSelect, NButton } from 'naive-ui';
 import {
@@ -13,21 +13,35 @@ import PendingTab from '@/views/requests/document-requests/subtabs/PendingTab.vu
 import ApprovedTab from '@/views/requests/document-requests/subtabs/ApprovedTab.vue';
 import ReleasedTab from '@/views/requests/document-requests/subtabs/ReleasedTab.vue';
 import RejectedTab from '@/views/requests/document-requests/subtabs/RejectedTab.vue';
+import { getDocumentTypes } from '@/api/documentService'
 
 const route = useRoute();
 const router = useRouter();
 const searchQuery = ref('');
-
 const tabRef = ref(null);
 const showFilterPopover = ref(false);
+
+const documentTypeOptions = ref([])
+
+onMounted(async () => {
+  try {
+    const { data } = await getDocumentTypes()
+
+    documentTypeOptions.value = [
+      { label: 'All Document Types', value: null },
+      ...data.map(type => ({
+        label: type.doctype_name,
+        value: type.id 
+      }))
+    ]
+  } catch (error) {
+    console.error('Failed to load document types', error)
+  }
+})
 
 // Filter state
 const filterState = ref({
   requestedDate: null,
-  transactionNumber: '',
-  rfidNumber: '',
-  residentName: '',
-  equipmentItem: '',
   documentType: null,
   paymentStatus: null
 });
@@ -36,10 +50,6 @@ const paymentStatusOptions = [
   { label: 'All Status', value: null },
   { label: 'Paid', value: 'paid' },
   { label: 'Unpaid', value: 'unpaid' }
-];
-
-const documentTypeOptions = [
-  // put somethong here
 ];
 
 const isPendingTab = computed(() => activeTab.value === 'pending');
@@ -89,10 +99,6 @@ const currentTabComponent = computed(() => {
 const handleFilterClear = () => {
   filterState.value = {
     requestedDate: null,
-    transactionNumber: '',
-    rfidNumber: '',
-    residentName: '',
-    equipmentItem: '',
     documentType: null,
     paymentStatus: null
   };
@@ -101,10 +107,6 @@ const handleFilterClear = () => {
 const hasActiveFilters = computed(() => {
   return !!(
     filterState.value.requestedDate ||
-    filterState.value.transactionNumber ||
-    filterState.value.rfidNumber ||
-    filterState.value.residentName ||
-    filterState.value.equipmentItem ||
     filterState.value.documentType ||
     filterState.value.paymentStatus
   );
@@ -148,9 +150,9 @@ const hasActiveFilters = computed(() => {
             </button>
           </template>
           
-          <div class="w-[350px] max-h-[500px] bg-white rounded-lg overflow-hidden flex flex-col">
+          <div class="w-[270px] max-h-[500px] bg-white rounded-lg overflow-hidden flex flex-col">
             <div class="p-4 border-b border-gray-200">
-              <h3 class="text-[16px] font-semibold text-gray-800">Filter Equipment Request</h3>
+              <h3 class="text-[16px] font-semibold text-gray-800">Filter Document Requests</h3>
             </div>
             
             <div class="overflow-y-auto px-6 py-4 space-y-4 flex-1">
@@ -167,43 +169,13 @@ const hasActiveFilters = computed(() => {
                 />
               </div>
 
-              <!-- Transaction Number -->
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Transaction Number</label>
-                <n-input
-                  v-model:value="filterState.transactionNumber"
-                  placeholder="e.g. DOC-2023-001"
-                  clearable
-                />
-              </div>
-
-              <!-- RFID Number -->
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">RFID Number</label>
-                <n-input
-                  v-model:value="filterState.rfidNumber"
-                  placeholder="e.g. 1234567890"
-                  clearable
-                />
-              </div>
-
-              <!-- Resident Name -->
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Resident Name</label>
-                <n-input
-                  v-model:value="filterState.residentName"
-                  placeholder="Search resident..."
-                  clearable
-                />
-              </div>
-
               <!-- Document Type -->
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Equipment Item</label>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Document Type</label>
                 <n-select
                   v-model:value="filterState.documentType"
                   :options="documentTypeOptions"
-                  placeholder="All Status"
+                  placeholder="All Document Types"
                 />
               </div>
 
