@@ -42,7 +42,7 @@ const showDeleteModal = ref(false)
 const showFilterModal = ref(false)
 const showResidentModal = ref(false)
 const currentResident = ref(null)
-const modalMode = ref('add') // 'add' or 'view'
+const modalMode = ref('add')
 
 // ======================================
 // Selection Logic

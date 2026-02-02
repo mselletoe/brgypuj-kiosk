@@ -20,7 +20,7 @@ const props = defineProps({
   },
   mode: {
     type: String,
-    default: 'add', // 'add' or 'view'
+    default: 'add',
     validator: (value) => ['add', 'view'].includes(value)
   },
   resident: {
@@ -95,13 +95,7 @@ const transactionColumns = [
   {
     title: 'Status',
     key: 'status',
-    width: 120,
-    render(row) {
-      const statusClass = row.status === 'Completed' 
-        ? 'bg-green-100 text-green-800' 
-        : 'bg-yellow-100 text-yellow-800'
-      return `<span class="px-3 py-1 rounded-full text-xs font-medium ${statusClass}">${row.status}</span>`
-    }
+    width: 120
   }
 ]
 
@@ -165,181 +159,133 @@ function handleClose() {
     @update:show="handleClose"
     :mask-closable="false"
   >
-    <NCard
-      style="width: 800px; max-height: 90vh; overflow-y: auto;"
-      :title="modalTitle"
-      :bordered="false"
-      size="huge"
+    <div
+      class="w-[800px] max-h-[90vh] overflow-y-auto bg-white rounded-xl shadow-lg flex flex-col"
       role="dialog"
       aria-modal="true"
     >
-      <template #header-extra>
+      <!-- HEADER -->
+      <div class="flex items-center justify-between px-6 py-4 border-b">
+        <h2 class="text-lg font-semibold text-gray-800">
+          {{ modalTitle }}
+        </h2>
+
         <button
           @click="handleClose"
-          class="p-1 hover:bg-gray-100 rounded transition"
+          class="p-1 rounded hover:bg-gray-100 transition"
         >
           <XMarkIcon class="w-6 h-6 text-gray-500" />
         </button>
-      </template>
+      </div>
 
-      <!-- Personal Information Section -->
-      <div class="space-y-4 mb-6">
-        <!-- Name Fields -->
-        <div class="grid grid-cols-4 gap-4">
-          <div>
-            <label class="block text-sm text-gray-700 mb-1.5">First Name</label>
-            <NInput
-              v-model:value="formData.firstName"
-              placeholder="First Name"
-              :disabled="mode === 'view'"
-            />
-          </div>
-          <div>
-            <label class="block text-sm text-gray-700 mb-1.5">Middle Name</label>
-            <NInput
-              v-model:value="formData.middleName"
-              placeholder="Middle Name"
-              :disabled="mode === 'view'"
-            />
-          </div>
-          <div>
-            <label class="block text-sm text-gray-700 mb-1.5">Surname</label>
-            <NInput
-              v-model:value="formData.lastName"
-              placeholder="Surname"
-              :disabled="mode === 'view'"
-            />
-          </div>
-          <div>
-            <label class="block text-sm text-gray-700 mb-1.5">Suffix</label>
-            <NSelect
-              v-model:value="formData.suffix"
-              :options="suffixOptions"
-              placeholder="Suffix"
-              :disabled="mode === 'view'"
-            />
-          </div>
-        </div>
-
-        <!-- RFID, Status, Phone, Email -->
-        <div class="grid grid-cols-4 gap-4">
-          <div>
-            <label class="block text-sm text-gray-700 mb-1.5">RFID No.</label>
-            <NInput
-              v-model:value="formData.rfid"
-              placeholder="RFID No."
-              :disabled="mode === 'view'"
-            />
-          </div>
-          <div>
-            <label class="block text-sm text-gray-700 mb-1.5">Status</label>
-            <div class="flex items-center gap-2 mt-2">
-              <NSwitch 
-                v-model:value="formData.status"
-                :disabled="mode === 'view'"
+      <!-- CONTENT -->
+      <div class="px-6 py-6 space-y-6">
+        <!-- Personal Information -->
+        <div class="space-y-4">
+          <!-- Name Fields -->
+          <div class="grid grid-cols-4 gap-4">
+            <div>
+              <label class="block text-sm text-gray-700 mb-1.5">First Name</label>
+              <NInput v-model:value="formData.firstName" />
+            </div>
+            <div>
+              <label class="block text-sm text-gray-700 mb-1.5">Middle Name</label>
+              <NInput v-model:value="formData.middleName" />
+            </div>
+            <div>
+              <label class="block text-sm text-gray-700 mb-1.5">Surname</label>
+              <NInput v-model:value="formData.lastName" />
+            </div>
+            <div>
+              <label class="block text-sm text-gray-700 mb-1.5">Suffix</label>
+              <NSelect
+                v-model:value="formData.suffix"
+                :options="suffixOptions"
               />
-              <span class="text-sm text-gray-700">
-                {{ formData.status ? 'Active' : 'Inactive' }}
-              </span>
             </div>
           </div>
-          <div>
-            <label class="block text-sm text-gray-700 mb-1.5">Phone Number</label>
-            <NInput
-              v-model:value="formData.phoneNumber"
-              placeholder="Phone Number"
-              :disabled="mode === 'view'"
-            />
+
+          <!-- RFID / Status / Phone / Email -->
+          <div class="grid grid-cols-4 gap-4">
+            <div>
+              <label class="block text-sm text-gray-700 mb-1.5">RFID No.</label>
+              <NInput v-model:value="formData.rfid" />
+            </div>
+
+            <div>
+              <label class="block text-sm text-gray-700 mb-1.5">Status</label>
+              <div class="flex items-center gap-2 mt-2">
+                <NSwitch v-model:value="formData.status" />
+                <span class="text-sm text-gray-700">
+                  {{ formData.status ? 'Active' : 'Inactive' }}
+                </span>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-sm text-gray-700 mb-1.5">Phone Number</label>
+              <NInput v-model:value="formData.phoneNumber" />
+            </div>
+
+            <div>
+              <label class="block text-sm text-gray-700 mb-1.5">Email</label>
+              <NInput v-model:value="formData.email" />
+            </div>
           </div>
-          <div>
-            <label class="block text-sm text-gray-700 mb-1.5">Email</label>
-            <NInput
-              v-model:value="formData.email"
-              placeholder="Email"
-              :disabled="mode === 'view'"
-            />
+
+          <!-- Address -->
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm text-gray-700 mb-1.5">House No./St.</label>
+              <NInput v-model:value="formData.houseNo" />
+            </div>
+            <div>
+              <label class="block text-sm text-gray-700 mb-1.5">Purok</label>
+              <NSelect
+                v-model:value="formData.purok"
+                :options="purokOptions"
+              />
+            </div>
           </div>
         </div>
 
-        <!-- Address Fields -->
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm text-gray-700 mb-1.5">House No./St.</label>
-            <NInput
-              v-model:value="formData.houseNo"
-              placeholder="House No./St."
-              :disabled="mode === 'view'"
-            />
-          </div>
-          <div>
-            <label class="block text-sm text-gray-700 mb-1.5">Purok</label>
-            <NSelect
-              v-model:value="formData.purok"
-              :options="purokOptions"
-              placeholder="Select Purok"
-              :disabled="mode === 'view'"
-            />
-          </div>
+        <!-- Transaction History -->
+        <div v-if="mode === 'view'">
+          <NCollapse>
+            <NCollapseItem title="Transaction History" name="transactions">
+              <NDataTable
+                :columns="transactionColumns"
+                :data="transactionHistory"
+                :bordered="false"
+                size="small"
+              />
+            </NCollapseItem>
+          </NCollapse>
         </div>
       </div>
 
-      <!-- Transaction History (only in view mode) -->
-      <div v-if="mode === 'view'" class="mt-6">
-        <NCollapse>
-          <NCollapseItem title="Transaction History" name="transactions">
-            <NDataTable
-              :columns="transactionColumns"
-              :data="transactionHistory"
-              :bordered="false"
-              size="small"
-            />
-          </NCollapseItem>
-        </NCollapse>
-      </div>
+      <!-- FOOTER -->
+      <div class="flex justify-end gap-3 px-6 py-4 border-t">
+        <NButton @click="handleClose">
+          {{ mode === 'view' ? 'Close' : 'Cancel' }}
+        </NButton>
 
-      <!-- Action Buttons -->
-      <template #footer>
-        <div class="flex justify-end gap-3">
-          <NButton @click="handleClose">
-            {{ mode === 'view' ? 'Close' : 'Cancel' }}
-          </NButton>
-          <NButton 
-            v-if="mode === 'add'"
-            type="primary" 
-            @click="handleSave"
-          >
-            Save
-          </NButton>
-          <NButton 
-            v-if="mode === 'view'"
-            type="primary" 
-            @click="handleSave"
-          >
-            Update
-          </NButton>
-        </div>
-      </template>
-    </NCard>
+        <NButton
+          v-if="mode !== 'view'"
+          type="primary"
+          @click="handleSave"
+        >
+          Save
+        </NButton>
+
+        <NButton
+          v-if="mode === 'view'"
+          type="primary"
+          @click="handleSave"
+        >
+          Update
+        </NButton>
+      </div>
+    </div>
   </NModal>
 </template>
-
-<style scoped>
-:deep(.n-card__header) {
-  padding: 20px 24px;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-:deep(.n-card__content) {
-  padding: 24px;
-}
-
-:deep(.n-card__footer) {
-  padding: 16px 24px;
-  border-top: 1px solid #e5e7eb;
-}
-
-:deep(.n-collapse .n-collapse-item__header) {
-  font-weight: 600;
-  padding: 12px 0;
-}
-</style>
