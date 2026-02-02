@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, onMounted } from 'vue'
 import { 
   NModal, 
   NCard, 
@@ -9,9 +9,20 @@ import {
   NSelect,
   NCollapse,
   NCollapseItem,
-  NDataTable
+  NDataTable,
+  NDatePicker,
+  NSpin,
+  useMessage
 } from 'naive-ui'
 import { XMarkIcon } from '@heroicons/vue/24/outline'
+import { 
+  fetchResidentDetail, 
+  createResident, 
+  updateResident,
+  updateResidentAddress,
+  updateResidentRFID,
+  fetchPuroks 
+} from '@/api/residentService'
 
 const props = defineProps({
   show: {
@@ -23,29 +34,53 @@ const props = defineProps({
     default: 'add',
     validator: (value) => ['add', 'view'].includes(value)
   },
-  resident: {
-    type: Object,
+  residentId: {
+    type: Number,
     default: null
   }
 })
 
-const emit = defineEmits(['close', 'save'])
+const emit = defineEmits(['close', 'saved'])
+const message = useMessage()
+
+// Loading states
+const loading = ref(false)
+const saving = ref(false)
+
+// Resident details (for view mode)
+const residentDetails = ref(null)
 
 // Form data
 const formData = ref({
-  firstName: '',
-  middleName: '',
-  lastName: '',
+  // Personal Info
+  first_name: '',
+  middle_name: '',
+  last_name: '',
   suffix: '',
-  rfid: '',
-  status: true,
-  phoneNumber: '',
+  gender: 'male',
+  birthdate: null,
+  
+  // Contact Info
+  phone_number: '',
   email: '',
-  houseNo: '',
-  purok: ''
+  
+  // Residency Info
+  residency_start_date: null,
+  
+  // Address Info
+  house_no_street: '',
+  purok_id: null,
+  barangay: 'Poblacion Uno',
+  municipality: 'Amadeo',
+  province: 'Cavite',
+  region: 'Region IV-A',
+  
+  // RFID Info
+  rfid_uid: '',
+  is_active: true
 })
 
-// Suffix options
+// Dropdown options
 const suffixOptions = [
   { label: 'None', value: '' },
   { label: 'Jr.', value: 'Jr.' },
@@ -55,13 +90,15 @@ const suffixOptions = [
   { label: 'IV', value: 'IV' }
 ]
 
-// Purok options (adjust based on your needs)
-const purokOptions = Array.from({ length: 10 }, (_, i) => ({
-  label: `Purok ${i + 1}`,
-  value: `Purok ${i + 1}`
-}))
+const genderOptions = [
+  { label: 'Male', value: 'male' },
+  { label: 'Female', value: 'female' },
+  { label: 'Other', value: 'other' }
+]
 
-// Transaction history (mock data)
+const purokOptions = ref([])
+
+// Transaction history (mock data for now - you can replace with real API call)
 const transactionHistory = ref([
   {
     transactionNumber: 'DR-1203',
@@ -102,50 +139,202 @@ const transactionColumns = [
 // Modal title
 const modalTitle = computed(() => {
   if (props.mode === 'add') return 'Register New Resident'
-  if (formData.value.firstName && formData.value.lastName) {
-    return `${formData.value.firstName} ${formData.value.middleName} ${formData.value.lastName} ${formData.value.suffix}`.trim()
+  if (residentDetails.value) {
+    return residentDetails.value.full_name
   }
   return 'Resident Details'
 })
 
-// Watch for prop changes
-watch(() => props.show, (newVal) => {
-  if (newVal && props.resident) {
-    // Populate form with resident data
-    formData.value = {
-      firstName: props.resident.firstName || '',
-      middleName: props.resident.middleName || '',
-      lastName: props.resident.lastName || '',
-      suffix: props.resident.suffix || '',
-      rfid: props.resident.rfid || '',
-      status: props.resident.status === 'Active',
-      phoneNumber: props.resident.phoneNumber || '',
-      email: props.resident.email || '',
-      houseNo: props.resident.houseNo || '',
-      purok: props.resident.purok || ''
-    }
-  } else if (newVal && props.mode === 'add') {
-    // Reset form for new resident
-    formData.value = {
-      firstName: '',
-      middleName: '',
-      lastName: '',
-      suffix: '',
-      rfid: '',
-      status: true,
-      phoneNumber: '',
-      email: '',
-      houseNo: '',
-      purok: ''
+// Load puroks on mount
+onMounted(async () => {
+  try {
+    const data = await fetchPuroks()
+    purokOptions.value = data.map(p => ({
+      label: p.purok_name,
+      value: p.id
+    }))
+  } catch (error) {
+    console.error('Failed to load puroks:', error)
+    message.error('Failed to load puroks')
+  }
+})
+
+// Load resident details when modal opens in view mode
+watch(() => props.show, async (newVal) => {
+  if (newVal) {
+    if (props.mode === 'view' && props.residentId) {
+      // Load resident details
+      await loadResidentDetails()
+    } else if (props.mode === 'add') {
+      // Reset form for new resident
+      resetForm()
     }
   }
 })
 
-function handleSave() {
-  emit('save', {
-    ...formData.value,
-    status: formData.value.status ? 'Active' : 'Inactive'
-  })
+async function loadResidentDetails() {
+  loading.value = true
+  try {
+    const data = await fetchResidentDetail(props.residentId)
+    residentDetails.value = data
+    
+    // Populate form data for editing
+    formData.value = {
+      first_name: data.first_name,
+      middle_name: data.middle_name || '',
+      last_name: data.last_name,
+      suffix: data.suffix || '',
+      gender: data.gender,
+      birthdate: data.birthdate, // Already formatted as MM/DD/YYYY
+      phone_number: data.phone_number || '',
+      email: data.email || '',
+      residency_start_date: data.residency_start_date,
+      house_no_street: data.current_address?.house_no_street || '',
+      purok_id: data.current_address?.purok_id || null,
+      barangay: data.current_address?.barangay || 'Poblacion Uno',
+      municipality: data.current_address?.municipality || 'Amadeo',
+      province: data.current_address?.province || 'Cavite',
+      region: data.current_address?.region || 'Region IV-A',
+      rfid_uid: data.active_rfid?.rfid_uid || '',
+      is_active: data.active_rfid?.is_active ?? true
+    }
+  } catch (error) {
+    console.error('Failed to load resident details:', error)
+    message.error('Failed to load resident details')
+  } finally {
+    loading.value = false
+  }
+}
+
+function resetForm() {
+  const today = new Date()
+  formData.value = {
+    first_name: '',
+    middle_name: '',
+    last_name: '',
+    suffix: '',
+    gender: 'male',
+    birthdate: null,
+    phone_number: '',
+    email: '',
+    residency_start_date: today.getTime(),
+    house_no_street: '',
+    purok_id: null,
+    barangay: 'Poblacion Uno',
+    municipality: 'Amadeo',
+    province: 'Cavite',
+    region: 'Region IV-A',
+    rfid_uid: '',
+    is_active: true
+  }
+}
+
+// Convert timestamp to YYYY-MM-DD format
+function formatDateForAPI(timestamp) {
+  if (!timestamp) return null
+  const date = new Date(timestamp)
+  return date.toISOString().split('T')[0]
+}
+
+async function handleSave() {
+  // Validation
+  if (!formData.value.first_name || !formData.value.last_name) {
+    message.error('First name and last name are required')
+    return
+  }
+  
+  if (!formData.value.birthdate) {
+    message.error('Birthdate is required')
+    return
+  }
+  
+  if (props.mode === 'add') {
+    if (!formData.value.house_no_street || !formData.value.purok_id) {
+      message.error('House/Street and Purok are required')
+      return
+    }
+    
+    if (!formData.value.rfid_uid) {
+      message.error('RFID No. is required')
+      return
+    }
+  }
+  
+  saving.value = true
+  
+  try {
+    if (props.mode === 'add') {
+      // Create new resident
+      const payload = {
+        first_name: formData.value.first_name,
+        middle_name: formData.value.middle_name || null,
+        last_name: formData.value.last_name,
+        suffix: formData.value.suffix || null,
+        gender: formData.value.gender,
+        birthdate: formatDateForAPI(formData.value.birthdate),
+        email: formData.value.email || null,
+        phone_number: formData.value.phone_number || null,
+        residency_start_date: formatDateForAPI(formData.value.residency_start_date),
+        address: {
+          house_no_street: formData.value.house_no_street,
+          purok_id: formData.value.purok_id,
+          barangay: formData.value.barangay,
+          municipality: formData.value.municipality,
+          province: formData.value.province,
+          region: formData.value.region
+        },
+        rfid: {
+          rfid_uid: formData.value.rfid_uid,
+          is_active: formData.value.is_active
+        }
+      }
+      
+      await createResident(payload)
+      message.success('Resident registered successfully')
+    } else {
+      // Update existing resident
+      // Update basic info
+      await updateResident(props.residentId, {
+        first_name: formData.value.first_name,
+        middle_name: formData.value.middle_name || null,
+        last_name: formData.value.last_name,
+        suffix: formData.value.suffix || null,
+        gender: formData.value.gender,
+        email: formData.value.email || null,
+        phone_number: formData.value.phone_number || null
+      })
+      
+      // Update address if changed
+      if (formData.value.house_no_street || formData.value.purok_id) {
+        await updateResidentAddress(props.residentId, {
+          house_no_street: formData.value.house_no_street,
+          purok_id: formData.value.purok_id,
+          barangay: formData.value.barangay,
+          municipality: formData.value.municipality,
+          province: formData.value.province,
+          region: formData.value.region
+        })
+      }
+      
+      // Update RFID if changed
+      if (formData.value.rfid_uid) {
+        await updateResidentRFID(props.residentId, {
+          rfid_uid: formData.value.rfid_uid,
+          is_active: formData.value.is_active
+        })
+      }
+      
+      message.success('Resident updated successfully')
+    }
+    
+    emit('saved')
+  } catch (error) {
+    console.error('Failed to save resident:', error)
+    const errorMsg = error.response?.data?.detail || 'Failed to save resident'
+    message.error(errorMsg)
+  } finally {
+    saving.value = false
+  }
 }
 
 function handleClose() {
@@ -160,7 +349,7 @@ function handleClose() {
     :mask-closable="false"
   >
     <div
-      class="w-[800px] max-h-[90vh] overflow-y-auto bg-white rounded-xl shadow-lg flex flex-col"
+      class="w-[900px] max-h-[90vh] overflow-y-auto bg-white rounded-xl shadow-lg flex flex-col"
       role="dialog"
       aria-modal="true"
     >
@@ -178,95 +367,272 @@ function handleClose() {
         </button>
       </div>
 
+      <!-- LOADING STATE -->
+      <div v-if="loading" class="flex items-center justify-center py-20">
+        <NSpin size="large" />
+      </div>
+
       <!-- CONTENT -->
-      <div class="px-6 py-6 space-y-6">
-        <!-- Personal Information -->
-        <div class="space-y-4">
+      <div v-else class="px-6 py-6 space-y-6">
+        <!-- VIEW MODE - Display Details -->
+        <div v-if="mode === 'view' && residentDetails" class="space-y-6">
+          <!-- Personal Information -->
+          <div>
+            <h3 class="text-sm font-semibold text-gray-700 mb-3 pb-2 border-b">
+              Personal Information
+            </h3>
+            <div class="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+              <div>
+                <span class="text-gray-500">First Name:</span>
+                <span class="ml-2 font-medium">{{ residentDetails.first_name }}</span>
+              </div>
+              <div>
+                <span class="text-gray-500">Middle Name:</span>
+                <span class="ml-2 font-medium">{{ residentDetails.middle_name || 'N/A' }}</span>
+              </div>
+              <div>
+                <span class="text-gray-500">Last Name:</span>
+                <span class="ml-2 font-medium">{{ residentDetails.last_name }}</span>
+              </div>
+              <div>
+                <span class="text-gray-500">Suffix:</span>
+                <span class="ml-2 font-medium">{{ residentDetails.suffix || 'N/A' }}</span>
+              </div>
+              <div>
+                <span class="text-gray-500">Gender:</span>
+                <span class="ml-2 font-medium capitalize">{{ residentDetails.gender }}</span>
+              </div>
+              <div>
+                <span class="text-gray-500">Birthdate:</span>
+                <span class="ml-2 font-medium">{{ residentDetails.birthdate }}</span>
+              </div>
+              <div>
+                <span class="text-gray-500">Age:</span>
+                <span class="ml-2 font-medium">{{ residentDetails.age }} years old</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Contact Information -->
+          <div>
+            <h3 class="text-sm font-semibold text-gray-700 mb-3 pb-2 border-b">
+              Contact Information
+            </h3>
+            <div class="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+              <div>
+                <span class="text-gray-500">Email:</span>
+                <span class="ml-2 font-medium">{{ residentDetails.email || 'N/A' }}</span>
+              </div>
+              <div>
+                <span class="text-gray-500">Phone Number:</span>
+                <span class="ml-2 font-medium">{{ residentDetails.phone_number || 'N/A' }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Address Information -->
+          <div>
+            <h3 class="text-sm font-semibold text-gray-700 mb-3 pb-2 border-b">
+              Address Information
+            </h3>
+            <div class="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+              <div class="col-span-2">
+                <span class="text-gray-500">Full Address:</span>
+                <span class="ml-2 font-medium">
+                  {{ residentDetails.current_address?.house_no_street }}, 
+                  {{ residentDetails.current_address?.purok?.purok_name }}, 
+                  {{ residentDetails.current_address?.barangay }}, 
+                  {{ residentDetails.current_address?.municipality }}, 
+                  {{ residentDetails.current_address?.province }}
+                </span>
+              </div>
+              <div>
+                <span class="text-gray-500">House No./Street:</span>
+                <span class="ml-2 font-medium">{{ residentDetails.current_address?.house_no_street || 'N/A' }}</span>
+              </div>
+              <div>
+                <span class="text-gray-500">Purok:</span>
+                <span class="ml-2 font-medium">{{ residentDetails.current_address?.purok?.purok_name || 'N/A' }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Residency Information -->
+          <div>
+            <h3 class="text-sm font-semibold text-gray-700 mb-3 pb-2 border-b">
+              Residency Information
+            </h3>
+            <div class="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+              <div>
+                <span class="text-gray-500">Residency Start Date:</span>
+                <span class="ml-2 font-medium">{{ residentDetails.residency_start_date }}</span>
+              </div>
+              <div>
+                <span class="text-gray-500">Years of Residency:</span>
+                <span class="ml-2 font-medium">{{ residentDetails.years_of_residency }} years</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- RFID Information -->
+          <div>
+            <h3 class="text-sm font-semibold text-gray-700 mb-3 pb-2 border-b">
+              RFID Information
+            </h3>
+            <div class="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+              <div>
+                <span class="text-gray-500">RFID No.:</span>
+                <span class="ml-2 font-medium">{{ residentDetails.active_rfid?.rfid_uid || 'N/A' }}</span>
+              </div>
+              <div>
+                <span class="text-gray-500">Status:</span>
+                <span 
+                  class="ml-2 font-medium"
+                  :class="residentDetails.active_rfid?.is_active ? 'text-green-600' : 'text-red-600'"
+                >
+                  {{ residentDetails.active_rfid?.is_active ? 'Active' : 'Inactive' }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Transaction History -->
+          <div>
+            <NCollapse>
+              <NCollapseItem title="Transaction History" name="transactions">
+                <NDataTable
+                  :columns="transactionColumns"
+                  :data="transactionHistory"
+                  :bordered="false"
+                  size="small"
+                />
+              </NCollapseItem>
+            </NCollapse>
+          </div>
+        </div>
+
+        <!-- ADD/EDIT MODE - Form -->
+        <div v-else class="space-y-4">
           <!-- Name Fields -->
           <div class="grid grid-cols-4 gap-4">
             <div>
-              <label class="block text-sm text-gray-700 mb-1.5">First Name</label>
-              <NInput v-model:value="formData.firstName" />
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                First Name <span class="text-red-500">*</span>
+              </label>
+              <NInput v-model:value="formData.first_name" placeholder="First Name" />
             </div>
             <div>
               <label class="block text-sm text-gray-700 mb-1.5">Middle Name</label>
-              <NInput v-model:value="formData.middleName" />
+              <NInput v-model:value="formData.middle_name" placeholder="Middle Name" />
             </div>
             <div>
-              <label class="block text-sm text-gray-700 mb-1.5">Surname</label>
-              <NInput v-model:value="formData.lastName" />
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                Last Name <span class="text-red-500">*</span>
+              </label>
+              <NInput v-model:value="formData.last_name" placeholder="Last Name" />
             </div>
             <div>
               <label class="block text-sm text-gray-700 mb-1.5">Suffix</label>
               <NSelect
                 v-model:value="formData.suffix"
                 :options="suffixOptions"
+                placeholder="Select Suffix"
               />
             </div>
           </div>
 
-          <!-- RFID / Status / Phone / Email -->
-          <div class="grid grid-cols-4 gap-4">
+          <!-- Gender, Birthdate, Residency Start -->
+          <div class="grid grid-cols-3 gap-4">
             <div>
-              <label class="block text-sm text-gray-700 mb-1.5">RFID No.</label>
-              <NInput v-model:value="formData.rfid" />
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                Gender <span class="text-red-500">*</span>
+              </label>
+              <NSelect
+                v-model:value="formData.gender"
+                :options="genderOptions"
+                placeholder="Select Gender"
+              />
             </div>
-
             <div>
-              <label class="block text-sm text-gray-700 mb-1.5">Status</label>
-              <div class="flex items-center gap-2 mt-2">
-                <NSwitch v-model:value="formData.status" />
-                <span class="text-sm text-gray-700">
-                  {{ formData.status ? 'Active' : 'Inactive' }}
-                </span>
-              </div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                Birthdate <span class="text-red-500">*</span>
+              </label>
+              <NDatePicker
+                v-model:value="formData.birthdate"
+                type="date"
+                placeholder="Select Birthdate"
+                class="w-full"
+                :disabled="mode === 'view'"
+              />
             </div>
+            <div>
+              <label class="block text-sm text-gray-700 mb-1.5">Residency Start Date</label>
+              <NDatePicker
+                v-model:value="formData.residency_start_date"
+                type="date"
+                placeholder="Select Date"
+                class="w-full"
+                :disabled="mode === 'view'"
+              />
+            </div>
+          </div>
 
+          <!-- Contact Information -->
+          <div class="grid grid-cols-2 gap-4">
             <div>
               <label class="block text-sm text-gray-700 mb-1.5">Phone Number</label>
-              <NInput v-model:value="formData.phoneNumber" />
+              <NInput v-model:value="formData.phone_number" placeholder="09123456789" />
             </div>
-
             <div>
               <label class="block text-sm text-gray-700 mb-1.5">Email</label>
-              <NInput v-model:value="formData.email" />
+              <NInput v-model:value="formData.email" type="email" placeholder="email@example.com" />
             </div>
           </div>
 
           <!-- Address -->
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label class="block text-sm text-gray-700 mb-1.5">House No./St.</label>
-              <NInput v-model:value="formData.houseNo" />
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                House No./Blk/Street <span v-if="mode === 'add'" class="text-red-500">*</span>
+              </label>
+              <NInput v-model:value="formData.house_no_street" placeholder="House No./Blk/Street" />
             </div>
             <div>
-              <label class="block text-sm text-gray-700 mb-1.5">Purok</label>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                Purok <span v-if="mode === 'add'" class="text-red-500">*</span>
+              </label>
               <NSelect
-                v-model:value="formData.purok"
+                v-model:value="formData.purok_id"
                 :options="purokOptions"
+                placeholder="Select Purok"
               />
             </div>
           </div>
-        </div>
 
-        <!-- Transaction History -->
-        <div v-if="mode === 'view'">
-          <NCollapse>
-            <NCollapseItem title="Transaction History" name="transactions">
-              <NDataTable
-                :columns="transactionColumns"
-                :data="transactionHistory"
-                :bordered="false"
-                size="small"
-              />
-            </NCollapseItem>
-          </NCollapse>
+          <!-- RFID Information -->
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                RFID No. <span v-if="mode === 'add'" class="text-red-500">*</span>
+              </label>
+              <NInput v-model:value="formData.rfid_uid" placeholder="RFID Number" />
+            </div>
+            <div>
+              <label class="block text-sm text-gray-700 mb-1.5">RFID Status</label>
+              <div class="flex items-center gap-2 mt-2">
+                <NSwitch v-model:value="formData.is_active" />
+                <span class="text-sm text-gray-700">
+                  {{ formData.is_active ? 'Active' : 'Inactive' }}
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
       <!-- FOOTER -->
       <div class="flex justify-end gap-3 px-6 py-4 border-t">
-        <NButton @click="handleClose">
+        <NButton @click="handleClose" :disabled="saving">
           {{ mode === 'view' ? 'Close' : 'Cancel' }}
         </NButton>
 
@@ -274,16 +640,18 @@ function handleClose() {
           v-if="mode !== 'view'"
           type="primary"
           @click="handleSave"
+          :loading="saving"
+          :disabled="saving"
         >
-          Save
+          {{ mode === 'add' ? 'Save' : 'Update' }}
         </NButton>
 
         <NButton
           v-if="mode === 'view'"
           type="primary"
-          @click="handleSave"
+          @click="mode = 'edit'"
         >
-          Update
+          Edit
         </NButton>
       </div>
     </div>

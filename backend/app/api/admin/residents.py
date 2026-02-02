@@ -9,14 +9,12 @@ from app.schemas.resident import (
     ResidentListItem,
     ResidentDetailResponse,
     ResidentDropdownItem,
-    ResidentAutofillOut,
     PurokResponse
 )
 from app.services.resident_service import (
     get_all_residents_list,
     get_residents_dropdown,
     get_resident_detail,
-    get_resident_autofill_data,
     create_resident,
     update_resident,
     update_resident_address,
@@ -68,24 +66,6 @@ def get_resident(resident_id: int, db: Session = Depends(get_db)):
         )
     
     return resident
-
-
-@router.get("/{resident_id}/autofill", response_model=ResidentAutofillOut)
-def get_resident_autofill(resident_id: int, db: Session = Depends(get_db)):
-    """
-    Get resident data formatted for form autofill.
-    
-    Returns comprehensive data including formatted dates and computed fields.
-    """
-    autofill_data = get_resident_autofill_data(db, resident_id)
-    
-    if not autofill_data:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Resident with ID {resident_id} not found"
-        )
-    
-    return autofill_data
 
 
 # ============================================================================
