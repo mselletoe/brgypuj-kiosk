@@ -230,7 +230,7 @@ const columns = computed(() => [
     <!-- Header -->
     <div class="flex mb-6 items-center justify-between">
       <div>
-        <PageTitle title="Residents Management" />
+        <PageTitle title="Residents Information Management" />
         <p class="text-sm text-gray-500 mt-1">Manage Residents Information</p>
       </div>
 

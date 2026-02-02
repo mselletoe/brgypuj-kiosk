@@ -44,7 +44,7 @@ export const registerAdmin = async ({ resident_id, username, password, role = 'A
  * Fetches the list of all residents for administrative management.
  * @returns {Promise<Array>} List of resident records.
  */
-export const fetchResidents = async () => {
-  const res = await api.get('/admin/residents')
+export const fetchResidentsDropdown = async () => {
+  const res = await api.get('/admin/residents/dropdown')
   return res.data
 }

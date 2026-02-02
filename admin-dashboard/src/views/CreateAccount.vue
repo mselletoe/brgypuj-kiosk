@@ -11,7 +11,7 @@ import { useRouter } from 'vue-router'
 import { NSelect, NInput, NSpin, useMessage, NIcon } from 'naive-ui'
 import logo from '@/assets/logo.svg'
 import { CheckmarkCircleOutline, CloseCircleOutline } from '@vicons/ionicons5'
-import { registerAdmin, fetchResidents } from '@/api/authService'
+import { registerAdmin, fetchResidentsDropdown } from '@/api/authService'
 
 const router = useRouter()
 const message = useMessage()
@@ -33,8 +33,11 @@ const loadingResidents = ref(true)
  */
 onMounted(async () => {
   try {
-    const res = await fetchResidents()
-    residents.value = res.map(r => ({ label: `${r.first_name} ${r.last_name}`, value: r.id }))
+    const res = await fetchResidentsDropdown()
+    residents.value = res.map(r => ({ 
+      label: r.full_name, 
+      value: r.id 
+    }))
   } catch (err) {
     message.error('Failed to load residents.')
     console.error(err)
