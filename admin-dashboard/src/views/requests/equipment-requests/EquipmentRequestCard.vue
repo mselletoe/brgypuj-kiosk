@@ -121,6 +121,7 @@ const buttonConfigs = {
   rejected: [
     { id: 'details', label: 'Details', variant: 'primary' },
     { id: 'notes', label: 'Notes', variant: 'gray' },
+    { id: 'notify', label: 'Notify', variant: 'solidgreen' },
     { id: 'undo', label: '', icon: ArrowUturnLeftIcon, variant: 'undo' },
     { id: 'delete', label: '', icon: TrashIcon, variant: 'delete' }
   ]

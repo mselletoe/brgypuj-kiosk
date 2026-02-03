@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import EquipmentRequestCard from '@/views/requests/equipment-requests/EquipmentRequestCard.vue'
 import ConfirmModal from '@/components/shared/ConfirmationModal.vue'
+import SMSModal from '@/components/shared/SendSMSModal.vue'
 import {
   getEquipmentRequests,
   markAsReturned,
@@ -25,6 +26,10 @@ const selectedRequests = ref(new Set())
 const showConfirmModal = ref(false)
 const confirmTitle = ref('Are you sure?')
 const confirmAction = ref(null)
+const showSmsModal = ref(false)
+const smsRecipientName = ref('')
+const smsRecipientPhone = ref('')
+const smsDefaultMessage = ref('')
 
 const fetchPickedUpRequests = async () => {
   isLoading.value = true
@@ -173,7 +178,7 @@ const handleButtonClick = ({ action, requestId }) => {
       console.log(`Opening notes for request ${requestId}`)
       break
     case 'notify':
-      console.log(`Sending notification for request ${requestId}`)
+      handleNotify(request)
       break
     case 'returned':
       handleReturned(requestId)
@@ -186,6 +191,46 @@ const handleButtonClick = ({ action, requestId }) => {
       break
     default:
       console.log(`Action ${action} not implemented yet`)
+  }
+}
+
+const handleNotify = (request) => {
+  const fullName = [
+    request.requester.firstName,
+    request.requester.middleName,
+    request.requester.lastName
+  ].filter(Boolean).join(' ')
+
+  smsRecipientName.value = fullName || 'Resident'
+  smsRecipientPhone.value = request.raw?.resident_phone || ''
+  smsDefaultMessage.value = `Hello ${request.requester.firstName || 'Resident'},
+
+Just a reminder for your request ${request.requestType} request (Transaction #${request.transaction_no}) is to be returned soon.
+
+Thank you!`
+
+  showSmsModal.value = true
+}
+
+const handleSendSMS = async (smsData) => {
+  try {
+    console.log('Sending SMS:', smsData)
+    
+    // TODO: Implement actual SMS sending API call
+    // Example:
+    // await sendSMS({
+    //   phone: smsData.phone,
+    //   message: smsData.message,
+    //   recipientName: smsData.recipientName
+    // })
+    
+    // For now, just log the data
+    console.log('SMS would be sent to:', smsData.phone)
+    console.log('Message:', smsData.message)
+    
+  } catch (error) {
+    console.error('Error sending SMS:', error)
+    throw error // Re-throw to let the modal handle the error display
   }
 }
 
@@ -301,5 +346,14 @@ const filteredRequests = computed(() => {
     cancel-text="Cancel"
     @confirm="handleConfirm"
     @cancel="handleCancel"
+  />
+
+  <SMSModal
+    :show="showSmsModal"
+    :recipient-name="smsRecipientName"
+    :recipient-phone="smsRecipientPhone"
+    :default-message="smsDefaultMessage"
+    @update:show="(value) => showSmsModal = value"
+    @send="handleSendSMS"
   />
 </template>

@@ -40,6 +40,8 @@ def _format_request_for_admin(request):
     """Helper to format request with resident data and items"""
     # Get the active RFID if resident exists
     rfid_display = None
+    phone_number = None
+
     if request.resident and hasattr(request.resident, 'rfids'):
         # Get the first active RFID if available
         active_rfid = next(
@@ -47,6 +49,7 @@ def _format_request_for_admin(request):
             None
         )
         rfid_display = active_rfid
+        phone_number = request.resident.phone_number
 
     return {
         "id": request.id,
@@ -56,6 +59,7 @@ def _format_request_for_admin(request):
         "resident_middle_name": request.resident.middle_name if request.resident else None,
         "resident_last_name": request.resident.last_name if request.resident else None,
         "resident_rfid": rfid_display,
+        "resident_phone": phone_number,
         "contact_person": request.contact_person,
         "contact_number": request.contact_number,
         "purpose": request.purpose,

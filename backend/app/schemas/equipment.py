@@ -163,6 +163,7 @@ class EquipmentRequestAdminOut(BaseModel):
     resident_middle_name: Optional[str]
     resident_last_name: Optional[str]
     resident_rfid: Optional[str]
+    resident_phone: Optional[str]
 
     contact_person: Optional[str]
     contact_number: Optional[str]

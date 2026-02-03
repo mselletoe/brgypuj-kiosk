@@ -184,19 +184,14 @@ const handleButtonClick = async ({ action, requestId }) => {
 }
 
 const handleNotify = (request) => {
-  // Build full name
   const fullName = [
     request.requester.firstName,
     request.requester.middleName,
     request.requester.lastName
   ].filter(Boolean).join(' ')
 
-  // Set modal data
   smsRecipientName.value = fullName || 'Resident'
-  // Use resident_phone from the raw data (coming from backend)
   smsRecipientPhone.value = request.raw?.resident_phone || ''
-  
-  // Create a default message with request details
   smsDefaultMessage.value = `Hello ${request.requester.firstName || 'Resident'},
 
 Your ${request.requestType} request (Transaction #${request.transaction_no}) has been approved and is ready for pickup.
@@ -205,7 +200,6 @@ Please visit the office during business hours to claim your document.
 
 Thank you!`
 
-  // Show the modal
   showSmsModal.value = true
 }
 
