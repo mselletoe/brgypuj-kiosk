@@ -174,7 +174,6 @@ const handleDone = () => {
       </div>
     </div>
 
-
     <div class="flex gap-6 mt-6 justify-between items-center bottom-0 flex-shrink-0">
       <Button
         @click="handlePageBack"

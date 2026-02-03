@@ -1,6 +1,7 @@
 <script setup>
 import { ref, watch, onMounted } from 'vue'
 import ArrowBackButton from '@/components/shared/ArrowBackButton.vue'
+import Button from '@/components/shared/Button.vue'
 import { useRoute, useRouter } from 'vue-router'
 
 const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
@@ -11,28 +12,25 @@ const router = useRouter()
 const lastNameLetter = ref('A')
 const firstNameLetter = ref('A')
 
-const residents = ref([])  
+const residents = ref([
+  { id: '1', name: 'Alice Adams', birthdate: '1990-01-01', address: '123 Main St', has_rfid: false },
+  { id: '2', name: 'Bob Brown', birthdate: '1985-05-12', address: '456 Oak Ave', has_rfid: true },
+  { id: '3', name: 'Charlie Clark', birthdate: '1992-07-23', address: '789 Pine Rd', has_rfid: false }
+])
+const filteredResidents = ref([...residents.value])
 const selectedResidentId = ref('')
 const residentDetails = ref({})
 const registrationSummary = ref({ idNum: '', name: '' })
 
-const scannedUid = ref(route.query.uid || '')
-
-const fetchResidents = async () => {
-  try {
-    const res = await api.get('/residents/filter', {
-      params: {
-        last_letter: lastNameLetter.value,
-        first_letter: firstNameLetter.value,
-      },
-    })
-    residents.value = res.data
-  } catch (err) {
-    console.error('❌ Failed to fetch residents:', err)
-  }
+// Filter residents locally by first letters
+const filterResidents = () => {
+  filteredResidents.value = residents.value.filter(
+    r => r.name.split(' ')[0].startsWith(firstNameLetter.value) &&
+         r.name.split(' ')[1]?.startsWith(lastNameLetter.value)
+  )
 }
 
-watch([lastNameLetter, firstNameLetter], fetchResidents, { immediate: true })
+watch([lastNameLetter, firstNameLetter], filterResidents, { immediate: true })
 
 watch(selectedResidentId, (id) => {
   const res = residents.value.find((r) => r.id === id)
@@ -51,13 +49,8 @@ watch(selectedResidentId, (id) => {
   }
 })
 
-// --- Register RFID ---
-const handleRegister = async () => {
-  if (!scannedUid.value) {
-    alert('⚠️ No RFID UID detected. Please scan a card first.')
-    return
-  }
-
+// --- Register Resident ---
+const handleRegister = () => {
   if (!selectedResidentId.value) {
     alert('⚠️ Please select a resident first.')
     return
@@ -65,39 +58,20 @@ const handleRegister = async () => {
 
   const selectedResident = residents.value.find(r => r.id === selectedResidentId.value)
   if (selectedResident?.has_rfid) {
-    alert('⚠️ This resident already has a registered RFID.')
+    alert('⚠️ This resident is already registered.')
     return
   }
 
-  try {
-    const res = await api.post('/rfid/register', {
-      resident_id: selectedResidentId.value,
-      rfid_uid: scannedUid.value,
-    })
-
-    alert(`✅ RFID successfully linked to ${registrationSummary.value.name}!`)
-
-    setTimeout(() => router.push('/rfid-success'), 500)
-
-  } catch (err) {
-
-    const msg = err.response?.data?.detail || ''
-
-    if (msg.includes('already registered')) {
-      alert('⚠️ This RFID tag is already linked to another resident.')
-    } else if (msg.includes('Resident not found')) {
-      alert('⚠️ Resident not found. Please try again.')
-    } else {
-      alert('❌ An unexpected error occurred while linking RFID.')
-    }
-  }
+  // Simulate registration
+  selectedResident.has_rfid = true
+  alert(`✅ ${registrationSummary.value.name} successfully registered!`)
 }
 
 const handleReset = () => {
   lastNameLetter.value = 'A'
   firstNameLetter.value = 'A'
   selectedResidentId.value = ''
-  residents.value = []
+  filteredResidents.value = [...residents.value]
   residentDetails.value = {}
   registrationSummary.value = { idNum: '', name: '' }
 }
@@ -110,109 +84,63 @@ const goBackToHome = () => {
     router.push('/login')
   }
 }
-
-onMounted(() => {
-  if (!route.query.uid) {
-    alert('⚠️ No RFID UID detected. Please scan a card first.');
-    router.push('/login');
-    return;
-  }
-  scannedUid.value = route.query.uid;
-});
 </script>
 
 <template>
-  <div class="py-0 p-8">
-    <div class="flex flex-col items-center gap-6">
-      <!-- Header -->
-      <div class="header flex gap-4 w-full items-center mb-4">
-        <ArrowBackButton @click="goBackToHome" />
-        <div class="flex justify-between w-full">
-          <h1 class="text-4xl font-bold text-[#013C6D]">Link RFID to Resident</h1>
-          <h1 class="text-4xl font-light text-[#013C6D]">
-            {{ scannedUid || 'No UID detected' }}
+  <div class="flex flex-col w-full h-full">
+    <!-- Header -->
+    <div class="flex items-center mb-6 gap-7 flex-shrink-0">
+      <ArrowBackButton @click="goBack"/>
+      <div class="flex justify-between items-center w-full">
+        <div>
+          <h1 class="text-[45px] text-[#03335C] font-bold tracking-tight -mt-2">
+            Register
           </h1>
+          <p class="text-[#03335C] -mt-2">
+            Register a new RFID for a resident.
+          </p>
+        </div>
+
+        <h1 class="text-[#03335C] font-bold text-[45px]">0921843094</h1>
+      </div>
+
+    </div>
+
+    <div class="flex flex-1 gap-8 w-full">
+      <!-- Left Panel -->
+      <div class="bg-white rounded-2xl shadow-lg p-6 flex-1 border-2 border-[#C1C1C1] text-[#003A6B]">
+        <p>Select a request transaction no.</p>
+
+        <div class="grid grid-cols-4 mt-5 gap-6">
+          <div class="text-[#B1202A] bg-[#FFE6E6] rounded-xl shadow-sm px-4 py-3 border-2 border-[#FBBABA] text-center font-bold text-xl">
+            <p>1232</p>
+          </div>
         </div>
       </div>
 
-      <div class="flex gap-8 w-full">
-        <!-- Left Panel -->
-        <div class="bg-white rounded-2xl shadow-lg p-8 flex-1 border-2 border-[#C1C1C1] text-[#003A6B]">
-          <!-- Last Name Selection -->
-          <div class="mb-5 flex items-center gap-4">
-            <label class="flex items-center gap-2 font-medium flex-1">
-              Select first letter of your <span class="font-bold">LAST NAME</span>
-            </label>
-            <select
-              v-model="lastNameLetter"
-              class="w-20 px-3 py-1 border-2 border-gray-300 rounded-lg text-center focus:outline-none focus:border-blue-500 text-gray-700"
-            >
-              <option v-for="letter in alphabet" :key="letter" :value="letter">{{ letter }}</option>
-            </select>
-          </div>
-
-          <!-- First Name Selection -->
-          <div class="mb-5 flex items-center gap-4">
-            <label class="flex items-center gap-2 font-medium flex-1">
-              Select first letter of your <span class="font-bold">FIRST NAME</span>
-            </label>
-            <select
-              v-model="firstNameLetter"
-              class="w-20 px-3 py-1 border-2 border-gray-300 rounded-lg text-center focus:outline-none focus:border-blue-500 text-gray-700"
-            >
-              <option v-for="letter in alphabet" :key="letter" :value="letter">{{ letter }}</option>
-            </select>
-          </div>
-
-          <!-- Resident Selection -->
-          <div class="mb-6">
-            <label class="flex items-center gap-2 font-medium mb-2">Select Resident</label>
-            <select
-              v-model="selectedResidentId"
-              class="w-full px-4 py-1 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-gray-700"
-            >
-              <option disabled value="">Select Resident</option>
-              <option v-for="resident in residents" :key="resident.id" :value="resident.id">
-                {{ resident.name }}
-                {{ resident.has_rfid ? '🔒' : '🆕' }}
-              </option>
-            </select>
-          </div>
-
-          <!-- Resident Details -->
-          <div class="bg-gray-50 rounded-lg p-3">
-            <h3 class="font-bold mb-1">Resident Details</h3>
-            <p class="text-sm"><span class="font-medium">Birthday:</span> {{ residentDetails.birthday || '—' }}</p>
-            <p class="text-sm"><span class="font-medium">Address:</span> {{ residentDetails.address || '—' }}</p>
-          </div>
-        </div>
-
-        <!-- Right Panel -->
-        <div class="w-80 flex flex-col gap-4 text-[#003A6B]">
-          <div class="bg-[#E4F5FC] rounded-2xl shadow-lg p-6 border-2 border-[#A3CDDE]">
-            <h2 class="font-bold text-2xl text-center mb-6">Registration Summary</h2>
-            <div class="space-y-3">
-              <p><span class="font-bold">RFID UID:</span> {{ scannedUid }}</p>
-              <p><span class="font-bold">Resident ID:</span> {{ registrationSummary.idNum }}</p>
-              <p><span class="font-bold">Name:</span> {{ registrationSummary.name }}</p>
-            </div>
-          </div>
-
-          <!-- Buttons -->
-          <button
-            @click="handleReset"
-            class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-4 rounded-xl shadow-lg transition-colors"
-          >
-            Reset
-          </button>
-          <button
-            @click="handleRegister"
-            class="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold py-4 rounded-xl shadow-lg transition-colors"
-          >
-            Link RFID
-          </button>
+      <!-- Right Panel -->
+      <div class="flex flex-col text-[#003A6B] bg-[#E4F5FC] rounded-2xl shadow-lg p-6 w-[400px] border-2 border-[#A3CDDE] text-center">
+        <h2 class="font-bold text-2xl text-center">Resident Details</h2>
+        <p class="italic text-[9px]">Please check the residents details before proceeding.</p>
+        <div class="text-start mt-3">
+          <p><span class="font-bold">Name:</span> {{ registrationSummary.name }}</p>
+          <p><span class="font-bold">Birthdate:</span> {{ registrationSummary.birthdate }}</p>
+          <p><span class="font-bold">Address:</span> {{ registrationSummary.address }}</p>
         </div>
       </div>
+    </div>
+
+    <div class="flex gap-6 mt-6 justify-between items-center bottom-0 flex-shrink-0">
+      <Button
+        variant="outline"
+      >
+        Cancel
+      </Button>
+      <Button
+        :variant="secondary"
+      >
+        Submit
+      </Button>
     </div>
   </div>
 </template>

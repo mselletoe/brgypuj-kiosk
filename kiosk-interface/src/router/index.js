@@ -71,7 +71,7 @@ const routes = [
       { path: 'register', name: 'Register', component: Register },
       { path: 'component-showcase', name: 'DevShowcase', component: ComponentShowcase },
       { path: 'transaction-history', name: 'TransactionHistory', component: TransactionHistory },
-      { path: '/id-services', name: 'IDServices', component: IDServices }
+      { path: 'id-services', name: 'IDServices', component: IDServices }
     ]
   },
   
