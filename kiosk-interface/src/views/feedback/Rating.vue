@@ -46,7 +46,7 @@ const goBack = () => {
       </div>
     </div>
 
-    <div class="text-center mb-12">
+    <div class="text-center mt-8 mb-12">
       <h2 class="text-[42px] text-[#03335C] font-bold leading-none">
         Rate our {{ feedbackCategory }}
       </h2>
@@ -55,12 +55,12 @@ const goBack = () => {
       </p>
     </div>
 
-    <div class="flex justify-center gap-5 px-6">
+    <div class="flex justify-center gap-6 px-6">
       <div 
         v-for="rating in ratings" 
         :key="rating.stars"
         @click="handleRatingClick(rating.stars, rating.text)"
-        class="flex flex-col items-center justify-center flex-1 aspect-[4/5] rounded-[25px] cursor-pointer transition-all active:scale-95 shadow-xl p-4"
+        class="flex flex-col items-center justify-center flex-1 aspect-[4/5] rounded-[25px] cursor-pointer transition-all active:scale-95 shadow-[4px_4px_8px_rgba(0,0,0,0.25),inset_2px_2px_4px_rgba(255,255,255,0.6),inset_-2px_-2px_6px_rgba(0,0,0,0.15)] p-4"
         :style="{ backgroundColor: rating.color }"
       >
         <img 
