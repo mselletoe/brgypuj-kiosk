@@ -1,6 +1,10 @@
 <script setup>
-import { computed } from 'vue';
+import { ref, computed } from 'vue'
+import { NPopover, NInput, NButton } from 'naive-ui'
 import { TrashIcon, ArrowUturnLeftIcon } from '@heroicons/vue/24/solid';
+
+const notes = ref('')
+const showNotesPopover = ref(false)
 
 const props = defineProps({
   id: {
@@ -50,6 +54,17 @@ const props = defineProps({
     default: false
   }
 });
+
+const saveNotes = () => {
+  emit('button-click', {
+    action: 'notes',
+    requestId: props.id,
+    notes: notes.value
+  })
+
+  showNotesPopover.value = false
+  notes.value = ''
+}
 
 const emit = defineEmits(['button-click', 'update:isPaid', 'update:selected']);
 
@@ -249,20 +264,60 @@ const handleButtonClick = (buttonId, btn) => {
       </div>
 
       <div class="flex items-center gap-2">
-        <button
-          v-for="btn in visibleButtons"
-          :key="btn.id"
-          @click="handleButtonClick(btn.id, btn)"
-          :disabled="isButtonDisabled(btn)"
-          :class="[
-            getButtonClass(btn),
-            ['delete', 'undo'].includes(btn.id) ? 'w-9 px-0' : 'px-4'
-          ]"
-          class="h-9 rounded-md text-sm font-semibold transition-all flex items-center justify-center"
-        >
-          {{ btn.label }}
-          <component v-if="!btn.label" :is="btn.icon" class="w-5 h-5" />
-        </button>
+        <template v-for="btn in visibleButtons" :key="btn.id">
+
+          <!-- NOTES BUTTON -->
+          <n-popover
+            v-if="btn.id === 'notes'"
+            trigger="click"
+            placement="bottom-end"
+            v-model:show="showNotesPopover"
+            :show-arrow="false"
+          >
+            <template #trigger>
+              <button
+                :class="[getButtonClass(btn), 'px-4']"
+                class="h-9 rounded-md text-sm font-semibold flex items-center justify-center"
+              >
+                {{ btn.label }}
+              </button>
+            </template>
+
+            <div class="flex w-72 p-1 gap-3 items-center">
+              <n-input
+                v-model:value="notes"
+                type="textarea"
+                size="medium"
+                placeholder="Add notes..."
+                class="h-9"
+              />
+              <n-button
+                size="small"
+                type="primary"
+                @click="saveNotes"
+                :disabled="!notes.trim()"
+              >
+                Save
+              </n-button>
+            </div>
+          </n-popover>
+
+          <!-- ALL OTHER BUTTONS -->
+          <button
+            v-else
+            @click="handleButtonClick(btn.id, btn)"
+            :disabled="isButtonDisabled(btn)"
+            :class="[
+              getButtonClass(btn),
+              ['delete', 'undo'].includes(btn.id) ? 'w-9 px-0' : 'px-4'
+            ]"
+            class="h-9 rounded-md text-sm font-semibold transition-all flex items-center justify-center"
+          >
+            {{ btn.label }}
+            <component v-if="!btn.label" :is="btn.icon" class="w-5 h-5" />
+          </button>
+
+        </template>
       </div>
     </div>
   </div>
