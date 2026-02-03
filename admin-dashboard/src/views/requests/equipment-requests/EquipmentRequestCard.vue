@@ -182,6 +182,7 @@ const handleButtonClick = (buttonId, btn) => {
       isSelected ? 'border-[#0957FF] ring-1 ring-[#0957FF]/10 shadow-sm bg-[#F0F5FF]' : 'border-[#CCCCCC] bg-white'
     ]"
   >
+    <!-- Transaction Number -->
     <div class="flex flex-col items-center justify-center space-y-1">
       <div class="flex justify-center bg-[#F0F5FF] border border-[#D4DFF6] rounded px-4 py-1 min-w-[90px]">
         <div class="text-lg font-bold text-slate-700 leading-tight">{{ transactionNo }}</div>        
@@ -189,57 +190,72 @@ const handleButtonClick = (buttonId, btn) => {
       <div class="text-[9px] text-gray-400 font-medium">Transaction No.</div>
     </div>
 
+    <!-- Details -->
     <div class="flex-1 flex flex-col gap-3">
+      <!-- Request Type Name -->
       <h3 class="text-xl font-bold text-slate-800 leading-none">
         {{ requestType }}
       </h3>
       
+      <!-- Request Details -->
       <div class="flex gap-16">
-        <div class="flex flex-col">
-          <span class="text-[11px] text-gray-400 font-medium">Request from</span>
-          <span class="text-sm text-slate-700 font-bold">
-            {{ requester.firstName }} {{ requester.middleName }} {{ requester.lastName }}
-          </span>
-        </div>
 
-        <div class="flex flex-col">
-          <span class="text-[11px] text-gray-400 font-medium">RFID No.</span>
-          <span class="text-sm font-bold text-blue-600">
-            {{ rfidNo }}
-          </span>
-        </div>
-      </div>
-
-      <div class="flex gap-16">
-        <div class="flex flex-col">
-          <span class="text-[11px] text-gray-400 font-medium">Requested on</span>
-          <span class="text-sm text-slate-700 font-bold">{{ requestedOn }}</span>
-        </div>
-
-        <div class="flex flex-col">
-          <span class="text-[11px] text-gray-400 font-medium">Borrowing Period</span>
-          <div class="flex items-center gap-2">
+        <!-- Column 1 -->
+        <div class="flex flex-col gap-3">
+          <!-- Full Name -->
+          <div class="flex flex-col">
+            <span class="text-[11px] text-gray-400 font-medium">Request from</span>
             <span class="text-sm text-slate-700 font-bold">
-              {{ borrowingPeriod.from }} - {{ borrowingPeriod.to }}
+              {{ requester.firstName }} {{ requester.middleName }} {{ requester.lastName }}
             </span>
-            <span 
-              v-if="dueStatus === 'overdue'" 
-              class="px-2 py-0.5 bg-red-100 text-red-600 rounded text-[10px] font-bold uppercase"
-            >
-              Past Due
+          </div>
+
+          <!-- RFID No. -->
+          <div class="flex flex-col">
+            <span class="text-[11px] text-gray-400 font-medium">RFID No.</span>
+            <span class="text-sm font-bold text-blue-600">
+              {{ rfidNo }}
             </span>
-            <span 
-              v-else-if="dueStatus === 'duetoday'" 
-              class="px-2 py-0.5 bg-green-100 text-green-600 rounded text-[10px] font-bold uppercase"
-            >
-              Due Today
-            </span>
+          </div>
+        </div>
+
+        <!-- Column 2 -->
+        <div class="flex flex-col gap-3">
+          <!-- Requested Date -->
+          <div class="flex flex-col">
+            <span class="text-[11px] text-gray-400 font-medium">Requested on</span>
+            <span class="text-sm text-slate-700 font-bold">{{ requestedOn }}</span>
+          </div>
+
+          <!-- Borrowing Period -->
+          <div class="flex flex-col">
+            <span class="text-[11px] text-gray-400 font-medium">Borrowing Period</span>
+            <div class="flex items-center gap-2">
+              <span class="text-sm text-slate-700 font-bold">
+                {{ borrowingPeriod.from }} - {{ borrowingPeriod.to }}
+              </span>
+              <span 
+                v-if="dueStatus === 'overdue'" 
+                class="px-2 py-0.5 bg-red-100 text-red-600 rounded text-[10px] font-bold uppercase"
+              >
+                Past Due
+              </span>
+              <span 
+                v-else-if="dueStatus === 'duetoday'" 
+                class="px-2 py-0.5 bg-green-100 text-green-600 rounded text-[10px] font-bold uppercase"
+              >
+                Due Today
+              </span>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
+    <!-- Buttons -->
     <div class="flex flex-col items-end gap-4 min-w-fit">
+
+      <!-- Checkbox -->
       <div class="flex items-center gap-3">
         <input 
           type="checkbox" 
@@ -249,6 +265,7 @@ const handleButtonClick = (buttonId, btn) => {
         />
       </div>
 
+      <!-- Payment Status -->
       <div v-if="amount" class="flex items-center gap-3">
         <button
           v-if="status === 'pending'"
@@ -272,10 +289,10 @@ const handleButtonClick = (buttonId, btn) => {
         </div>
       </div>
 
+      <!-- Action Buttons -->
       <div class="flex items-center gap-2">
         <template v-for="btn in visibleButtons" :key="btn.id">
-
-          <!-- NOTES BUTTON -->
+          <!-- Notes Button -->
           <n-popover
             v-if="btn.id === 'notes'"
             trigger="click"
@@ -311,7 +328,7 @@ const handleButtonClick = (buttonId, btn) => {
             </div>
           </n-popover>
 
-          <!-- ALL OTHER BUTTONS -->
+          <!-- Other Buttons -->
           <button
             v-else
             @click="handleButtonClick(btn.id, btn)"
@@ -325,7 +342,6 @@ const handleButtonClick = (buttonId, btn) => {
             {{ btn.label }}
             <component v-if="!btn.label" :is="btn.icon" class="w-5 h-5" />
           </button>
-
         </template>
       </div>
     </div>
