@@ -1,8 +1,7 @@
 <script setup>
 import { ref, watch, computed, onMounted } from 'vue'
 import { 
-  NModal, 
-  NCard, 
+  NModal,
   NInput, 
   NButton, 
   NSwitch,
@@ -42,6 +41,23 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'saved'])
 const message = useMessage()
+const originalFormData = ref(null)
+
+function normalizeForm(data) {
+  return JSON.stringify({
+    ...data,
+    birthdate: data.birthdate ? Number(data.birthdate) : null,
+    residency_start_date: data.residency_start_date
+      ? Number(data.residency_start_date)
+      : null
+  })
+}
+
+const isFormChanged = computed(() => {
+  if (!originalFormData.value) return false
+  return normalizeForm(formData.value) !== normalizeForm(originalFormData.value)
+})
+
 
 // Loading states
 const loading = ref(false)
@@ -198,6 +214,9 @@ async function loadResidentDetails() {
       rfid_uid: data.active_rfid?.rfid_uid || '',
       is_active: data.active_rfid?.is_active ?? true
     }
+
+    originalFormData.value = JSON.parse(JSON.stringify(formData.value))
+
   } catch (error) {
     console.error('Failed to load resident details:', error)
     message.error('Failed to load resident details')
@@ -227,6 +246,8 @@ function resetForm() {
     rfid_uid: '',
     is_active: true
   }
+
+  originalFormData.value = JSON.parse(JSON.stringify(formData.value))
 }
 
 // Convert timestamp to YYYY-MM-DD format
@@ -349,7 +370,7 @@ function handleClose() {
     :mask-closable="false"
   >
     <div
-      class="w-[900px] max-h-[90vh] overflow-y-auto bg-white rounded-xl shadow-lg flex flex-col"
+      class="w-[900px] max-h-[90vh] overflow-hidden bg-white rounded-xl shadow-lg flex flex-col"
       role="dialog"
       aria-modal="true"
     >
@@ -373,146 +394,9 @@ function handleClose() {
       </div>
 
       <!-- CONTENT -->
-      <div v-else class="px-6 py-6 space-y-6">
-        <!-- VIEW MODE - Display Details -->
-        <div v-if="mode === 'view' && residentDetails" class="space-y-6">
-          <!-- Personal Information -->
-          <div>
-            <h3 class="text-sm font-semibold text-gray-700 mb-3 pb-2 border-b">
-              Personal Information
-            </h3>
-            <div class="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
-              <div>
-                <span class="text-gray-500">First Name:</span>
-                <span class="ml-2 font-medium">{{ residentDetails.first_name }}</span>
-              </div>
-              <div>
-                <span class="text-gray-500">Middle Name:</span>
-                <span class="ml-2 font-medium">{{ residentDetails.middle_name || 'N/A' }}</span>
-              </div>
-              <div>
-                <span class="text-gray-500">Last Name:</span>
-                <span class="ml-2 font-medium">{{ residentDetails.last_name }}</span>
-              </div>
-              <div>
-                <span class="text-gray-500">Suffix:</span>
-                <span class="ml-2 font-medium">{{ residentDetails.suffix || 'N/A' }}</span>
-              </div>
-              <div>
-                <span class="text-gray-500">Gender:</span>
-                <span class="ml-2 font-medium capitalize">{{ residentDetails.gender }}</span>
-              </div>
-              <div>
-                <span class="text-gray-500">Birthdate:</span>
-                <span class="ml-2 font-medium">{{ residentDetails.birthdate }}</span>
-              </div>
-              <div>
-                <span class="text-gray-500">Age:</span>
-                <span class="ml-2 font-medium">{{ residentDetails.age }} years old</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Contact Information -->
-          <div>
-            <h3 class="text-sm font-semibold text-gray-700 mb-3 pb-2 border-b">
-              Contact Information
-            </h3>
-            <div class="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
-              <div>
-                <span class="text-gray-500">Email:</span>
-                <span class="ml-2 font-medium">{{ residentDetails.email || 'N/A' }}</span>
-              </div>
-              <div>
-                <span class="text-gray-500">Phone Number:</span>
-                <span class="ml-2 font-medium">{{ residentDetails.phone_number || 'N/A' }}</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Address Information -->
-          <div>
-            <h3 class="text-sm font-semibold text-gray-700 mb-3 pb-2 border-b">
-              Address Information
-            </h3>
-            <div class="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
-              <div class="col-span-2">
-                <span class="text-gray-500">Full Address:</span>
-                <span class="ml-2 font-medium">
-                  {{ residentDetails.current_address?.house_no_street }}, 
-                  {{ residentDetails.current_address?.purok?.purok_name }}, 
-                  {{ residentDetails.current_address?.barangay }}, 
-                  {{ residentDetails.current_address?.municipality }}, 
-                  {{ residentDetails.current_address?.province }}
-                </span>
-              </div>
-              <div>
-                <span class="text-gray-500">House No./Street:</span>
-                <span class="ml-2 font-medium">{{ residentDetails.current_address?.house_no_street || 'N/A' }}</span>
-              </div>
-              <div>
-                <span class="text-gray-500">Purok:</span>
-                <span class="ml-2 font-medium">{{ residentDetails.current_address?.purok?.purok_name || 'N/A' }}</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Residency Information -->
-          <div>
-            <h3 class="text-sm font-semibold text-gray-700 mb-3 pb-2 border-b">
-              Residency Information
-            </h3>
-            <div class="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
-              <div>
-                <span class="text-gray-500">Residency Start Date:</span>
-                <span class="ml-2 font-medium">{{ residentDetails.residency_start_date }}</span>
-              </div>
-              <div>
-                <span class="text-gray-500">Years of Residency:</span>
-                <span class="ml-2 font-medium">{{ residentDetails.years_of_residency }} years</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- RFID Information -->
-          <div>
-            <h3 class="text-sm font-semibold text-gray-700 mb-3 pb-2 border-b">
-              RFID Information
-            </h3>
-            <div class="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
-              <div>
-                <span class="text-gray-500">RFID No.:</span>
-                <span class="ml-2 font-medium">{{ residentDetails.active_rfid?.rfid_uid || 'N/A' }}</span>
-              </div>
-              <div>
-                <span class="text-gray-500">Status:</span>
-                <span 
-                  class="ml-2 font-medium"
-                  :class="residentDetails.active_rfid?.is_active ? 'text-green-600' : 'text-red-600'"
-                >
-                  {{ residentDetails.active_rfid?.is_active ? 'Active' : 'Inactive' }}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Transaction History -->
-          <div>
-            <NCollapse>
-              <NCollapseItem title="Transaction History" name="transactions">
-                <NDataTable
-                  :columns="transactionColumns"
-                  :data="transactionHistory"
-                  :bordered="false"
-                  size="small"
-                />
-              </NCollapseItem>
-            </NCollapse>
-          </div>
-        </div>
-
+      <div v-else class="px-6 py-6 space-y-6 overflow-y-auto">
         <!-- ADD/EDIT MODE - Form -->
-        <div v-else class="space-y-4">
+        <div class="space-y-4">
           <!-- Name Fields -->
           <div class="grid grid-cols-4 gap-4">
             <div>
@@ -562,7 +446,6 @@ function handleClose() {
                 type="date"
                 placeholder="Select Birthdate"
                 class="w-full"
-                :disabled="mode === 'view'"
               />
             </div>
             <div>
@@ -572,7 +455,6 @@ function handleClose() {
                 type="date"
                 placeholder="Select Date"
                 class="w-full"
-                :disabled="mode === 'view'"
               />
             </div>
           </div>
@@ -627,31 +509,35 @@ function handleClose() {
               </div>
             </div>
           </div>
+
+          <div>
+            <NCollapse>
+              <NCollapseItem title="Transaction History" name="transactions">
+                <NDataTable
+                  :columns="transactionColumns"
+                  :data="transactionHistory"
+                  :bordered="false"
+                  size="small"
+                />
+              </NCollapseItem>
+            </NCollapse>
+          </div>
         </div>
       </div>
 
       <!-- FOOTER -->
       <div class="flex justify-end gap-3 px-6 py-4 border-t">
         <NButton @click="handleClose" :disabled="saving">
-          {{ mode === 'view' ? 'Close' : 'Cancel' }}
+          Cancel
         </NButton>
 
         <NButton
-          v-if="mode !== 'view'"
           type="primary"
           @click="handleSave"
           :loading="saving"
-          :disabled="saving"
+          :disabled="saving || (mode === 'view' && !isFormChanged)"
         >
-          {{ mode === 'add' ? 'Save' : 'Update' }}
-        </NButton>
-
-        <NButton
-          v-if="mode === 'view'"
-          type="primary"
-          @click="mode = 'edit'"
-        >
-          Edit
+          Save
         </NButton>
       </div>
     </div>

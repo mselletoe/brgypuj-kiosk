@@ -194,7 +194,7 @@ const columns = computed(() => [
   {
     title: 'RFID No.',
     key: 'rfid_no',
-    width: 120,
+    width: 150,
     render(row) {
       return row.rfid_no || 'N/A'
     }
@@ -202,7 +202,7 @@ const columns = computed(() => [
   {
     title: 'Current Address',
     key: 'current_address',
-    width: 300,
+    minWidth: 250,
     render(row) {
       return row.current_address || 'N/A'
     }
