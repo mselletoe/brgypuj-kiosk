@@ -40,6 +40,7 @@ const badgeColorClass = computed(() => {
       isSelected ? 'border-[#0957FF] ring-1 ring-[#0957FF]/10 shadow-sm bg-[#F0F5FF]' : 'border-[#CCCCCC] bg-white'
     ]"
   >
+    <!-- Reference No. -->
     <div class="flex flex-col items-center justify-center space-y-1">
       <div 
         class="flex justify-center border rounded px-4 py-1 min-w-[90px]"
@@ -47,10 +48,12 @@ const badgeColorClass = computed(() => {
       >
         <div class="text-lg font-bold text-slate-700">{{ id }}</div>        
       </div>
-      <div class="text-[9px] text-gray-400 font-medium uppercase tracking-wider">Reference</div>
+      <div class="text-[9px] text-gray-400 font-medium uppercase tracking-wider">Reference No.</div>
     </div>
 
     <div class="flex-1 grid grid-cols-12 gap-4">
+
+      <!-- Category Name -->
       <div class="col-span-12">
         <h3 class="text-xl font-bold text-slate-800">{{ title }}</h3>
       </div>
@@ -89,7 +92,7 @@ const badgeColorClass = computed(() => {
         </div>
       </div>
 
-      <div class="col-span-6">
+      <div v-if="type === 'feedback'" class="col-span-6">
         <span class="block text-[11px] text-gray-400 font-medium">Additional Comment</span>
         <p class="text-sm text-slate-600 leading-relaxed italic">
           {{ comment || 'No comments provided.' }}
