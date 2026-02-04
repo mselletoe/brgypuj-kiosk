@@ -167,19 +167,18 @@ const handleSubmit = async () => {
       </Button>
     </div>
 
-    <!-- Modal overlay -->
     <div
       v-if="isModalVisible"
       class="fixed inset-0 z-[1000]
-             flex items-center justify-center
-             bg-black/40"
+            flex items-center justify-center
+            bg-black/40"
     >
       <Modal
         title="Feedback Submitted!"
         message="Thank you for taking the time to share your thoughts with us."
-        :showNewRequest="false"
-        doneText="Done"
-        @done="closeModal"
+        :showSecondaryButton="false"
+        primaryButtonText="Done"
+        @primary-click="closeModal"
       />
     </div>
   </div>

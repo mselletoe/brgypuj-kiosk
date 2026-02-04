@@ -43,7 +43,7 @@ const badgeColorClass = computed(() => {
     <!-- Reference No. -->
     <div class="flex flex-col items-center justify-center space-y-1">
       <div 
-        class="flex justify-center border rounded px-4 py-1 min-w-[90px]"
+        class="flex justify-center border rounded px-4 min-w-[90px]"
         :class="badgeColorClass"
       >
         <div class="text-lg font-bold text-slate-700">{{ id }}</div>        
