@@ -51,52 +51,60 @@ const badgeColorClass = computed(() => {
       <div class="text-[9px] text-gray-400 font-medium uppercase tracking-wider">Reference No.</div>
     </div>
 
-    <div class="flex-1 grid grid-cols-12 gap-4">
-
+    <div class="flex-1 flex flex-col gap-3">
       <!-- Category Name -->
-      <div class="col-span-12">
-        <h3 class="text-xl font-bold text-slate-800">{{ title }}</h3>
-      </div>
+      <h3 class="text-xl font-bold text-slate-800">{{ title }}</h3>
       
-      <div class="col-span-3 flex flex-col gap-3">
-        <div>
-          <span class="block text-[11px] text-gray-400 font-medium">Feedback from</span>
-          <span class="text-sm text-slate-700 font-bold">
-            {{ requester.firstName }} {{ requester.middleName }} {{ requester.surname }}
-          </span>
-        </div>
-        <div>
-          <span class="block text-[11px] text-gray-400 font-medium">RFID No.</span>
-          <span :class="rfidNo === 'Guest Mode' ? 'text-orange-500' : 'text-blue-600'" class="text-sm font-bold">
-            {{ rfidNo }}
-          </span>
-        </div>
-      </div>
-
-      <div class="col-span-3 flex flex-col gap-3">
-        <div>
-          <span class="block text-[11px] text-gray-400 font-medium">Created on</span>
-          <span class="text-sm text-slate-700 font-bold">{{ createdOn }}</span>
-        </div>
-        <div v-if="type === 'feedback'">
-          <span class="block text-[11px] text-gray-400 font-medium">Rating</span>
-          <div class="flex items-center gap-1">
-            <span class="text-sm text-blue-600 font-bold mr-1">{{ ratingLabel }}</span>
-            <div class="flex text-yellow-400">
-              <template v-for="i in 5" :key="i">
-                <StarIcon v-if="i <= rating" class="w-4 h-4" />
-                <StarOutline v-else class="w-4 h-4 text-gray-300" />
-              </template>
-            </div>
+      <!-- Details -->
+      <div class="flex gap-16">
+        <!-- Column 1 -->
+        <div class="flex flex-col gap-3">
+          <!-- Full Name -->
+          <div class="flex flex-col">
+            <span class="block text-[11px] text-gray-400 font-medium">Feedback from</span>
+            <span class="text-sm text-slate-700 font-bold">
+              {{ requester.firstName }} {{ requester.middleName }} {{ requester.surname }}
+            </span>
+          </div>
+          <!-- RFID No./Guest -->
+          <div class="flex flex-col">
+            <span class="block text-[11px] text-gray-400 font-medium">RFID No.</span>
+            <span :class="rfidNo === 'Guest Mode' ? 'text-orange-500' : 'text-blue-600'" class="text-sm font-bold">
+              {{ rfidNo }}
+            </span>
           </div>
         </div>
-      </div>
 
-      <div v-if="type === 'feedback'" class="col-span-6">
-        <span class="block text-[11px] text-gray-400 font-medium">Additional Comment</span>
-        <p class="text-sm text-slate-600 leading-relaxed italic">
-          {{ comment || 'No comments provided.' }}
-        </p>
+        <!-- Column 2 -->
+        <div class="flex flex-col gap-3">
+          <!-- Created Date -->
+          <div class="flex flex-col">
+            <span class="block text-[11px] text-gray-400 font-medium">Created on</span>
+            <span class="text-sm text-slate-700 font-bold">{{ createdOn }}</span>
+          </div>
+
+          <!-- Rating (Feedback only) -->
+          <div v-if="type === 'feedback'" class="flex flex-col">
+            <span class="block text-[11px] text-gray-400 font-medium">Rating</span>
+            <div class="flex items-center gap-1">
+              <span class="text-sm text-blue-600 font-bold mr-1">{{ ratingLabel }}</span>
+              <div class="flex text-yellow-400">
+                <template v-for="i in 5" :key="i">
+                  <StarIcon v-if="i <= rating" class="w-4 h-4" />
+                  <StarOutline v-else class="w-4 h-4 text-gray-300" />
+                </template>
+              </div>
+            </div>
+          </div>          
+        </div>
+
+        <!-- Column 3 -->
+        <div v-if="type === 'feedback'" class="flex flex-col">
+          <span class="block text-[11px] text-gray-400 font-medium">Additional Comment</span>
+          <p class="text-sm text-slate-600 leading-relaxed italic">
+            {{ comment || 'No comments provided.' }}
+          </p>
+        </div>
       </div>
     </div>
 

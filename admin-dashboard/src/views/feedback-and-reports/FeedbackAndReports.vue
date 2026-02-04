@@ -8,12 +8,18 @@ import AllTab from '@/views/feedback-and-reports/subtabs/AllTab.vue';
 import FeedbackTab from '@/views/feedback-and-reports/subtabs/FeedbackTab.vue';
 import ReportsTab from '@/views/feedback-and-reports/subtabs/ReportsTab.vue';
 import LostReports from '@/views/feedback-and-reports/subtabs/LostReports.vue';
+import { bulkDeleteFeedbacks } from '@/api/feedbackService';
 
 const route = useRoute();
 const router = useRouter();
 const searchQuery = ref('');
 
-// 1. Map route params to Components
+const selectedItems = ref(new Set());
+const selectionState = computed(() => {
+  if (selectedItems.value.size === 0) return 'none';
+  return selectedItems.value.size > 0 ? 'partial' : 'none';
+});
+
 const tabMap = {
   all: AllTab,
   feedbacks: FeedbackTab,
@@ -21,15 +27,48 @@ const tabMap = {
   lostreports: LostReports
 };
 
-// 2. Sync activeTab with URL (Defaults to 'all')
 const activeTab = computed({
   get: () => route.params.status || 'all',
   set: (newStatus) => {
     router.push({ name: 'FeedbackReports', params: { status: newStatus } });
+    selectedItems.value.clear();
   }
 });
 
 const currentTabComponent = computed(() => tabMap[activeTab.value] || AllTab);
+
+const handleSelectionUpdate = (itemId, isSelected) => {
+  if (isSelected) {
+    selectedItems.value.add(itemId);
+  } else {
+    selectedItems.value.delete(itemId);
+  }
+};
+
+const handleMainSelectToggle = () => {
+  if (selectionState.value !== 'none') {
+    selectedItems.value.clear();
+  }
+};
+
+const triggerDelete = async () => {
+  if (selectedItems.value.size === 0) return;
+  
+  const confirmed = confirm(`Are you sure you want to delete ${selectedItems.value.size} feedback(s)?`);
+  if (!confirmed) return;
+
+  try {
+    const ids = Array.from(selectedItems.value);
+    await bulkDeleteFeedbacks(ids);
+    
+    selectedItems.value.clear();
+    
+    window.location.reload();
+  } catch (error) {
+    console.error('Failed to delete feedbacks:', error);
+    alert('Failed to delete feedbacks. Please try again.');
+  }
+};
 </script>
 
 <template>
@@ -97,6 +136,8 @@ const currentTabComponent = computed(() => tabMap[activeTab.value] || AllTab);
         <component 
           :is="currentTabComponent" 
           :search-query="searchQuery" 
+          :selected-items="selectedItems"
+          @update:selection="handleSelectionUpdate"
           :key="activeTab"
         />
       </keep-alive>
