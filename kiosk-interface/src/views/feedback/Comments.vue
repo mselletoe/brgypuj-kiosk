@@ -6,7 +6,6 @@ import commentSvg from '@/assets/vectors/Comment.svg?url'
 import ArrowBackButton from '@/components/shared/ArrowBackButton.vue'
 import Button from '@/components/shared/Button.vue'
 import yellowStarSvg from '@/assets/vectors/YellowStar.svg?url'
-// 1. Import your shared Modal component
 import Modal from '@/components/shared/Modal.vue'
 
 const route = useRoute()
@@ -15,16 +14,10 @@ const starCount = ref(0)
 const ratingText = ref('')
 const experienceCategory = ref('general')
 
-// 2. Add state and functions to control the modal
 const isModalVisible = ref(false)
-
-const showModal = () => {
-  isModalVisible.value = true
-}
 
 const closeModal = () => {
   isModalVisible.value = false
-  // Optional: you can redirect the user after they click "Done"
   router.push({ path: 'feedback' })
 }
 
@@ -38,18 +31,6 @@ onMounted(() => {
   if (route.query.category) {
     experienceCategory.value = route.query.category
   }
-})
-
-const correctedSubtitle = computed(() => {
-    const category = experienceCategory.value
-    const phrase = ' Experience'
-    const fullPrefix = 'Tell us more about your '
-    
-    if (category.toLowerCase().endsWith('experience')) {
-        return fullPrefix + category
-    } else {
-        return fullPrefix + category + phrase
-    }
 })
 
 const ratingTextColor = computed(() => {
@@ -70,7 +51,7 @@ const ratingTextColor = computed(() => {
 })
 
 const goBackToRating = () => {
-    router.go(-1)
+  router.push({ path: '/rating' })
 }
 </script>
 
@@ -160,4 +141,3 @@ const goBackToRating = () => {
     </div>
   </div>
 </template>
-
