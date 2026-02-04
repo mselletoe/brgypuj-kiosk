@@ -5,7 +5,6 @@ import { NTabs, NTabPane } from 'naive-ui'
 import { TrashIcon } from '@heroicons/vue/24/outline'
 
 import PageTitle from '@/components/shared/PageTitle.vue'
-import AllTab from '@/views/feedback-and-reports/subtabs/AllTab.vue'
 import FeedbackTab from '@/views/feedback-and-reports/subtabs/FeedbackTab.vue'
 import ReportsTab from '@/views/feedback-and-reports/subtabs/ReportsTab.vue'
 import LostReports from '@/views/feedback-and-reports/subtabs/LostReports.vue'
@@ -18,7 +17,6 @@ const activeTabRef = ref(null)
 
 /* ---------- TABS ---------- */
 const tabMap = {
-  all: AllTab,
   feedbacks: FeedbackTab,
   reports: ReportsTab,
   lostreports: LostReports
@@ -32,7 +30,7 @@ const activeTab = computed({
 })
 
 const currentTabComponent = computed(
-  () => tabMap[activeTab.value] || AllTab
+  () => tabMap[activeTab.value] || FeedbackTab
 )
 
 /* ---------- SELECTION STATE (FROM CHILD) ---------- */
@@ -151,7 +149,6 @@ const triggerDelete = () => {
     <!-- Tabs -->
     <div class="flex justify-between items-center border-b border-gray-200">
       <n-tabs v-model:value="activeTab" type="line" animated class="flex-grow">
-        <n-tab-pane name="all" tab="All" />
         <n-tab-pane name="feedbacks" tab="Feedbacks" />
         <n-tab-pane name="reports" tab="Reports" />
         <n-tab-pane name="lostreports" tab="Lost Reports" />
