@@ -1,4 +1,3 @@
-
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -7,18 +6,23 @@ import ArrowBackButton from '@/components/shared/ArrowBackButton.vue'
 import Button from '@/components/shared/Button.vue'
 import yellowStarSvg from '@/assets/vectors/YellowStar.svg?url'
 import Modal from '@/components/shared/Modal.vue'
+import { submitFeedback } from '@/api/feedbackService'
+import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
 const router = useRouter()
+const authStore = useAuthStore()
 const starCount = ref(0)
 const ratingText = ref('')
 const experienceCategory = ref('general')
+const additionalComments = ref('')
+const isSubmitting = ref(false)
 
 const isModalVisible = ref(false)
 
 const closeModal = () => {
   isModalVisible.value = false
-  router.push({ path: 'feedback' })
+  router.push({ path: '/feedback' })
 }
 
 onMounted(() => {
@@ -51,7 +55,41 @@ const ratingTextColor = computed(() => {
 })
 
 const goBackToRating = () => {
-  router.push({ path: '/rating' })
+  router.push({ path: '/rating', query: { category: experienceCategory.value } })
+}
+
+const handleCancel = () => {
+  router.push({ path: '/feedback' })
+}
+
+const handleSubmit = async () => {
+  if (isSubmitting.value) return
+
+  isSubmitting.value = true
+
+  try {
+    // Get resident_id from auth store
+    // If user is in RFID mode, use residentId; otherwise null for guest mode
+    const residentId = authStore.residentId
+
+    const payload = {
+      resident_id: residentId,
+      category: experienceCategory.value,
+      rating: starCount.value,
+      additional_comments: additionalComments.value || null
+    }
+
+    await submitFeedback(payload)
+    
+    // Show success modal
+    isModalVisible.value = true
+  } catch (error) {
+    console.error('Failed to submit feedback:', error)
+    // You can add error handling UI here if needed
+    alert('Failed to submit feedback. Please try again.')
+  } finally {
+    isSubmitting.value = false
+  }
 }
 </script>
 
@@ -101,6 +139,7 @@ const goBackToRating = () => {
 
     <!-- Textarea -->
     <textarea
+      v-model="additionalComments"
       class="w-full h-[200px] p-[15px]
              bg-white text-[13px] text-[#003a6b]
              border-2 border-[#003a6b] rounded-[10px]
@@ -114,13 +153,17 @@ const goBackToRating = () => {
     <div class="flex gap-6 mt-6 justify-between items-center bottom-0 flex-shrink-0">
       <Button
         variant="outline"
+        @click="handleCancel"
+        :disabled="isSubmitting"
       >
         Cancel
       </Button>
       <Button
-        :variant="secondary"
+        variant="secondary"
+        @click="handleSubmit"
+        :disabled="isSubmitting"
       >
-        Submit
+        {{ isSubmitting ? 'Submitting...' : 'Submit' }}
       </Button>
     </div>
 
