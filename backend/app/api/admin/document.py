@@ -7,6 +7,7 @@ request monitoring within the administrative dashboard.
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Body
 from fastapi.responses import StreamingResponse, FileResponse
 import os
+from pathlib import Path
 from io import BytesIO
 from sqlalchemy.orm import Session
 from app.api.deps import get_db
@@ -40,6 +41,7 @@ from app.services.document_service import (
     update_request_notes,
     regenerate_request_pdf,
 )
+from app.services.document_service import PDF_STORAGE_DIR
 
 router = APIRouter(prefix="/documents")
 
@@ -239,7 +241,7 @@ def get_document_request(request_id: int, db: Session = Depends(get_db),):
 
 
 @router.get("/requests/{request_id}/pdf")
-def download_request_pdf(request_id: int, db: Session = Depends(get_db)):
+def view_request_pdf(request_id: int, db: Session = Depends(get_db)):
     request = get_document_request_by_id(db, request_id)
     if not request:
         raise HTTPException(status_code=404, detail="Request not found")
@@ -247,17 +249,19 @@ def download_request_pdf(request_id: int, db: Session = Depends(get_db)):
     if not request.request_file_path:
         raise HTTPException(status_code=404, detail="No PDF generated yet")
 
-    BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+    # Resolve absolute path based on service's PDF_STORAGE_DIR
+    absolute_path = PDF_STORAGE_DIR / Path(request.request_file_path).relative_to("storage/documents")
 
-    absolute_path = os.path.join(BASE_DIR, request.request_file_path)
+    print("Absolute path being checked:", absolute_path)
+    print("Exists?", absolute_path.exists())
 
-    if not os.path.exists(absolute_path):
+    if not absolute_path.exists():
         raise HTTPException(status_code=404, detail="PDF file missing")
 
     return FileResponse(
-        path=request.request_file_path,
+        path=str(absolute_path),
         media_type="application/pdf",
-        filename=f"request_{request.transaction_no}.pdf",
+        headers={"Content-Disposition": f"inline; filename=request_{request.transaction_no}.pdf"},
     )
 
 

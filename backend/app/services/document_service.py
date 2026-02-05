@@ -172,8 +172,8 @@ def _save_request_pdf(transaction_no: str, pdf_bytes: bytes) -> str:
     with open(file_path, "wb") as f:
         f.write(pdf_bytes)
 
-    # store RELATIVE path in DB
-    return str(file_path.relative_to(BASE_DIR))
+    # store RELATIVE POSIX path in DB
+    return str(file_path.relative_to(BASE_DIR).as_posix())
 
 
 # -------------------------------------------------

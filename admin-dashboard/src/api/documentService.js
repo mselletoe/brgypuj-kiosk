@@ -48,6 +48,14 @@ export function getDocumentRequests() {
   return api.get('/admin/documents/requests')
 }
 
+
+export function viewRequestPdf(requestId) {
+  const backendBaseUrl = api.defaults.baseURL
+  const pdfUrl = `${backendBaseUrl}/admin/documents/requests/${requestId}/pdf`
+  
+  window.open(pdfUrl, '_blank')
+}
+
 export function approveRequest(id) {
   return api.post(`/admin/documents/requests/${id}/approve`)
 }
