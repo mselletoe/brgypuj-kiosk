@@ -103,7 +103,7 @@ function save() {
     title="Configure Fields"
     :mask-closable="false"
     preset="card"
-    style="width: 90%; max-width: 1000px;"
+    style="width: 90%; max-width: 800px; max-height: 80vh; overflow-y: auto;"
     @close="emit('close')"
   >
     <div style="min-height: 200px;">

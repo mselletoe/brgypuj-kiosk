@@ -62,16 +62,16 @@ const fieldMapping = {
   phone_number: ['phone_number', 'contact_number', 'mobile_number', 'phone', 'contact'],
   
   // Address fields
-  unit_blk_street: ['unit_blk_street', 'street', 'house_number', 'house_no_street'],
+  unit_blk_street: ['unit_blk_street', 'street', 'house_number', 'house_no'],
   purok_name: ['purok_name', 'purok', 'sitio'],
   barangay: ['barangay', 'brgy'],
   municipality: ['municipality', 'city'],
-  province: ['province'],
+  province: ['province', 'prov'],
   region: ['region'],
   full_address: ['full_address', 'address', 'complete_address'],
   
   // Residency info
-  years_residency: ['years_residency', 'years_of_residency', 'residency_years', 'year_residency'],
+  years_residency: ['yr_res', 'years_residency', 'years_of_residency', 'residency_years', 'year_residency'],
   residency_start_date: ['residency_start_date', 'date_started_residency'],
   
   // RFID info
