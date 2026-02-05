@@ -124,6 +124,8 @@ const handleDone = () => {
 /**
  * Submits the finalized form data to the backend.
  * Captures the transaction number for the user's reference upon success.
+ * 
+ * FIXED: Properly handles async PDF generation without race conditions
  */
 const handleSubmit = async (data) => {
   if (isSubmitting.value) return
@@ -146,20 +148,32 @@ const handleSubmit = async (data) => {
       resident_id: residentId
     }
 
-    // Call backend
+    // Call backend (this may take time due to PDF generation)
     const response = await createDocumentRequest(payload)
 
+    // Store form data
     formData.value = data
-
-    // Show modal with transaction number
-    showSuccessModal.value = true
     transactionNo.value = response.transaction_no
 
-  } catch (err) {
-    console.error(err)
-    alert(err?.response?.data?.detail || 'Failed to submit document request.')
-  } finally {
+    // IMPORTANT: Set isSubmitting to false BEFORE showing modal
+    // This ensures the loading overlay is removed first
     isSubmitting.value = false
+
+    // Small delay to ensure loading overlay transition completes
+    await new Promise(resolve => setTimeout(resolve, 100))
+
+    // Show success modal
+    showSuccessModal.value = true
+
+  } catch (err) {
+    console.error('Document submission error:', err)
+    
+    // Set isSubmitting to false before showing error
+    isSubmitting.value = false
+    
+    // Show user-friendly error message
+    const errorMessage = err?.response?.data?.detail || 'Failed to submit document request. Please try again.'
+    alert(errorMessage)
   }
 }
 
@@ -221,7 +235,7 @@ onMounted(async () => {
         <div class="bg-white rounded-2xl p-10 shadow-2xl flex flex-col items-center gap-2 min-w-[400px]">
           <Loading color="#03335C" size="14px" spacing="70px" />
           <p class="text-[#003A6B] text-lg font-semibold mt-6">Submitting your request...</p>
-          <p class="text-gray-500 text-sm">Please wait a moment</p>
+          <p class="text-gray-500 text-sm">Please wait while we generate your document</p>
         </div>
       </div>
     </transition>
