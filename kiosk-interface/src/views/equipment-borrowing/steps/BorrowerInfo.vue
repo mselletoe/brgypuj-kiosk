@@ -220,7 +220,7 @@ const inputClass = "w-full px-4 py-3 text-base border border-gray-300 rounded-lg
       <Button
         @click="handleBack"
         variant="outline"
-        size="lg"
+        size="md"
       >
         Back to Dates
       </Button>
@@ -229,7 +229,7 @@ const inputClass = "w-full px-4 py-3 text-base border border-gray-300 rounded-lg
         @click="handleNext"
         :disabled="!isFormValid"
         :variant="!isFormValid ? 'disabled' : 'secondary'"
-        size="lg"
+        size="md"
       >
         Review Request
       </Button>

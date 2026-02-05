@@ -178,7 +178,7 @@ const handleDone = () => {
       <Button
         @click="handlePageBack"
         variant="outline"
-        size="lg"
+        size="md"
         :disabled="isSubmitting"
       >
         Back to Form
@@ -187,7 +187,7 @@ const handleDone = () => {
         @click="handleSubmit"
         :disabled="isSubmitting"
         :variant="isSubmitting ? 'disabled' : 'secondary'"
-        size="lg"
+        size="md"
       >
         {{ isSubmitting ? 'Submitting...' : 'Submit Request' }}
       </Button>

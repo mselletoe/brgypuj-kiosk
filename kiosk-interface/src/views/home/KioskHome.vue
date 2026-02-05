@@ -49,13 +49,13 @@ function goTo(path) {
   <div class="flex flex-col items-center text-[#003a6b] w-full">
     <div class="flex w-full justify-between">
       <div class="flex flex-col text-left">
-        <h2 class="text-[50px] font-normal tracking-[-0.03em] drop-shadow-[3px_3px_5px_rgba(0,0,0,0.3)]">
+        <h2 class="text-[40px] font-normal tracking-[-0.03em] drop-shadow-[3px_3px_5px_rgba(0,0,0,0.3)]">
           Welcome to
         </h2>
-        <h1 class="mb-8 text-[68px] font-bold leading-[0.6] tracking-[-0.03em] text-[#003a6b] drop-shadow-[3px_3px_5px_rgba(0,0,0,0.3)]">
+        <h1 class="mb-7 text-[58px] font-bold leading-[0.6] tracking-[-0.03em] text-[#003a6b] drop-shadow-[3px_3px_5px_rgba(0,0,0,0.3)]">
           Barangay Services
         </h1>
-        <p class="m-0 text-[17.5px] font-normal leading-tight">
+        <p class="m-0 text-[16px] font-normal leading-tight">
           Select a service below to get started.<br>
           All services are designed for easy touch navigation.
         </p>
@@ -66,11 +66,12 @@ function goTo(path) {
     </div>
 
     <div class="flex flex-col items-center w-full">
-      <div class="mt-12 flex w-full flex-wrap justify-between gap-4">
+      <div class="mt-4 flex w-full flex-wrap justify-between gap-4">
         
+        <!-- Document Services -->
         <div 
           v-if="!auth.isGuest"
-          class="flex h-[220px] min-w-[165px] flex-1 cursor-pointer flex-col items-center justify-center rounded-[15px] bg-[#2C67E7] p-[10px] text-center shadow-[4px_4px_8px_rgba(0,0,0,0.25),inset_2px_2px_4px_rgba(255,255,255,0.6),inset_-2px_-2px_6px_rgba(0,0,0,0.15)] transition-all duration-150 hover:-translate-y-[3px] hover:scale-105 active:scale-[0.97]"
+          class="flex h-[220px] min-w-[160px] flex-1 cursor-pointer flex-col items-center justify-center rounded-[15px] bg-[#2C67E7] p-[10px] text-center shadow-[4px_4px_8px_rgba(0,0,0,0.25),inset_2px_2px_4px_rgba(255,255,255,0.6),inset_-2px_-2px_6px_rgba(0,0,0,0.15)] transition-all duration-150 hover:-translate-y-[3px] hover:scale-105 active:scale-[0.97]"
           @click="goTo('document-services')"
         >
           <img src="@/assets/vectors/DocumentServices.svg" alt="Document Services" class="mb-[5px] h-[105px] w-[105px]" />
@@ -78,9 +79,10 @@ function goTo(path) {
           <p class="m-0 text-[11px] font-normal leading-[12px] text-white">Barangay ID, Clearances,<br>Certificates, and Permits</p>
         </div>
 
+        <!-- Equipment Borrowing -->
         <div 
           v-if="!auth.isGuest"
-          class="flex h-[220px] min-w-[165px] flex-1 cursor-pointer flex-col items-center justify-center rounded-[15px] bg-[#F16C14] p-[10px] text-center shadow-[4px_4px_8px_rgba(0,0,0,0.25),inset_2px_2px_4px_rgba(255,255,255,0.6),inset_-2px_-2px_6px_rgba(0,0,0,0.15)] transition-all duration-150 hover:-translate-y-[3px] hover:scale-105 active:scale-[0.97]"
+          class="flex h-[220px] min-w-[160px] flex-1 cursor-pointer flex-col items-center justify-center rounded-[15px] bg-[#F16C14] p-[10px] text-center shadow-[4px_4px_8px_rgba(0,0,0,0.25),inset_2px_2px_4px_rgba(255,255,255,0.6),inset_-2px_-2px_6px_rgba(0,0,0,0.15)] transition-all duration-150 hover:-translate-y-[3px] hover:scale-105 active:scale-[0.97]"
           @click="goTo('equipment-borrowing')"
         >
           <img src="@/assets/vectors/EquipmentBorrowing.svg" alt="Equipment Borrowing" class="mb-[5px] h-[105px] w-[105px]" />
@@ -88,8 +90,9 @@ function goTo(path) {
           <p class="m-0 text-[11px] font-normal leading-[12px] text-white">Borrow tents, chairs, and<br>other Barangay utilities</p>
         </div>
         
+        <!-- RFID Services -->
         <div 
-          class="flex h-[220px] min-w-[165px] flex-1 cursor-pointer flex-col items-center justify-center rounded-[15px] bg-[#21C05C] p-[10px] text-center shadow-[4px_4px_8px_rgba(0,0,0,0.25),inset_2px_2px_4px_rgba(255,255,255,0.6),inset_-2px_-2px_6px_rgba(0,0,0,0.15)] transition-all duration-150 hover:-translate-y-[3px] hover:scale-105 active:scale-[0.97]"
+          class="flex h-[220px] min-w-[160px] flex-1 cursor-pointer flex-col items-center justify-center rounded-[15px] bg-[#21C05C] p-[10px] text-center shadow-[4px_4px_8px_rgba(0,0,0,0.25),inset_2px_2px_4px_rgba(255,255,255,0.6),inset_-2px_-2px_6px_rgba(0,0,0,0.15)] transition-all duration-150 hover:-translate-y-[3px] hover:scale-105 active:scale-[0.97]"
           @click="goTo('id-services')"
         >
           <img alt="RFID Services" class="mb-[5px] h-[105px] w-[105px]" />
@@ -97,8 +100,9 @@ function goTo(path) {
           <p class="m-0 text-[11px] font-normal leading-[12px] text-white">Request or Manage your Barangay RFID card.</p>
         </div>
 
+        <!-- Help & Support -->
         <div 
-          class="flex h-[220px] min-w-[165px] flex-1 cursor-pointer flex-col items-center justify-center rounded-[15px] bg-[#A451F3] p-[10px] text-center shadow-[4px_4px_8px_rgba(0,0,0,0.25),inset_2px_2px_4px_rgba(255,255,255,0.6),inset_-2px_-2px_6px_rgba(0,0,0,0.15)] transition-all duration-150 hover:-translate-y-[3px] hover:scale-105 active:scale-[0.97]"
+          class="flex h-[220px] min-w-[160px] flex-1 cursor-pointer flex-col items-center justify-center rounded-[15px] bg-[#A451F3] p-[10px] text-center shadow-[4px_4px_8px_rgba(0,0,0,0.25),inset_2px_2px_4px_rgba(255,255,255,0.6),inset_-2px_-2px_6px_rgba(0,0,0,0.15)] transition-all duration-150 hover:-translate-y-[3px] hover:scale-105 active:scale-[0.97]"
           @click="goTo('help-and-support')"
         >
           <img src="@/assets/vectors/HelpSupport.svg" alt="Help & Support" class="mb-[5px] h-[105px] w-[105px]" />
@@ -106,8 +110,9 @@ function goTo(path) {
           <p class="m-0 text-[11px] font-normal leading-[12px] text-white">Find answers and<br>get assistance</p>
         </div>
 
+        <!-- Feedback -->
         <div 
-          class="flex h-[220px] min-w-[165px] flex-1 cursor-pointer flex-col items-center justify-center rounded-[15px] bg-[#13B3A1] p-[10px] text-center shadow-[4px_4px_8px_rgba(0,0,0,0.25),inset_2px_2px_4px_rgba(255,255,255,0.6),inset_-2px_-2px_6px_rgba(0,0,0,0.15)] transition-all duration-150 hover:-translate-y-[3px] hover:scale-105 active:scale-[0.97]"
+          class="flex h-[220px] min-w-[160px] flex-1 cursor-pointer flex-col items-center justify-center rounded-[15px] bg-[#13B3A1] p-[10px] text-center shadow-[4px_4px_8px_rgba(0,0,0,0.25),inset_2px_2px_4px_rgba(255,255,255,0.6),inset_-2px_-2px_6px_rgba(0,0,0,0.15)] transition-all duration-150 hover:-translate-y-[3px] hover:scale-105 active:scale-[0.97]"
           @click="goTo('feedback')"
         >
           <img src="@/assets/vectors/Feedback.svg" alt="Feedback" class="mb-[5px] h-[105px] w-[105px]" />
@@ -116,7 +121,7 @@ function goTo(path) {
         </div>      
       </div>
 
-      <div class="mt-8 flex gap-5 w-full">
+      <div class="mt-4 flex gap-5 w-full">
         <Button 
           v-if="!auth.isGuest"
           variant="outline" 

@@ -133,11 +133,13 @@ const goBackToHome = () => {
     <div class="flex gap-6 mt-6 justify-between items-center bottom-0 flex-shrink-0">
       <Button
         variant="outline"
+        size="md"
       >
         Cancel
       </Button>
       <Button
-        :variant="secondary"
+        variant='secondary'
+        size="md"
       >
         Submit
       </Button>
