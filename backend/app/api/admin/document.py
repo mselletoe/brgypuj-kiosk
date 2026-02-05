@@ -5,7 +5,8 @@ Provides management endpoints for document type templates and resident
 request monitoring within the administrative dashboard.
 """
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Body
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, FileResponse
+import os
 from io import BytesIO
 from sqlalchemy.orm import Session
 from app.api.deps import get_db
@@ -36,7 +37,8 @@ from app.services.document_service import (
     delete_request,
     bulk_delete_requests,
     get_request_notes, 
-    update_request_notes
+    update_request_notes,
+    regenerate_request_pdf,
 )
 
 router = APIRouter(prefix="/documents")
@@ -234,6 +236,41 @@ def get_document_request(request_id: int, db: Session = Depends(get_db),):
     data["request_file_path"] = request.request_file_path
     
     return data
+
+
+@router.get("/requests/{request_id}/pdf")
+def download_request_pdf(request_id: int, db: Session = Depends(get_db)):
+    request = get_document_request_by_id(db, request_id)
+    if not request:
+        raise HTTPException(status_code=404, detail="Request not found")
+
+    if not request.request_file_path:
+        raise HTTPException(status_code=404, detail="No PDF generated yet")
+
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+
+    absolute_path = os.path.join(BASE_DIR, request.request_file_path)
+
+    if not os.path.exists(absolute_path):
+        raise HTTPException(status_code=404, detail="PDF file missing")
+
+    return FileResponse(
+        path=request.request_file_path,
+        media_type="application/pdf",
+        filename=f"request_{request.transaction_no}.pdf",
+    )
+
+
+@router.post("/requests/{request_id}/regenerate-pdf")
+def regenerate_pdf(request_id: int, db: Session = Depends(get_db)):
+    """
+    Manually regenerates the PDF for a request.
+    Useful if auto-generation failed or template was updated.
+    """
+    success = regenerate_request_pdf(db, request_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Request not found")
+    return {"detail": "PDF regenerated successfully"}
 
 
 @router.post("/requests/{request_id}/approve")

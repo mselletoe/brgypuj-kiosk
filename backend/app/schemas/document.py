@@ -170,4 +170,4 @@ class DocumentRequestAdminDetail(DocumentRequestAdminOut):
     """
     resident_name: str
     price: Decimal
-    request_file_path: Optional[str]
+    request_file_path: Optional[str] = None
