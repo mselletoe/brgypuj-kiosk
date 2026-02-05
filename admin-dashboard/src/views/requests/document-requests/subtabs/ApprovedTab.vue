@@ -9,7 +9,8 @@ import {
   deleteRequest,
   undoRequest,
   bulkDeleteRequests,
-  bulkUndoRequests
+  bulkUndoRequests,
+  viewRequestPdf
 } from '@/api/documentService'
 
 const props = defineProps({
@@ -154,7 +155,7 @@ const handleButtonClick = async ({ action, requestId }) => {
   try {
     switch (action) {
       case 'view':
-        alert(`Viewing request ${requestId} - implement view modal`)
+        viewRequestPdf(requestId)
         break
       case 'notes':
         console.log(`Opening notes for request ${requestId}`)
