@@ -3,12 +3,11 @@ import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router"; 
 import Pob1Logo from "@/assets/images/Pob1Logo.svg";
 
-const router = useRouter(); // Initialize router
+const router = useRouter();
 const announcements = ref([]);
 const current = ref(0);
 let autoSlide = null;
 
-// Fetch announcements
 const loadAnnouncements = async () => {
   try {
     const res = await api.get("/announcements");
@@ -18,7 +17,6 @@ const loadAnnouncements = async () => {
   }
 };
 
-// Auto slide
 const startSlider = () => {
   autoSlide = setInterval(() => {
     nextSlide();
@@ -46,10 +44,7 @@ const formatDate = (date) => {
   });
 };
 
-// Navigate to login
 const start = () => {
-  // FIX: Use router.push instead of window.location
-  // This keeps the app loaded and lets Login.vue's safety timer work correctly.
   router.push("/login"); 
 };
 

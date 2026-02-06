@@ -68,8 +68,6 @@ const handleSubmit = async () => {
   isSubmitting.value = true
 
   try {
-    // Get resident_id from auth store
-    // If user is in RFID mode, use residentId; otherwise null for guest mode
     const residentId = authStore.residentId
 
     const payload = {
@@ -81,11 +79,9 @@ const handleSubmit = async () => {
 
     await submitFeedback(payload)
     
-    // Show success modal
     isModalVisible.value = true
   } catch (error) {
     console.error('Failed to submit feedback:', error)
-    // You can add error handling UI here if needed
     alert('Failed to submit feedback. Please try again.')
   } finally {
     isSubmitting.value = false
@@ -95,6 +91,7 @@ const handleSubmit = async () => {
 
 <template>
   <div class="flex flex-col w-full h-full">
+    <!-- Header -->
     <div class="flex items-center mb-6 gap-7 flex-shrink-0">
       <ArrowBackButton @click="goBackToRating"/>
       <div>
@@ -103,51 +100,54 @@ const handleSubmit = async () => {
       </div>
     </div>
 
-    <!-- Rating display -->
-    <div class="flex flex-wrap items-center justify-center w-full mb-[23px] text-xl">
-      <h2 class="font-bold mr-[5px] whitespace-nowrap">
-        Your Rating:
-      </h2>
+    <!-- Main -->
+    <div class="flex-1">
+      <!-- Rating display -->
+      <div class="flex flex-wrap items-center justify-center w-full mb-[23px] text-xl">
+        <h2 class="font-bold mr-[5px] whitespace-nowrap">
+          Your Rating:
+        </h2>
 
-      <template v-for="n in Number(starCount)" :key="n">
+        <template v-for="n in Number(starCount)" :key="n">
+          <img
+            :src="yellowStarSvg"
+            alt="Yellow Star"
+            class="w-[22px] h-[22px] mx-[1px]"
+          />
+        </template>
+
+        <h2
+          class="font-bold ml-[5px]"
+          :style="{ color: ratingTextColor }"
+        >
+          {{ ratingText }}
+        </h2>
+      </div>
+
+      <!-- Additional comments title -->
+      <div class="flex items-center w-full mb-2">
         <img
-          :src="yellowStarSvg"
-          alt="Yellow Star"
-          class="w-[22px] h-[22px] mx-[1px]"
+          :src="commentSvg"
+          alt="Comment Icon"
+          class="w-6 h-6 mr-[5px]"
         />
-      </template>
+        <h3 class="text-[13px] font-bold text-left text-[#003a6b]">
+          Additional Comments (Optional)
+        </h3>
+      </div>
 
-      <h2
-        class="font-bold ml-[5px]"
-        :style="{ color: ratingTextColor }"
-      >
-        {{ ratingText }}
-      </h2>
+      <!-- Textarea -->
+      <textarea
+        v-model="additionalComments"
+        class="w-full h-[200px] p-[15px]
+              bg-white text-[13px] text-[#003a6b]
+              border-2 border-[#003a6b] rounded-[10px]
+              shadow-[3px_3px_6px_rgba(0,0,0,0.2)]
+              resize-none outline-none box-border
+              placeholder:text-[#003a6b]"
+        placeholder="Share any specific suggestions, compliments, and concerns..."
+      ></textarea>
     </div>
-
-    <!-- Additional comments title -->
-    <div class="flex items-center w-full mb-2">
-      <img
-        :src="commentSvg"
-        alt="Comment Icon"
-        class="w-6 h-6 mr-[5px]"
-      />
-      <h3 class="text-[13px] font-bold text-left text-[#003a6b]">
-        Additional Comments (Optional)
-      </h3>
-    </div>
-
-    <!-- Textarea -->
-    <textarea
-      v-model="additionalComments"
-      class="w-full h-[200px] p-[15px]
-             bg-white text-[13px] text-[#003a6b]
-             border-2 border-[#003a6b] rounded-[10px]
-             shadow-[3px_3px_6px_rgba(0,0,0,0.2)]
-             resize-none outline-none box-border
-             placeholder:text-[#003a6b]"
-      placeholder="Share any specific suggestions, compliments, and concerns..."
-    ></textarea>
 
     <!-- Buttons -->
     <div class="flex gap-6 mt-6 justify-between items-center bottom-0 flex-shrink-0">
@@ -167,6 +167,7 @@ const handleSubmit = async () => {
       </Button>
     </div>
 
+    <!-- Modals -->
     <div
       v-if="isModalVisible"
       class="fixed inset-0 z-[1000]

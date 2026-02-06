@@ -96,6 +96,7 @@ const handleDone = () => {
 
 <template>
   <div class="flex flex-col w-full h-full" :class="{ 'content-with-keyboard': showKeyboard }">
+    <!-- Header -->
     <div class="flex items-center mb-6 gap-7 flex-shrink-0">
       <ArrowBackButton @click="goBackToHome" />
       <div>
@@ -104,16 +105,18 @@ const handleDone = () => {
       </div>
     </div>
 
+    <!-- Main -->
     <div class="flex-1 overflow-y-auto custom-scrollbar">
-      <div class="flex gap-2 items-stretch">
-        <div class="w-1/2 bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+      <div class="flex gap-3 mb-6">
+        <!-- Left -->
+        <div class="w-1/2 bg-white rounded-2xl shadow-lg border border-gray-200 p-5">
           <h3 class="text-2xl font-bold text-[#013C6D] flex items-center gap-2">
             <MagnifyingGlassIcon class="w-8 h-8" />
             Review Your Request
           </h3>
-          <div class="mt-6">
+          <div class="mt-4">
             <h4 class="text-lg font-bold text-[#013C6D]">Selected Items Summary</h4>
-            <ul class="mt-2 space-y-0 min-h-24">
+            <ul class="mt-2 space-y-0 min-h-32">
               <li
                 v-for="item in selectedEquipment"
                 :key="item.id"
@@ -124,7 +127,7 @@ const handleDone = () => {
               </li>
             </ul>
           </div>
-          <div class="mt-6">
+          <div class="mt-4">
             <h4 class="text-lg font-bold text-[#013C6D]">Borrowing Period</h4>
             <div class="mt-2 flex justify-between text-base text-gray-700 max-w-xs">
               <div>
@@ -139,8 +142,9 @@ const handleDone = () => {
           </div>
         </div>
 
-        <div class="w-1/2 flex flex-col gap-2">
-          <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+        <!-- Right -->
+        <div class="w-1/2 flex flex-col gap-3">
+          <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-5">
             <h3 class="text-2xl font-bold text-[#013C6D]">Contact Information</h3>
             <div class="mt-4 space-y-2">
               <div class="flex justify-between text-base">
@@ -161,7 +165,7 @@ const handleDone = () => {
               </div>
             </div>
           </div>
-          <div class="bg-[#EBF5FF] rounded-2xl shadow-lg border border-[#B0D7F8] p-6">
+          <div class="bg-[#EBF5FF] rounded-2xl shadow-lg border border-[#B0D7F8] p-5">
             <div class="flex justify-between text-2xl font-bold text-[#013C6D]">
               <span>Total Cost:</span>
               <span>{{ formatCurrency(totalCost) }}</span>
@@ -174,6 +178,7 @@ const handleDone = () => {
       </div>
     </div>
 
+    <!-- Buttons -->
     <div class="flex gap-6 mt-6 justify-between items-center bottom-0 flex-shrink-0">
       <Button
         @click="handlePageBack"
@@ -193,6 +198,7 @@ const handleDone = () => {
       </Button>
     </div>
 
+    <!-- Modal -->
     <div v-if="showModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-8">
       <Modal
         title="Request Submitted!"

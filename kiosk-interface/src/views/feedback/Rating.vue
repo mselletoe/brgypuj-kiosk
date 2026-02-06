@@ -42,20 +42,17 @@ const goBack = () => {
       <ArrowBackButton @click="goBack"/>
       <div>
         <h1 class="text-[45px] text-[#03335C] font-bold tracking-tight -mt-2">Your Feedback Matters</h1>
-        <p class="text-[#03335C] -mt-2">Tell us more about your choice</p>
+        <p class="text-[#03335C] -mt-2">Tap a star to rate your experience</p>
       </div>
     </div>
 
-    <div class="text-center mt-8 mb-12">
+    <div class="text-center mt-6 mb-9">
       <h2 class="text-[42px] text-[#03335C] font-bold leading-none">
         Rate our {{ feedbackCategory }}
       </h2>
-      <p class="text-[20px] text-[#03335C] italic font-medium mt-2">
-        Tap a star to rate your experience
-      </p>
     </div>
 
-    <div class="flex justify-center gap-6 px-6">
+    <div class="flex justify-center gap-5">
       <div 
         v-for="rating in ratings" 
         :key="rating.stars"

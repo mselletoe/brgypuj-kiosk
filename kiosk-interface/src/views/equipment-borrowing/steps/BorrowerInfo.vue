@@ -122,6 +122,7 @@ const inputClass = "w-full px-4 py-3 text-base border border-gray-300 rounded-lg
 
 <template>
   <div class="flex flex-col w-full h-full" :class="{ 'content-with-keyboard': showKeyboard }">
+    <!-- Header -->
     <div class="flex items-center mb-6 gap-7 flex-shrink-0">
       <ArrowBackButton @click="goBackToHome" />
       <div>
@@ -130,13 +131,16 @@ const inputClass = "w-full px-4 py-3 text-base border border-gray-300 rounded-lg
       </div>
     </div>
 
+    <!-- Main -->
     <div class="flex-1 overflow-y-auto custom-scrollbar">
       <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+        <!-- Box Title -->
         <h3 class="text-2xl font-bold text-[#013C6D] flex items-center gap-2">
           <DocumentTextIcon class="w-8 h-8" />
           Borrowing Information
         </h3>
 
+        <!-- Checkbox -->
         <div class="mt-4 flex items-center gap-3">
           <input
             type="checkbox"
@@ -150,7 +154,9 @@ const inputClass = "w-full px-4 py-3 text-base border border-gray-300 rounded-lg
           </label>
         </div>
 
+        <!-- Form -->
         <div class="mt-4 grid grid-cols-2 gap-x-6 gap-y-4">
+          <!-- Contact Person -->
           <div>
             <label for="contact-person" class="block text-base font-bold text-[#003A6B] mb-1">
               Contact Person <span class="text-red-600">*</span>
@@ -166,6 +172,7 @@ const inputClass = "w-full px-4 py-3 text-base border border-gray-300 rounded-lg
             />
           </div>
 
+          <!-- Contact Number -->
           <div>
             <label for="contact-number" class="block text-base font-bold text-[#003A6B] mb-1">
               Contact Number <span class="text-red-600">*</span>
@@ -181,6 +188,7 @@ const inputClass = "w-full px-4 py-3 text-base border border-gray-300 rounded-lg
             />
           </div>
 
+          <!-- Purpose -->
           <div>
             <label for="purpose" class="block text-base font-bold text-[#003A6B] mb-1">
               Purpose of Borrowing <span class="text-red-600">*</span>
@@ -197,6 +205,7 @@ const inputClass = "w-full px-4 py-3 text-base border border-gray-300 rounded-lg
             </select>
           </div>
 
+          <!-- Notes -->
           <div>
             <label for="notes" class="block text-base font-medium text-gray-700 mb-1">
               Additional Notes (Optional)
@@ -215,7 +224,7 @@ const inputClass = "w-full px-4 py-3 text-base border border-gray-300 rounded-lg
       </div>
     </div>
 
-
+    <!-- Buttons -->
     <div class="flex gap-6 mt-6 justify-between items-center bottom-0 flex-shrink-0">
       <Button
         @click="handleBack"
@@ -236,6 +245,7 @@ const inputClass = "w-full px-4 py-3 text-base border border-gray-300 rounded-lg
     </div>
   </div>
 
+  <!-- Keyboard -->
   <Transition name="slide-up">
     <Keyboard
       v-if="showKeyboard"
@@ -248,25 +258,3 @@ const inputClass = "w-full px-4 py-3 text-base border border-gray-300 rounded-lg
     />
   </Transition>
 </template>
-
-<style scoped>
-select:invalid,
-select[value="null"] {
-  color: #6b7280;
-}
-
-.slide-up-enter-active,
-.slide-up-leave-active {
-  transition: transform 0.3s ease-out;
-}
-
-.slide-up-enter-from,
-.slide-up-leave-to {
-  transform: translateY(100%);
-}
-
-.content-with-keyboard {
-  padding-bottom: 210px;
-  transition: padding-bottom 0.3s ease-out;
-}
-</style>
