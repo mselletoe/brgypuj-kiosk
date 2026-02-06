@@ -185,6 +185,7 @@ onMounted(async () => {
 
 <template>
   <div class="flex flex-col w-full h-full">
+    <!-- Header -->
     <div class="flex items-center mb-6 gap-7 flex-shrink-0">
       <ArrowBackButton @click="goBack"/>
       <div>

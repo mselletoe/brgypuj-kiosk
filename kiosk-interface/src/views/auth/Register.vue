@@ -1,96 +1,14 @@
 <script setup>
-import { ref, watch, onMounted } from 'vue'
 import ArrowBackButton from '@/components/shared/ArrowBackButton.vue'
 import Button from '@/components/shared/Button.vue'
-import { useRoute, useRouter } from 'vue-router'
 
-const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
-
-const route = useRoute()
-const router = useRouter()
-
-const lastNameLetter = ref('A')
-const firstNameLetter = ref('A')
-
-const residents = ref([
-  { id: '1', name: 'Alice Adams', birthdate: '1990-01-01', address: '123 Main St', has_rfid: false },
-  { id: '2', name: 'Bob Brown', birthdate: '1985-05-12', address: '456 Oak Ave', has_rfid: true },
-  { id: '3', name: 'Charlie Clark', birthdate: '1992-07-23', address: '789 Pine Rd', has_rfid: false }
-])
-const filteredResidents = ref([...residents.value])
-const selectedResidentId = ref('')
-const residentDetails = ref({})
-const registrationSummary = ref({ idNum: '', name: '' })
-
-// Filter residents locally by first letters
-const filterResidents = () => {
-  filteredResidents.value = residents.value.filter(
-    r => r.name.split(' ')[0].startsWith(firstNameLetter.value) &&
-         r.name.split(' ')[1]?.startsWith(lastNameLetter.value)
-  )
-}
-
-watch([lastNameLetter, firstNameLetter], filterResidents, { immediate: true })
-
-watch(selectedResidentId, (id) => {
-  const res = residents.value.find((r) => r.id === id)
-  if (res) {
-    residentDetails.value = {
-      birthday: res.birthdate || '—',
-      address: res.address || '—',
-    }
-    registrationSummary.value = {
-      idNum: res.id,
-      name: res.name,
-    }
-  } else {
-    residentDetails.value = {}
-    registrationSummary.value = { idNum: '', name: '' }
-  }
-})
-
-// --- Register Resident ---
-const handleRegister = () => {
-  if (!selectedResidentId.value) {
-    alert('⚠️ Please select a resident first.')
-    return
-  }
-
-  const selectedResident = residents.value.find(r => r.id === selectedResidentId.value)
-  if (selectedResident?.has_rfid) {
-    alert('⚠️ This resident is already registered.')
-    return
-  }
-
-  // Simulate registration
-  selectedResident.has_rfid = true
-  alert(`✅ ${registrationSummary.value.name} successfully registered!`)
-}
-
-const handleReset = () => {
-  lastNameLetter.value = 'A'
-  firstNameLetter.value = 'A'
-  selectedResidentId.value = ''
-  filteredResidents.value = [...residents.value]
-  residentDetails.value = {}
-  registrationSummary.value = { idNum: '', name: '' }
-}
-
-const goBackToHome = () => {
-  const stored = localStorage.getItem('auth_user')
-  if (stored) {
-    router.replace('/home')
-  } else {
-    router.push('/login')
-  }
-}
 </script>
 
 <template>
   <div class="flex flex-col w-full h-full">
     <!-- Header -->
     <div class="flex items-center mb-6 gap-7 flex-shrink-0">
-      <ArrowBackButton @click="goBack"/>
+      <ArrowBackButton/>
       <div class="flex justify-between items-center w-full">
         <div>
           <h1 class="text-[45px] text-[#03335C] font-bold tracking-tight -mt-2">
@@ -123,9 +41,9 @@ const goBackToHome = () => {
         <h2 class="font-bold text-2xl text-center">Resident Details</h2>
         <p class="italic text-[9px]">Please check the residents details before proceeding.</p>
         <div class="text-start mt-3">
-          <p><span class="font-bold">Name:</span> {{ registrationSummary.name }}</p>
-          <p><span class="font-bold">Birthdate:</span> {{ registrationSummary.birthdate }}</p>
-          <p><span class="font-bold">Address:</span> {{ registrationSummary.address }}</p>
+          <p><span class="font-bold">Name:</span></p>
+          <p><span class="font-bold">Birthdate:</span></p>
+          <p><span class="font-bold">Address:</span></p>
         </div>
       </div>
     </div>

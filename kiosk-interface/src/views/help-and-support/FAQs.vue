@@ -2,7 +2,7 @@
 import { ref } from 'vue';
 import { ChevronUpIcon, ChevronDownIcon } from '@heroicons/vue/24/solid';
 
-const openIndex = ref(0); // Index of the currently open FAQ, start with the first one open
+const openIndex = ref(0);
 
 const faqs = ref([
   {
@@ -24,7 +24,7 @@ const faqs = ref([
 ]);
 
 const toggleFAQ = (index) => {
-  openIndex.value = openIndex.value === index ? null : index; // Toggle or close if clicking the open one
+  openIndex.value = openIndex.value === index ? null : index; 
 };
 </script>
 

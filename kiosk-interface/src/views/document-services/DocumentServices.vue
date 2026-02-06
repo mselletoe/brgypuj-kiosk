@@ -75,6 +75,7 @@ onMounted(fetchDocuments)
     <div v-if="loading" class="text-center text-gray-500 py-10">Loading services...</div>
     <div v-if="error" class="text-center text-red-500 py-10">{{ error }}</div>
 
+    <!-- Document type Option box -->
     <div class="flex-1 overflow-y-auto custom-scrollbar">
       <div v-if="isParent() && !loading && !error" class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <router-link
