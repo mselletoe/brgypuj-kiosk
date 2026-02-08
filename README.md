@@ -1,13 +1,13 @@
-# 🏛️ Barangay Poblacion Uno Jasmin Kiosk System
+# 🏛️ RFID-enabled Barangay Transaction Kiosk with SMS Notification System
 
-A kiosk and admin dashboard system designed for use on a Raspberry Pi (kiosk side) and external PCs (admin side).
+An RFID-Based Barangay Service Delivery and Management System that automates resident transactions and communication, ensuring high functional suitability and accessibility even in offline environments.
 
 ---
 ## 🏗️ System Architecture
-- **Kiosk Interface:** Full-screen Vue 3 app running on Raspberry Pi Chromium (Kiosk Mode).
-- **Admin Dashboard:** Management UI for Barangay staff.
-- **Backend API:** FastAPI (Python) acting as the bridge between UIs and Database.
-- **Database:** PostgreSQL storing resident data, requests, and inventory.
+- **Kiosk Interface:** A lightweight Vue 3 application optimized for Raspberry Pi Chromium (Kiosk Mode), providing a seamless touch-screen experience for residents.
+- **Admin Dashboard:** A Vue 3 Management UI for Barangay staff to oversee requests, inventory, and resident records.
+- **Backend API:** A FastAPI (Python) REST API serving as the central orchestration layer.
+- **Database:** PostgreSQL for relational data integrity, storing resident profiles, transaction logs, and system configurations.
 
 ---
 
@@ -17,7 +17,7 @@ A kiosk and admin dashboard system designed for use on a Raspberry Pi (kiosk sid
 - Node.js (v18+)
 - Python (3.10+)
 - PostgreSQL (15+)
-- Docker (Optional)
+- Hardware: RFID Reader & Raspberry Pi
 
 ### 1. Clone the Repository
 ```bash
