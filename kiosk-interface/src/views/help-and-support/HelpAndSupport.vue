@@ -1,32 +1,34 @@
 <script setup>
-import { ref } from 'vue';
-import { useRouter } from 'vue-router';
-import ArrowBackButton from '@/components/shared/ArrowBackButton.vue'; // Adjust path if needed
-import FAQs from './FAQs.vue'; // Adjust path if needed
-import Contact from './Contact.vue'; // Adjust path if needed
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import ArrowBackButton from '@/components/shared/ArrowBackButton.vue'
+import FAQs from './FAQs.vue'
+import Contact from './Contact.vue'
 
-const router = useRouter();
-const currentTab = ref('faqs'); // 'faqs' or 'contact'
+const router = useRouter()
+const currentTab = ref('faqs')
 
 const setActiveTab = (tabName) => {
   currentTab.value = tabName;
 };
 
 const goBackToHome = () => {
-  router.push('/home'); // Assuming '/home' is your home route
+  router.push('/home')
 };
 
-// Button classes for active/inactive states
-const activeTabClass = 'bg-[#013C6D] text-white';
-const inactiveTabClass = 'bg-white text-gray-600 hover:bg-gray-300';
+const activeTabClass = 'bg-[#013C6D] text-white'
+const inactiveTabClass = 'bg-white text-gray-600 hover:bg-gray-300'
 </script>
 
 <template>
-  <div class="px-8 pb-0 pt-4">
-    <div class="flex items-center justify-between mb-6">
-      <div class="flex items-center gap-4">
+  <div class="flex flex-col w-full h-full">
+    <div class="flex items-center justify-between mb-6 flex-shrink-0">
+      <div class="flex items-center gap-7">
         <ArrowBackButton @click="goBackToHome" />
-        <h1 class="text-[40px] font-bold text-[#013C6D]">Help & Support</h1>
+        <div>
+          <h1 class="text-[45px] text-[#03335C] font-bold tracking-tight -mt-2">Help & Support</h1>
+          <p class="text-[#03335C] -mt-2">Description</p>          
+        </div>
       </div>
 
       <div class="flex items-center gap-2 rounded-lg border-2 border-[#013C6D] p-1">

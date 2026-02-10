@@ -1,30 +1,23 @@
-# 🏛️ Barangay Poblacion Uno Jasmin Kiosk System
+# 🏛️ RFID-enabled Barangay Transaction Kiosk with SMS Notification System
 
-A kiosk and admin dashboard system built with **Vue 3**, **Vite**, **TailwindCSS + DaisyUI**, **FastAPI**, and **PostgreSQL**.  
-Designed for use on a Raspberry Pi (kiosk side) and external PCs (admin side). The system manages resident data, requests, and announcements through a shared backend and database.
+An RFID-Based Barangay Service Delivery and Management System that automates resident transactions and communication, ensuring high functional suitability and accessibility even in offline environments.
+
+---
+## 🏗️ System Architecture
+- **Kiosk Interface:** A lightweight Vue 3 application optimized for Raspberry Pi Chromium (Kiosk Mode), providing a seamless touch-screen experience for residents.
+- **Admin Dashboard:** A Vue 3 Management UI for Barangay staff to oversee requests, inventory, and resident records.
+- **Backend API:** A FastAPI (Python) REST API serving as the central orchestration layer.
+- **Database:** PostgreSQL for relational data integrity, storing resident profiles, transaction logs, and system configurations.
 
 ---
 
-## ✅ Tech Stack
+## 🚀 Getting Started
 
-### Frontend (Both UIs)
-- Vue 3 + Vite  
-- TailwindCSS  
-- DaisyUI  
-- Vue Router  
-
-### Backend
-- FastAPI (Python)
-
-### Database
-- PostgreSQL
-
-### Containerization
-- Docker & Docker Compose
-
----
-
-## 🚀 Getting Started (Development)
+### Prerequisites
+- Node.js (v18+)
+- Python (3.10+)
+- PostgreSQL (15+)
+- Hardware: RFID Reader & Raspberry Pi
 
 ### 1. Clone the Repository
 ```bash
@@ -47,7 +40,10 @@ npm run dev
 ### 3. Backend Setup
 ```bash
 cd backend
+python -m venv venv
+source venv/bin/activate # or venv\Scripts\activate on Windows
 pip install -r requirements.txt
+# Configure .env file
 uvicorn app.main:app --reload
 ```
 

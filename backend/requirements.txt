@@ -3,8 +3,9 @@ fastapi
 uvicorn[standard]
 
 # Database
-sqlalchemy
+sqlalchemy>=2.0
 psycopg2-binary
+alembic
 
 # Environment & Configuration
 python-dotenv
@@ -26,7 +27,11 @@ python-docx
 pypandoc
 
 # Validation
+<<<<<<< HEAD
 email-validator
+=======
+pydantic-settings
+>>>>>>> 4ddb44f52d136f561676a82380d750ae9c428a2a
 pydantic[email]
 
 # HTTP Requests

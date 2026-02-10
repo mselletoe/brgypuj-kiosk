@@ -1,8 +1,15 @@
+/**
+ * @file router/index.js
+ * @description Centralized routing configuration with Navigation Guards.
+ * Protects internal kiosk services from unauthorized access and manages 
+ * the transition between Idle, Authentication, and Dashboard states.
+ */
+
 import { createRouter, createWebHistory } from 'vue-router'
-import { auth } from '@/stores/auth'
+import { useAuthStore } from '@/stores/auth'
 import UserLayout from '@/layouts/UserLayout.vue'
 
-// views
+// Views
 import Display from '@/views/idle/Display.vue'
 import Idle from '@/views/idle/Idle.vue'
 import Announcements from '@/views/idle/Announcements.vue'
@@ -18,38 +25,57 @@ import HelpAndSupport from '@/views/help-and-support/HelpAndSupport.vue'
 import Feedback from '@/views/feedback/Feedback.vue'
 import Rating from '@/views/feedback/Rating.vue'
 import Comments from '@/views/feedback/Comments.vue'
-import Appointments from '@/views/appointments/Appointments.vue'
+import ComponentShowcase from '../components/ComponentShowcase.vue'
+import InAnnouncements from '../views/announcements/Announcement.vue'
+import TransactionHistory from '../views/transactions/TransactionHistory.vue'
+import IDServices from '../views/id-services/IDServices.vue'
 
 const routes = [
+  // Root Redirect: Kiosk starts at the Idle/Welcome screen
   { path: '/', redirect: '/idle' },
-
-  { path: '/display', component: Display},
-  { path: '/idle', component: Idle },
-  { path: '/announcements', component: Announcements },
-  { path: '/login', component: Login },
-  { path: '/login-rfid', component: ScanRFID },
-  { path: '/auth-pin', component: AuthPIN },
-
-  // Authenticated & Inside-layout routes 
+  
+  /**
+   * PUBLIC ROUTES
+   * Accessible without any authentication.
+   */
+  { path: '/display', name: 'Display', component: Display },
+  { path: '/idle', name: 'Idle', component: Idle },
+  { path: '/announcements', name: 'Announcements', component: Announcements },
+  { path: '/login', name: 'LoginSelection', component: Login },
+  { path: '/login-rfid', name: 'ScanRFID', component: ScanRFID },
+  { path: '/auth-pin', name: 'VerifyPIN', component: AuthPIN },
+  { path: '/inannouncements', name: 'InAnnouncements', component: InAnnouncements },
+  /**
+   * PROTECTED ROUTES (UserLayout)
+   * Requires either Guest or RFID authentication.
+   */
   {
     path: '/',
     component: UserLayout,
+    meta: { requiresAuth: true },
     children: [
-      { path: 'home', component: KioskHome, meta: { requiresAuth: true } },
-      { path: 'document-services', component: DocumentServices, meta: { requiresAuth: true },
+      { path: 'home', name: 'Home', component: KioskHome },
+      { 
+        path: 'document-services', 
+        name: 'DocumentServices',
+        component: DocumentServices,
         children: [
-          { path: ':docType', component: DocumentFormWrapper, meta: { requiresAuth: true } }
+          { path: ':docType', component: DocumentFormWrapper }
         ]
       },
-      { path: 'equipment-borrowing', component: EquipmentBorrowing, meta: { requiresAuth: true } },
-      { path: 'help-and-support', component: HelpAndSupport, meta: { requiresAuth: true } },
-      { path: 'feedback', component: Feedback, meta: { requiresAuth: true } },
-      { path: 'rating', component: Rating, meta: { requiresAuth: true } },
-      { path: 'comments', component: Comments, meta: { requiresAuth: true } },
-      { path: 'appointments', component: Appointments, meta: { requiresAuth: true } },
-      { path: 'register', component: Register }
+      { path: 'equipment-borrowing', name: 'EquipmentBorrowing', component: EquipmentBorrowing },
+      { path: 'help-and-support', name: 'Support', component: HelpAndSupport },
+      { path: 'feedback', name: 'Feedback', component: Feedback },
+      { path: 'rating', name: 'Rating', component: Rating },
+      { path: 'comments', name: 'Comments', component: Comments },
+      { path: 'register', name: 'Register', component: Register },
+      { path: 'component-showcase', name: 'DevShowcase', component: ComponentShowcase },
+      { path: 'transaction-history', name: 'TransactionHistory', component: TransactionHistory },
+      { path: 'id-services', name: 'IDServices', component: IDServices }
     ]
   },
+  
+  // Catch-all: Redirect unknown paths back to the safety of the Idle screen
   { path: '/:pathMatch(.*)*', redirect: '/idle' },
 ]
 
@@ -58,39 +84,35 @@ const router = createRouter({
   routes,
 })
 
-
-// Global guard
+/**
+ * GLOBAL NAVIGATION GUARD
+ * Intercepts every route change to check authentication status.
+ */
 router.beforeEach((to, from, next) => {
-  const stored = localStorage.getItem('auth_user')
-  if (stored) {
-    const parsed = JSON.parse(stored)
-    auth.user = parsed.user
-    auth.isGuest = parsed.isGuest
+  const authStore = useAuthStore()
+  
+  // Ensure the store is rehydrated from LocalStorage before checking
+  if (!authStore.isAuthenticated) {
+    authStore.restore()
   }
 
-  const loggedIn = !!auth.user
-  const isGuest = auth.isGuest
-  const loginPaths = ['/login', '/login-rfid']
-  const nonAuthPaths = ['/login', '/login-rfid', '/auth-pin', '/idle', '/display', '/announcements']
-
-  // Guests
-  if (isGuest && loginPaths.includes(to.path)) return next('/home')
-
-  // Logged-in users
-  if (loggedIn && loginPaths.includes(to.path)) return next('/home')
-
-  // Protect routes with requiresAuth
-  if (!loggedIn && !isGuest && to.meta.requiresAuth) {
-    if (to.path === '/register' && to.query.uid) return next()
-    return next('/login-rfid')
+  /**
+   * Scenario: Accessing a protected page without a session.
+   * If the route has 'requiresAuth' and the user isn't logged in, send them to login.
+   */
+  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+    next('/login')
+  } 
+  /**
+   * Scenario: Trying to access login pages while already authenticated.
+   * If they are already logged in and try to go to /login, send them to /home.
+   */
+  else if ((to.path === '/login' || to.path === '/login-rfid') && authStore.isAuthenticated) {
+    next('/home')
   }
-
-  // Prevent logged-in or guest from going back to non-auth pages
-  if ((loggedIn || isGuest) && nonAuthPaths.includes(to.path)) {
-    return next('/home') // always redirect to home
+  else {
+    next() // Proceed as normal
   }
-
-  next()
 })
 
 export default router

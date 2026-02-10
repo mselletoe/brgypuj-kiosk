@@ -1,27 +1,41 @@
 <script setup>
+/**
+ * @file Login.vue
+ * @description Main entry point for the Kiosk authentication selection. 
+ * Allows users to choose between RFID authentication or Guest access.
+ * Includes an automated session timeout to return the kiosk to the Idle state.
+ */
+
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { disableTouchToStart } from '@/composables/touchToStart'
-import PrimaryButton from '@/components/shared/PrimaryButton.vue'
+import Button from '@/components/shared/Button.vue'
 import { SignalIcon } from '@heroicons/vue/24/solid'
-import { auth } from '@/stores/auth'
+import { useAuthStore } from '@/stores/auth'
 
+// --- Component State & Composables ---
 const router = useRouter()
+const authStore = useAuthStore()
 
-// --- State ---
+/** @type {import('vue').Ref<number>} Seconds remaining before auto-redirect */
 const timeLeft = ref(10)
+
+/** @type {ReturnType<typeof setInterval> | null} Reference to the countdown timer */
 let timerInterval = null
-let mountTime = 0 // Variable to store exactly when the page opened
 
-// --- Navigation Handlers ---
+/** @type {number} Timestamp used to prevent accidental double-clicks during transition */
+let mountTime = 0
 
+// --- Logic & Handlers ---
+
+/**
+ * Handles navigation to the RFID scanning interface.
+ * Implements a 500ms debounce to prevent "ghost touches" from the Idle screen.
+ */
 const handleRfidLogin = () => {
-  // === GHOST CLICK FIX ===
-  // Calculate how long the page has been open
   const timeSinceMount = Date.now() - mountTime;
 
-  // If the page has been open for less than 800ms (0.8 seconds),
-  // assume this is a ghost click from the previous screen and IGNORE it.
+  // Prevent immediate execution if triggered too fast after mount
   if (timeSinceMount < 500) {
     return;
   }
@@ -30,21 +44,19 @@ const handleRfidLogin = () => {
   router.push('/login-rfid')
 }
 
+/**
+ * Initializes a Guest session.
+ * Bypasses RFID authentication and sets the global auth mode to 'guest'.
+ */
 const continueAsGuest = () => {
-  // Apply the same safety check for the Guest button
-  const timeSinceMount = Date.now() - mountTime;
-  if (timeSinceMount < 800) {
-    return;
-  }
-
-  const guestUser = { name: "Guest User" };
-  auth.user = guestUser;
-  auth.isGuest = true;
-  localStorage.setItem('auth_user', JSON.stringify({ user: guestUser, isGuest: true }));
+  authStore.setGuest()
   router.replace('/home')
 }
 
-// --- Timer Logic ---
+/**
+ * Manages the inactivity countdown.
+ * Automatically redirects the application to the Idle screen if no action is taken.
+ */
 const startCountdown = () => {
   if (timerInterval) clearInterval(timerInterval)
   timeLeft.value = 10
@@ -57,19 +69,23 @@ const startCountdown = () => {
   }, 1000)
 }
 
+/**
+ * Resets the inactivity timer. 
+ * Invoked on user interaction to prevent premature session termination.
+ */
 const resetTimer = () => {
   startCountdown()
 }
 
+// --- Lifecycle Hooks ---
+
 onMounted(() => {
-  // 1. Capture the exact time the component mounted
   mountTime = Date.now()
-  
-  // 2. Start the idle countdown
   startCountdown()
 })
 
 onUnmounted(() => {
+  // Ensure background intervals are cleared to prevent memory leaks
   if (timerInterval) clearInterval(timerInterval)
 })
 </script>
@@ -91,24 +107,24 @@ onUnmounted(() => {
 
       <div class="mt-5 flex flex-col gap-y-5">
         
-        <PrimaryButton 
+        <Button 
           @click.stop="handleRfidLogin" 
-          class="w-96 h-[80px] text-[25px] font-bold"
+          class="w-96 h-[80px] font-bold"
+          variant="primary"
         >
-          <span class="flex items-center justify-center gap-x-3">
+          <span class="flex items-center justify-center gap-x-3 text-xl">
             Use RFID
             <SignalIcon class="h-8 w-8 mt-0" />
           </span>
-        </PrimaryButton>
+        </Button>
 
-        <PrimaryButton 
+        <Button 
           @click.stop="continueAsGuest()"
-          bgColor="bg-transparent"
-          textColor="text-[#013C6D]"
+          variant="outline"
           class="w-96 h-[45px] text-[15px]"
         >
           Continue as Guest
-        </PrimaryButton>
+        </Button>
         
       </div>
 

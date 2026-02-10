@@ -2,6 +2,7 @@
 import { ref, watch } from 'vue'
 import { NModal, NButton, NInput, NSelect, NCheckbox, useMessage } from 'naive-ui'
 import { v4 as uuidv4 } from 'uuid'
+import { TrashIcon } from '@heroicons/vue/24/outline'
 
 // Component props
 const props = defineProps({
@@ -99,88 +100,100 @@ function save() {
 <template>
   <NModal
     v-model:show="localShow"
-    :title="localFields.length === 0 ? 'Configure Fields - No fields yet' : `Configure Fields (${localFields.length})`"
+    title="Configure Fields"
     :mask-closable="false"
     preset="card"
-    style="width: 90%; max-width: 900px;"
+    style="width: 90%; max-width: 800px; max-height: 80vh; overflow-y: auto;"
     @close="emit('close')"
   >
-    <div class="space-y-4">
+    <div style="min-height: 200px;">
       <!-- Empty state when no fields exist -->
-      <div v-if="localFields.length === 0" class="text-center py-8 text-gray-500">
-        <p class="mb-4">No fields configured yet.</p>
+      <div 
+        v-if="localFields.length === 0" 
+        style="text-align: center; padding: 3rem 1rem; color: #999;"
+      >
+        <p style="margin-bottom: 1rem; font-size: 15px;">No fields configured yet.</p>
         <NButton type="primary" @click="addField">Add Your First Field</NButton>
       </div>
 
       <!-- List of configured fields -->
-      <div v-else class="space-y-3">
+      <div v-else style="display: flex; flex-direction: column; gap: 1rem;">
         <div
           v-for="(field, index) in localFields"
           :key="field.id"
-          class="border border-gray-200 rounded-lg p-4 bg-gray-50 hover:bg-gray-100 transition-colors"
+          style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 1rem; padding: 1.25rem; background: #fafafa; border: 1px solid #e5e5e5; border-radius: 8px; align-items: start;"
         >
-          <!-- Field header with number and remove button -->
-          <div class="flex items-center justify-between mb-3">
-            <span class="font-semibold text-gray-700">Field {{ index + 1 }}</span>
-            <NButton 
-              type="error" 
-              size="small" 
-              quaternary
-              @click="removeField(index)"
-            >
-              Remove
-            </NButton>
-          </div>
-
-          <!-- Field name and type in a row -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-            <div>
-              <label class="text-sm text-gray-600 mb-1 block">Field Name</label>
-              <NInput
-                v-model:value="field.name"
-                placeholder="e.g., full_name, contact_number"
-                size="medium"
-                @input="field.name = formatName(field.name)"
-              />
-            </div>
-            <div>
-              <label class="text-sm text-gray-600 mb-1 block">Field Type</label>
-              <NSelect
-                v-model:value="field.type"
-                :options="[
-                  { label: 'Text', value: 'text' },
-                  { label: 'Number', value: 'number' },
-                  { label: 'Email', value: 'email' },
-                  { label: 'Telephone', value: 'tel' },
-                  { label: 'Textarea', value: 'textarea' },
-                  { label: 'Date', value: 'date' },
-                  { label: 'Select Dropdown', value: 'select' }
-                ]"
-                size="medium"
-              />
-            </div>
-          </div>
-
-          <!-- Required checkbox -->
-          <div class="mb-3">
-            <NCheckbox v-model:checked="field.required" size="large">
-              Required field
-            </NCheckbox>
-          </div>
-
-          <!-- Options input for select type fields -->
-          <div v-if="field.type === 'select'">
-            <label class="text-sm text-gray-600 mb-1 block">Options (comma separated)</label>
+          <!-- Label -->
+          <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+            <label style="font-size: 13px; color: #666; font-weight: 500;">Field Label</label>
             <NInput
-              v-model:value="field.optionsText"
-              placeholder="e.g., Option 1, Option 2, Option 3"
-              @input="field.options = field.optionsText.split(',').map(o => o.trim()).filter(o => o)"
+              v-model:value="field.label"
+              placeholder="e.g., Field Label"
+              size="medium"
+              @input="field.name = formatName(field.name)"
+            />
+          </div>
+
+          <!-- Template placeholder (Label) -->
+          <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+            <label style="font-size: 13px; color: #666; font-weight: 500;">Template placeholder</label>
+            <NInput
+              v-model:value="field.name"
+              placeholder="e.g., field_name"
               size="medium"
             />
-            <!-- Show parsed options preview -->
-            <p v-if="field.options && field.options.length > 0" class="text-xs text-gray-500 mt-1">
-              {{ field.options.length }} option(s): {{ field.options.join(', ') }}
-            </p>
+          </div>
+
+          <!-- Type -->
+          <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+            <label style="font-size: 13px; color: #666; font-weight: 500;">Type</label>
+            <NSelect
+              v-model:value="field.type"
+              :options="[
+                { label: 'Text', value: 'text' },
+                { label: 'Number', value: 'number' },
+                { label: 'Email', value: 'email' },
+                { label: 'Telephone', value: 'tel' },
+                { label: 'Textarea', value: 'textarea' },
+                { label: 'Date', value: 'date' },
+                { label: 'Select Dropdown', value: 'select' }
+              ]"
+              size="medium"
+            />
+          </div>
+
+          <!-- Remove button -->
+          <button 
+            style="margin-top: 1.75rem; background: transparent; border: 1px solid #ffcdd2; border-radius: 6px; padding: 0.5rem; cursor: pointer; color: #e53935; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"
+            @click="removeField(index)"
+            @mouseenter="e => e.target.style.background = '#ffebee'"
+            @mouseleave="e => e.target.style.background = 'transparent'"
+            type="button"
+          >
+            <TrashIcon style="width: 20px; height: 20px;" />
+          </button>
+
+          <!-- Required checkbox and options on second row -->
+          <div style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.5rem;">
+            <NCheckbox v-model:checked="field.required" size="medium">
+              Required field
+            </NCheckbox>
+
+            <!-- Options input for select type fields -->
+            <div v-if="field.type === 'select'" style="display: flex; flex-direction: column; gap: 0.5rem;">
+              <NInput
+                v-model:value="field.optionsText"
+                placeholder="Options (comma separated): Option 1, Option 2, Option 3"
+                @input="field.options = field.optionsText.split(',').map(o => o.trim()).filter(o => o)"
+                size="medium"
+              />
+              <p 
+                v-if="field.options && field.options.length > 0" 
+                style="font-size: 12px; color: #999; margin: 0;"
+              >
+                {{ field.options.length }} option(s): {{ field.options.join(', ') }}
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -188,41 +201,23 @@ function save() {
 
     <!-- Modal footer with action buttons -->
     <template #footer>
-      <div class="flex justify-between items-center">
+      <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
         <NButton 
-          type="default" 
+          type="default"
           @click="addField"
           size="medium"
         >
-          + Add Field
+          Add field
         </NButton>
-        <div class="flex gap-2">
-          <NButton 
-            @click="localShow = false; emit('close')"
-            size="medium"
-          >
-            Cancel
-          </NButton>
-          <NButton 
-            type="primary" 
-            @click="save"
-            :disabled="localFields.length === 0"
-            size="medium"
-          >
-            Save Configuration
-          </NButton>
-        </div>
+        <NButton 
+          type="primary" 
+          @click="save"
+          :disabled="localFields.length === 0"
+          size="medium"
+        >
+          Save
+        </NButton>
       </div>
     </template>
   </NModal>
 </template>
-
-<style scoped>
-.space-y-3 > * + * {
-  margin-top: 0.75rem;
-}
-
-.space-y-4 > * + * {
-  margin-top: 1rem;
-}
-</style>

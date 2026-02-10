@@ -1,16 +1,21 @@
 <script setup>
-import { ref, onActivated, computed } from 'vue';
+import { ref, onActivated } from 'vue';
 import EquipmentSelect from './steps/SelectEquipment.vue';
 import EquipmentSelectDates from './steps/SelectDates.vue';
 import EquipmentForm from './steps/BorrowerInfo.vue';
 import EquipmentReviewRequest from './steps/ReviewRequest.vue';
 
-// Import the auth store
-import { auth } from '@/stores/auth.js'; 
-
 const selectedEquipment = ref([]);
 const selectedDates = ref(null);
-const borrowerInfo = ref({});
+
+const borrowerInfo = ref({
+  contactPerson: '',
+  contactNumber: '',
+  purpose: null,
+  notes: '',
+  use_autofill: false
+});
+
 const currentStep = ref('select');
 
 const goNext = (step) => currentStep.value = step;
@@ -19,9 +24,11 @@ const goBack = (step) => currentStep.value = step;
 const onUpdateEquipment = (newEquipmentArray) => {
   selectedEquipment.value = newEquipmentArray;
 };
+
 const onUpdateDates = (newDatesObject) => {
   selectedDates.value = newDatesObject;
 };
+
 const onUpdateBorrowerInfo = (newInfoObject) => {
   borrowerInfo.value = newInfoObject;
 };
@@ -36,6 +43,7 @@ const resetFormAndGoToStart = () => {
 onActivated(() => {
   resetFormAndGoToStart();
 });
+<<<<<<< HEAD
 
 // Compute auth info for logged-in users
 const authInfo = computed(() => {
@@ -56,6 +64,8 @@ const authInfo = computed(() => {
   }
   return null;
 });
+=======
+>>>>>>> 4ddb44f52d136f561676a82380d750ae9c428a2a
 </script>
 
 <template>
@@ -81,7 +91,6 @@ const authInfo = computed(() => {
     @update:borrower-info="onUpdateBorrowerInfo"
     :go-next="goNext"
     :go-back="goBack"
-    :auth-info="authInfo"
   />
 
   <EquipmentReviewRequest

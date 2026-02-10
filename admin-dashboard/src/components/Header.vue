@@ -1,52 +1,77 @@
 <script setup>
-import { h, ref, onMounted } from 'vue'
+/**
+ * @file Header.vue
+ * @description Administrative dashboard header component.
+ * Provides the top navigation bar containing the global search placeholder
+ * and the user profile dropdown. Integrates with the Admin Auth store
+ * to display current session metadata and handle logout procedures.
+ */
+import { h, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { NDropdown } from 'naive-ui'
-import { useAuth } from '@/stores/authStore'
-import { UserCircleIcon, Cog6ToothIcon, LockClosedIcon, ArrowLeftOnRectangleIcon } from '@heroicons/vue/24/solid'
+import { UserCircleIcon, QuestionMarkCircleIcon, BellIcon, ArrowLeftOnRectangleIcon } from '@heroicons/vue/24/solid'
+import { useAdminAuthStore } from '@/stores/auth'
 
 const router = useRouter()
-const auth = useAuth()
-auth.loadToken()
+const adminAuth = useAdminAuthStore()
 
-console.log('Auth user:', auth.user)
-console.log('Token:', auth.token)
-
+/**
+ * Utility function to render Heroicons within Naive UI components.
+ * @param {Component} icon - The Heroicon component to be rendered.
+ * @returns {Function} A VNode rendering function.
+ */
 const renderIcon = (icon) => () => h(icon, { class: 'h-5 w-5' })
 
+/**
+ * Configuration for the user profile dropdown menu.
+ * Includes labels, keys for event handling, and rendered icons.
+ */
 const dropdownOptions = [
-  { label: 'My Profile', key: 'profile', icon: renderIcon(UserCircleIcon) },
-  { label: 'Dashboard Settings', key: 'settings', icon: renderIcon(Cog6ToothIcon) },
-  { label: 'Password and Security', key: 'security', icon: renderIcon(LockClosedIcon) },
+  { label: 'Account Settings', key: 'profile', icon: renderIcon(UserCircleIcon) },
   { type: 'divider' },
   { label: 'Log Out', key: 'logout', icon: renderIcon(ArrowLeftOnRectangleIcon) }
 ]
 
-// Handle dropdown selection
+/**
+ * Orchestrates navigation and session actions based on dropdown selection.
+ * @param {string} key - The unique identifier of the selected menu item.
+ */
 const handleSelect = (key) => {
   switch(key) {
     case 'profile':
-      console.log('Navigate to My Profile')
-      break
-    case 'settings':
-      console.log('Navigate to Dashboard Settings')
-      break
-    case 'security':
-      console.log('Navigate to Password and Security')
+      router.push('/account-settings')
       break
     case 'logout':
-      console.log('Logging out...')
-      auth.logout()
+      adminAuth.logout()
       router.replace('/auth')
       break
   }
 }
+
+const goToHelp = () => {
+  router.push('/help-and-support')
+}
+
+/**
+ * Reactive computed properties to display administrator metadata.
+ * Fallbacks are provided for scenarios where the auth store is still rehydrating.
+ */
+const username = computed(() => adminAuth.admin?.username || 'Admin')
+const role = computed(() => adminAuth.admin?.role || 'Administrator')
 </script>
 
 <template>
   <header class="pb-8 flex items-center justify-between w-[99%]">
     <div class="bg-white rounded-md w-[700px] h-[40px]"></div>
-    <div>
+
+    <div class="flex items-center gap-2">
+      <button @click="goToHelp" class="p-2 text-[#1F2937] hover:text-[#2D4465] rounded-full transition-colors">
+        <QuestionMarkCircleIcon class="h-6 w-6" />
+      </button>
+
+      <button class="p-2 text-[#1F2937] rounded-full hover:text-[#2D4465] transition-colors relative">
+        <BellIcon class="h-6 w-6" />
+      </button>
       <n-dropdown
         trigger="click"
         :options="dropdownOptions"
@@ -61,8 +86,8 @@ const handleSelect = (key) => {
               </svg>
             </div>
             <div class="flex flex-col">
-              <span class="text-sm font-bold text-gray-800">{{ auth.user?.first_name }} {{ auth.user?.last_name }}</span>
-              <span class="text-xs text-gray-500">{{ auth.user?.role }}</span>
+              <span class="text-sm font-bold text-gray-800">{{ username }}</span>
+              <span class="text-xs text-gray-500">{{ role }}</span>
             </div>
           </div>
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">

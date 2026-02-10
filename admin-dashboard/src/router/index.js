@@ -1,33 +1,24 @@
-/*
- * =================================================================================
- * File: router/index.js
- * Description: 
- * Main routing configuration for the Vue.js application.
- * - Defines all accessible URL paths (routes).
- * - Manages access control (Navigation Guards) to protect admin pages.
- * - Redirects unauthenticated users to the login page.
- * =================================================================================
- */
-
 import { createRouter, createWebHistory } from 'vue-router'
-import { useAuth } from '@/stores/authStore'
+import { useAdminAuthStore } from '@/stores/auth'
 
 import AdminLayout from '@/layouts/AdminLayout.vue'
 import Overview from '@/views/Overview.vue'
-import Requests from '@/views/requests/RequestsManagement.vue'
-import Documenttemplates from '@/views/docutemp/DocumentTemplates.vue'
+import DocumentRequests from '@/views/requests/document-requests/DocumentRequest.vue'
 import DocumentServices from '@/views/document-services/DocumentServices.vue'
 import KioskAnnouncements from '@/views/announcements/KioskAnnouncements.vue'
 import SMSAnnouncements from '@/views/announcements/SMSAnnouncements.vue'
-import Appointments from '@/views/Appointments.vue'
-import CommunityFeedback from '@/views/CommunityFeedback.vue'
-import InformationHub from '@/views/InformationHub.vue'
 import Residents from '@/views/Residents.vue'
 import Auth from '@/views/Auth.vue'
 import CreateAccount from '@/views/CreateAccount.vue'
-import EquipmentManagement from '@/views/equipment/EquipmentManagement.vue'
+import EquipmentInventory from '@/views/equipment-inventory/EquipmentInventory.vue'
 import SystemSettings from '@/views/settings/SystemSettings.vue'
-
+import EquipmentRequests from '@/views/requests/equipment-requests/EquipmentRequest.vue'
+import FeedbackAndReports from '@/views/feedback-and-reports/FeedbackAndReports.vue'
+import ComponentShowcase from '@/components/ComponentShowcase.vue'
+import AccountSettings from '@/views/settings/AccountSettings.vue'
+import HelpAndSupport from '@/views/Help&Support.vue'
+import FAQsManagement from '@/views/faqs-management/FAQsManagement.vue'
+import ResidentsManagement from '@/views/residents-management/ResidentsManagement.vue'
 
 const routes = [
   {
@@ -49,16 +40,36 @@ const routes = [
     meta: { requiresAuth: true },
     children: [
       { path: 'overview', component: Overview },
-      { path: 'requests', component: Requests },
+
+      {
+        path: 'document-requests/:status?',
+        name: 'DocumentRequests',
+        component: DocumentRequests,
+        props: true
+      },
+      {
+        path: 'equipment-requests/:status?',
+        name: 'EquipmentRequests',
+        component: EquipmentRequests,
+        props: true
+      },
+      {
+        path: 'feedback-and-reports/:status?',
+        name: 'FeedbackReports',
+        component: FeedbackAndReports,
+        props: true
+      },
+
       { path: 'document-services', component: DocumentServices },
       { path: 'kiosk-announcements', component: KioskAnnouncements },
       { path: 'sms-announcements', component: SMSAnnouncements },
-      { path: 'appointments', component: Appointments },
-      { path: 'community-feedback', component: CommunityFeedback },
-      { path: 'information-hub', component: InformationHub },
-      { path: 'residents', component: Residents },  
-      { path: 'equipment-management', component: EquipmentManagement },
-      { path: 'system-settings', component: SystemSettings }
+      { path: 'residents-management', component: ResidentsManagement },
+      { path: 'equipment-inventory', component: EquipmentInventory },
+      { path: 'system-settings', component: SystemSettings },
+      { path: 'component-showcase', component: ComponentShowcase },
+      { path: 'account-settings', component: AccountSettings },
+      { path: 'help-and-support', component: HelpAndSupport },
+      { path: 'faqs-management', component: FAQsManagement }
     ]
   }
 ]
@@ -68,24 +79,20 @@ const router = createRouter({
   routes
 })
 
-router.beforeEach((to, from, next) => {
-  const auth = useAuth()
-  
-  if (!auth.token) {
-    auth.loadToken()
-  }
 
-  const isAuthenticated = !!auth.token
+router.beforeEach((to, from, next) => {
+  const auth = useAdminAuthStore()
+  auth.loadAuth()
+
+  const isAuthenticated = auth.isAuthenticated
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
   const requiresGuest = to.matched.some(record => record.meta.requiresGuest)
 
   if (requiresAuth && !isAuthenticated) {
     next('/auth')
-  }
-  else if (requiresGuest && isAuthenticated) {
-    next('/overview')
-  }
-  else {
+  } else if (requiresGuest && isAuthenticated) {
+    next('/overview') 
+  } else {
     next()
   }
 })
