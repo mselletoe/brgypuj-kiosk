@@ -6,6 +6,7 @@ import SendSMSModal from '@/components/shared/SendSMSModal.vue'
 import RequestCard from '@/views/requests/document-requests/DocumentRequestCard.vue'
 import BorrowingRequestCard from '@/views/requests/equipment-requests/EquipmentRequestCard.vue'
 import NotesInput from './shared/NotesInput.vue'
+import FeedbackCard from '@/views/feedback-and-reports/FeedbackReportCard.vue'
 
 const noteInputRef = ref(null)
 
@@ -155,6 +156,50 @@ const handleNoteSubmit = (val) => {
               amount="500"
               :isPaid="true"
               :isSelected="false"
+            />
+          </div>
+        </div>
+
+        <!-- Feedback Card -->
+        <div class="lg:col-span-2 bg-white rounded-2xl shadow-lg p-6 border-2 border-gray-200">
+          <div class="mb-4 border-b border-gray-200 pb-3">
+            <h2 class="text-2xl font-bold text-[#013C6D] mb-1">Feedback Card</h2>
+            <p class="text-sm text-gray-600">User feedback with rating and comments</p>
+          </div>
+
+          <div class="flex items-center justify-center min-h-[200px] bg-gray-50 rounded-xl p-6">
+            <FeedbackCard
+              id="FB-001"
+              type="feedback"
+              title="Library Service Feedback"
+              :requester="{ firstName: 'Juan', middleName: 'D.', surname: 'Cruz' }"
+              rfidNo="RFID-98765"
+              createdOn="01/12/26"
+              :rating="4"
+              ratingLabel="Good"
+              comment="Staff were helpful and the process was quick."
+              :isSelected="false"
+            />
+          </div>
+        </div>
+
+        <!-- Report Card -->
+        <div class="lg:col-span-2 bg-white rounded-2xl shadow-lg p-6 border-2 border-gray-200">
+          <div class="mb-4 border-b border-gray-200 pb-3">
+            <h2 class="text-2xl font-bold text-[#013C6D] mb-1">Report Card</h2>
+            <p class="text-sm text-gray-600">Incident or loss report</p>
+          </div>
+
+          <div class="flex items-center justify-center min-h-[200px] bg-gray-50 rounded-xl p-6">
+            <FeedbackCard
+              id="RP-014"
+              type="report"
+              title="Lost RFID Card"
+              :requester="{ firstName: 'Maria', middleName: 'S.', surname: 'Santos' }"
+              rfidNo="RFID-11223"
+              createdOn="01/11/26"
+              comment="RFID card was lost near the main gate."
+              :isResolved="false"
             />
           </div>
         </div>

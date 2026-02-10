@@ -7,7 +7,6 @@ import VueDatePicker from '@vuepic/vue-datepicker'
 import '@vuepic/vue-datepicker/dist/main.css'
 import { useRouter } from 'vue-router';
 
-// --- Props & Emits ---
 const props = defineProps({
   selectedEquipment: Array,
   selectedDates: Object,
@@ -17,11 +16,9 @@ const props = defineProps({
 const emit = defineEmits(['update:selected-dates'])
 const router = useRouter();
 
-// --- Local State ---
 const borrowDate = ref(props.selectedDates?.borrow || null)
 const returnDate = ref(props.selectedDates?.return || null)
 
-// --- Date Restrictions (Philippine Time) ---
 const minBorrowDate = computed(() => {
   const now = new Date()
   const phTimeStr = now.toLocaleString("en-US", { timeZone: "Asia/Manila" })
@@ -30,7 +27,6 @@ const minBorrowDate = computed(() => {
   return phDate
 })
 
-// --- Computed Properties ---
 const numberOfDays = computed(() => {
   if (!borrowDate.value || !returnDate.value) {
     return 1
@@ -60,7 +56,6 @@ const totalCost = computed(() => {
   return costBreakdown.value.reduce((total, item) => total + item.cost, 0)
 })
 
-// --- Methods ---
 const formatCurrency = (value) => {
   return `₱${value.toLocaleString()}`
 }
@@ -190,12 +185,3 @@ const goBackToHome = () => router.push('/home');
 
   </div>
 </template>
-
-<style>
-/* Global style for the date picker pop-up */
-.dp__theme_light {
-  --dp-font-family: 'Poppins', sans-serif;
-  --dp-border-radius: 8px;
-  --dp-primary-color: #013C6D;
-}
-</style>

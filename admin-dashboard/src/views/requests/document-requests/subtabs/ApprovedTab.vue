@@ -2,13 +2,15 @@
 import { ref, computed, onMounted } from 'vue'
 import RequestCard from '@/views/requests/document-requests/DocumentRequestCard.vue'
 import ConfirmModal from '@/components/shared/ConfirmationModal.vue'
+import SMSModal from '@/components/shared/SendSMSModal.vue'
 import {
   getDocumentRequests,
   releaseRequest,
   deleteRequest,
   undoRequest,
   bulkDeleteRequests,
-  bulkUndoRequests
+  bulkUndoRequests,
+  viewRequestPdf
 } from '@/api/documentService'
 
 const props = defineProps({
@@ -25,6 +27,10 @@ const selectedRequests = ref(new Set())
 const showConfirmModal = ref(false)
 const confirmTitle = ref('Are you sure?')
 const confirmAction = ref(null)
+const showSmsModal = ref(false)
+const smsRecipientName = ref('')
+const smsRecipientPhone = ref('')
+const smsDefaultMessage = ref('')
 
 const fetchApprovedRequests = async () => {
   isLoading.value = true
@@ -149,13 +155,13 @@ const handleButtonClick = async ({ action, requestId }) => {
   try {
     switch (action) {
       case 'view':
-        alert(`Viewing request ${requestId} - implement view modal`)
+        viewRequestPdf(requestId)
         break
       case 'notes':
         console.log(`Opening notes for request ${requestId}`)
         break
       case 'notify':
-        console.log(`Sending notification for request ${requestId}`)
+        handleNotify(request)
         break
       case 'ready':
         console.log(`Marking request ${requestId} as ready`)
@@ -175,6 +181,48 @@ const handleButtonClick = async ({ action, requestId }) => {
   } catch (error) {
     console.error(`Error handling ${action}:`, error)
     alert(`Failed to ${action} request. Please try again.`)
+  }
+}
+
+const handleNotify = (request) => {
+  const fullName = [
+    request.requester.firstName,
+    request.requester.middleName,
+    request.requester.lastName
+  ].filter(Boolean).join(' ')
+
+  smsRecipientName.value = fullName || 'Resident'
+  smsRecipientPhone.value = request.raw?.resident_phone || ''
+  smsDefaultMessage.value = `Hello ${request.requester.firstName || 'Resident'},
+
+Your ${request.requestType} request (Transaction #${request.transaction_no}) has been approved and is ready for pickup.
+
+Please visit the office during business hours to claim your document.
+
+Thank you!`
+
+  showSmsModal.value = true
+}
+
+const handleSendSMS = async (smsData) => {
+  try {
+    console.log('Sending SMS:', smsData)
+    
+    // TODO: Implement actual SMS sending API call
+    // Example:
+    // await sendSMS({
+    //   phone: smsData.phone,
+    //   message: smsData.message,
+    //   recipientName: smsData.recipientName
+    // })
+    
+    // For now, just log the data
+    console.log('SMS would be sent to:', smsData.phone)
+    console.log('Message:', smsData.message)
+    
+  } catch (error) {
+    console.error('Error sending SMS:', error)
+    throw error // Re-throw to let the modal handle the error display
   }
 }
 
@@ -295,5 +343,14 @@ const filteredRequests = computed(() => {
     cancel-text="Cancel"
     @confirm="handleConfirm"
     @cancel="handleCancel"
+  />
+
+  <SMSModal
+    :show="showSmsModal"
+    :recipient-name="smsRecipientName"
+    :recipient-phone="smsRecipientPhone"
+    :default-message="smsDefaultMessage"
+    @update:show="(value) => showSmsModal = value"
+    @send="handleSendSMS"
   />
 </template>

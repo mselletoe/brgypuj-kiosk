@@ -5,7 +5,9 @@ Provides management endpoints for document type templates and resident
 request monitoring within the administrative dashboard.
 """
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Body
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, FileResponse
+import os
+from pathlib import Path
 from io import BytesIO
 from sqlalchemy.orm import Session
 from app.api.deps import get_db
@@ -36,8 +38,10 @@ from app.services.document_service import (
     delete_request,
     bulk_delete_requests,
     get_request_notes, 
-    update_request_notes
+    update_request_notes,
+    regenerate_request_pdf,
 )
+from app.services.document_service import PDF_STORAGE_DIR
 
 router = APIRouter(prefix="/documents")
 
@@ -170,6 +174,8 @@ def _format_request_for_admin(request):
     """Helper to format request with resident data"""
     # Get the active RFID UID if resident exists
     rfid_display = "Guest Mode"
+    phone_number = None
+
     if request.resident:
         # Get the active RFID from the relationship
         active_rfid = next(
@@ -177,6 +183,7 @@ def _format_request_for_admin(request):
             None
         )
         rfid_display = active_rfid if active_rfid else "No RFID"
+        phone_number = request.resident.phone_number
 
     return {
         "id": request.id,
@@ -185,6 +192,7 @@ def _format_request_for_admin(request):
         "resident_first_name": request.resident.first_name if request.resident else None,
         "resident_middle_name": request.resident.middle_name if request.resident else None,
         "resident_last_name": request.resident.last_name if request.resident else None,
+        "resident_phone": phone_number,
         "resident_rfid": rfid_display,
         "doctype_id": request.doctype_id,
         "doctype_name": request.doctype.doctype_name,
@@ -230,6 +238,43 @@ def get_document_request(request_id: int, db: Session = Depends(get_db),):
     data["request_file_path"] = request.request_file_path
     
     return data
+
+
+@router.get("/requests/{request_id}/pdf")
+def view_request_pdf(request_id: int, db: Session = Depends(get_db)):
+    request = get_document_request_by_id(db, request_id)
+    if not request:
+        raise HTTPException(status_code=404, detail="Request not found")
+
+    if not request.request_file_path:
+        raise HTTPException(status_code=404, detail="No PDF generated yet")
+
+    # Resolve absolute path based on service's PDF_STORAGE_DIR
+    absolute_path = PDF_STORAGE_DIR / Path(request.request_file_path).relative_to("storage/documents")
+
+    print("Absolute path being checked:", absolute_path)
+    print("Exists?", absolute_path.exists())
+
+    if not absolute_path.exists():
+        raise HTTPException(status_code=404, detail="PDF file missing")
+
+    return FileResponse(
+        path=str(absolute_path),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"inline; filename=request_{request.transaction_no}.pdf"},
+    )
+
+
+@router.post("/requests/{request_id}/regenerate-pdf")
+def regenerate_pdf(request_id: int, db: Session = Depends(get_db)):
+    """
+    Manually regenerates the PDF for a request.
+    Useful if auto-generation failed or template was updated.
+    """
+    success = regenerate_request_pdf(db, request_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Request not found")
+    return {"detail": "PDF regenerated successfully"}
 
 
 @router.post("/requests/{request_id}/approve")

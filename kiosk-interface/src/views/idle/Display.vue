@@ -64,7 +64,7 @@ const toggleLang = () => (currentLang.value = currentLang.value === 'FIL' ? 'ENG
       </div>
     </div>
 
-    <div class="absolute bottom-11 left-20 text-[#8EC3EF] text-xl font-medium animate-pulse">
+    <div class="absolute bottom-11 left-20 text-[#6399c5] text-xl font-medium animate-pulse">
       Touch anywhere to start
     </div>
 

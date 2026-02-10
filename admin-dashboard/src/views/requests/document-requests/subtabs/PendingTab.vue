@@ -9,7 +9,8 @@ import {
   deleteRequest,
   markAsPaid,
   markAsUnpaid,
-  bulkDeleteRequests
+  bulkDeleteRequests,
+  viewRequestPdf 
 } from '@/api/documentService'
 
 const props = defineProps({
@@ -127,7 +128,7 @@ const handleButtonClick = ({ action, requestId }) => {
 
   switch (action) {
     case 'view':
-      alert(`Viewing request ${requestId} (frontend only)`)
+      viewRequestPdf(requestId)
       break
     case 'notes':
       console.log(`Opening notes for request ${requestId}`)

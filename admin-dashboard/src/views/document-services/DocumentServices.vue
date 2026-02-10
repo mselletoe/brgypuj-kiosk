@@ -351,11 +351,6 @@ const columns = computed(() => [
     }
   },
   {
-    title: 'ID',
-    key: 'id',
-    width: 70
-  },
-  {
     title: 'Name',
     key: 'request_type_name',
     render(row) {

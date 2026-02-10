@@ -5,9 +5,15 @@ Handles the business logic for document management, including administrative
 configuration of document types and resident-facing request processing.
 """
 import random
+import subprocess
+import tempfile
+import os
+import platform
+from io import BytesIO
 from datetime import datetime
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
+from docxtpl import DocxTemplate
 from app.models.document import DocumentType, DocumentRequest
 from app.models.resident import Resident
 from app.schemas.document import (
@@ -16,6 +22,158 @@ from app.schemas.document import (
     DocumentTypeCreate,
     DocumentTypeUpdate,
 )
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parents[2]
+PDF_STORAGE_DIR = BASE_DIR / "storage" / "documents"
+
+
+# -------------------------------------------------
+# PDF Generation Helper
+# -------------------------------------------------
+
+def _convert_docx_to_pdf(docx_bytes: bytes) -> bytes:
+    """
+    Convert DOCX bytes to PDF bytes using LibreOffice.
+    Works on both Windows and Linux (Raspberry Pi).
+    """
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # Save DOCX to temp file
+        docx_path = os.path.join(temp_dir, "document.docx")
+        with open(docx_path, "wb") as f:
+            f.write(docx_bytes)
+        
+        # Determine LibreOffice command based on platform
+        system = platform.system()
+        if system == "Windows":
+            # Common LibreOffice paths on Windows
+            libreoffice_paths = [
+                r"C:\Program Files\LibreOffice\program\soffice.exe",
+                r"C:\Program Files (x86)\LibreOffice\program\soffice.exe",
+            ]
+            soffice_cmd = None
+            for path in libreoffice_paths:
+                if os.path.exists(path):
+                    soffice_cmd = path
+                    break
+            if not soffice_cmd:
+                raise Exception("LibreOffice not found on Windows. Please install it.")
+        else:  # Linux (Raspberry Pi)
+            soffice_cmd = "soffice"
+        
+        # Convert DOCX to PDF using LibreOffice
+        try:
+            subprocess.run(
+                [
+                    soffice_cmd,
+                    "--headless",
+                    "--convert-to", "pdf",
+                    "--outdir", temp_dir,
+                    docx_path
+                ],
+                check=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=30
+            )
+        except subprocess.CalledProcessError as e:
+            raise Exception(f"LibreOffice conversion failed: {e.stderr.decode()}")
+        except FileNotFoundError:
+            raise Exception("LibreOffice not found. Install with: sudo apt-get install libreoffice")
+        
+        # Read the generated PDF
+        pdf_path = os.path.join(temp_dir, "document.pdf")
+        if not os.path.exists(pdf_path):
+            raise Exception("PDF file was not generated")
+        
+        with open(pdf_path, "rb") as f:
+            pdf_bytes = f.read()
+        
+        return pdf_bytes
+
+
+def _prepare_template_data(form_data: dict) -> dict:
+    """
+    Prepares template data by auto-filling date-related placeholders.
+    
+    Automatically detects and fills:
+    - {{ date_today }} - Full date (e.g., "January 4, 2026")
+    - {{ day }} - Day with ordinal suffix (e.g., "4th")
+    - {{ month }} - Full month name (e.g., "January")
+    - {{ year }} - Full year (e.g., "2026")
+    """
+    now = datetime.now()
+    
+    # Helper function to get ordinal suffix
+    def get_ordinal_suffix(day: int) -> str:
+        if 10 <= day % 100 <= 20:
+            suffix = 'th'
+        else:
+            suffix = {1: 'st', 2: 'nd', 3: 'rd'}.get(day % 10, 'th')
+        return f"{day}{suffix}"
+    
+    # Create a copy of form_data to avoid modifying original
+    template_data = form_data.copy()
+    
+    # Auto-fill date placeholders
+    template_data.update({
+        'date_today': now.strftime("%B %d, %Y"),  # January 04, 2026
+        'day': get_ordinal_suffix(now.day),        # 4th
+        'month': now.strftime("%B"),               # January
+        'year': str(now.year),                     # 2026
+    })
+    
+    return template_data
+
+
+def _generate_pdf_from_template(
+    template_bytes: bytes,
+    form_data: dict
+) -> bytes:
+    """
+    Generates a PDF from a DOCX template by:
+    1. Auto-filling date placeholders
+    2. Rendering the template with form data
+    3. Converting DOCX to PDF using LibreOffice
+    """
+    try:
+        # Load template
+        tpl = DocxTemplate(BytesIO(template_bytes))
+        
+        # Prepare data with auto-filled dates
+        template_data = _prepare_template_data(form_data)
+        
+        # Render template
+        tpl.render(template_data)
+        
+        # Save rendered DOCX to bytes
+        docx_stream = BytesIO()
+        tpl.save(docx_stream)
+        docx_bytes = docx_stream.getvalue()
+        
+        # Convert to PDF
+        pdf_bytes = _convert_docx_to_pdf(docx_bytes)
+        
+        return pdf_bytes
+        
+    except Exception as e:
+        raise Exception(f"PDF generation failed: {str(e)}")
+
+
+def _save_request_pdf(transaction_no: str, pdf_bytes: bytes) -> str:
+    year = datetime.now().strftime("%Y")
+    month = datetime.now().strftime("%m")
+
+    output_dir = PDF_STORAGE_DIR / year / month
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    file_path = output_dir / f"{transaction_no}.pdf"
+
+    with open(file_path, "wb") as f:
+        f.write(pdf_bytes)
+
+    # store RELATIVE POSIX path in DB
+    return str(file_path.relative_to(BASE_DIR).as_posix())
 
 
 # -------------------------------------------------
@@ -131,6 +289,8 @@ def create_document_request(db: Session, payload: DocumentRequestCreate) -> Docu
     Special handling for RFID requests:
     - RFID requests can be made in guest mode (resident_id = None)
     - All other document types require a valid resident_id
+    
+    Auto-generates PDF from template with form data.
     """
 
     # 1. Validate document availability
@@ -169,6 +329,30 @@ def create_document_request(db: Session, payload: DocumentRequestCreate) -> Docu
     db.add(request)
     db.commit()
     db.refresh(request)
+
+    # 6. Auto-generate PDF if template exists
+    if doc_type.file:
+        try:
+            pdf_bytes = _generate_pdf_from_template(
+                template_bytes=doc_type.file,
+                form_data=payload.form_data
+            )
+            
+            # Save PDF to request
+            relative_path = _save_request_pdf(
+                request.transaction_no,
+                pdf_bytes
+            )
+            request.request_file_path = relative_path
+            db.commit()
+            db.refresh(request)
+            
+            print(f"✅ PDF auto-generated for request {request.transaction_no}")
+            
+        except Exception as e:
+            print(f"❌ PDF generation failed for request {request.transaction_no}: {str(e)}")
+            # Don't fail the request if PDF generation fails
+            # Admin can regenerate manually if needed
 
     return DocumentRequestKioskResponse(
         transaction_no=request.transaction_no
@@ -457,3 +641,41 @@ def update_request_notes(db: Session, request_id: int, notes: str) -> str:
     db.commit()
     db.refresh(req)
     return req.notes
+
+
+def regenerate_request_pdf(db: Session, request_id: int) -> bool:
+    """
+    Admin: Manually regenerate PDF for a specific request.
+    Useful if auto-generation failed or template was updated.
+    """
+    req = _get_request(db, request_id)
+    if not req:
+        return False
+    
+    doc_type = db.query(DocumentType).filter(DocumentType.id == req.doctype_id).first()
+    if not doc_type or not doc_type.file:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No template file found for this document type"
+        )
+    
+    try:
+        pdf_bytes = _generate_pdf_from_template(
+            template_bytes=doc_type.file,
+            form_data=req.form_data
+        )
+        
+        relative_path = _save_request_pdf(
+            req.transaction_no,
+            pdf_bytes
+        )
+        req.request_file_path = relative_path
+        db.commit()
+        
+        return True
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"PDF regeneration failed: {str(e)}"
+        )

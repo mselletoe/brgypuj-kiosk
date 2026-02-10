@@ -65,6 +65,7 @@ const routes = [
         component: DocumentServices,
         children: [{ path: ":docType", component: DocumentFormWrapper }],
       },
+<<<<<<< HEAD
       {
         path: "equipment-borrowing",
         name: "EquipmentBorrowing",
@@ -87,6 +88,18 @@ const routes = [
       },
       { path: "/id-services", name: "IDServices", component: IDServices },
     ],
+=======
+      { path: 'equipment-borrowing', name: 'EquipmentBorrowing', component: EquipmentBorrowing },
+      { path: 'help-and-support', name: 'Support', component: HelpAndSupport },
+      { path: 'feedback', name: 'Feedback', component: Feedback },
+      { path: 'rating', name: 'Rating', component: Rating },
+      { path: 'comments', name: 'Comments', component: Comments },
+      { path: 'register', name: 'Register', component: Register },
+      { path: 'component-showcase', name: 'DevShowcase', component: ComponentShowcase },
+      { path: 'transaction-history', name: 'TransactionHistory', component: TransactionHistory },
+      { path: 'id-services', name: 'IDServices', component: IDServices }
+    ]
+>>>>>>> 5e3690296cc9194a37d1a310f431fb48a2a360f6
   },
 
   // Catch-all: Redirect unknown paths back to the safety of the Idle screen

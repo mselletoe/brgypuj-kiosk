@@ -117,31 +117,15 @@ const goBack = () => {
   }
 }
 
-/**
- * Closes the success modal with a fade-out animation and resets the session.
- */
-const closeModal = () => {
-  isFadingOut.value = true
-  setTimeout(() => {
-    showSuccessModal.value = false
-    formData.value = {}
-    currentStep.value = 'form'
-    isFadingOut.value = false
-    router.push('/home')
-  }, 500)
-}
-
-const handleYes = () => {
-  router.push('/document-services')
-}
-
-const handleNo = () => {
-  closeModal()
+const handleDone = () => {
+  router.push('/home')
 }
 
 /**
  * Submits the finalized form data to the backend.
  * Captures the transaction number for the user's reference upon success.
+ * 
+ * FIXED: Properly handles async PDF generation without race conditions
  */
 const handleSubmit = async (data) => {
   if (isSubmitting.value) return
@@ -164,20 +148,32 @@ const handleSubmit = async (data) => {
       resident_id: residentId
     }
 
-    // Call backend
+    // Call backend (this may take time due to PDF generation)
     const response = await createDocumentRequest(payload)
 
+    // Store form data
     formData.value = data
-
-    // Show modal with transaction number
-    showSuccessModal.value = true
     transactionNo.value = response.transaction_no
 
-  } catch (err) {
-    console.error(err)
-    alert(err?.response?.data?.detail || 'Failed to submit document request.')
-  } finally {
+    // IMPORTANT: Set isSubmitting to false BEFORE showing modal
+    // This ensures the loading overlay is removed first
     isSubmitting.value = false
+
+    // Small delay to ensure loading overlay transition completes
+    await new Promise(resolve => setTimeout(resolve, 100))
+
+    // Show success modal
+    showSuccessModal.value = true
+
+  } catch (err) {
+    console.error('Document submission error:', err)
+    
+    // Set isSubmitting to false before showing error
+    isSubmitting.value = false
+    
+    // Show user-friendly error message
+    const errorMessage = err?.response?.data?.detail || 'Failed to submit document request. Please try again.'
+    alert(errorMessage)
   }
 }
 
@@ -189,6 +185,7 @@ onMounted(async () => {
 
 <template>
   <div class="flex flex-col w-full h-full">
+    <!-- Header -->
     <div class="flex items-center mb-6 gap-7 flex-shrink-0">
       <ArrowBackButton @click="goBack"/>
       <div>
@@ -239,7 +236,7 @@ onMounted(async () => {
         <div class="bg-white rounded-2xl p-10 shadow-2xl flex flex-col items-center gap-2 min-w-[400px]">
           <Loading color="#03335C" size="14px" spacing="70px" />
           <p class="text-[#003A6B] text-lg font-semibold mt-6">Submitting your request...</p>
-          <p class="text-gray-500 text-sm">Please wait a moment</p>
+          <p class="text-gray-500 text-sm">Please wait while we generate your document</p>
         </div>
       </div>
     </transition>
@@ -255,14 +252,11 @@ onMounted(async () => {
           :message="`Pay the fee at the counter and be informed of further details. Please take note of the Request ID number below for reference.`"
           :referenceId="transactionNo"
           :showReferenceId="true"
-          primaryButtonText="Yes"
-          secondaryButtonText="No"
+          primaryButtonText="Done"
           :showPrimaryButton="true"
-          :showSecondaryButton="true"
+          :showSecondaryButton="false"
           :showNewRequest="false"
-          @primary-click="handleYes"
-          @secondary-click="handleNo"
-          @done="closeModal"
+          @primary-click="handleDone"
         />
       </div>
     </transition>

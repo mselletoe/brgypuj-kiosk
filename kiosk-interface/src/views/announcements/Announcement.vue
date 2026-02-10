@@ -1,19 +1,25 @@
 <script setup>
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { SpeakerWaveIcon, SpeakerXMarkIcon } from '@heroicons/vue/24/solid'
 import logoPath from '@/assets/images/Pob1Logo.svg'
+import ArrowBackButton from '@/components/shared/ArrowBackButton.vue'
 
 const isMuted = ref(false)
+const router = useRouter()
 const currentLang = ref('FIL')
 
 const toggleMute = () => (isMuted.value = !isMuted.value)
 const toggleLang = () => (currentLang.value = currentLang.value === 'FIL' ? 'ENG' : 'FIL')
+
+const goBack = () => router.push('/home')
 </script>
 
 <template>
-  <div class="announcement-page w-full h-screen overflow-hidden">
-    <header class="flex items-center justify-between px-10 py-6">
-      
+  <div class="announcement-page w-full h-screen overflow-hidden px-10 py-6">
+    <!-- Header -->
+    <header class="flex items-center justify-between mb-6">
+      <!-- Logo and Name -->
       <div class="flex items-center gap-4 text-[#013C6D]">
         <img :src="logoPath" alt="Brgy Logo" class="w-[60px] h-[60px] object-contain" />
         <div class="flex flex-col justify-center">
@@ -26,6 +32,7 @@ const toggleLang = () => (currentLang.value = currentLang.value === 'FIL' ? 'ENG
         </div>
       </div>
 
+      <!-- Action Buttons -->
       <div class="flex items-center gap-5">
         <button 
           @click="toggleMute" 
@@ -58,13 +65,23 @@ const toggleLang = () => (currentLang.value = currentLang.value === 'FIL' ? 'ENG
 
     </header>
 
+    <!-- Main -->
     <main>
-        <div>
-            <!-- Arrowbackbutton and title -->
+      <!-- Arrow Back and Title -->
+      <div class="flex items-center mb-6 gap-7 flex-shrink-0">
+        <ArrowBackButton @click="goBack"/>
+        <div class="flex items-center">
+          <h1 class="text-[45px] text-[#03335C] font-bold tracking-tight">
+            BARANGAY ANNOUNCEMENTS
+          </h1>
         </div>
-        <div>
-            <!-- Main Content here -->
-        </div>
+      </div>
+
+      <!-- Announcements -->
+      <div>
+            <!-- Announcement Contents here -->
+      </div>
+  
     </main>
   </div>
 </template>

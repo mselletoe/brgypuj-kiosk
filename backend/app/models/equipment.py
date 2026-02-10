@@ -25,7 +25,7 @@ class EquipmentRequest(Base):
 
     id = Column(Integer, primary_key=True)
     transaction_no = Column(String(20), unique=True, nullable=False, server_default=FetchedValue())
-    resident_id = Column(Integer, ForeignKey("residents.id", ondelete="SET NULL"))
+    resident_id = Column(Integer, ForeignKey("residents.id", ondelete="RESTRICT"), nullable=False)
     contact_person = Column(String(255))
     contact_number = Column(String(16))
     purpose = Column(String(255))

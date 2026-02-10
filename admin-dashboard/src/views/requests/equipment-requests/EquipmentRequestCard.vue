@@ -1,6 +1,10 @@
 <script setup>
-import { computed } from 'vue';
+import { ref, computed } from 'vue'
+import { NPopover, NInput, NButton } from 'naive-ui'
 import { TrashIcon, ArrowUturnLeftIcon } from '@heroicons/vue/24/solid';
+
+const notes = ref('')
+const showNotesPopover = ref(false)
 
 const props = defineProps({
   id: {
@@ -51,14 +55,37 @@ const props = defineProps({
   }
 });
 
+const saveNotes = () => {
+  emit('button-click', {
+    action: 'notes',
+    requestId: props.id,
+    notes: notes.value
+  })
+
+  showNotesPopover.value = false
+  notes.value = ''
+}
+
 const emit = defineEmits(['button-click', 'update:isPaid', 'update:selected']);
 
-const isPastDue = computed(() => {
-  if (!props.borrowingPeriod?.to) return false;
+const dueStatus = computed(() => {
+  if (!props.borrowingPeriod?.to) return null;
+  
   const dueDate = new Date(props.borrowingPeriod.to);
   const today = new Date();
+  
+  dueDate.setHours(0, 0, 0, 0);
   today.setHours(0, 0, 0, 0);
-  return dueDate < today;
+  
+  if (props.status === 'pickedup') {
+    if (dueDate < today) {
+      return 'overdue'; // Past due and not yet returned
+    } else if (dueDate.getTime() === today.getTime()) {
+      return 'duetoday'; // Due today
+    }
+  }
+  
+  return null;
 });
 
 const buttonConfigs = {
@@ -94,6 +121,7 @@ const buttonConfigs = {
   rejected: [
     { id: 'details', label: 'Details', variant: 'primary' },
     { id: 'notes', label: 'Notes', variant: 'gray' },
+    { id: 'notify', label: 'Notify', variant: 'solidgreen' },
     { id: 'undo', label: '', icon: ArrowUturnLeftIcon, variant: 'undo' },
     { id: 'delete', label: '', icon: TrashIcon, variant: 'delete' }
   ]
@@ -155,6 +183,7 @@ const handleButtonClick = (buttonId, btn) => {
       isSelected ? 'border-[#0957FF] ring-1 ring-[#0957FF]/10 shadow-sm bg-[#F0F5FF]' : 'border-[#CCCCCC] bg-white'
     ]"
   >
+    <!-- Transaction Number -->
     <div class="flex flex-col items-center justify-center space-y-1">
       <div class="flex justify-center bg-[#F0F5FF] border border-[#D4DFF6] rounded px-4 py-1 min-w-[90px]">
         <div class="text-lg font-bold text-slate-700 leading-tight">{{ transactionNo }}</div>        
@@ -162,51 +191,72 @@ const handleButtonClick = (buttonId, btn) => {
       <div class="text-[9px] text-gray-400 font-medium">Transaction No.</div>
     </div>
 
+    <!-- Details -->
     <div class="flex-1 flex flex-col gap-3">
+      <!-- Request Type Name -->
       <h3 class="text-xl font-bold text-slate-800 leading-none">
         {{ requestType }}
       </h3>
       
+      <!-- Request Details -->
       <div class="flex gap-16">
-        <div class="flex flex-col">
-          <span class="text-[11px] text-gray-400 font-medium">Request from</span>
-          <span class="text-sm text-slate-700 font-bold">
-            {{ requester.firstName }} {{ requester.middleName }} {{ requester.lastName }}
-          </span>
-        </div>
 
-        <div class="flex flex-col">
-          <span class="text-[11px] text-gray-400 font-medium">RFID No.</span>
-          <span class="text-sm font-bold text-blue-600">
-            {{ rfidNo }}
-          </span>
-        </div>
-      </div>
-
-      <div class="flex gap-16">
-        <div class="flex flex-col">
-          <span class="text-[11px] text-gray-400 font-medium">Requested on</span>
-          <span class="text-sm text-slate-700 font-bold">{{ requestedOn }}</span>
-        </div>
-
-        <div class="flex flex-col">
-          <span class="text-[11px] text-gray-400 font-medium">Borrowing Period</span>
-          <div class="flex items-center gap-2">
+        <!-- Column 1 -->
+        <div class="flex flex-col gap-3">
+          <!-- Full Name -->
+          <div class="flex flex-col">
+            <span class="text-[11px] text-gray-400 font-medium">Request from</span>
             <span class="text-sm text-slate-700 font-bold">
-              {{ borrowingPeriod.from }} - {{ borrowingPeriod.to }}
+              {{ requester.firstName }} {{ requester.middleName }} {{ requester.lastName }}
             </span>
-            <span 
-              v-if="isPastDue" 
-              class="px-2 py-0.5 bg-red-100 text-red-600 rounded text-[10px] font-bold uppercase"
-            >
-              Past Due
+          </div>
+
+          <!-- RFID No. -->
+          <div class="flex flex-col">
+            <span class="text-[11px] text-gray-400 font-medium">RFID No.</span>
+            <span class="text-sm font-bold text-blue-600">
+              {{ rfidNo }}
             </span>
+          </div>
+        </div>
+
+        <!-- Column 2 -->
+        <div class="flex flex-col gap-3">
+          <!-- Requested Date -->
+          <div class="flex flex-col">
+            <span class="text-[11px] text-gray-400 font-medium">Requested on</span>
+            <span class="text-sm text-slate-700 font-bold">{{ requestedOn }}</span>
+          </div>
+
+          <!-- Borrowing Period -->
+          <div class="flex flex-col">
+            <span class="text-[11px] text-gray-400 font-medium">Borrowing Period</span>
+            <div class="flex items-center gap-2">
+              <span class="text-sm text-slate-700 font-bold">
+                {{ borrowingPeriod.from }} - {{ borrowingPeriod.to }}
+              </span>
+              <span 
+                v-if="dueStatus === 'overdue'" 
+                class="px-2 py-0.5 bg-red-100 text-red-600 rounded text-[10px] font-bold uppercase"
+              >
+                Past Due
+              </span>
+              <span 
+                v-else-if="dueStatus === 'duetoday'" 
+                class="px-2 py-0.5 bg-green-100 text-green-600 rounded text-[10px] font-bold uppercase"
+              >
+                Due Today
+              </span>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
+    <!-- Buttons -->
     <div class="flex flex-col items-end gap-4 min-w-fit">
+
+      <!-- Checkbox -->
       <div class="flex items-center gap-3">
         <input 
           type="checkbox" 
@@ -216,6 +266,7 @@ const handleButtonClick = (buttonId, btn) => {
         />
       </div>
 
+      <!-- Payment Status -->
       <div v-if="amount" class="flex items-center gap-3">
         <button
           v-if="status === 'pending'"
@@ -239,21 +290,60 @@ const handleButtonClick = (buttonId, btn) => {
         </div>
       </div>
 
+      <!-- Action Buttons -->
       <div class="flex items-center gap-2">
-        <button
-          v-for="btn in visibleButtons"
-          :key="btn.id"
-          @click="handleButtonClick(btn.id, btn)"
-          :disabled="isButtonDisabled(btn)"
-          :class="[
-            getButtonClass(btn),
-            ['delete', 'undo'].includes(btn.id) ? 'w-9 px-0' : 'px-4'
-          ]"
-          class="h-9 rounded-md text-sm font-semibold transition-all flex items-center justify-center"
-        >
-          {{ btn.label }}
-          <component v-if="!btn.label" :is="btn.icon" class="w-5 h-5" />
-        </button>
+        <template v-for="btn in visibleButtons" :key="btn.id">
+          <!-- Notes Button -->
+          <n-popover
+            v-if="btn.id === 'notes'"
+            trigger="click"
+            placement="bottom-end"
+            v-model:show="showNotesPopover"
+            :show-arrow="false"
+          >
+            <template #trigger>
+              <button
+                :class="[getButtonClass(btn), 'px-4']"
+                class="h-9 rounded-md text-sm font-semibold flex items-center justify-center"
+              >
+                {{ btn.label }}
+              </button>
+            </template>
+
+            <div class="flex w-72 p-1 gap-3 items-center">
+              <n-input
+                v-model:value="notes"
+                type="textarea"
+                size="medium"
+                placeholder="Add notes..."
+                class="h-9"
+              />
+              <n-button
+                size="small"
+                type="primary"
+                @click="saveNotes"
+                :disabled="!notes.trim()"
+              >
+                Save
+              </n-button>
+            </div>
+          </n-popover>
+
+          <!-- Other Buttons -->
+          <button
+            v-else
+            @click="handleButtonClick(btn.id, btn)"
+            :disabled="isButtonDisabled(btn)"
+            :class="[
+              getButtonClass(btn),
+              ['delete', 'undo'].includes(btn.id) ? 'w-9 px-0' : 'px-4'
+            ]"
+            class="h-9 rounded-md text-sm font-semibold transition-all flex items-center justify-center"
+          >
+            {{ btn.label }}
+            <component v-if="!btn.label" :is="btn.icon" class="w-5 h-5" />
+          </button>
+        </template>
       </div>
     </div>
   </div>

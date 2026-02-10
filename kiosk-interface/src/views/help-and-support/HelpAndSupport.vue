@@ -1,24 +1,23 @@
 <script setup>
-import { ref } from 'vue';
-import { useRouter } from 'vue-router';
-import ArrowBackButton from '@/components/shared/ArrowBackButton.vue'; // Adjust path if needed
-import FAQs from './FAQs.vue'; // Adjust path if needed
-import Contact from './Contact.vue'; // Adjust path if needed
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import ArrowBackButton from '@/components/shared/ArrowBackButton.vue'
+import FAQs from './FAQs.vue'
+import Contact from './Contact.vue'
 
-const router = useRouter();
-const currentTab = ref('faqs'); // 'faqs' or 'contact'
+const router = useRouter()
+const currentTab = ref('faqs')
 
 const setActiveTab = (tabName) => {
   currentTab.value = tabName;
 };
 
 const goBackToHome = () => {
-  router.push('/home'); // Assuming '/home' is your home route
+  router.push('/home')
 };
 
-// Button classes for active/inactive states
-const activeTabClass = 'bg-[#013C6D] text-white';
-const inactiveTabClass = 'bg-white text-gray-600 hover:bg-gray-300';
+const activeTabClass = 'bg-[#013C6D] text-white'
+const inactiveTabClass = 'bg-white text-gray-600 hover:bg-gray-300'
 </script>
 
 <template>

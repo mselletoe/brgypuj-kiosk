@@ -24,6 +24,8 @@ const emit = defineEmits(['start-new-request']);
 const router = useRouter();
 const showModal = ref(false);
 const isSubmitting = ref(false);
+const transactionNo = ref('');
+const isFadingOut = ref(false);
 
 const formatCurrency = (value) => {
   if (!value) return '₱0';
@@ -75,6 +77,8 @@ const handleSubmit = async () => {
     const response = await createEquipmentRequest(payload);
 
     console.log('Request created:', response);
+
+    transactionNo.value = response.transaction_no;
     showModal.value = true;
 
   } catch (err) {
@@ -85,15 +89,14 @@ const handleSubmit = async () => {
   }
 };
 
-const handleModalDone = () => {
-  showModal.value = false
-  router.push('/home')
-}
-
+const handleDone = () => {
+  router.push('/home');
+};
 </script>
 
 <template>
   <div class="flex flex-col w-full h-full" :class="{ 'content-with-keyboard': showKeyboard }">
+    <!-- Header -->
     <div class="flex items-center mb-6 gap-7 flex-shrink-0">
       <ArrowBackButton @click="goBackToHome" />
       <div>
@@ -102,16 +105,18 @@ const handleModalDone = () => {
       </div>
     </div>
 
+    <!-- Main -->
     <div class="flex-1 overflow-y-auto custom-scrollbar">
-      <div class="flex gap-2 items-stretch">
-        <div class="w-1/2 bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+      <div class="flex gap-3 mb-6">
+        <!-- Left -->
+        <div class="w-1/2 bg-white rounded-2xl shadow-lg border border-gray-200 p-5">
           <h3 class="text-2xl font-bold text-[#013C6D] flex items-center gap-2">
             <MagnifyingGlassIcon class="w-8 h-8" />
             Review Your Request
           </h3>
-          <div class="mt-6">
+          <div class="mt-4">
             <h4 class="text-lg font-bold text-[#013C6D]">Selected Items Summary</h4>
-            <ul class="mt-2 space-y-0 min-h-24">
+            <ul class="mt-2 space-y-0 min-h-32">
               <li
                 v-for="item in selectedEquipment"
                 :key="item.id"
@@ -122,7 +127,7 @@ const handleModalDone = () => {
               </li>
             </ul>
           </div>
-          <div class="mt-6">
+          <div class="mt-4">
             <h4 class="text-lg font-bold text-[#013C6D]">Borrowing Period</h4>
             <div class="mt-2 flex justify-between text-base text-gray-700 max-w-xs">
               <div>
@@ -137,8 +142,9 @@ const handleModalDone = () => {
           </div>
         </div>
 
-        <div class="w-1/2 flex flex-col gap-2">
-          <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+        <!-- Right -->
+        <div class="w-1/2 flex flex-col gap-3">
+          <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-5">
             <h3 class="text-2xl font-bold text-[#013C6D]">Contact Information</h3>
             <div class="mt-4 space-y-2">
               <div class="flex justify-between text-base">
@@ -159,7 +165,7 @@ const handleModalDone = () => {
               </div>
             </div>
           </div>
-          <div class="bg-[#EBF5FF] rounded-2xl shadow-lg border border-[#B0D7F8] p-6">
+          <div class="bg-[#EBF5FF] rounded-2xl shadow-lg border border-[#B0D7F8] p-5">
             <div class="flex justify-between text-2xl font-bold text-[#013C6D]">
               <span>Total Cost:</span>
               <span>{{ formatCurrency(totalCost) }}</span>
@@ -172,12 +178,12 @@ const handleModalDone = () => {
       </div>
     </div>
 
-
+    <!-- Buttons -->
     <div class="flex gap-6 mt-6 justify-between items-center bottom-0 flex-shrink-0">
       <Button
         @click="handlePageBack"
         variant="outline"
-        size="lg"
+        size="md"
         :disabled="isSubmitting"
       >
         Back to Form
@@ -186,19 +192,24 @@ const handleModalDone = () => {
         @click="handleSubmit"
         :disabled="isSubmitting"
         :variant="isSubmitting ? 'disabled' : 'secondary'"
-        size="lg"
+        size="md"
       >
         {{ isSubmitting ? 'Submitting...' : 'Submit Request' }}
       </Button>
     </div>
 
+    <!-- Modal -->
     <div v-if="showModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-8">
       <Modal
         title="Request Submitted!"
-        message="Your borrowing request has been submitted for approval. Pay the fee at the counter and you will be contacted for pickup details."
-        :showPrimaryButton="true"
+        :message="`Pay the fee at the counter and you will be contacted for pickup details. Please take note of the Request ID number below for reference.`"
+        :referenceId="transactionNo"
+        :showReferenceId="true"
         primaryButtonText="Done"
-        @primary-click="handleModalDone"
+        :showPrimaryButton="true"
+        :showSecondaryButton="false"
+        :showNewRequest="false"
+        @primary-click="handleDone"
       />
     </div>
   </div>

@@ -145,6 +145,7 @@ class DocumentRequestAdminOut(BaseModel):
     resident_middle_name: Optional[str]
     resident_last_name: Optional[str]
     resident_rfid: Optional[str]
+    resident_phone: Optional[str]
     
     doctype_id: int
     doctype_name: str
@@ -169,4 +170,4 @@ class DocumentRequestAdminDetail(DocumentRequestAdminOut):
     """
     resident_name: str
     price: Decimal
-    request_file_path: Optional[str]
+    request_file_path: Optional[str] = None

@@ -7,7 +7,6 @@ import { PlusIcon, MinusIcon } from '@heroicons/vue/24/solid';
 import Keyboard from '@/components/shared/Keyboard.vue';
 import { getAvailableEquipment } from '@/api/equipmentService'
 
-// --- Props & Emits ---
 const props = defineProps({
   selectedEquipment: Array,
   goNext: Function,
@@ -15,7 +14,6 @@ const props = defineProps({
 const emit = defineEmits(['update:selected-equipment']);
 const router = useRouter();
 
-// --- Local State ---
 const allEquipment = ref([])
 const loading = ref(false)
 const loadError = ref(null)
@@ -43,12 +41,10 @@ const fetchEquipment = async () => {
   }
 }
 
-// --- Keyboard State ---
 const showKeyboard = ref(false);
 const activeEquipment = ref(null);
 const quantityWarning = ref('');
 
-// --- Computed Helpers ---
 const getSelectedItem = (equipment) =>
   props.selectedEquipment.find(item => item.id === equipment.id);
 
@@ -61,7 +57,6 @@ const formatCurrency = (value) => `₱${parseFloat(value).toLocaleString()}`;
 
 const hasSelection = computed(() => props.selectedEquipment.length > 0);
 
-// --- Quantity Handlers ---
 const setQuantity = (equipment, newQuantity) => {
   if (newQuantity < 0) newQuantity = 0;
   if (newQuantity > equipment.available) {
@@ -96,7 +91,6 @@ const setQuantity = (equipment, newQuantity) => {
 const increment = (equipment) => setQuantity(equipment, getItemQuantity(equipment) + 1);
 const decrement = (equipment) => setQuantity(equipment, getItemQuantity(equipment) - 1);
 
-// --- Keyboard Functions ---
 const openKeyboard = (equipment) => {
   activeEquipment.value = equipment;
   showKeyboard.value = true;
@@ -127,7 +121,6 @@ const handleKeyboardHide = () => {
   quantityWarning.value = '';
 };
 
-// --- Other Actions ---
 const resetSelection = () => emit('update:selected-equipment', []);
 const continueStep = () => props.goNext('dates');
 const goBackToHome = () => router.push('/home');

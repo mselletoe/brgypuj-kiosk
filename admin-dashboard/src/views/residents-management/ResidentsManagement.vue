@@ -1,48 +1,49 @@
 <script setup>
-import { ref, computed, h, watch } from 'vue'
+import { ref, computed, h, watch, onMounted } from 'vue'
 import { NDataTable, NInput, NButton, NCheckbox, useMessage } from 'naive-ui'
 import { FunnelIcon, TrashIcon, CheckIcon } from '@heroicons/vue/24/outline'
 import PageTitle from '@/components/shared/PageTitle.vue'
 import ResidentModal from './ResidentModal.vue'
 import ConfirmModal from '@/components/shared/ConfirmationModal.vue'
+import { 
+  fetchResidents, 
+  deleteResident as deleteResidentAPI 
+} from '@/api/residentService'
 
 const message = useMessage()
 
 // ======================================
 // State Management
 // ======================================
-const residents = ref([
-  {
-    id: 1,
-    firstName: 'First Name',
-    middleName: 'Middle Name',
-    lastName: 'Last Name',
-    suffix: 'Suffix',
-    phoneNumber: '09123456789',
-    rfid: 'RFID No.',
-    currentAddress: 'House No./St., Purok X',
-    status: 'Active'
-  },
-  {
-    id: 2,
-    firstName: 'First Name',
-    middleName: 'Middle Name',
-    lastName: 'Last Name',
-    suffix: 'Suffix',
-    phoneNumber: '09123456789',
-    rfid: 'RFID No.',
-    currentAddress: 'House No./St., Purok X',
-    status: 'Active'
-  }
-])
-
+const residents = ref([])
+const loading = ref(false)
 const searchQuery = ref('')
 const selectedIds = ref([])
 const showDeleteModal = ref(false)
 const showFilterModal = ref(false)
 const showResidentModal = ref(false)
 const currentResident = ref(null)
-const modalMode = ref('add') // 'add' or 'view'
+const modalMode = ref('add')
+
+// ======================================
+// Data Loading
+// ======================================
+async function loadResidents() {
+  loading.value = true
+  try {
+    const data = await fetchResidents()
+    residents.value = data
+  } catch (error) {
+    console.error('Failed to load residents:', error)
+    message.error('Failed to load residents')
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  loadResidents()
+})
 
 // ======================================
 // Selection Logic
@@ -52,11 +53,10 @@ const filteredResidents = computed(() => {
   
   const query = searchQuery.value.toLowerCase()
   return residents.value.filter(r => 
-    r.firstName.toLowerCase().includes(query) ||
-    r.middleName.toLowerCase().includes(query) ||
-    r.lastName.toLowerCase().includes(query) ||
-    r.phoneNumber.includes(query) ||
-    r.rfid.toLowerCase().includes(query)
+    r.full_name.toLowerCase().includes(query) ||
+    (r.phone_number && r.phone_number.includes(query)) ||
+    (r.rfid_no && r.rfid_no.toLowerCase().includes(query)) ||
+    (r.current_address && r.current_address.toLowerCase().includes(query))
   )
 })
 
@@ -93,31 +93,19 @@ function openAddModal() {
 
 function openViewModal(resident) {
   modalMode.value = 'view'
-  currentResident.value = { ...resident }
+  currentResident.value = resident
   showResidentModal.value = true
 }
 
-function handleSaveResident(residentData) {
-  if (modalMode.value === 'add') {
-    // Add new resident
-    const newId = Math.max(...residents.value.map(r => r.id), 0) + 1
-    residents.value.push({
-      id: newId,
-      ...residentData
-    })
-    message.success('Resident registered successfully')
-  } else {
-    // Update existing resident
-    const index = residents.value.findIndex(r => r.id === currentResident.value.id)
-    if (index !== -1) {
-      residents.value[index] = {
-        ...residents.value[index],
-        ...residentData
-      }
-      message.success('Resident updated successfully')
-    }
-  }
+function handleModalClose() {
   showResidentModal.value = false
+  currentResident.value = null
+}
+
+function handleResidentSaved() {
+  showResidentModal.value = false
+  currentResident.value = null
+  loadResidents() // Reload the table
 }
 
 // ======================================
@@ -131,16 +119,32 @@ function requestBulkDelete() {
   showDeleteModal.value = true
 }
 
-function confirmDelete() {
-  residents.value = residents.value.filter(r => !selectedIds.value.includes(r.id))
-  message.success(`${selectedIds.value.length} resident(s) deleted successfully`)
-  selectedIds.value = []
-  showDeleteModal.value = false
+async function confirmDelete() {
+  try {
+    // Delete all selected residents
+    await Promise.all(
+      selectedIds.value.map(id => deleteResidentAPI(id))
+    )
+    
+    message.success(`${selectedIds.value.length} resident(s) deleted successfully`)
+    selectedIds.value = []
+    showDeleteModal.value = false
+    loadResidents() // Reload the table
+  } catch (error) {
+    console.error('Failed to delete residents:', error)
+    message.error('Failed to delete some residents')
+  }
 }
 
-function deleteResident(id) {
-  residents.value = residents.value.filter(r => r.id !== id)
-  message.success('Resident deleted successfully')
+async function handleDeleteSingle(id) {
+  try {
+    await deleteResidentAPI(id)
+    message.success('Resident deleted successfully')
+    loadResidents() // Reload the table
+  } catch (error) {
+    console.error('Failed to delete resident:', error)
+    message.error('Failed to delete resident')
+  }
 }
 
 // ======================================
@@ -167,39 +171,46 @@ const columns = computed(() => [
     }
   },
   {
-    title: '',
+    title: '#',
     key: 'id',
-    width: 60,
+    width: 50,
     render(row) {
       return row.id
     }
   },
   {
-    title: 'First Name Middle Name Last Name Suffix',
-    key: 'fullName',
-    render(row) {
-      return `${row.firstName} ${row.middleName} ${row.lastName} ${row.suffix}`
-    }
+    title: 'Full Name',
+    key: 'full_name',
+    minWidth: 100
   },
   {
     title: 'Phone Number',
-    key: 'phoneNumber',
-    width: 150
+    key: 'phone_number',
+    width: 150,
+    render(row) {
+      return row.phone_number || 'N/A'
+    }
   },
   {
-    title: 'RFID',
-    key: 'rfid',
-    width: 120
+    title: 'RFID No.',
+    key: 'rfid_no',
+    width: 150,
+    render(row) {
+      return row.rfid_no || 'N/A'
+    }
   },
   {
     title: 'Current Address',
-    key: 'currentAddress',
-    width: 200
+    key: 'current_address',
+    minWidth: 250,
+    render(row) {
+      return row.current_address || 'N/A'
+    }
   },
   {
     title: 'Actions',
     key: 'actions',
-    width: 150,
+    width: 130,
     render(row) {
       return h('div', { class: 'flex gap-2 items-center' }, [
         h(
@@ -214,7 +225,7 @@ const columns = computed(() => [
         h(
           'button',
           {
-            onClick: () => deleteResident(row.id),
+            onClick: () => handleDeleteSingle(row.id),
             class: 'p-1.5 text-red-600 hover:bg-red-50 rounded transition'
           },
           [h(TrashIcon, { class: 'w-5 h-5' })]
@@ -230,7 +241,7 @@ const columns = computed(() => [
     <!-- Header -->
     <div class="flex mb-6 items-center justify-between">
       <div>
-        <PageTitle title="Residents Management" />
+        <PageTitle title="Residents Information Management" />
         <p class="text-sm text-gray-500 mt-1">Manage Residents Information</p>
       </div>
 
@@ -318,6 +329,7 @@ const columns = computed(() => [
       <n-data-table 
         :columns="columns" 
         :data="filteredResidents" 
+        :loading="loading"
         :bordered="false"
       />
     </div>
@@ -326,9 +338,9 @@ const columns = computed(() => [
     <ResidentModal
       :show="showResidentModal"
       :mode="modalMode"
-      :resident="currentResident"
-      @close="showResidentModal = false"
-      @save="handleSaveResident"
+      :resident-id="currentResident?.id"
+      @close="handleModalClose"
+      @saved="handleResidentSaved"
     />
 
     <ConfirmModal
