@@ -32,7 +32,11 @@ import IDServices from "../views/id-services/IDServices.vue";
 
 const routes = [
   // Root Redirect: Kiosk starts at the Idle/Welcome screen
-  { path: "/", redirect: "/idle" },
+  // [ORIGINAL CODE]
+  // { path: '/', redirect: '/idle' },
+
+  // [DEV BYPASS] Force Root to Home
+  { path: "/", redirect: "/home" },
 
   /**
    * PUBLIC ROUTES
@@ -56,7 +60,12 @@ const routes = [
   {
     path: "/",
     component: UserLayout,
+    // [ORIGINAL CODE]
+    // meta: { requiresAuth: true },
+
+    // [DEV BYPASS] Disable strict auth requirement here
     meta: { requiresAuth: false },
+
     children: [
       { path: "home", name: "Home", component: KioskHome },
       {
@@ -65,7 +74,6 @@ const routes = [
         component: DocumentServices,
         children: [{ path: ":docType", component: DocumentFormWrapper }],
       },
-<<<<<<< HEAD
       {
         path: "equipment-borrowing",
         name: "EquipmentBorrowing",
@@ -88,22 +96,14 @@ const routes = [
       },
       { path: "/id-services", name: "IDServices", component: IDServices },
     ],
-=======
-      { path: 'equipment-borrowing', name: 'EquipmentBorrowing', component: EquipmentBorrowing },
-      { path: 'help-and-support', name: 'Support', component: HelpAndSupport },
-      { path: 'feedback', name: 'Feedback', component: Feedback },
-      { path: 'rating', name: 'Rating', component: Rating },
-      { path: 'comments', name: 'Comments', component: Comments },
-      { path: 'register', name: 'Register', component: Register },
-      { path: 'component-showcase', name: 'DevShowcase', component: ComponentShowcase },
-      { path: 'transaction-history', name: 'TransactionHistory', component: TransactionHistory },
-      { path: 'id-services', name: 'IDServices', component: IDServices }
-    ]
->>>>>>> 5e3690296cc9194a37d1a310f431fb48a2a360f6
   },
 
   // Catch-all: Redirect unknown paths back to the safety of the Idle screen
-  { path: "/:pathMatch(.*)*", redirect: "/idle" },
+  // [ORIGINAL CODE]
+  // { path: '/:pathMatch(.*)*', redirect: '/idle' },
+
+  // [DEV BYPASS] Redirect unknown paths to Home
+  { path: "/:pathMatch(.*)*", redirect: "/home" },
 ];
 
 const router = createRouter({
@@ -119,27 +119,54 @@ router.beforeEach((to, from, next) => {
   const authStore = useAuthStore();
 
   // Ensure the store is rehydrated from LocalStorage before checking
+
+  // [ORIGINAL CODE]
+  /*
   if (!authStore.isAuthenticated) {
-    authStore.restore();
+    authStore.restore()
+  }
+  */
+
+  // [DEV BYPASS] 1. INJECT FAKE USER IF MISSING
+  // Prevents "isAuthenticated" read-only errors and allows app to load data
+  if (!authStore.user) {
+    console.log("DEV MODE: Injecting Fake User...");
+    authStore.$patch({
+      user: {
+        id: "DEV-USER",
+        firstName: "Developer",
+        lastName: "Bypass",
+        role: "student",
+        studentId: "2023-0001",
+      },
+      token: "bypass-token",
+    });
   }
 
   /**
    * Scenario: Accessing a protected page without a session.
    * If the route has 'requiresAuth' and the user isn't logged in, send them to login.
    */
+
+  // [ORIGINAL CODE] - Commented out to disable enforcement
+  /*
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    next("/login");
-  } else if (
-    /**
-     * Scenario: Trying to access login pages while already authenticated.
-     * If they are already logged in and try to go to /login, send them to /home.
-     */
-    (to.path === "/login" || to.path === "/login-rfid") &&
-    authStore.isAuthenticated
-  ) {
+    next('/login')
+  } 
+  else if ((to.path === '/login' || to.path === '/login-rfid') && authStore.isAuthenticated) {
+    next('/home')
+  }
+  else {
+    next() // Proceed as normal
+  }
+  */
+
+  // [DEV BYPASS] 2. BLOCK IDLE SCREEN & ALLOW EVERYTHING ELSE
+  if (to.path === "/idle" || to.path === "/login") {
+    console.log("DEV MODE: Blocking Idle/Login screen -> Redirecting to Home");
     next("/home");
   } else {
-    next(); // Proceed as normal
+    next();
   }
 });
 
