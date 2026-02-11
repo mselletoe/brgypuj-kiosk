@@ -6,17 +6,43 @@ from seeds.seed_admin import seed_admin
 from seeds.seed_document_types import seed_document_types
 from seeds.seed_equipment_inventory import seed_equipment_inventory
 
-if __name__ == "__main__":
+def seed_all():
+    """
+    Run all database seeding functions in the correct order.
+    Order matters due to foreign key relationships.
+    """
     print("🌱 Starting database seeding...")
     print("-" * 50)
     
-    seed_puroks()
-    seed_residents()
-    seed_addresses()
-    seed_rfids()
-    seed_admin()
-    seed_document_types()
-    seed_equipment_inventory()
-    
-    print("-" * 50)
-    print("✅ Database seeding completed!")
+    try:
+        # 1. Seed puroks first (no dependencies)
+        seed_puroks()
+        
+        # 2. Seed residents (no dependencies)
+        seed_residents()
+        
+        # 3. Seed addresses (depends on residents and puroks)
+        seed_addresses()
+        
+        # 4. Seed RFIDs (depends on residents)
+        seed_rfids()
+        
+        # 5. Seed admin (depends on residents)
+        seed_admin()
+        
+        # 6. Seed document types (no dependencies)
+        seed_document_types()
+        
+        # 7. Seed equipment inventory (no dependencies)
+        seed_equipment_inventory()
+        
+        print("-" * 50)
+        print("✅ Database seeding completed successfully!")
+        
+    except Exception as e:
+        print("-" * 50)
+        print(f"❌ Database seeding encountered an error: {e}")
+        raise
+
+if __name__ == "__main__":
+    seed_all()
