@@ -5,6 +5,7 @@ import KioskAnnouncementCard from '@/views/announcements/KioskAnnouncementCard.v
 import ConfirmModal from '@/components/shared/ConfirmationModal.vue'
 import {
   getAllAnnouncements,
+  getAnnouncementById,
   createAnnouncement,
   updateAnnouncement,
   deleteAnnouncement as deleteAnnouncementApi,
@@ -23,8 +24,15 @@ const loading = ref(false)
 const loadAnnouncements = async () => {
   loading.value = true
   try {
+    // First get the list of announcements
     const data = await getAllAnnouncements()
-    announcements.value = data
+    
+    // Then fetch full details (including images) for each announcement
+    const detailedAnnouncements = await Promise.all(
+      data.map(announcement => getAnnouncementById(announcement.id))
+    )
+    
+    announcements.value = detailedAnnouncements
   } catch (err) {
     console.error('Failed to fetch announcements:', err)
     alert('Failed to load announcements. Please try again.')
