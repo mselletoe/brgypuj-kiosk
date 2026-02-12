@@ -1,5 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useMessage } from 'naive-ui'
 import PageTitle from '@/components/shared/PageTitle.vue'
 import KioskAnnouncementCard from '@/views/announcements/KioskAnnouncementCard.vue'
 import ConfirmModal from '@/components/shared/ConfirmationModal.vue'
@@ -11,6 +12,8 @@ import {
   deleteAnnouncement as deleteAnnouncementApi,
   toggleAnnouncementStatus
 } from '@/api/announcementService'
+
+const message = useMessage()
 
 /* -------------------- STATE -------------------- */
 const announcements = ref([])
@@ -35,7 +38,7 @@ const loadAnnouncements = async () => {
     announcements.value = detailedAnnouncements
   } catch (err) {
     console.error('Failed to fetch announcements:', err)
-    alert('Failed to load announcements. Please try again.')
+    message.error('Failed to load announcements. Please try again.')
   } finally {
     loading.value = false
   }
@@ -64,15 +67,15 @@ const cancelEdit = () => {
 const saveAnnouncement = async ({ formData, imageFile }) => {
   // Validation
   if (!formData.title?.trim()) {
-    alert('Title is required')
+    message.warning('Title is required')
     return
   }
   if (!formData.event_date) {
-    alert('Event date is required')
+    message.warning('Event date is required')
     return
   }
   if (!formData.location?.trim()) {
-    alert('Location is required')
+    message.warning('Location is required')
     return
   }
 
@@ -90,11 +93,11 @@ const saveAnnouncement = async ({ formData, imageFile }) => {
     if (creatingNew.value) {
       // Create new announcement
       await createAnnouncement(announcementData, imageFile)
-      alert('Announcement created successfully')
+      message.success('Announcement created successfully')
     } else {
       // Update existing announcement
       await updateAnnouncement(editingId.value, announcementData, imageFile, false)
-      alert('Announcement updated successfully')
+      message.success('Announcement updated successfully')
     }
 
     // Reload announcements
@@ -102,7 +105,7 @@ const saveAnnouncement = async ({ formData, imageFile }) => {
     cancelEdit()
   } catch (err) {
     console.error('Save failed:', err)
-    alert(err.response?.data?.detail || 'Failed to save announcement. Please try again.')
+    message.error(err.response?.data?.detail || 'Failed to save announcement. Please try again.')
   } finally {
     loading.value = false
   }
@@ -113,9 +116,10 @@ const handleToggleStatus = async (announcement) => {
     await toggleAnnouncementStatus(announcement.id)
     // Reload to get updated data
     await loadAnnouncements()
+    message.success(`Announcement ${announcement.is_active ? 'deactivated' : 'activated'} successfully`)
   } catch (err) {
     console.error('Toggle status failed:', err)
-    alert('Failed to toggle announcement status')
+    message.error('Failed to toggle announcement status')
   }
 }
 
@@ -133,9 +137,10 @@ const confirmDelete = async () => {
     await loadAnnouncements()
     showDeleteModal.value = false
     deleteTargetId.value = null
+    message.success('Announcement deleted successfully')
   } catch (err) {
     console.error('Delete failed:', err)
-    alert('Failed to delete announcement. Please try again.')
+    message.error('Failed to delete announcement. Please try again.')
   } finally {
     loading.value = false
   }
