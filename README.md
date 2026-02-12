@@ -3,7 +3,7 @@
 An RFID-Based Barangay Service Delivery and Management System that automates resident transactions and communication, ensuring high functional suitability and accessibility even in offline environments.
 
 ---
-## 🏗️ System Architecture
+## System Architecture
 - **Kiosk Interface:** A lightweight Vue 3 application optimized for Raspberry Pi Chromium (Kiosk Mode), providing a seamless touch-screen experience for residents.
 - **Admin Dashboard:** A Vue 3 Management UI for Barangay staff to oversee requests, inventory, and resident records.
 - **Backend API:** A FastAPI (Python) REST API serving as the central orchestration layer.
