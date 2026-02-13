@@ -37,8 +37,8 @@ const handleToggle = () => {
   <div 
     class="rounded-xl border-2 shadow-sm overflow-hidden flex flex-col h-full transition-all relative"
     :class="{
-        'border-[#0957FF] bg-[#F0F5FF]': isEditing || isNew,
-        'border-gray-200 bg-white': !isEditing && !isNew
+        'border-[#0957FF] bg-[#F0F5FF]': isEditing || isNew || isSelected,
+        'border-gray-200 bg-white': !isEditing && !isNew && !isSelected
     }"
   >
     <div v-if="!isEditing && !isNew" class="absolute top-4 right-4 z-10">
