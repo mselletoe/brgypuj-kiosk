@@ -264,7 +264,8 @@ const hasActiveFilters = computed(() => {
         <component 
           :is="currentTabComponent" 
           ref="tabRef" 
-          :search-query="searchQuery" 
+          :search-query="searchQuery"
+          :filters="filterState"
           :key="activeTab"
         />
       </keep-alive>
