@@ -1,6 +1,7 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useMessage } from 'naive-ui'
+import { TrashIcon } from '@heroicons/vue/24/outline'
 import PageTitle from '@/components/shared/PageTitle.vue'
 import KioskAnnouncementCard from '@/views/announcements/KioskAnnouncementCard.vue'
 import ConfirmModal from '@/components/shared/ConfirmationModal.vue'
@@ -10,6 +11,7 @@ import {
   createAnnouncement,
   updateAnnouncement,
   deleteAnnouncement as deleteAnnouncementApi,
+  bulkDeleteAnnouncements,
   toggleAnnouncementStatus
 } from '@/api/announcementService'
 
@@ -22,6 +24,21 @@ const creatingNew = ref(false)
 const showDeleteModal = ref(false)
 const deleteTargetId = ref(null)
 const loading = ref(false)
+const selectedAnnouncements = ref(new Set())
+const searchQuery = ref('')
+
+/* -------------------- COMPUTED -------------------- */
+const selectedCount = computed(() => selectedAnnouncements.value.size)
+const totalCount = computed(() => announcements.value.length)
+
+const selectionState = computed(() => {
+  const count = selectedCount.value
+  const total = totalCount.value
+  
+  if (count === 0) return 'none'
+  if (count > 0 && count < total) return 'partial'
+  return 'all'
+})
 
 /* -------------------- LOAD DATA -------------------- */
 const loadAnnouncements = async () => {
@@ -48,7 +65,58 @@ onMounted(() => {
   loadAnnouncements()
 })
 
-/* -------------------- ACTIONS -------------------- */
+/* -------------------- SELECTION ACTIONS -------------------- */
+const handleMainSelectToggle = () => {
+  if (selectionState.value === 'all' || selectionState.value === 'partial') {
+    deselectAll()
+  } else {
+    selectAll()
+  }
+}
+
+const selectAll = () => {
+  selectedAnnouncements.value = new Set(announcements.value.map(a => a.id))
+}
+
+const deselectAll = () => {
+  selectedAnnouncements.value.clear()
+}
+
+const handleSelectionUpdate = (announcementId, isSelected) => {
+  if (isSelected) {
+    selectedAnnouncements.value.add(announcementId)
+  } else {
+    selectedAnnouncements.value.delete(announcementId)
+  }
+}
+
+/* -------------------- BULK DELETE -------------------- */
+const bulkDelete = () => {
+  if (selectedAnnouncements.value.size === 0) return
+
+  deleteTargetId.value = 'bulk'
+  showDeleteModal.value = true
+}
+
+const confirmBulkDelete = async () => {
+  loading.value = true
+  
+  try {
+    await bulkDeleteAnnouncements(Array.from(selectedAnnouncements.value))
+    await loadAnnouncements()
+    selectedAnnouncements.value.clear()
+    showDeleteModal.value = false
+    deleteTargetId.value = null
+    message.success(`${selectedCount.value} announcement(s) deleted successfully`)
+  } catch (err) {
+    console.error('Bulk delete failed:', err)
+    message.error('Failed to delete announcements. Please try again.')
+  } finally {
+    loading.value = false
+  }
+}
+
+/* -------------------- CRUD ACTIONS -------------------- */
 const startCreate = () => {
   creatingNew.value = true
   editingId.value = null
@@ -129,6 +197,11 @@ const requestDelete = (id) => {
 }
 
 const confirmDelete = async () => {
+  if (deleteTargetId.value === 'bulk') {
+    await confirmBulkDelete()
+    return
+  }
+
   const id = deleteTargetId.value
   loading.value = true
   
@@ -150,25 +223,79 @@ const cancelDelete = () => {
   showDeleteModal.value = false
   deleteTargetId.value = null
 }
+
+const deleteModalTitle = computed(() => {
+  if (deleteTargetId.value === 'bulk') {
+    return `Delete ${selectedCount.value} announcement(s)?`
+  }
+  return 'Delete this announcement?'
+})
+
+const deleteModalMessage = computed(() => {
+  if (deleteTargetId.value === 'bulk') {
+    return `This action cannot be undone. ${selectedCount.value} announcement(s) will be permanently removed from the system.`
+  }
+  return 'This action cannot be undone. The announcement will be permanently removed from the system.'
+})
 </script>
 
 <template>
   <div class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden">
     <!-- Header -->
-    <div class="flex mb-6 items-center justify-between">
+    <div class="flex justify-between items-center mb-4">
       <div>
         <PageTitle title="Kiosk Announcements" />
         <p class="text-sm text-gray-500 mt-1">
           Create and schedule public notices for the community information kiosks.
         </p>
       </div>
-      <button
-        @click="startCreate"
-        :disabled="loading || creatingNew"
-        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-      >
-        Add Announcement
-      </button>
+      
+      <div class="flex items-center space-x-2">
+        <!-- Search -->
+        <input
+          v-model="searchQuery"
+          type="text"
+          placeholder="Search announcements..."
+          class="block px-4 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 transition-all"
+        />
+
+        <!-- Delete Button -->
+        <button 
+          @click="bulkDelete"
+          :disabled="selectionState === 'none'"
+          :class="[selectionState === 'none' ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-50']"
+          class="p-2 border border-red-700 rounded-lg transition-colors"
+        >
+          <TrashIcon class="w-5 h-5 text-red-700" />
+        </button>
+
+        <!-- Select Checkbox -->
+        <div class="flex items-center border rounded-lg overflow-hidden"
+          :class="selectionState !== 'none' ? 'border-blue-600' : 'border-gray-400'"
+        >
+          <button 
+            @click="handleMainSelectToggle"
+            class="p-2 hover:bg-gray-50 flex items-center"
+          >
+            <div class="w-5 h-5 border rounded flex items-center justify-center" 
+                 :class="selectionState !== 'none' ? 'bg-blue-600 border-blue-600' : 'border-gray-400'">
+              <div v-if="selectionState === 'partial'" class="w-2 h-0.5 bg-white"></div>
+              <svg v-if="selectionState === 'all'" class="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+          </button>
+        </div>
+
+        <!-- Add Button -->
+        <button
+          @click="startCreate"
+          :disabled="loading || creatingNew"
+          class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          Add Announcement
+        </button>
+      </div>
     </div>
 
     <!-- Loading State -->
@@ -180,7 +307,7 @@ const cancelDelete = () => {
     </div>
 
     <!-- Grid -->
-    <div v-else class="flex-1 overflow-y-auto pr-2">
+    <div v-else class="flex-1 overflow-y-auto pr-2 pt-2">
       <div
         v-if="announcements.length || creatingNew"
         class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5"
@@ -209,11 +336,13 @@ const cancelDelete = () => {
           :key="item.id"
           :announcement="item"
           :is-editing="editingId === item.id"
+          :is-selected="selectedAnnouncements.has(item.id)"
           @edit="startEdit"
           @save="saveAnnouncement"
           @cancel="cancelEdit"
           @delete="requestDelete"
           @toggle-status="handleToggleStatus"
+          @update:selected="(value) => handleSelectionUpdate(item.id, value)"
         />
       </div>
 
@@ -260,8 +389,8 @@ const cancelDelete = () => {
   <!-- Delete Confirmation Modal -->
   <ConfirmModal
     :show="showDeleteModal"
-    title="Delete this announcement?"
-    message="This action cannot be undone. The announcement will be permanently removed from the system."
+    :title="deleteModalTitle"
+    :message="deleteModalMessage"
     confirm-text="Delete"
     cancel-text="Cancel"
     @confirm="confirmDelete"

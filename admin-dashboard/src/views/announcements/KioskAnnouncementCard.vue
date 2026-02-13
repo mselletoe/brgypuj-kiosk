@@ -16,10 +16,11 @@ const props = defineProps({
     }) 
   },
   isEditing: { type: Boolean, default: false },
-  isNew: { type: Boolean, default: false }
+  isNew: { type: Boolean, default: false },
+  isSelected: { type: Boolean, default: false }
 });
 
-const emit = defineEmits(['save', 'cancel', 'delete', 'edit', 'image-upload', 'toggle-status']);
+const emit = defineEmits(['save', 'cancel', 'delete', 'edit', 'image-upload', 'toggle-status', 'update:selected']);
 
 // Internal form state to avoid mutating props directly
 const form = ref({ ...props.announcement });
@@ -132,6 +133,19 @@ const handleSave = () => {
         >
           {{ announcement.is_active ? 'Active' : 'Inactive' }}
         </button>
+      </div>
+
+      <!-- Selection Checkbox -->
+      <div 
+        v-if="!isEditing && !isNew"
+        class="absolute top-3 right-3 z-10"
+      >
+        <input 
+          type="checkbox" 
+          :checked="isSelected"
+          @change="$emit('update:selected', $event.target.checked)"
+          class="w-5 h-5 border-gray-300 rounded accent-[#0957FF] cursor-pointer shadow-sm"
+        />
       </div>
     </div>
 
