@@ -97,10 +97,10 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="pt-6 min-h-screen space-y-6">
+  <div class="min-h-screen space-y-6">
 
     <!-- Key Stats Grid -->
-    <div class="p-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       
       <!-- Total Requests -->
       <div 
@@ -172,7 +172,7 @@ onMounted(() => {
     </div>
 
     <!-- Main Content Grid -->
-    <div class="p-3 grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
       
       <!-- Left Column - Analytics (2/3) -->
       <div class="lg:col-span-2 space-y-6">
