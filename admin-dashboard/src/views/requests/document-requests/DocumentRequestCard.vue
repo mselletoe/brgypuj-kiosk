@@ -1,10 +1,14 @@
 <script setup>
-import { ref, computed } from 'vue'
-import { NPopover, NInput, NButton } from 'naive-ui'
+import { ref, computed, onMounted, watch } from 'vue'
+import { NPopover, NInput, NButton, NSpin } from 'naive-ui'
 import { TrashIcon, ArrowUturnLeftIcon } from '@heroicons/vue/24/solid';
+import { getNotes, updateNotes } from '@/api/documentService'
 
 const notes = ref('')
 const showNotesPopover = ref(false)
+const isLoadingNotes = ref(false)
+const isSavingNotes = ref(false)
+const originalNotes = ref('')
 
 const props = defineProps({
   id: {
@@ -55,18 +59,54 @@ const props = defineProps({
   }
 });
 
-const saveNotes = () => {
-  emit('button-click', {
-    action: 'notes',
-    requestId: props.id,
-    notes: notes.value
-  })
+// Load notes when popover opens
+watch(showNotesPopover, async (isOpen) => {
+  if (isOpen) {
+    await loadNotes()
+  }
+})
 
-  showNotesPopover.value = false
-  notes.value = ''
+const loadNotes = async () => {
+  isLoadingNotes.value = true
+  try {
+    const { data } = await getNotes(props.id)
+    notes.value = data.notes || ''
+    originalNotes.value = data.notes || ''
+  } catch (error) {
+    console.error('Failed to load notes:', error)
+    notes.value = ''
+    originalNotes.value = ''
+  } finally {
+    isLoadingNotes.value = false
+  }
 }
 
-const emit = defineEmits(['button-click', 'update:isPaid', 'update:selected']);
+const saveNotes = async () => {
+  isSavingNotes.value = true
+  try {
+    const { data } = await updateNotes(props.id, notes.value)
+    originalNotes.value = data.notes || ''
+    
+    // Emit success event
+    emit('notes-updated', {
+      requestId: props.id,
+      notes: data.notes
+    })
+    
+    showNotesPopover.value = false
+  } catch (error) {
+    console.error('Failed to save notes:', error)
+    // Optionally show error notification here
+  } finally {
+    isSavingNotes.value = false
+  }
+}
+
+const hasUnsavedChanges = computed(() => {
+  return notes.value !== originalNotes.value
+})
+
+const emit = defineEmits(['button-click', 'update:isPaid', 'update:selected', 'notes-updated']);
 
 const accentColorClass = computed(() => {
   return props.type === 'rfid' ? 'border-l-[#FF2B3A]' : 'border-l-[#0957FF]';
@@ -299,18 +339,22 @@ const handleButtonClick = (buttonId, btn) => {
             </template>
 
             <div class="flex w-72 p-1 gap-3 items-center">
-              <n-input
-                v-model:value="notes"
-                type="textarea"
-                size="medium"
-                placeholder="Add notes..."
-                class="h-9"
-              />
+              <n-spin :show="isLoadingNotes" size="small" class="flex-1">
+                <n-input
+                  v-model:value="notes"
+                  type="textarea"
+                  size="medium"
+                  placeholder="Add notes..."
+                  class="h-9"
+                  :disabled="isLoadingNotes"
+                />
+              </n-spin>
               <n-button
                 size="small"
                 type="primary"
                 @click="saveNotes"
-                :disabled="!notes.trim()"
+                :disabled="!hasUnsavedChanges || isSavingNotes"
+                :loading="isSavingNotes"
               >
                 Save
               </n-button>
