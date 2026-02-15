@@ -78,6 +78,9 @@ const fetchPendingRequests = async () => {
       },
       amount: req.payment_status !== 'free' ? String(req.total_cost ?? '0.00') : null,
       isPaid: req.payment_status === 'paid',
+      contactPerson: req.contact_person,
+      contactNumber: req.contact_number,
+      purpose: req.purpose,
       raw: req
     }})
     
@@ -322,6 +325,9 @@ const filteredRequests = computed(() => {
       :amount="request.amount"
       :is-paid="request.isPaid"
       :is-selected="selectedRequests.has(request.id)"
+      :contact-person="request.contactPerson"
+      :contact-number="request.contactNumber"
+      :purpose="request.purpose"
       @button-click="handleButtonClick"
       @update:is-paid="(value) => handlePaymentUpdate(request.id, value)"
       @update:selected="(value) => handleSelectionUpdate(request.id, value)"

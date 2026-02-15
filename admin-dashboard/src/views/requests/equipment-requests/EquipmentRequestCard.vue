@@ -6,6 +6,7 @@ import { getNotes, updateNotes } from '@/api/equipmentService'
 
 const notes = ref('')
 const showNotesPopover = ref(false)
+const showDetailsPopover = ref(false)
 const isLoadingNotes = ref(false)
 const isSavingNotes = ref(false)
 const originalNotes = ref('')
@@ -56,7 +57,19 @@ const props = defineProps({
   isSelected: {
     type: Boolean,
     default: false
-  }
+  },
+  contactPerson: {
+    type: String,
+    default: null
+  },
+  contactNumber: {
+    type: String,
+    default: null
+  },
+  purpose: {
+    type: String,
+    default: null
+  },
 });
 
 // Load notes when popover opens
@@ -333,9 +346,59 @@ const handleButtonClick = (buttonId, btn) => {
       <!-- Action Buttons -->
       <div class="flex items-center gap-2">
         <template v-for="btn in visibleButtons" :key="btn.id">
+          <!-- Details Button -->
+          <n-popover
+            v-if="btn.id === 'details'"
+            trigger="click"
+            placement="bottom-end"
+            v-model:show="showDetailsPopover"
+            :show-arrow="false"
+          >
+            <template #trigger>
+              <button
+                :class="[getButtonClass(btn), 'px-4']"
+                class="h-9 rounded-md text-sm font-semibold flex items-center justify-center"
+              >
+                {{ btn.label }}
+              </button>
+            </template>
+
+            <div class="w-80 p-3 space-y-3">
+              <h3 class="text-sm font-bold text-slate-800 mb-3 pb-2 border-b border-gray-200">
+                Request Details
+              </h3>
+              
+              <div class="space-y-3">
+                <!-- Contact Person -->
+                <div class="flex flex-col">
+                  <span class="text-xs text-gray-500 font-medium mb-1">Contact Person</span>
+                  <span class="text-sm text-slate-700">
+                    {{ contactPerson || 'Not provided' }}
+                  </span>
+                </div>
+
+                <!-- Contact Number -->
+                <div class="flex flex-col">
+                  <span class="text-xs text-gray-500 font-medium mb-1">Contact Number</span>
+                  <span class="text-sm text-slate-700">
+                    {{ contactNumber || 'Not provided' }}
+                  </span>
+                </div>
+
+                <!-- Purpose -->
+                <div class="flex flex-col">
+                  <span class="text-xs text-gray-500 font-medium mb-1">Purpose</span>
+                  <span class="text-sm text-slate-700">
+                    {{ purpose || 'Not provided' }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </n-popover>
+
           <!-- Notes Button -->
           <n-popover
-            v-if="btn.id === 'notes'"
+            v-else-if="btn.id === 'notes'"
             trigger="click"
             placement="bottom-end"
             v-model:show="showNotesPopover"
