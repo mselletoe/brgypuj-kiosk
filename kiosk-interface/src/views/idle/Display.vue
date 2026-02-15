@@ -62,11 +62,13 @@ const toggleLang = () => (currentLang.value = currentLang.value === 'FIL' ? 'ENG
         <p>Emergency: 911</p>
         <p>Barangay: (02) 123-4567</p>
       </div>
+
+      <div class="mt-10 text-[#6399c5] text-xl font-medium animate-pulse">
+        Touch anywhere to start
+      </div>      
     </div>
 
-    <div class="absolute bottom-11 left-20 text-[#6399c5] text-xl font-medium animate-pulse">
-      Touch anywhere to start
-    </div>
+
 
     <img src="@/assets/images/Pob1Logo.svg" alt="Barangay Logo"
       class="absolute -bottom-56 -right-24 w-[600px] h-[600px] object-contain opacity-50 pointer-events-none"

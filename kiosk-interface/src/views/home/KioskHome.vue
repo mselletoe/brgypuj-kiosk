@@ -57,7 +57,7 @@ function goTo(path) {
         </h1>
         <p class="m-0 text-[16px] font-normal leading-tight">
           Select a service below to get started.<br>
-          All services are designed for easy touch navigation.
+          Do not forget to log out after your transactions for security purposes.
         </p>
       </div>
       <div class="logo-section">

@@ -67,7 +67,7 @@ onMounted(fetchDocuments)
           Document Services
         </h1>
         <p class="text-[#03335C] -mt-2">
-          Select and apply for barangay documents
+          Select and apply for barangay documents. Take note of the requirements for each document type.
         </p>
       </div>
     </div>
