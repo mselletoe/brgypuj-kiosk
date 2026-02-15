@@ -1,10 +1,15 @@
 <script setup>
-import { ref, computed } from 'vue'
-import { NPopover, NInput, NButton } from 'naive-ui'
+import { ref, computed, watch } from 'vue'
+import { NPopover, NInput, NButton, NSpin } from 'naive-ui'
 import { TrashIcon, ArrowUturnLeftIcon } from '@heroicons/vue/24/solid';
+import { getNotes, updateNotes } from '@/api/equipmentService'
 
 const notes = ref('')
 const showNotesPopover = ref(false)
+const showDetailsPopover = ref(false)
+const isLoadingNotes = ref(false)
+const isSavingNotes = ref(false)
+const originalNotes = ref('')
 
 const props = defineProps({
   id: {
@@ -52,21 +57,69 @@ const props = defineProps({
   isSelected: {
     type: Boolean,
     default: false
-  }
+  },
+  contactPerson: {
+    type: String,
+    default: null
+  },
+  contactNumber: {
+    type: String,
+    default: null
+  },
+  purpose: {
+    type: String,
+    default: null
+  },
 });
 
-const saveNotes = () => {
-  emit('button-click', {
-    action: 'notes',
-    requestId: props.id,
-    notes: notes.value
-  })
+// Load notes when popover opens
+watch(showNotesPopover, async (isOpen) => {
+  if (isOpen) {
+    await loadNotes()
+  }
+})
 
-  showNotesPopover.value = false
-  notes.value = ''
+const loadNotes = async () => {
+  isLoadingNotes.value = true
+  try {
+    const { data } = await getNotes(props.id)
+    notes.value = data.notes || ''
+    originalNotes.value = data.notes || ''
+  } catch (error) {
+    console.error('Failed to load notes:', error)
+    notes.value = ''
+    originalNotes.value = ''
+  } finally {
+    isLoadingNotes.value = false
+  }
 }
 
-const emit = defineEmits(['button-click', 'update:isPaid', 'update:selected']);
+const saveNotes = async () => {
+  isSavingNotes.value = true
+  try {
+    const { data } = await updateNotes(props.id, notes.value)
+    originalNotes.value = data.notes || ''
+    
+    // Emit success event
+    emit('notes-updated', {
+      requestId: props.id,
+      notes: data.notes
+    })
+    
+    showNotesPopover.value = false
+  } catch (error) {
+    console.error('Failed to save notes:', error)
+    // Optionally show error notification here
+  } finally {
+    isSavingNotes.value = false
+  }
+}
+
+const hasUnsavedChanges = computed(() => {
+  return notes.value !== originalNotes.value
+})
+
+const emit = defineEmits(['button-click', 'update:isPaid', 'update:selected', 'notes-updated']);
 
 const dueStatus = computed(() => {
   if (!props.borrowingPeriod?.to) return null;
@@ -151,7 +204,7 @@ const getButtonClass = (btn) => {
     green: 'bg-white text-green-600 border border-[#09AA44] hover:bg-green-50',
     solidgreen: 'bg-[#09AA44] text-white hover:bg-green-700',
     red: 'bg-white text-red-600 border border-[#FF2B3A] hover:bg-red-50',
-    delete: 'bg-white text-[#B1202A] border border-[#FBBABA] hover:bg-[#FFE6E6]',
+    delete: 'bg-white text-red-500 border border-red-400 hover:bg-red-50',
     undo: 'bg-white text-orange-500 border border-orange-400 hover:bg-orange-50'
   };
   
@@ -293,9 +346,59 @@ const handleButtonClick = (buttonId, btn) => {
       <!-- Action Buttons -->
       <div class="flex items-center gap-2">
         <template v-for="btn in visibleButtons" :key="btn.id">
+          <!-- Details Button -->
+          <n-popover
+            v-if="btn.id === 'details'"
+            trigger="click"
+            placement="bottom-end"
+            v-model:show="showDetailsPopover"
+            :show-arrow="false"
+          >
+            <template #trigger>
+              <button
+                :class="[getButtonClass(btn), 'px-4']"
+                class="h-9 rounded-md text-sm font-semibold flex items-center justify-center"
+              >
+                {{ btn.label }}
+              </button>
+            </template>
+
+            <div class="w-80 p-3 space-y-3">
+              <h3 class="text-sm font-bold text-slate-800 mb-3 pb-2 border-b border-gray-200">
+                Request Details
+              </h3>
+              
+              <div class="space-y-3">
+                <!-- Contact Person -->
+                <div class="flex flex-col">
+                  <span class="text-xs text-gray-500 font-medium mb-1">Contact Person</span>
+                  <span class="text-sm text-slate-700">
+                    {{ contactPerson || 'Not provided' }}
+                  </span>
+                </div>
+
+                <!-- Contact Number -->
+                <div class="flex flex-col">
+                  <span class="text-xs text-gray-500 font-medium mb-1">Contact Number</span>
+                  <span class="text-sm text-slate-700">
+                    {{ contactNumber || 'Not provided' }}
+                  </span>
+                </div>
+
+                <!-- Purpose -->
+                <div class="flex flex-col">
+                  <span class="text-xs text-gray-500 font-medium mb-1">Purpose</span>
+                  <span class="text-sm text-slate-700">
+                    {{ purpose || 'Not provided' }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </n-popover>
+
           <!-- Notes Button -->
           <n-popover
-            v-if="btn.id === 'notes'"
+            v-else-if="btn.id === 'notes'"
             trigger="click"
             placement="bottom-end"
             v-model:show="showNotesPopover"
@@ -311,18 +414,22 @@ const handleButtonClick = (buttonId, btn) => {
             </template>
 
             <div class="flex w-72 p-1 gap-3 items-center">
-              <n-input
-                v-model:value="notes"
-                type="textarea"
-                size="medium"
-                placeholder="Add notes..."
-                class="h-9"
-              />
+              <n-spin :show="isLoadingNotes" size="small" class="flex-1">
+                <n-input
+                  v-model:value="notes"
+                  type="textarea"
+                  size="medium"
+                  placeholder="Add notes..."
+                  class="h-9"
+                  :disabled="isLoadingNotes"
+                />
+              </n-spin>
               <n-button
                 size="small"
                 type="primary"
                 @click="saveNotes"
-                :disabled="!notes.trim()"
+                :disabled="!hasUnsavedChanges || isSavingNotes"
+                :loading="isSavingNotes"
               >
                 Save
               </n-button>

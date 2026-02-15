@@ -3,6 +3,7 @@ import { ref, computed, nextTick ,onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import ArrowBackButton from '@/components/shared/ArrowBackButton.vue';
 import Button from '@/components/shared/Button.vue';
+import Modal from '@/components/shared/Modal.vue';
 import { PlusIcon, MinusIcon } from '@heroicons/vue/24/solid';
 import Keyboard from '@/components/shared/Keyboard.vue';
 import { getAvailableEquipment } from '@/api/equipmentService'
@@ -10,6 +11,7 @@ import { getAvailableEquipment } from '@/api/equipmentService'
 const props = defineProps({
   selectedEquipment: Array,
   goNext: Function,
+  hasStartedForm: Function,
 });
 const emit = defineEmits(['update:selected-equipment']);
 const router = useRouter();
@@ -17,6 +19,7 @@ const router = useRouter();
 const allEquipment = ref([])
 const loading = ref(false)
 const loadError = ref(null)
+const showExitModal = ref(false);
 
 const fetchEquipment = async () => {
   loading.value = true
@@ -123,7 +126,23 @@ const handleKeyboardHide = () => {
 
 const resetSelection = () => emit('update:selected-equipment', []);
 const continueStep = () => props.goNext('dates');
-const goBackToHome = () => router.push('/home');
+
+const handleBackClick = () => {
+  if (props.hasStartedForm && props.hasStartedForm()) {
+    showExitModal.value = true;
+  } else {
+    router.push('/home');
+  }
+};
+
+const confirmExit = () => {
+  showExitModal.value = false;
+  router.push('/home');
+};
+
+const cancelExit = () => {
+  showExitModal.value = false;
+};
 
 onMounted(() => {
   fetchEquipment()
@@ -133,7 +152,7 @@ onMounted(() => {
 <template>
   <div class="flex flex-col w-full h-full" :class="{ 'content-with-keyboard': showKeyboard }">
     <div class="flex items-center mb-6 gap-7 flex-shrink-0">
-      <ArrowBackButton @click="goBackToHome" />
+      <ArrowBackButton @click="handleBackClick" />
       <div>
         <h1 class="text-[45px] text-[#03335C] font-bold tracking-tight -mt-2">Equipment Borrowing</h1>
         <p class="text-[#03335C] -mt-2">Below are list of available equipment.</p>
@@ -232,6 +251,21 @@ onMounted(() => {
         class="fixed bottom-0 w-full"
       />
     </Transition>
+
+    <!-- Exit Confirmation Modal -->
+    <div v-if="showExitModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-8">
+      <Modal
+        title="Exit Equipment Request?"
+        message="You have unsaved changes. Are you sure you want to exit? All your progress will be lost."
+        primaryButtonText="Exit"
+        secondaryButtonText="Stay"
+        :showPrimaryButton="true"
+        :showSecondaryButton="true"
+        :showReferenceId="false"
+        @primary-click="confirmExit"
+        @secondary-click="cancelExit"
+      />
+    </div>
   </div>
 </template>
 

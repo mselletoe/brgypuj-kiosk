@@ -97,15 +97,15 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="pt-6 min-h-screen space-y-6">
+  <div class="min-h-screen space-y-6">
 
     <!-- Key Stats Grid -->
-    <div class="p-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       
       <!-- Total Requests -->
       <div 
         @click="navigateTo('/requests')"
-        class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-5 shadow-lg cursor-pointer hover:shadow-lg transition-all hover:scale-105"
+        class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-5 shadow-md cursor-pointer transition-all"
       >
         <div class="flex items-start justify-between">
           <div class="flex-1">
@@ -122,7 +122,7 @@ onMounted(() => {
       <!-- Pending Requests -->
       <div 
         @click="navigateTo('/requests')"
-        class="bg-white rounded-xl p-5 shadow-md border border-gray-200 cursor-pointer hover:shadow-lg transition-all hover:scale-105"
+        class="bg-white rounded-xl p-5 shadow-md border border-gray-200 cursor-pointer transition-all"
       >
         <div class="flex items-start justify-between">
           <div class="flex-1">
@@ -139,7 +139,7 @@ onMounted(() => {
       <!-- Ready for Pickup -->
       <div 
         @click="navigateTo('/requests')"
-        class="bg-white rounded-xl p-5 shadow-md border border-gray-200 cursor-pointer hover:shadow-lg transition-all hover:scale-105"
+        class="bg-white rounded-xl p-5 shadow-md border border-gray-200 cursor-pointer transition-all"
       >
         <div class="flex items-start justify-between">
           <div class="flex-1">
@@ -156,7 +156,7 @@ onMounted(() => {
       <!-- Equipment Requests -->
       <div 
         @click="navigateTo('/equipment-management')"
-        class="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-5 shadow-lg cursor-pointer hover:shadow-xl transition-all hover:scale-105"
+        class="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-5 shadow-md cursor-pointer transition-all"
       >
         <div class="flex items-start justify-between">
           <div class="flex-1">
@@ -172,7 +172,7 @@ onMounted(() => {
     </div>
 
     <!-- Main Content Grid -->
-    <div class="p-3 grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
       
       <!-- Left Column - Analytics (2/3) -->
       <div class="lg:col-span-2 space-y-6">
@@ -475,24 +475,3 @@ onMounted(() => {
     </div>
   </div>
 </template>
-
-<style scoped>
-/* Custom scrollbar for activity feed */
-::-webkit-scrollbar {
-  width: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #888;
-  border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #555;
-}
-</style>

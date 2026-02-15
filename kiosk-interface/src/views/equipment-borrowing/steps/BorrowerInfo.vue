@@ -2,10 +2,12 @@
 import { ref, computed, nextTick, watch } from 'vue';
 import ArrowBackButton from '@/components/shared/ArrowBackButton.vue';
 import Button from '@/components/shared/Button.vue';
+import Modal from '@/components/shared/Modal.vue';
 import Keyboard from '@/components/shared/Keyboard.vue';
 import { useAuthStore } from '@/stores/auth';
 import { DocumentTextIcon } from '@heroicons/vue/24/outline';
 import { getAutofillData } from '@/api/equipmentService';
+import { useRouter } from 'vue-router';
 
 const useAutofill = ref(false);
 const isLoadingAutofill = ref(false);
@@ -13,11 +15,14 @@ const authStore = useAuthStore();
 const residentId = computed(() => authStore.residentId);
 const showKeyboard = ref(false);
 const activeInput = ref(null);
+const showExitModal = ref(false);
+const router = useRouter();
 
 const props = defineProps({
   borrowerInfo: Object,
   goNext: Function,
   goBack: Function,
+  hasStartedForm: Function,
 });
 
 const emit = defineEmits(['update:borrower-info']);
@@ -117,6 +122,23 @@ const handleKeyboardHide = () => {
   activeInput.value = null;
 };
 
+const handleBackClick = () => {
+  if (props.hasStartedForm && props.hasStartedForm()) {
+    showExitModal.value = true;
+  } else {
+    router.push('/home');
+  }
+};
+
+const confirmExit = () => {
+  showExitModal.value = false;
+  router.push('/home');
+};
+
+const cancelExit = () => {
+  showExitModal.value = false;
+};
+
 const inputClass = "w-full px-4 py-3 text-base border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#013C6D]";
 </script>
 
@@ -124,7 +146,7 @@ const inputClass = "w-full px-4 py-3 text-base border border-gray-300 rounded-lg
   <div class="flex flex-col w-full h-full" :class="{ 'content-with-keyboard': showKeyboard }">
     <!-- Header -->
     <div class="flex items-center mb-6 gap-7 flex-shrink-0">
-      <ArrowBackButton @click="goBackToHome" />
+      <ArrowBackButton @click="handleBackClick" />
       <div>
         <h1 class="text-[45px] text-[#03335C] font-bold tracking-tight -mt-2">Equipment Borrowing</h1>
         <p class="text-[#03335C] -mt-2">Provide your borrowing information below.</p>
@@ -204,22 +226,6 @@ const inputClass = "w-full px-4 py-3 text-base border border-gray-300 rounded-lg
               </option>
             </select>
           </div>
-
-          <!-- Notes -->
-          <div>
-            <label for="notes" class="block text-base font-medium text-gray-700 mb-1">
-              Additional Notes (Optional)
-            </label>
-            <textarea
-              id="notes"
-              v-model="localInfo.notes"
-              rows="3"
-              placeholder="Any additional notes or special requirements"
-              :class="inputClass"
-              @focus="focusInput('notes', 'notes')"
-              readonly
-            ></textarea>
-          </div>
         </div>
       </div>
     </div>
@@ -257,4 +263,36 @@ const inputClass = "w-full px-4 py-3 text-base border border-gray-300 rounded-lg
       class="fixed bottom-0 w-full"
     />
   </Transition>
+
+  <!-- Exit Confirmation Modal -->
+  <div v-if="showExitModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-8">
+    <Modal
+      title="Exit Equipment Request?"
+      message="You have unsaved changes. Are you sure you want to exit? All your progress will be lost."
+      primaryButtonText="Exit"
+      secondaryButtonText="Stay"
+      :showPrimaryButton="true"
+      :showSecondaryButton="true"
+      :showReferenceId="false"
+      @primary-click="confirmExit"
+      @secondary-click="cancelExit"
+    />
+  </div>
 </template>
+
+<style scoped>
+.content-with-keyboard {
+  padding-bottom: 210px;
+  transition: padding-bottom 0.3s ease-out;
+}
+
+.slide-up-enter-active,
+.slide-up-leave-active {
+  transition: transform 0.3s ease-out;
+}
+
+.slide-up-enter-from,
+.slide-up-leave-to {
+  transform: translateY(100%);
+}
+</style>

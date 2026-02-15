@@ -16,10 +16,11 @@ const props = defineProps({
     }) 
   },
   isEditing: { type: Boolean, default: false },
-  isNew: { type: Boolean, default: false }
+  isNew: { type: Boolean, default: false },
+  isSelected: { type: Boolean, default: false }
 });
 
-const emit = defineEmits(['save', 'cancel', 'delete', 'edit', 'image-upload', 'toggle-status']);
+const emit = defineEmits(['save', 'cancel', 'delete', 'edit', 'image-upload', 'toggle-status', 'update:selected']);
 
 // Internal form state to avoid mutating props directly
 const form = ref({ ...props.announcement });
@@ -133,6 +134,19 @@ const handleSave = () => {
           {{ announcement.is_active ? 'Active' : 'Inactive' }}
         </button>
       </div>
+
+      <!-- Selection Checkbox -->
+      <div 
+        v-if="!isEditing && !isNew"
+        class="absolute top-3 right-3 z-10"
+      >
+        <input 
+          type="checkbox" 
+          :checked="isSelected"
+          @change="$emit('update:selected', $event.target.checked)"
+          class="w-5 h-5 border-gray-300 rounded accent-[#0957FF] cursor-pointer shadow-sm"
+        />
+      </div>
     </div>
 
     <!-- Content Section -->
@@ -173,15 +187,15 @@ const handleSave = () => {
         <div class="flex justify-end gap-2 mt-4">
           <button 
             @click="$emit('edit', announcement)" 
-            class="p-2 border border-orange-200 rounded-lg text-orange-400 hover:bg-orange-50 transition-colors"
+            class="p-2 border border-orange-300 rounded-lg text-orange-400 hover:bg-orange-50 transition-colors"
           >
-            <PencilSquareIcon class="w-5 h-5" />
+            <PencilSquareIcon class="w-4 h-4" />
           </button>
           <button 
             @click="$emit('delete', announcement.id)" 
-            class="p-2 border border-red-100 rounded-lg text-red-400 hover:bg-red-50 transition-colors"
+            class="p-2 border border-red-300 rounded-lg text-red-400 hover:bg-red-50 transition-colors"
           >
-            <TrashIcon class="w-5 h-5" />
+            <TrashIcon class="w-4 h-4" />
           </button>
         </div>
       </template>

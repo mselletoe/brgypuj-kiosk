@@ -164,7 +164,7 @@ function save() {
 
           <!-- Remove button -->
           <button 
-            style="margin-top: 1.75rem; background: transparent; border: 1px solid #ffcdd2; border-radius: 6px; padding: 0.5rem; cursor: pointer; color: #e53935; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"
+            style="margin-top: 1.75rem; background: transparent; border: 1px solid red; border-radius: 6px; padding: 0.5rem; cursor: pointer; color: red; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"
             @click="removeField(index)"
             @mouseenter="e => e.target.style.background = '#ffebee'"
             @mouseleave="e => e.target.style.background = 'transparent'"

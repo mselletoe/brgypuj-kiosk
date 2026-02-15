@@ -10,6 +10,7 @@ import { useRoute, useRouter } from 'vue-router'
 import DocumentForm from './DocumentForm.vue'
 import ArrowBackButton from '@/components/shared/ArrowBackButton.vue' 
 import Modal from '@/components/shared/Modal.vue'
+import Button from '@/components/shared/Button.vue'
 import Loading from '@/components/shared/Loading.vue'
 import { useAuthStore } from '@/stores/auth'
 import { getDocumentTypes, createDocumentRequest } from '@/api/documentService'
@@ -36,6 +37,13 @@ const documents = ref({})
 const loadingDocuments = ref(true)
 const errorDocuments = ref(null)
 const transactionNo = ref('')
+const documentFormRef = ref(null)
+
+const submitFromWrapper = () => {
+  if (documentFormRef.value) {
+    documentFormRef.value.handleContinue()
+  }
+}
 
 /**
  * Normalizes the URL parameter into a slug format for configuration lookup.
@@ -185,9 +193,10 @@ onMounted(async () => {
 
 <template>
   <div class="flex flex-col w-full h-full">
+
     <!-- Header -->
     <div class="flex items-center mb-6 gap-7 flex-shrink-0">
-      <ArrowBackButton @click="goBack"/>
+      <ArrowBackButton @click="goBack" />
       <div>
         <h1 class="text-[45px] text-[#03335C] font-bold tracking-tight -mt-2">
           {{ config?.title || docTypeSlug?.charAt(0).toUpperCase() + docTypeSlug?.slice(1) }}
@@ -198,36 +207,75 @@ onMounted(async () => {
       </div>
     </div>
 
-    <div v-if="isLoadingResidentData" class="text-center py-8 flex-shrink-0">
-      <Loading color="#03335C" size="12px" spacing="50px" />
-      <p class="text-gray-600 mt-4">Loading your information...</p>
-    </div>
+    <!-- SCROLLABLE CONTENT AREA -->
+    <div class="flex-1 overflow-y-auto custom-scrollbar">
 
-    <div 
-      v-else 
-      class="border-[2px] border-[#00203C] h-full rounded-2xl p-10 shadow-md bg-white overflow-y-auto custom-scrollbar"
-    >
-      <DocumentForm
-        v-if="currentStep === 'form' && config?.available"
-        :config="config"
-        :initial-data="formData"
-        :resident-data="residentData"
-        :is-rfid-user="isRfidUser"
-        :is-submitting="isSubmitting"
-        @continue="handleSubmit"
-      />
+      <div class="grid grid-cols-5 gap-8 items-stretch mb-4">
 
-      <div v-else class="text-center py-12">
-        <p class="text-[#003A6B] text-lg">The type of document you are requesting <br/> is currently unavailable.</p>
-        <button 
-          @click="router.push('/document-services')"
-          class="mt-4 px-6 py-2 bg-[#003A6B] text-white rounded hover:bg-[#001F40]"
-        >
-          Back to Documents
-        </button>
+        <!-- LEFT PANEL -->
+        <div class="col-span-3">
+          <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-8 min-h-[400px]">
+
+            <div v-if="isLoadingResidentData" class="text-center py-8">
+              <Loading color="#03335C" size="12px" spacing="50px" />
+              <p class="text-gray-600 mt-4">Loading your information...</p>
+            </div>
+
+            <DocumentForm
+              ref="documentFormRef"
+              v-else-if="config?.available"
+              :config="config"
+              :initial-data="formData"
+              :resident-data="residentData"
+              :is-rfid-user="isRfidUser"
+              :is-submitting="isSubmitting"
+              @continue="handleSubmit"
+            />
+
+            <div v-else class="text-center py-12">
+              <p class="text-[#003A6B] text-lg">
+                The type of document you are requesting <br />
+                is currently unavailable.
+              </p>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- RIGHT PANEL (EMPTY) -->
+        <div class="col-span-2">
+          <div class="bg-[#EBF5FF] rounded-2xl shadow-lg border border-[#B0D7F8] p-6 min-h-[280px]">
+            <!-- Blank for now -->
+          </div>
+        </div>
+
       </div>
+
     </div>
 
+    <!-- FIXED BUTTONS (IDENTICAL STRUCTURE TO BORROWING PAGE) -->
+    <div class="flex gap-6 mt-6 justify-between items-center flex-shrink-0">
+
+      <Button
+        @click="goBack"
+        variant="outline"
+        size="md"
+      >
+        Cancel
+      </Button>
+
+      <Button
+        @click="submitFromWrapper"
+        :disabled="isSubmitting"
+        :variant="isSubmitting ? 'disabled' : 'secondary'"
+        size="md"
+      >
+        {{ isSubmitting ? 'Submitting...' : 'Submit Request' }}
+      </Button>
+
+    </div>
+
+    <!-- Loading Overlay -->
     <transition name="fade-blur">
       <div
         v-if="isSubmitting"
@@ -235,17 +283,21 @@ onMounted(async () => {
       >
         <div class="bg-white rounded-2xl p-10 shadow-2xl flex flex-col items-center gap-2 min-w-[400px]">
           <Loading color="#03335C" size="14px" spacing="70px" />
-          <p class="text-[#003A6B] text-lg font-semibold mt-6">Submitting your request...</p>
-          <p class="text-gray-500 text-sm">Please wait while we generate your document</p>
+          <p class="text-[#03335C] text-lg font-semibold mt-6">
+            Submitting your request...
+          </p>
+          <p class="text-gray-500 text-sm">
+            Please wait while we generate your document
+          </p>
         </div>
       </div>
     </transition>
 
+    <!-- Success Modal -->
     <transition name="fade-blur">
       <div
         v-if="showSuccessModal"
-        class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 transition-opacity duration-500"
-        :class="{ 'opacity-0': isFadingOut, 'opacity-100': !isFadingOut }"
+        class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50"
       >
         <Modal
           title="Application Submitted!"
@@ -260,8 +312,10 @@ onMounted(async () => {
         />
       </div>
     </transition>
+
   </div>
 </template>
+
 
 <style scoped>
 .fade-blur-enter-active,

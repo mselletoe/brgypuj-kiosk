@@ -37,8 +37,8 @@ const handleToggle = () => {
   <div 
     class="rounded-xl border-2 shadow-sm overflow-hidden flex flex-col h-full transition-all relative"
     :class="{
-        'border-[#0957FF] bg-[#F0F5FF]': isEditing || isNew,
-        'border-gray-200 bg-white': !isEditing && !isNew
+        'border-[#0957FF] bg-[#F0F5FF]': isEditing || isNew || isSelected,
+        'border-gray-200 bg-white': !isEditing && !isNew && !isSelected
     }"
   >
     <div v-if="!isEditing && !isNew" class="absolute top-4 right-4 z-10">
@@ -75,15 +75,15 @@ const handleToggle = () => {
         <div class="flex justify-end gap-2 mt-4">
           <button 
             @click="$emit('edit', equipment)" 
-            class="p-2 border border-orange-200 rounded-lg text-orange-400 hover:bg-orange-50 transition-colors"
+            class="p-2 border border-orange-300 rounded-lg text-orange-500 hover:bg-orange-50 transition-colors"
           >
-            <PencilSquareIcon class="w-6 h-6" />
+            <PencilSquareIcon class="w-4 h-4" />
           </button>
           <button 
             @click="$emit('delete', equipment.id)" 
-            class="p-2 border border-red-100 rounded-lg text-red-400 hover:bg-red-50 transition-colors"
+            class="p-2 border border-red-300 rounded-lg text-red-500 hover:bg-red-50 transition-colors"
           >
-            <TrashIcon class="w-6 h-6" />
+            <TrashIcon class="w-4 h-4" />
           </button>
         </div>
       </template>

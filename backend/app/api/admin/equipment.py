@@ -6,7 +6,7 @@ borrowing requests. Requires admin authentication.
 """
 
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Body
 from sqlalchemy.orm import Session
 from app.api.deps import get_db
 from app.schemas.equipment import (
@@ -424,17 +424,19 @@ def bulk_delete(ids: List[int], db: Session = Depends(get_db)):
 # REQUEST NOTES
 # =========================================================
 
-@router.get("/requests/{request_id}/notes", response_model=str)
+@router.get("/requests/{request_id}/notes")
 def get_notes(request_id: int, db: Session = Depends(get_db)):
     """
     **Admin:** Retrieve notes for a specific request.
     """
-    return equipment_service.get_request_notes(db, request_id)
+    notes = equipment_service.get_request_notes(db, request_id)
+    return {"notes": notes}
 
 
-@router.put("/requests/{request_id}/notes", response_model=str)
-def update_notes(request_id: int, notes: str, db: Session = Depends(get_db)):
+@router.put("/requests/{request_id}/notes")
+def update_notes(request_id: int, payload: dict = Body(...), db: Session = Depends(get_db)):
     """
     **Admin:** Update notes for a specific request.
     """
-    return equipment_service.update_request_notes(db, request_id, notes)
+    notes = equipment_service.update_request_notes(db, request_id, payload.get("notes", ""))
+    return {"notes": notes}

@@ -190,19 +190,23 @@ const handleContinue = () => {
     emit('continue', formData.value)
   }
 }
+
+defineExpose({
+  handleContinue
+})
 </script>
 
 <template>
   <div class="space-y-5">
 
     <!-- Autofill Notice -->
-    <div v-if="isRfidUser && residentData" class="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-start gap-3">
+    <!-- <div v-if="isRfidUser && residentData" class="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-start gap-3">
       <LockClosedIcon class="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
       <div>
         <p class="text-sm text-blue-800 font-semibold">Your information has been pre-filled</p>
         <p class="text-xs text-blue-600 mt-1">Fields with a lock icon are pulled from your resident profile and cannot be edited here.</p>
       </div>
-    </div>
+    </div> -->
 
     <!-- Form Fields Grid -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -287,22 +291,6 @@ const handleContinue = () => {
           {{ errors[field.name] }}
         </p>
       </div>
-    </div>
-
-    <!-- Submit Button -->
-    <div class="flex justify-end">
-      <button
-        @click="handleContinue"
-        :disabled="props.isSubmitting"
-        :class="[
-          'px-8 py-3 font-semibold rounded-full transition',
-          props.isSubmitting
-            ? 'bg-gray-400 cursor-not-allowed text-white'
-            : 'bg-[#003A6B] text-white hover:bg-[#001F40]'
-        ]"
-      >
-        {{ props.isSubmitting ? 'Submitting...' : 'Next' }}
-      </button>
     </div>
   </div>
 </template>

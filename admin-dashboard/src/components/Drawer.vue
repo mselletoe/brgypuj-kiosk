@@ -90,7 +90,7 @@ const isActive = (path) => route.path.startsWith(path)
 }
 
 .inactive-nav:hover {
-  background-color: #f3f4f6 !important;
+  background-color: transparent !important;
   color: #0957FF !important;
 }
 

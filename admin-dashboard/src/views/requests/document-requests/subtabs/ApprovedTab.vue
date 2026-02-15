@@ -17,6 +17,14 @@ const props = defineProps({
   searchQuery: {
     type: String,
     default: ''
+  },
+  filters: {
+    type: Object,
+    default: () => ({
+      requestedDate: null,
+      documentType: null,
+      paymentStatus: null
+    })
   }
 })
 
@@ -277,16 +285,42 @@ const handleSelectionUpdate = (requestId, isSelected) => {
 onMounted(fetchApprovedRequests)
 
 const filteredRequests = computed(() => {
-  if (!props.searchQuery) return approvedRequests.value
+  let result = approvedRequests.value
 
-  const q = props.searchQuery.toLowerCase()
-  return approvedRequests.value.filter(req =>
-    req.requester.firstName.toLowerCase().includes(q) ||
-    req.requester.lastName.toLowerCase().includes(q) ||
-    req.requestType.toLowerCase().includes(q) ||
-    req.rfidNo.toLowerCase().includes(q) ||
-    (req.transaction_no || '').toLowerCase().includes(q)
-  )
+  if (props.searchQuery) {
+    const q = props.searchQuery.toLowerCase()
+    result = result.filter(req =>
+      req.requester.firstName.toLowerCase().includes(q) ||
+      req.requester.lastName.toLowerCase().includes(q) ||
+      req.requestType.toLowerCase().includes(q) ||
+      req.rfidNo.toLowerCase().includes(q) ||
+      (req.transaction_no || '').toLowerCase().includes(q)
+    )
+  }
+
+  if (props.filters?.requestedDate) {
+    const selectedDate = new Date(props.filters.requestedDate).toDateString()
+
+    result = result.filter(req =>
+      new Date(req.raw.requested_at).toDateString() === selectedDate
+    )
+  }
+
+  if (props.filters?.documentType) {
+    result = result.filter(req =>
+      req.raw.doctype_id === props.filters.documentType
+    )
+  }
+
+  if (props.filters?.paymentStatus) {
+    result = result.filter(req =>
+      props.filters.paymentStatus === 'paid'
+        ? req.isPaid
+        : !req.isPaid
+    )
+  }
+
+  return result
 })
 </script>
 

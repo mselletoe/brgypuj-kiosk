@@ -16,6 +16,15 @@ const props = defineProps({
   searchQuery: {
     type: String,
     default: ''
+  },
+  filters: {
+    type: Object,
+    default: () => ({
+      requestedDate: null,
+      borrowingPeriodStart: null,
+      borrowingPeriodEnd: null,
+      paymentStatus: null
+    })
   }
 })
 
@@ -69,6 +78,9 @@ const fetchPendingRequests = async () => {
       },
       amount: req.payment_status !== 'free' ? String(req.total_cost ?? '0.00') : null,
       isPaid: req.payment_status === 'paid',
+      contactPerson: req.contact_person,
+      contactNumber: req.contact_number,
+      purpose: req.purpose,
       raw: req
     }})
     
@@ -223,16 +235,52 @@ const handleSelectionUpdate = (requestId, isSelected) => {
 onMounted(fetchPendingRequests)
 
 const filteredRequests = computed(() => {
-  if (!props.searchQuery) return pendingRequests.value
+  let result = pendingRequests.value
 
-  const q = props.searchQuery.toLowerCase()
-  return pendingRequests.value.filter(req =>
-    req.requester.firstName.toLowerCase().includes(q) ||
-    req.requester.lastName.toLowerCase().includes(q) ||
-    req.requestType.toLowerCase().includes(q) ||
-    req.rfidNo.toLowerCase().includes(q) ||
-    (req.transaction_no || '').toLowerCase().includes(q)
-  )
+  if (props.searchQuery) {
+    const q = props.searchQuery.toLowerCase()
+    result = result.filter(req =>
+      req.requester.firstName.toLowerCase().includes(q) ||
+      req.requester.lastName.toLowerCase().includes(q) ||
+      req.requestType.toLowerCase().includes(q) ||
+      (req.rfidNo || '').toLowerCase().includes(q) ||
+      (req.transaction_no || '').toLowerCase().includes(q)
+    )
+  }
+
+  if (props.filters?.requestedDate) {
+    const selectedDate = new Date(props.filters.requestedDate).toDateString()
+
+    result = result.filter(req =>
+      new Date(req.raw.requested_at).toDateString() === selectedDate
+    )
+  }
+
+  if (props.filters?.borrowingPeriodStart) {
+    const start = new Date(props.filters.borrowingPeriodStart)
+
+    result = result.filter(req =>
+      new Date(req.raw.borrow_date) >= start
+    )
+  }
+
+  if (props.filters?.borrowingPeriodEnd) {
+    const end = new Date(props.filters.borrowingPeriodEnd)
+
+    result = result.filter(req =>
+      new Date(req.raw.return_date) <= end
+    )
+  }
+
+  if (props.filters?.paymentStatus) {
+    result = result.filter(req =>
+      props.filters.paymentStatus === 'paid'
+        ? req.isPaid
+        : !req.isPaid
+    )
+  }
+
+  return result
 })
 </script>
 
@@ -277,6 +325,9 @@ const filteredRequests = computed(() => {
       :amount="request.amount"
       :is-paid="request.isPaid"
       :is-selected="selectedRequests.has(request.id)"
+      :contact-person="request.contactPerson"
+      :contact-number="request.contactNumber"
+      :purpose="request.purpose"
       @button-click="handleButtonClick"
       @update:is-paid="(value) => handlePaymentUpdate(request.id, value)"
       @update:selected="(value) => handleSelectionUpdate(request.id, value)"
