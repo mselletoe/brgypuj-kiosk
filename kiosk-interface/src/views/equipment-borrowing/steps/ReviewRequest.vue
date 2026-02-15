@@ -9,20 +9,20 @@ import { createEquipmentRequest } from '@/api/equipmentService';
 import { useAuthStore } from '@/stores/auth';
 
 const authStore = useAuthStore();
-
-const goBackToHome = () => router.push('/home');
+const router = useRouter();
 
 const props = defineProps({
   selectedEquipment: Array,
   selectedDates: Object,
   borrowerInfo: Object,
   goBack: Function,
+  hasStartedForm: Function,
 });
 
 const emit = defineEmits(['start-new-request']);
 
-const router = useRouter();
 const showModal = ref(false);
+const showExitModal = ref(false);
 const isSubmitting = ref(false);
 const transactionNo = ref('');
 const isFadingOut = ref(false);
@@ -92,13 +92,30 @@ const handleSubmit = async () => {
 const handleDone = () => {
   router.push('/home');
 };
+
+const handleBackClick = () => {
+  if (props.hasStartedForm && props.hasStartedForm()) {
+    showExitModal.value = true;
+  } else {
+    router.push('/home');
+  }
+};
+
+const confirmExit = () => {
+  showExitModal.value = false;
+  router.push('/home');
+};
+
+const cancelExit = () => {
+  showExitModal.value = false;
+};
 </script>
 
 <template>
   <div class="flex flex-col w-full h-full" :class="{ 'content-with-keyboard': showKeyboard }">
     <!-- Header -->
     <div class="flex items-center mb-6 gap-7 flex-shrink-0">
-      <ArrowBackButton @click="goBackToHome" />
+      <ArrowBackButton @click="handleBackClick" />
       <div>
         <h1 class="text-[45px] text-[#03335C] font-bold tracking-tight -mt-2">Equipment Borrowing</h1>
         <p class="text-[#03335C] -mt-2">Review the details of your equipment request.</p>
@@ -159,10 +176,6 @@ const handleDone = () => {
                 <span class="text-gray-600">Purpose</span>
                 <span class="font-medium text-right">{{ borrowerInfo.purpose }}</span>
               </div>
-              <div class="flex justify-between text-base">
-                <span class="text-gray-600">Additional Notes</span>
-                <span class="font-medium text-right break-all">{{ borrowerInfo.notes || 'N/A' }}</span>
-              </div>
             </div>
           </div>
           <div class="bg-[#EBF5FF] rounded-2xl shadow-lg border border-[#B0D7F8] p-5">
@@ -198,7 +211,7 @@ const handleDone = () => {
       </Button>
     </div>
 
-    <!-- Modal -->
+    <!-- Success Modal -->
     <div v-if="showModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-8">
       <Modal
         title="Request Submitted!"
@@ -210,6 +223,21 @@ const handleDone = () => {
         :showSecondaryButton="false"
         :showNewRequest="false"
         @primary-click="handleDone"
+      />
+    </div>
+
+    <!-- Exit Confirmation Modal -->
+    <div v-if="showExitModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-8">
+      <Modal
+        title="Exit Equipment Request?"
+        message="You have unsaved changes. Are you sure you want to exit? All your progress will be lost."
+        primaryButtonText="Exit"
+        secondaryButtonText="Stay"
+        :showPrimaryButton="true"
+        :showSecondaryButton="true"
+        :showReferenceId="false"
+        @primary-click="confirmExit"
+        @secondary-click="cancelExit"
       />
     </div>
   </div>

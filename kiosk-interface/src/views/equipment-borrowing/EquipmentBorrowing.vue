@@ -40,6 +40,15 @@ const resetFormAndGoToStart = () => {
   currentStep.value = 'select';
 };
 
+const hasStartedForm = () => {
+  return selectedEquipment.value.length > 0 || 
+         selectedDates.value !== null || 
+         borrowerInfo.value.contactPerson ||
+         borrowerInfo.value.contactNumber ||
+         borrowerInfo.value.purpose ||
+         borrowerInfo.value.notes;
+};
+
 onActivated(() => {
   resetFormAndGoToStart();
 });
@@ -51,6 +60,7 @@ onActivated(() => {
     :selected-equipment="selectedEquipment"
     @update:selected-equipment="onUpdateEquipment"
     :go-next="goNext"
+    :has-started-form="hasStartedForm"
   />
 
   <EquipmentSelectDates
@@ -60,6 +70,7 @@ onActivated(() => {
     @update:selected-dates="onUpdateDates"
     :go-next="goNext"
     :go-back="goBack"
+    :has-started-form="hasStartedForm"
   />
 
   <EquipmentForm
@@ -68,6 +79,7 @@ onActivated(() => {
     @update:borrower-info="onUpdateBorrowerInfo"
     :go-next="goNext"
     :go-back="goBack"
+    :has-started-form="hasStartedForm"
   />
 
   <EquipmentReviewRequest
@@ -77,5 +89,6 @@ onActivated(() => {
     :borrower-info="borrowerInfo"
     :go-back="goBack"
     @start-new-request="resetFormAndGoToStart"
+    :has-started-form="hasStartedForm"
   />
 </template>
