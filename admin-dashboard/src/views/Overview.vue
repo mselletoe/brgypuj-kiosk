@@ -105,7 +105,7 @@ onMounted(() => {
       <!-- Total Requests -->
       <div 
         @click="navigateTo('/requests')"
-        class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-5 shadow-lg cursor-pointer hover:shadow-lg transition-all hover:scale-105"
+        class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-5 shadow-md cursor-pointer transition-all"
       >
         <div class="flex items-start justify-between">
           <div class="flex-1">
@@ -122,7 +122,7 @@ onMounted(() => {
       <!-- Pending Requests -->
       <div 
         @click="navigateTo('/requests')"
-        class="bg-white rounded-xl p-5 shadow-md border border-gray-200 cursor-pointer hover:shadow-lg transition-all hover:scale-105"
+        class="bg-white rounded-xl p-5 shadow-md border border-gray-200 cursor-pointer transition-all"
       >
         <div class="flex items-start justify-between">
           <div class="flex-1">
@@ -139,7 +139,7 @@ onMounted(() => {
       <!-- Ready for Pickup -->
       <div 
         @click="navigateTo('/requests')"
-        class="bg-white rounded-xl p-5 shadow-md border border-gray-200 cursor-pointer hover:shadow-lg transition-all hover:scale-105"
+        class="bg-white rounded-xl p-5 shadow-md border border-gray-200 cursor-pointer transition-all"
       >
         <div class="flex items-start justify-between">
           <div class="flex-1">
@@ -156,7 +156,7 @@ onMounted(() => {
       <!-- Equipment Requests -->
       <div 
         @click="navigateTo('/equipment-management')"
-        class="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-5 shadow-lg cursor-pointer hover:shadow-xl transition-all hover:scale-105"
+        class="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-5 shadow-md cursor-pointer transition-all"
       >
         <div class="flex items-start justify-between">
           <div class="flex-1">
@@ -475,24 +475,3 @@ onMounted(() => {
     </div>
   </div>
 </template>
-
-<style scoped>
-/* Custom scrollbar for activity feed */
-::-webkit-scrollbar {
-  width: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #888;
-  border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #555;
-}
-</style>
