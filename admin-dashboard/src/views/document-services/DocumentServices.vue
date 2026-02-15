@@ -451,7 +451,7 @@ const columns = computed(() => [
           'button',
           {
             onClick: () => (editingId.value = row.id),
-            class: 'p-1.5 text-yellow-600 hover:bg-yellow-50 rounded transition'
+            class: 'p-1.5 text-orange-500 hover:bg-orange-50 rounded transition'
           },
           [h(PencilSquareIcon, { class: 'w-5 h-5' })]
         ),
@@ -459,7 +459,7 @@ const columns = computed(() => [
           'button',
           {
             onClick: () => requestDelete(row.id),
-            class: 'p-1.5 text-red-600 hover:bg-red-50 rounded transition'
+            class: 'p-1.5 text-red-500 hover:bg-red-50 rounded transition'
           },
           [h(TrashIcon, { class: 'w-5 h-5' })]
         ),
@@ -521,14 +521,14 @@ onMounted(fetchServices)
         <button
           @click="bulkDelete"
           :disabled="selectionState === 'none'"
-          class="p-2 border border-red-700 rounded-lg transition-colors"
+          class="p-2 border border-red-400 rounded-lg transition-colors"
           :class="
             selectionState === 'none'
               ? 'opacity-50 cursor-not-allowed'
               : 'hover:bg-red-50'
           "
         >
-          <TrashIcon class="w-5 h-5 text-red-700" />
+          <TrashIcon class="w-5 h-5 text-red-500" />
         </button>
 
         <div

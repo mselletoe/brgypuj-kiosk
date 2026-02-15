@@ -75,15 +75,15 @@ const handleToggle = () => {
         <div class="flex justify-end gap-2 mt-4">
           <button 
             @click="$emit('edit', equipment)" 
-            class="p-2 border border-orange-200 rounded-lg text-orange-400 hover:bg-orange-50 transition-colors"
+            class="p-2 border border-orange-300 rounded-lg text-orange-500 hover:bg-orange-50 transition-colors"
           >
-            <PencilSquareIcon class="w-6 h-6" />
+            <PencilSquareIcon class="w-4 h-4" />
           </button>
           <button 
             @click="$emit('delete', equipment.id)" 
-            class="p-2 border border-red-100 rounded-lg text-red-400 hover:bg-red-50 transition-colors"
+            class="p-2 border border-red-300 rounded-lg text-red-500 hover:bg-red-50 transition-colors"
           >
-            <TrashIcon class="w-6 h-6" />
+            <TrashIcon class="w-4 h-4" />
           </button>
         </div>
       </template>

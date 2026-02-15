@@ -127,7 +127,7 @@ const badgeColorClass = computed(() => {
 
         <button
           @click="$emit('delete', id)"
-          class="w-9 h-9 flex items-center justify-center bg-white text-[#B1202A] border border-[#FBBABA] hover:bg-[#FFE6E6] rounded-md transition-all"
+          class="w-9 h-9 flex items-center justify-center bg-white text-red-500 border border-red-400 hover:bg-red-50 rounded-md transition-all"
         >
           <TrashIcon class="w-5 h-5" />
         </button>

@@ -204,7 +204,7 @@ const getButtonClass = (btn) => {
     green: 'bg-white text-green-600 border border-[#09AA44] hover:bg-green-50',
     solidgreen: 'bg-[#09AA44] text-white hover:bg-green-700',
     red: 'bg-white text-red-600 border border-[#FF2B3A] hover:bg-red-50',
-    delete: 'bg-white text-[#B1202A] border border-[#FBBABA] hover:bg-[#FFE6E6]',
+    delete: 'bg-white text-red-500 border border-red-400 hover:bg-red-50',
     undo: 'bg-white text-orange-500 border border-orange-400 hover:bg-orange-50'
   };
   

@@ -23,7 +23,7 @@ const tabMap = {
 }
 
 const activeTab = computed({
-  get: () => route.params.status || 'all',
+  get: () => route.params.status || 'feedbacks',
   set: (val) => {
     router.push({ name: 'FeedbackReports', params: { status: val } })
   }
@@ -96,9 +96,9 @@ const triggerDelete = () => {
               ? 'opacity-50 cursor-not-allowed'
               : 'hover:bg-red-50'
           ]"
-          class="p-2 border border-red-700 rounded-lg transition-colors"
+          class="p-2 border border-red-400 rounded-lg transition-colors"
         >
-          <TrashIcon class="w-5 h-5 text-red-700" />
+          <TrashIcon class="w-5 h-5 text-red-500" />
         </button>
 
         <!-- Select All -->
