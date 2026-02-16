@@ -1,8 +1,6 @@
 /**
  * @file router/index.js
  * @description Centralized routing configuration with Navigation Guards.
- * Protects internal kiosk services from unauthorized access and manages
- * the transition between Idle, Authentication, and Dashboard states.
  */
 
 import { createRouter, createWebHistory } from "vue-router";
@@ -28,19 +26,19 @@ import Comments from "@/views/feedback/Comments.vue";
 import ComponentShowcase from "../components/ComponentShowcase.vue";
 import InAnnouncements from "../views/announcements/Announcement.vue";
 import TransactionHistory from "../views/transactions/TransactionHistory.vue";
+
+// ID Services Views
 import IDServices from "../views/id-services/IDServices.vue";
+import RequestReplacement from "../views/id-services/RequestReplacement.vue";
+import ChangePasscode from "../views/id-services/ChangePasscode.vue";
+import ReportLost from "../views/id-services/ReportLost.vue";
 
 const routes = [
   // Root Redirect: Kiosk starts at the Idle/Welcome screen
-  // [ORIGINAL CODE]
-  // { path: '/', redirect: '/idle' },
-
-  // [DEV BYPASS] Force Root to Home
-  { path: "/", redirect: "/home" },
+  { path: "/", redirect: "/idle" },
 
   /**
    * PUBLIC ROUTES
-   * Accessible without any authentication.
    */
   { path: "/display", name: "Display", component: Display },
   { path: "/idle", name: "Idle", component: Idle },
@@ -53,27 +51,44 @@ const routes = [
     name: "InAnnouncements",
     component: InAnnouncements,
   },
+
   /**
    * PROTECTED ROUTES (UserLayout)
-   * Requires either Guest or RFID authentication.
    */
   {
     path: "/",
     component: UserLayout,
-    // [ORIGINAL CODE]
-    // meta: { requiresAuth: true },
-
-    // [DEV BYPASS] Disable strict auth requirement here
-    meta: { requiresAuth: false },
-
+    meta: { requiresAuth: true },
     children: [
       { path: "home", name: "Home", component: KioskHome },
+
+      // Document Services
       {
         path: "document-services",
         name: "DocumentServices",
         component: DocumentServices,
         children: [{ path: ":docType", component: DocumentFormWrapper }],
       },
+
+      // ID Services (New Routes Added Here)
+      { path: "id-services", name: "IDServices", component: IDServices },
+      {
+        path: "id-services/replacement",
+        name: "RequestReplacement",
+        component: RequestReplacement,
+      },
+      {
+        path: "id-services/change-pin",
+        name: "ChangePasscode",
+        component: ChangePasscode,
+      },
+      {
+        path: "id-services/report-lost",
+        name: "ReportLost",
+        component: ReportLost,
+      },
+
+      // Other Services
       {
         path: "equipment-borrowing",
         name: "EquipmentBorrowing",
@@ -94,16 +109,11 @@ const routes = [
         name: "TransactionHistory",
         component: TransactionHistory,
       },
-      { path: "/id-services", name: "IDServices", component: IDServices },
     ],
   },
 
-  // Catch-all: Redirect unknown paths back to the safety of the Idle screen
-  // [ORIGINAL CODE]
-  // { path: '/:pathMatch(.*)*', redirect: '/idle' },
-
-  // [DEV BYPASS] Redirect unknown paths to Home
-  { path: "/:pathMatch(.*)*", redirect: "/home" },
+  // Catch-all
+  { path: "/:pathMatch(.*)*", redirect: "/idle" },
 ];
 
 const router = createRouter({
@@ -111,59 +121,30 @@ const router = createRouter({
   routes,
 });
 
-/**
- * GLOBAL NAVIGATION GUARD
- * Intercepts every route change to check authentication status.
- */
+// Navigation Guard with DEV BYPASS
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore();
 
-  // Ensure the store is rehydrated from LocalStorage before checking
+  if (!authStore.isAuthenticated) authStore.restore();
 
-  // [ORIGINAL CODE]
-  /*
-  if (!authStore.isAuthenticated) {
-    authStore.restore()
-  }
-  */
-
-  // [DEV BYPASS] 1. INJECT FAKE USER IF MISSING
-  // Prevents "isAuthenticated" read-only errors and allows app to load data
-  if (!authStore.user) {
-    console.log("DEV MODE: Injecting Fake User...");
-    authStore.$patch({
-      user: {
-        id: "DEV-USER",
-        firstName: "Developer",
-        lastName: "Bypass",
-        role: "student",
-        studentId: "2023-0001",
-      },
-      token: "bypass-token",
-    });
-  }
-
-  /**
-   * Scenario: Accessing a protected page without a session.
-   * If the route has 'requiresAuth' and the user isn't logged in, send them to login.
-   */
-
-  // [ORIGINAL CODE] - Commented out to disable enforcement
-  /*
+  // 🚧 DEV BYPASS
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    next('/login')
-  } 
-  else if ((to.path === '/login' || to.path === '/login-rfid') && authStore.isAuthenticated) {
-    next('/home')
+    console.log("⚠️ DEV MODE: Bypassing RFID Check");
+    authStore.setRFID(
+      { id: "2023-0042", first_name: "Keanno", last_name: "Macatangay" },
+      "FAKE-RFID-TAG-888",
+    );
+    next();
+    return;
   }
-  else {
-    next() // Proceed as normal
-  }
-  */
+  // 🚧 END BYPASS
 
-  // [DEV BYPASS] 2. BLOCK IDLE SCREEN & ALLOW EVERYTHING ELSE
-  if (to.path === "/idle" || to.path === "/login") {
-    console.log("DEV MODE: Blocking Idle/Login screen -> Redirecting to Home");
+  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+    next("/login");
+  } else if (
+    (to.path === "/login" || to.path === "/login-rfid") &&
+    authStore.isAuthenticated
+  ) {
     next("/home");
   } else {
     next();
