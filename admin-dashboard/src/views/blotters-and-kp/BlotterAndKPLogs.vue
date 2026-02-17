@@ -317,13 +317,20 @@ const columns = computed(() => [
 // Modal Form State
 // ======================================
 const incidentTypeOptions = [
-  { label: 'Physical Altercation', value: 'Physical Altercation' },
-  { label: 'Verbal Dispute', value: 'Verbal Dispute' },
-  { label: 'Property Dispute', value: 'Property Dispute' },
-  { label: 'Noise Complaint', value: 'Noise Complaint' },
-  { label: 'Theft', value: 'Theft' },
-  { label: 'Trespassing', value: 'Trespassing' },
-  { label: 'Domestic Disturbance', value: 'Domestic Disturbance' },
+  { label: 'Physical Altercation (Pananakit o Pisikal na Pag-aaway)', value: 'Physical Altercation' },
+  { label: 'Verbal Dispute (Pagmumura o Pag-aaway sa Salita)', value: 'Verbal Dispute' },
+  { label: 'Property Dispute (Away sa Lupa o Hangganan)', value: 'Property Dispute' },
+  { label: 'Unpaid Debt (Utang na Hindi Nababayaran)', value: 'Unpaid Debt' },
+  { label: 'Noise Complaint (Reklamo sa Ingay (Videoke, atbp.))', value: 'Noise Complaint' },
+  { label: 'Theft (Pagnanakaw)', value: 'Theft' },
+  { label: 'Trespassing (Pagpasok nang Walang Pahintulot)', value: 'Trespassing' },
+  { label: 'Domestic Disturbance (Gulo sa Loob ng Tahanan)', value: 'Domestic Disturbance' },
+  { label: 'Lost Item/Document (Nawawalang Gamit o Dokumento)', value: 'Lost Item/Document' },
+  { label: 'Vehicular Accident (Aksidente sa Sasakyan)', value: 'Vehicular Accident' },
+  { label: 'Stray Animal/Pet Issue (Reklamo sa Pagala-galang Hayop)', value: 'Stray Animal/Pet Issue' },
+  { label: 'Vandalism (Paninira ng Ari-arian / Graffitti)', value: 'Vandalism' },
+  { label: 'Threats (Pananakot)', value: 'Threats' },
+  { label: 'Slander/Libel (Paninirang-puri)', value: 'Slander' },
   { label: 'Other', value: 'Other' }
 ]
 
