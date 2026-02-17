@@ -75,7 +75,7 @@ onMounted(() => {
 // ======================================
 const residentOptions = computed(() =>
   residents.value.map(r => ({
-    label: [r.first_name, r.middle_name, r.last_name].filter(Boolean).join(' '),
+    label: r.full_name || [r.first_name, r.middle_name, r.last_name].filter(Boolean).join(' ') || `Resident #${r.id}`,
     value: r.id,
     resident: r
   }))
