@@ -27,7 +27,8 @@ class Resident(Base):
     phone_number = Column(String(15))
     rfid_pin = Column(String(255))
     registered_at = Column(TIMESTAMP, server_default=func.current_timestamp())
-
+    
+    blotter_records = relationship("BlotterRecord",back_populates="complainant")
     addresses = relationship("Address", back_populates="resident", cascade="all, delete")
     rfids = relationship("ResidentRFID", back_populates="resident", cascade="all, delete")
     admin_accounts = relationship("Admin", back_populates="resident")
