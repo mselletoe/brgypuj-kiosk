@@ -19,6 +19,7 @@ import AccountSettings from '@/views/settings/AccountSettings.vue'
 import HelpAndSupport from '@/views/Help&Support.vue'
 import FAQsManagement from '@/views/faqs-management/FAQsManagement.vue'
 import ResidentsManagement from '@/views/residents-management/ResidentsManagement.vue'
+import BlotterAndKPLogs from '@/views/blotters-and-kp/BlotterAndKPLogs.vue'
 
 const routes = [
   {
@@ -69,7 +70,8 @@ const routes = [
       { path: 'component-showcase', component: ComponentShowcase },
       { path: 'account-settings', component: AccountSettings },
       { path: 'help-and-support', component: HelpAndSupport },
-      { path: 'faqs-management', component: FAQsManagement }
+      { path: 'faqs-management', component: FAQsManagement },
+      { path: 'blotter-kp-logs', component: BlotterAndKPLogs },
     ]
   }
 ]

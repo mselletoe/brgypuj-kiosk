@@ -151,7 +151,6 @@ const triggerDelete = () => {
       <n-tabs v-model:value="activeTab" type="line" animated class="flex-grow">
         <n-tab-pane name="feedbacks" tab="Feedbacks" />
         <n-tab-pane name="reports" tab="Reports" />
-        <n-tab-pane name="lostreports" tab="Lost Reports" />
       </n-tabs>
     </div>
 
