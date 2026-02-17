@@ -5,7 +5,6 @@ Handles the business logic for blotter record management within
 the Admin Dashboard. Includes creation, retrieval, update, and 
 deletion of blotter records.
 """
-import random
 from sqlalchemy.orm import Session, joinedload
 from fastapi import HTTPException, status
 from app.models.blotter import BlotterRecord
@@ -20,7 +19,10 @@ from app.schemas.blotter import BlotterRecordCreate, BlotterRecordUpdate
 def _get_record(db: Session, blotter_id: int) -> BlotterRecord | None:
     return (
         db.query(BlotterRecord)
-        .options(joinedload(BlotterRecord.complainant))
+        .options(
+            joinedload(BlotterRecord.complainant),
+            joinedload(BlotterRecord.respondent),
+        )
         .filter(BlotterRecord.id == blotter_id)
         .first()
     )
@@ -34,8 +36,6 @@ def _generate_blotter_no(db: Session) -> str:
     from datetime import datetime
 
     year = datetime.now().year
-
-    # Get the count of blotter records filed this year to determine next sequence
     year_prefix = f"{year}-"
     count = (
         db.query(BlotterRecord)
@@ -65,6 +65,47 @@ def _validate_resident(db: Session, resident_id: int) -> Resident:
     return resident
 
 
+def _get_full_name(resident) -> str:
+    """Returns the full name of a resident."""
+    return " ".join(filter(None, [
+        resident.first_name,
+        resident.middle_name,
+        resident.last_name,
+    ]))
+
+
+def _calculate_age(birthdate) -> int | None:
+    """Calculates age from a birthdate."""
+    if not birthdate:
+        return None
+    from datetime import date
+    today = date.today()
+    return today.year - birthdate.year - (
+        (today.month, today.day) < (birthdate.month, birthdate.day)
+    )
+
+
+def _get_resident_address(db: Session, resident_id: int) -> str | None:
+    """
+    Fetches the primary address of a resident.
+    Adjust the model/fields to match your Address model.
+    """
+    from app.models.resident import Address
+    address = (
+        db.query(Address)
+        .filter(Address.resident_id == resident_id)
+        .first()
+    )
+    if not address:
+        return None
+    parts = filter(None, [
+        getattr(address, 'street', None),
+        getattr(address, 'barangay', None),
+        getattr(address, 'city', None),
+    ])
+    return ", ".join(parts) or None
+
+
 # -------------------------------------------------
 # Service Functions
 # -------------------------------------------------
@@ -75,7 +116,10 @@ def get_all_blotter_records(db: Session) -> list[BlotterRecord]:
     """
     return (
         db.query(BlotterRecord)
-        .options(joinedload(BlotterRecord.complainant))
+        .options(
+            joinedload(BlotterRecord.complainant),
+            joinedload(BlotterRecord.respondent),
+        )
         .order_by(BlotterRecord.created_at.desc())
         .all()
     )
@@ -83,7 +127,7 @@ def get_all_blotter_records(db: Session) -> list[BlotterRecord]:
 
 def get_blotter_record_by_id(db: Session, blotter_id: int) -> BlotterRecord | None:
     """
-    Admin: Fetches a single blotter record with full complainant details.
+    Admin: Fetches a single blotter record with full party details.
     """
     return _get_record(db, blotter_id)
 
@@ -91,18 +135,28 @@ def get_blotter_record_by_id(db: Session, blotter_id: int) -> BlotterRecord | No
 def create_blotter_record(db: Session, payload: BlotterRecordCreate) -> BlotterRecord:
     """
     Admin: Creates a new blotter record with an auto-generated blotter number.
-    Optionally links to a registered resident as the complainant.
+    When a resident is selected as complainant or respondent, their name and
+    address are auto-filled from their resident profile.
     """
+    data = payload.model_dump()
+
+    # Auto-fill complainant details from resident profile if linked
     if payload.complainant_id:
-        _validate_resident(db, payload.complainant_id)
+        resident = _validate_resident(db, payload.complainant_id)
+        data['complainant_name'] = _get_full_name(resident)
+        data['complainant_age'] = _calculate_age(resident.birthdate)
+        data['complainant_address'] = _get_resident_address(db, resident.id)
+
+    # Auto-fill respondent details from resident profile if linked
+    if payload.respondent_id:
+        resident = _validate_resident(db, payload.respondent_id)
+        data['respondent_name'] = _get_full_name(resident)
+        data['respondent_age'] = _calculate_age(resident.birthdate)
+        data['respondent_address'] = _get_resident_address(db, resident.id)
 
     blotter_no = _generate_blotter_no(db)
 
-    record = BlotterRecord(
-        blotter_no=blotter_no,
-        **payload.model_dump(),
-    )
-
+    record = BlotterRecord(blotter_no=blotter_no, **data)
     db.add(record)
     db.commit()
     db.refresh(record)
@@ -115,15 +169,29 @@ def update_blotter_record(
 ) -> BlotterRecord | None:
     """
     Admin: Updates fields of an existing blotter record.
+    Re-resolves resident data if complainant_id or respondent_id changes.
     """
     record = _get_record(db, blotter_id)
     if not record:
         return None
 
-    if payload.complainant_id is not None:
-        _validate_resident(db, payload.complainant_id)
+    data = payload.model_dump(exclude_unset=True)
 
-    for field, value in payload.model_dump(exclude_unset=True).items():
+    # Re-resolve complainant if resident link is being changed
+    if data.get('complainant_id'):
+        resident = _validate_resident(db, data['complainant_id'])
+        data['complainant_name'] = _get_full_name(resident)
+        data['complainant_age'] = _calculate_age(resident.birthdate)
+        data['complainant_address'] = _get_resident_address(db, resident.id)
+
+    # Re-resolve respondent if resident link is being changed
+    if data.get('respondent_id'):
+        resident = _validate_resident(db, data['respondent_id'])
+        data['respondent_name'] = _get_full_name(resident)
+        data['respondent_age'] = _calculate_age(resident.birthdate)
+        data['respondent_address'] = _get_resident_address(db, resident.id)
+
+    for field, value in data.items():
         setattr(record, field, value)
 
     db.commit()
@@ -139,10 +207,8 @@ def delete_blotter_record(db: Session, blotter_id: int) -> bool:
     record = db.query(BlotterRecord).filter(BlotterRecord.id == blotter_id).first()
     if not record:
         return False
-
     db.delete(record)
     db.commit()
-
     return True
 
 
@@ -157,5 +223,4 @@ def bulk_delete_blotter_records(db: Session, ids: list[int]) -> int:
         .delete(synchronize_session=False)
     )
     db.commit()
-
     return count

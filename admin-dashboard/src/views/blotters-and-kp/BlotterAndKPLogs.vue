@@ -8,7 +8,6 @@ import {
   NModal,
   NSelect,
   NDatePicker,
-  NSpin,
   useMessage
 } from 'naive-ui'
 import { FunnelIcon, TrashIcon, CheckIcon, XMarkIcon } from '@heroicons/vue/24/outline'
@@ -16,12 +15,12 @@ import PageTitle from '@/components/shared/PageTitle.vue'
 import ConfirmModal from '@/components/shared/ConfirmationModal.vue'
 import {
   getAllBlotters,
-  getBlotterById,
   createBlotter,
   updateBlotter,
   deleteBlotter,
   bulkDeleteBlotters
 } from '@/api/blotterService'
+import { fetchResidents } from '@/api/residentService'
 
 const message = useMessage()
 
@@ -36,6 +35,11 @@ const showDeleteModal = ref(false)
 const showBlotterModal = ref(false)
 const currentBlotter = ref(null)
 const modalMode = ref('add')
+const saving = ref(false)
+const formData = ref({})
+
+// Residents for the selector dropdowns
+const residents = ref([])
 
 // ======================================
 // Data Loading
@@ -44,28 +48,77 @@ async function loadBlotters() {
   loading.value = true
   try {
     const data = await getAllBlotters()
-    // Normalize: convert incident_date string to timestamp for NDatePicker
     blotters.value = data.map(normalizeRecord)
-  } catch (error) {
+  } catch {
     message.error('Failed to load blotter records')
   } finally {
     loading.value = false
   }
 }
 
+async function loadResidents() {
+  try {
+    const data = await fetchResidents()
+    residents.value = data
+  } catch {
+    message.error('Failed to load residents')
+  }
+}
+
 onMounted(() => {
   loadBlotters()
+  loadResidents()
 })
+
+// ======================================
+// Resident Selector Options
+// ======================================
+const residentOptions = computed(() =>
+  residents.value.map(r => ({
+    label: [r.first_name, r.middle_name, r.last_name].filter(Boolean).join(' '),
+    value: r.id,
+    resident: r
+  }))
+)
+
+function handleComplainantSelect(residentId) {
+  if (!residentId) {
+    // Cleared — reset complainant fields
+    formData.value.complainant_id = null
+    formData.value.complainant_name = ''
+    formData.value.complainant_age = null
+    formData.value.complainant_address = ''
+    return
+  }
+  const option = residentOptions.value.find(o => o.value === residentId)
+  if (!option) return
+  const r = option.resident
+  formData.value.complainant_id = r.id
+  formData.value.complainant_name = option.label
+  formData.value.complainant_age = r.age ?? null
+  formData.value.complainant_address = r.address ?? ''
+}
+
+function handleRespondentSelect(residentId) {
+  if (!residentId) {
+    formData.value.respondent_id = null
+    formData.value.respondent_name = ''
+    formData.value.respondent_age = null
+    formData.value.respondent_address = ''
+    return
+  }
+  const option = residentOptions.value.find(o => o.value === residentId)
+  if (!option) return
+  const r = option.resident
+  formData.value.respondent_id = r.id
+  formData.value.respondent_name = option.label
+  formData.value.respondent_age = r.age ?? null
+  formData.value.respondent_address = r.address ?? ''
+}
 
 // ======================================
 // Data Normalization
 // ======================================
-
-/**
- * Converts API record to frontend-friendly format.
- * - incident_date (YYYY-MM-DD string) → timestamp for NDatePicker
- * - incident_time kept as-is (HH:MM string)
- */
 function normalizeRecord(record) {
   return {
     ...record,
@@ -74,32 +127,28 @@ function normalizeRecord(record) {
   }
 }
 
-/**
- * Converts frontend form data back to API payload format.
- * - date timestamp → incident_date (YYYY-MM-DD)
- * - time string → incident_time
- */
 function toApiPayload(form) {
   const payload = { ...form }
 
   if (form.date) {
-    const d = new Date(form.date)
-    payload.incident_date = d.toISOString().split('T')[0]
+    payload.incident_date = new Date(form.date).toISOString().split('T')[0]
+  } else {
+    payload.incident_date = null
   }
 
   payload.incident_time = form.time || null
 
   // Remove frontend-only fields
-  delete payload.date
-  delete payload.time
-  delete payload.id
-  delete payload.blotter_no
-  delete payload.complainant_resident_name
-  delete payload.complainant_resident_first_name
-  delete payload.complainant_resident_middle_name
-  delete payload.complainant_resident_last_name
-  delete payload.complainant_resident_phone
-  delete payload.created_at
+  const remove = [
+    'date', 'time', 'id', 'blotter_no', 'created_at',
+    'complainant_resident_name', 'complainant_resident_first_name',
+    'complainant_resident_middle_name', 'complainant_resident_last_name',
+    'complainant_resident_phone',
+    'respondent_resident_name', 'respondent_resident_first_name',
+    'respondent_resident_middle_name', 'respondent_resident_last_name',
+    'respondent_resident_phone',
+  ]
+  remove.forEach(k => delete payload[k])
 
   return payload
 }
@@ -134,9 +183,7 @@ function handleMainSelectToggle() {
   }
 }
 
-watch(searchQuery, () => {
-  selectedIds.value = []
-})
+watch(searchQuery, () => { selectedIds.value = [] })
 
 // ======================================
 // Format Helpers
@@ -186,7 +233,7 @@ async function confirmDelete() {
     message.success(`${selectedIds.value.length} record(s) deleted successfully`)
     selectedIds.value = []
     showDeleteModal.value = false
-  } catch (error) {
+  } catch {
     message.error('Failed to delete some records')
   }
 }
@@ -196,7 +243,7 @@ async function handleDeleteSingle(id) {
     await deleteBlotter(id)
     blotters.value = blotters.value.filter(b => b.id !== id)
     message.success('Blotter record deleted successfully')
-  } catch (error) {
+  } catch {
     message.error('Failed to delete record')
   }
 }
@@ -236,28 +283,22 @@ const columns = computed(() => [
     minWidth: 160
   },
   {
+    title: 'Respondent',
+    key: 'respondent_name',
+    minWidth: 160,
+    render(row) { return row.respondent_name || 'N/A' }
+  },
+  {
     title: 'Date',
     key: 'date',
     width: 140,
-    render(row) {
-      return formatDate(row.date)
-    }
+    render(row) { return formatDate(row.date) }
   },
   {
     title: 'Type of Incident',
     key: 'incident_type',
     minWidth: 180,
-    render(row) {
-      return row.incident_type || 'N/A'
-    }
-  },
-  {
-    title: 'Contact No.',
-    key: 'contact_no',
-    width: 150,
-    render(row) {
-      return row.contact_no || 'N/A'
-    }
+    render(row) { return row.incident_type || 'N/A' }
   },
   {
     title: 'Actions',
@@ -265,23 +306,8 @@ const columns = computed(() => [
     width: 130,
     render(row) {
       return h('div', { class: 'flex gap-2 items-center' }, [
-        h(
-          NButton,
-          {
-            type: 'info',
-            size: 'small',
-            onClick: () => openViewModal(row)
-          },
-          { default: () => 'View' }
-        ),
-        h(
-          'button',
-          {
-            onClick: () => handleDeleteSingle(row.id),
-            class: 'p-1.5 text-red-500 hover:bg-red-50 rounded transition'
-          },
-          [h(TrashIcon, { class: 'w-5 h-5' })]
-        )
+        h(NButton, { type: 'info', size: 'small', onClick: () => openViewModal(row) }, { default: () => 'View' }),
+        h('button', { onClick: () => handleDeleteSingle(row.id), class: 'p-1.5 text-red-500 hover:bg-red-50 rounded transition' }, [h(TrashIcon, { class: 'w-5 h-5' })])
       ])
     }
   }
@@ -290,9 +316,6 @@ const columns = computed(() => [
 // ======================================
 // Modal Form State
 // ======================================
-const saving = ref(false)
-const formData = ref({})
-
 const incidentTypeOptions = [
   { label: 'Physical Altercation', value: 'Physical Altercation' },
   { label: 'Verbal Dispute', value: 'Verbal Dispute' },
@@ -304,27 +327,31 @@ const incidentTypeOptions = [
   { label: 'Other', value: 'Other' }
 ]
 
+function emptyForm() {
+  return {
+    complainant_id: null,
+    complainant_name: '',
+    complainant_age: null,
+    complainant_address: '',
+    respondent_id: null,
+    respondent_name: '',
+    respondent_age: null,
+    respondent_address: '',
+    date: new Date().getTime(),
+    time: '',
+    incident_place: '',
+    incident_type: null,
+    narrative: '',
+    recorded_by: '',
+    contact_no: ''
+  }
+}
+
 watch(() => showBlotterModal.value, (val) => {
   if (val) {
-    if (modalMode.value === 'view' && currentBlotter.value) {
-      formData.value = { ...currentBlotter.value }
-    } else {
-      formData.value = {
-        complainant_name: '',
-        complainant_age: null,
-        complainant_address: '',
-        respondent_name: '',
-        respondent_age: null,
-        respondent_address: '',
-        date: new Date().getTime(),
-        time: '',
-        incident_place: '',
-        incident_type: null,
-        narrative: '',
-        recorded_by: '',
-        contact_no: ''
-      }
-    }
+    formData.value = modalMode.value === 'view' && currentBlotter.value
+      ? { ...currentBlotter.value }
+      : emptyForm()
   }
 })
 
@@ -335,7 +362,6 @@ async function handleSave() {
   }
 
   saving.value = true
-
   try {
     const payload = toApiPayload(formData.value)
 
@@ -351,12 +377,8 @@ async function handleSave() {
     }
 
     showBlotterModal.value = false
-  } catch (error) {
-    message.error(
-      modalMode.value === 'add'
-        ? 'Failed to add blotter record'
-        : 'Failed to update blotter record'
-    )
+  } catch {
+    message.error(modalMode.value === 'add' ? 'Failed to add blotter record' : 'Failed to update blotter record')
   } finally {
     saving.value = false
   }
@@ -377,24 +399,13 @@ const modalTitle = computed(() => {
         <p class="text-sm text-gray-500 mt-1">Manage Blotter and KP logs for residents</p>
       </div>
 
-      <!-- Action Buttons -->
       <div class="flex items-center gap-3">
-        <!-- Search -->
-        <n-input
-          v-model:value="searchQuery"
-          placeholder="Search"
-          style="width: 250px"
-          clearable
-        />
+        <n-input v-model:value="searchQuery" placeholder="Search" style="width: 250px" clearable />
 
-        <!-- Filter Button -->
-        <button
-          class="p-2 border border-gray-400 rounded-lg hover:bg-gray-50 transition-colors"
-        >
+        <button class="p-2 border border-gray-400 rounded-lg hover:bg-gray-50 transition-colors">
           <FunnelIcon class="w-5 h-5 text-gray-700" />
         </button>
 
-        <!-- Bulk Delete Button -->
         <button
           @click="requestBulkDelete"
           :disabled="selectionState === 'none'"
@@ -404,15 +415,11 @@ const modalTitle = computed(() => {
           <TrashIcon class="w-5 h-5 text-red-500" />
         </button>
 
-        <!-- Select All Toggle -->
         <div
           class="flex items-center border rounded-lg overflow-hidden transition-colors"
           :class="selectionState !== 'none' ? 'border-blue-600' : 'border-gray-400'"
         >
-          <button
-            @click="handleMainSelectToggle"
-            class="p-2 hover:bg-gray-50 flex items-center"
-          >
+          <button @click="handleMainSelectToggle" class="p-2 hover:bg-gray-50 flex items-center">
             <div
               class="w-5 h-5 border rounded flex items-center justify-center transition-colors"
               :class="selectionState !== 'none' ? 'bg-blue-600 border-blue-600' : 'border-gray-400'"
@@ -423,7 +430,6 @@ const modalTitle = computed(() => {
           </button>
         </div>
 
-        <!-- Add Blotter Button -->
         <button
           @click="openAddModal"
           class="px-4 py-2 bg-blue-600 text-white rounded-md font-medium text-sm hover:bg-blue-700 transition flex items-center gap-2"
@@ -438,27 +444,15 @@ const modalTitle = computed(() => {
 
     <!-- Data Table -->
     <div class="overflow-y-auto bg-white rounded-lg border border-gray-200">
-      <n-data-table
-        :columns="columns"
-        :data="filteredBlotters"
-        :loading="loading"
-        :bordered="false"
-      />
+      <n-data-table :columns="columns" :data="filteredBlotters" :loading="loading" :bordered="false" />
     </div>
 
     <!-- ================================ -->
     <!-- Blotter Modal -->
     <!-- ================================ -->
-    <NModal
-      :show="showBlotterModal"
-      @update:show="handleModalClose"
-      :mask-closable="false"
-    >
-      <div
-        class="w-[820px] max-h-[90vh] overflow-hidden bg-white rounded-xl shadow-lg flex flex-col"
-        role="dialog"
-        aria-modal="true"
-      >
+    <NModal :show="showBlotterModal" @update:show="handleModalClose" :mask-closable="false">
+      <div class="w-[820px] max-h-[90vh] overflow-hidden bg-white rounded-xl shadow-lg flex flex-col" role="dialog" aria-modal="true">
+
         <!-- Modal Header -->
         <div class="flex items-center justify-between px-6 py-4 border-b bg-gray-50">
           <h2 class="text-lg font-semibold text-gray-800">{{ modalTitle }}</h2>
@@ -477,17 +471,11 @@ const modalTitle = computed(() => {
               <n-input
                 :value="modalMode === 'view' ? formData.blotter_no : 'Auto-generated'"
                 :disabled="true"
-                placeholder="Auto-generated"
               />
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1.5">Date</label>
-              <NDatePicker
-                v-model:value="formData.date"
-                type="date"
-                placeholder="Select Date"
-                class="w-full"
-              />
+              <NDatePicker v-model:value="formData.date" type="date" placeholder="Select Date" class="w-full" />
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1.5">Time</label>
@@ -500,15 +488,39 @@ const modalTitle = computed(() => {
             <n-input v-model:value="formData.incident_place" placeholder="Location of the incident" />
           </div>
 
-          <!-- Complainant -->
+          <!-- ======================== -->
+          <!-- Complainant Section -->
+          <!-- ======================== -->
           <div class="border-t pt-4">
             <p class="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">Complainant (Nagreklamo)</p>
+
+            <!-- Resident Selector -->
+            <div class="mb-3">
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                Registered Resident
+                <span class="text-gray-400 font-normal">(optional — select to auto-fill)</span>
+              </label>
+              <NSelect
+                v-model:value="formData.complainant_id"
+                :options="residentOptions"
+                filterable
+                clearable
+                placeholder="Search resident by name..."
+                @update:value="handleComplainantSelect"
+              />
+            </div>
+
+            <!-- Manual Fields (auto-filled if resident selected, editable otherwise) -->
             <div class="grid grid-cols-3 gap-4">
-              <div class="col-span-1">
+              <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">
                   Full Name <span class="text-red-500">*</span>
                 </label>
-                <n-input v-model:value="formData.complainant_name" placeholder="Full Name" />
+                <n-input
+                  v-model:value="formData.complainant_name"
+                  placeholder="Full Name"
+                  :disabled="!!formData.complainant_id"
+                />
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Age</label>
@@ -516,22 +528,51 @@ const modalTitle = computed(() => {
                   v-model:value="formData.complainant_age"
                   placeholder="Age"
                   type="number"
+                  :disabled="!!formData.complainant_id"
                 />
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Address</label>
-                <n-input v-model:value="formData.complainant_address" placeholder="Address" />
+                <n-input
+                  v-model:value="formData.complainant_address"
+                  placeholder="Address"
+                  :disabled="!!formData.complainant_id"
+                />
               </div>
             </div>
           </div>
 
-          <!-- Respondent -->
+          <!-- ======================== -->
+          <!-- Respondent Section -->
+          <!-- ======================== -->
           <div class="border-t pt-4">
             <p class="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">Respondent (Inireklamo)</p>
+
+            <!-- Resident Selector -->
+            <div class="mb-3">
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                Registered Resident
+                <span class="text-gray-400 font-normal">(optional — select to auto-fill)</span>
+              </label>
+              <NSelect
+                v-model:value="formData.respondent_id"
+                :options="residentOptions"
+                filterable
+                clearable
+                placeholder="Search resident by name..."
+                @update:value="handleRespondentSelect"
+              />
+            </div>
+
+            <!-- Manual Fields -->
             <div class="grid grid-cols-3 gap-4">
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Full Name</label>
-                <n-input v-model:value="formData.respondent_name" placeholder="Full Name" />
+                <n-input
+                  v-model:value="formData.respondent_name"
+                  placeholder="Full Name"
+                  :disabled="!!formData.respondent_id"
+                />
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Age</label>
@@ -539,11 +580,16 @@ const modalTitle = computed(() => {
                   v-model:value="formData.respondent_age"
                   placeholder="Age"
                   type="number"
+                  :disabled="!!formData.respondent_id"
                 />
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Address</label>
-                <n-input v-model:value="formData.respondent_address" placeholder="Address" />
+                <n-input
+                  v-model:value="formData.respondent_address"
+                  placeholder="Address"
+                  :disabled="!!formData.respondent_id"
+                />
               </div>
             </div>
           </div>
@@ -553,26 +599,15 @@ const modalTitle = computed(() => {
             <p class="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">Incident Details</p>
             <div class="mb-4">
               <label class="block text-sm font-medium text-gray-700 mb-1.5">Type of Incident</label>
-              <NSelect
-                v-model:value="formData.incident_type"
-                :options="incidentTypeOptions"
-                placeholder="Select Type"
-              />
+              <NSelect v-model:value="formData.incident_type" :options="incidentTypeOptions" placeholder="Select Type" />
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1.5">
-                Narrative of Events
-              </label>
-              <n-input
-                v-model:value="formData.narrative"
-                type="textarea"
-                placeholder="Describe what happened..."
-                :rows="4"
-              />
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">Narrative of Events</label>
+              <n-input v-model:value="formData.narrative" type="textarea" placeholder="Describe what happened..." :rows="4" />
             </div>
           </div>
 
-          <!-- Recorded By -->
+          <!-- Record Information -->
           <div class="border-t pt-4">
             <p class="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">Record Information</p>
             <div class="grid grid-cols-2 gap-4">
@@ -592,14 +627,7 @@ const modalTitle = computed(() => {
         <!-- Modal Footer -->
         <div class="flex justify-end gap-3 px-6 py-4 border-t">
           <NButton @click="handleModalClose" :disabled="saving">Cancel</NButton>
-          <NButton
-            type="primary"
-            @click="handleSave"
-            :loading="saving"
-            :disabled="saving"
-          >
-            Save
-          </NButton>
+          <NButton type="primary" @click="handleSave" :loading="saving" :disabled="saving">Save</NButton>
         </div>
       </div>
     </NModal>

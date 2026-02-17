@@ -12,7 +12,7 @@ from pydantic import BaseModel, ConfigDict
 
 
 # =========================================================
-# BLOTTER RECORDS (Admin Dashboard only)
+# BLOTTER RECORDS
 # =========================================================
 
 class BlotterRecordBase(BaseModel):
@@ -42,6 +42,7 @@ class BlotterRecordCreate(BlotterRecordBase):
     Optionally links to a registered resident as complainant.
     """
     complainant_id: Optional[int] = None
+    respondent_id: Optional[int] = None
 
 
 class BlotterRecordUpdate(BaseModel):
@@ -53,6 +54,7 @@ class BlotterRecordUpdate(BaseModel):
     complainant_name: Optional[str] = None
     complainant_age: Optional[int] = None
     complainant_address: Optional[str] = None
+    respondent_id: Optional[int] = None
     respondent_name: Optional[str] = None
     respondent_age: Optional[int] = None
     respondent_address: Optional[str] = None
@@ -74,10 +76,12 @@ class BlotterRecordOut(BlotterRecordBase):
     """
     id: int
     blotter_no: str
-    complainant_id: Optional[int] = None
 
-    # Resolved resident name if linked
+    complainant_id: Optional[int] = None
     complainant_resident_name: Optional[str] = None
+
+    respondent_id: Optional[int] = None
+    respondent_resident_name: Optional[str] = None
 
     created_at: datetime
 
@@ -87,9 +91,16 @@ class BlotterRecordOut(BlotterRecordBase):
 class BlotterRecordDetail(BlotterRecordOut):
     """
     Comprehensive blotter record data for the Admin Detail view.
-    Extends the list schema with the full linked resident details.
+    Includes full resolved resident details for both parties.
     """
+    # Complainant resident details
     complainant_resident_first_name: Optional[str] = None
     complainant_resident_middle_name: Optional[str] = None
     complainant_resident_last_name: Optional[str] = None
     complainant_resident_phone: Optional[str] = None
+
+    # Respondent resident details
+    respondent_resident_first_name: Optional[str] = None
+    respondent_resident_middle_name: Optional[str] = None
+    respondent_resident_last_name: Optional[str] = None
+    respondent_resident_phone: Optional[str] = None
