@@ -8,15 +8,20 @@ import {
   NModal,
   NSelect,
   NDatePicker,
-  NTimePicker,
   NSpin,
-  NCollapse,
-  NCollapseItem,
   useMessage
 } from 'naive-ui'
 import { FunnelIcon, TrashIcon, CheckIcon, XMarkIcon } from '@heroicons/vue/24/outline'
 import PageTitle from '@/components/shared/PageTitle.vue'
 import ConfirmModal from '@/components/shared/ConfirmationModal.vue'
+import {
+  getAllBlotters,
+  getBlotterById,
+  createBlotter,
+  updateBlotter,
+  deleteBlotter,
+  bulkDeleteBlotters
+} from '@/api/blotterService'
 
 const message = useMessage()
 
@@ -33,73 +38,15 @@ const currentBlotter = ref(null)
 const modalMode = ref('add')
 
 // ======================================
-// Mock Data
-// ======================================
-const mockBlotters = [
-  {
-    id: 1,
-    blotter_no: '2026-0001',
-    complainant_name: 'Juan dela Cruz',
-    complainant_age: 34,
-    complainant_address: 'Purok 2, Poblacion Uno, Amadeo, Cavite',
-    respondent_name: 'Pedro Santos',
-    respondent_age: 40,
-    respondent_address: 'Purok 3, Poblacion Uno, Amadeo, Cavite',
-    date: new Date('2026-01-15').getTime(),
-    time: '14:30',
-    place: 'Barangay Hall vicinity',
-    incident_type: 'Physical Altercation',
-    narrative: 'The complainant reported that the respondent punched him without provocation while he was walking near the barangay hall.',
-    recorded_by: 'Brgy. Tanod Jose Reyes',
-    contact_no: '09171234567'
-  },
-  {
-    id: 2,
-    blotter_no: '2026-0002',
-    complainant_name: 'Maria Santos',
-    complainant_age: 28,
-    complainant_address: 'Purok 1, Poblacion Uno, Amadeo, Cavite',
-    respondent_name: 'Ana Gomez',
-    respondent_age: 32,
-    respondent_address: 'Purok 1, Poblacion Uno, Amadeo, Cavite',
-    date: new Date('2026-01-22').getTime(),
-    time: '09:15',
-    place: 'Market area',
-    incident_type: 'Verbal Dispute',
-    narrative: 'The complainant reported verbal harassment and threats from the respondent at the local market.',
-    recorded_by: 'Brgy. Secretary Lorna Diaz',
-    contact_no: '09189876543'
-  },
-  {
-    id: 3,
-    blotter_no: '2026-0003',
-    complainant_name: 'Roberto Villanueva',
-    complainant_age: 55,
-    complainant_address: 'Purok 4, Poblacion Uno, Amadeo, Cavite',
-    respondent_name: 'Carlos Mendoza',
-    respondent_age: 30,
-    respondent_address: 'Purok 2, Poblacion Uno, Amadeo, Cavite',
-    date: new Date('2026-02-03').getTime(),
-    time: '18:00',
-    place: 'Respondent\'s property boundary',
-    incident_type: 'Property Dispute',
-    narrative: 'The complainant alleges that the respondent encroached on his property by building a fence beyond the agreed boundary.',
-    recorded_by: 'Brgy. Tanod Jose Reyes',
-    contact_no: '09171234567'
-  }
-]
-
-// ======================================
 // Data Loading
 // ======================================
 async function loadBlotters() {
   loading.value = true
   try {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 500))
-    blotters.value = mockBlotters
+    const data = await getAllBlotters()
+    // Normalize: convert incident_date string to timestamp for NDatePicker
+    blotters.value = data.map(normalizeRecord)
   } catch (error) {
-    console.error('Failed to load blotter records:', error)
     message.error('Failed to load blotter records')
   } finally {
     loading.value = false
@@ -109,6 +56,53 @@ async function loadBlotters() {
 onMounted(() => {
   loadBlotters()
 })
+
+// ======================================
+// Data Normalization
+// ======================================
+
+/**
+ * Converts API record to frontend-friendly format.
+ * - incident_date (YYYY-MM-DD string) → timestamp for NDatePicker
+ * - incident_time kept as-is (HH:MM string)
+ */
+function normalizeRecord(record) {
+  return {
+    ...record,
+    date: record.incident_date ? new Date(record.incident_date).getTime() : null,
+    time: record.incident_time ? record.incident_time.slice(0, 5) : ''
+  }
+}
+
+/**
+ * Converts frontend form data back to API payload format.
+ * - date timestamp → incident_date (YYYY-MM-DD)
+ * - time string → incident_time
+ */
+function toApiPayload(form) {
+  const payload = { ...form }
+
+  if (form.date) {
+    const d = new Date(form.date)
+    payload.incident_date = d.toISOString().split('T')[0]
+  }
+
+  payload.incident_time = form.time || null
+
+  // Remove frontend-only fields
+  delete payload.date
+  delete payload.time
+  delete payload.id
+  delete payload.blotter_no
+  delete payload.complainant_resident_name
+  delete payload.complainant_resident_first_name
+  delete payload.complainant_resident_middle_name
+  delete payload.complainant_resident_last_name
+  delete payload.complainant_resident_phone
+  delete payload.created_at
+
+  return payload
+}
 
 // ======================================
 // Selection Logic
@@ -145,7 +139,7 @@ watch(searchQuery, () => {
 })
 
 // ======================================
-// Format Date
+// Format Helpers
 // ======================================
 function formatDate(timestamp) {
   if (!timestamp) return 'N/A'
@@ -187,22 +181,22 @@ function requestBulkDelete() {
 
 async function confirmDelete() {
   try {
+    await bulkDeleteBlotters(selectedIds.value)
     blotters.value = blotters.value.filter(b => !selectedIds.value.includes(b.id))
     message.success(`${selectedIds.value.length} record(s) deleted successfully`)
     selectedIds.value = []
     showDeleteModal.value = false
   } catch (error) {
-    console.error('Failed to delete records:', error)
     message.error('Failed to delete some records')
   }
 }
 
 async function handleDeleteSingle(id) {
   try {
+    await deleteBlotter(id)
     blotters.value = blotters.value.filter(b => b.id !== id)
     message.success('Blotter record deleted successfully')
   } catch (error) {
-    console.error('Failed to delete record:', error)
     message.error('Failed to delete record')
   }
 }
@@ -316,7 +310,6 @@ watch(() => showBlotterModal.value, (val) => {
       formData.value = { ...currentBlotter.value }
     } else {
       formData.value = {
-        blotter_no: '',
         complainant_name: '',
         complainant_age: null,
         complainant_address: '',
@@ -325,7 +318,7 @@ watch(() => showBlotterModal.value, (val) => {
         respondent_address: '',
         date: new Date().getTime(),
         time: '',
-        place: '',
+        incident_place: '',
         incident_type: null,
         narrative: '',
         recorded_by: '',
@@ -335,29 +328,38 @@ watch(() => showBlotterModal.value, (val) => {
   }
 })
 
-function handleSave() {
+async function handleSave() {
   if (!formData.value.complainant_name) {
     message.error('Complainant name is required')
     return
   }
+
   saving.value = true
-  setTimeout(() => {
+
+  try {
+    const payload = toApiPayload(formData.value)
+
     if (modalMode.value === 'add') {
-      const newRecord = {
-        ...formData.value,
-        id: Date.now(),
-        blotter_no: formData.value.blotter_no || `2026-${String(blotters.value.length + 1).padStart(4, '0')}`
-      }
-      blotters.value.unshift(newRecord)
+      const created = await createBlotter(payload)
+      blotters.value.unshift(normalizeRecord(created))
       message.success('Blotter record added successfully')
     } else {
-      const idx = blotters.value.findIndex(b => b.id === formData.value.id)
-      if (idx !== -1) blotters.value[idx] = { ...formData.value }
+      const updated = await updateBlotter(currentBlotter.value.id, payload)
+      const idx = blotters.value.findIndex(b => b.id === currentBlotter.value.id)
+      if (idx !== -1) blotters.value[idx] = normalizeRecord(updated)
       message.success('Blotter record updated successfully')
     }
-    saving.value = false
+
     showBlotterModal.value = false
-  }, 600)
+  } catch (error) {
+    message.error(
+      modalMode.value === 'add'
+        ? 'Failed to add blotter record'
+        : 'Failed to update blotter record'
+    )
+  } finally {
+    saving.value = false
+  }
 }
 
 const modalTitle = computed(() => {
@@ -429,7 +431,7 @@ const modalTitle = computed(() => {
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
           </svg>
-          Add Blotter
+          Add
         </button>
       </div>
     </div>
@@ -472,7 +474,11 @@ const modalTitle = computed(() => {
           <div class="grid grid-cols-3 gap-4">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1.5">Blotter No.</label>
-              <n-input v-model:value="formData.blotter_no" placeholder="e.g. 2026-0001" />
+              <n-input
+                :value="modalMode === 'view' ? formData.blotter_no : 'Auto-generated'"
+                :disabled="true"
+                placeholder="Auto-generated"
+              />
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1.5">Date</label>
@@ -491,10 +497,10 @@ const modalTitle = computed(() => {
 
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1.5">Place of Incident</label>
-            <n-input v-model:value="formData.place" placeholder="Location of the incident" />
+            <n-input v-model:value="formData.incident_place" placeholder="Location of the incident" />
           </div>
 
-          <!-- Divider -->
+          <!-- Complainant -->
           <div class="border-t pt-4">
             <p class="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">Complainant (Nagreklamo)</p>
             <div class="grid grid-cols-3 gap-4">

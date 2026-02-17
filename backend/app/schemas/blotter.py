@@ -22,10 +22,10 @@ class BlotterRecordBase(BaseModel):
     complainant_name: str
     complainant_age: Optional[int] = None
     complainant_address: Optional[str] = None
-    respondent_name: str
+    respondent_name: Optional[str] = None
     respondent_age: Optional[int] = None
     respondent_address: Optional[str] = None
-    incident_date: date
+    incident_date: Optional[date] = None
     incident_time: Optional[time] = None
     incident_place: Optional[str] = None
     incident_type: Optional[str] = None
