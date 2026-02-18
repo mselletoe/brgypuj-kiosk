@@ -8,7 +8,7 @@ Admin Dashboard management.
 
 from datetime import datetime
 from decimal import Decimal
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -26,7 +26,12 @@ class DocumentTypeBase(BaseModel):
     price: Decimal
     fields: List[Dict[str, Any]] = []
 
-
+class RequirementItem(BaseModel):
+    id: str
+    label: str
+    type: Literal["document", "system_check"]
+    params: Optional[Dict[str, Any]] = None
+    
 # ---------- ADMIN INPUT ----------
 
 class DocumentTypeCreate(DocumentTypeBase):

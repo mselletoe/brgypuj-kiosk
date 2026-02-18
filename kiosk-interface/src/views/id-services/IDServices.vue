@@ -9,17 +9,30 @@ import {
   ExclamationTriangleIcon,
   ArrowPathIcon,
   LockClosedIcon,
+  IdentificationIcon,
+  PlusIcon,
 } from "@heroicons/vue/24/outline";
 
 const router = useRouter();
 const authStore = useAuthStore();
 
+// Check if user is logged in
+const isGuest = computed(() => !authStore.user);
+
 // Navigation Functions
-const handleRequestReplacement = () => router.push("/id-services/replacement");
+const handleTopButton = () => {
+  if (isGuest.value) {
+    // Route for new application (You'll need to create this route later)
+    router.push("/id-services/apply");
+  } else {
+    router.push("/id-services/replacement");
+  }
+};
+
 const handleChangePasscode = () => router.push("/id-services/change-pin");
 const handleReportLost = () => router.push("/id-services/report-lost");
 
-// Resident Data Logic
+// Resident Data Logic (Only used if NOT guest)
 const resident = computed(() => {
   const user = authStore.user || {};
   return {
@@ -52,6 +65,7 @@ const goBack = () => router.push("/home");
     >
       <div class="flex-1 max-w-[650px]">
         <div
+          v-if="!isGuest"
           class="relative h-full bg-gradient-to-br from-[#003A6B] to-[#005B96] rounded-3xl shadow-[0_10px_30px_-5px_rgba(0,0,0,0.15)] overflow-hidden text-white p-8 flex flex-col justify-between transform transition-transform active:scale-[0.99] duration-300 border border-white/10"
         >
           <div
@@ -132,46 +146,102 @@ const goBack = () => router.push("/home");
             <QrCodeIcon class="w-12 h-12 opacity-80" />
           </div>
         </div>
+
+        <div
+          v-else
+          class="relative h-full bg-gradient-to-br from-[#003A6B] to-[#005B96] rounded-3xl shadow-[0_10px_30px_-5px_rgba(0,0,0,0.15)] overflow-hidden text-white p-8 flex flex-col justify-center items-center text-center border border-white/10"
+        >
+          <div
+            class="absolute top-0 right-0 w-80 h-80 bg-white/5 rounded-full -mr-24 -mt-24 pointer-events-none"
+          ></div>
+          <div
+            class="absolute bottom-0 left-0 w-64 h-64 bg-white/5 rounded-full -ml-16 -mb-16 pointer-events-none"
+          ></div>
+
+          <div class="z-10 flex flex-col items-center">
+            <div
+              class="w-24 h-24 bg-white/10 rounded-full flex items-center justify-center mb-6 backdrop-blur-sm border border-white/20"
+            >
+              <IdentificationIcon class="w-12 h-12 text-white" />
+            </div>
+            <h2 class="text-4xl font-bold mb-3 tracking-tight">No Active ID</h2>
+            <p class="text-lg text-blue-100 max-w-md leading-relaxed">
+              You are currently in Guest Mode. Apply for a Barangay RFID Card to
+              access kiosk services easily.
+            </p>
+            <div
+              class="mt-8 flex gap-2 items-center bg-white/10 px-6 py-2 rounded-full border border-white/20"
+            >
+              <div
+                class="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"
+              ></div>
+              <span class="text-sm font-bold tracking-widest uppercase"
+                >Application Open</span
+              >
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="flex flex-col gap-4 w-[350px]">
         <button
-          @click="handleRequestReplacement"
+          @click="handleTopButton"
           class="flex-1 flex items-center px-6 bg-white rounded-2xl shadow-sm border-2 border-gray-100 active:border-[#21C05C] active:bg-gray-50 transition-all group text-left"
         >
           <div
             class="w-10 h-10 bg-green-50 rounded-full flex-shrink-0 flex items-center justify-center mr-3 group-active:bg-[#21C05C] transition-colors"
           >
-            <ArrowPathIcon
+            <component
+              :is="isGuest ? PlusIcon : ArrowPathIcon"
               class="w-6 h-6 text-[#21C05C] group-active:text-white"
             />
           </div>
           <div class="flex-1">
             <h3 class="font-bold text-[#03335C] text-xl leading-tight">
-              Request Replacement
+              {{ isGuest ? "Apply for RFID" : "Request Replacement" }}
             </h3>
-            <p class="text-gray-500 text-sm mt-0.5">Get a new physical card</p>
+            <p class="text-gray-500 text-sm mt-0.5">
+              {{
+                isGuest ? "New resident application" : "Get a new physical card"
+              }}
+            </p>
           </div>
         </button>
 
         <button
-          @click="handleChangePasscode"
-          class="flex-1 flex items-center px-6 bg-white rounded-2xl shadow-sm border-2 border-gray-100 active:border-[#003A6B] active:bg-gray-50 transition-all group text-left"
+          @click="!isGuest && handleChangePasscode()"
+          :class="[
+            'flex-1 flex items-center px-6 rounded-2xl shadow-sm border-2 transition-all group text-left',
+            isGuest
+              ? 'bg-gray-50 border-gray-100 opacity-60 cursor-not-allowed'
+              : 'bg-white border-gray-100 active:border-[#003A6B] active:bg-gray-50',
+          ]"
         >
           <div
-            class="w-10 h-10 bg-blue-50 rounded-full flex-shrink-0 flex items-center justify-center mr-3 group-active:bg-[#003A6B] transition-colors"
+            :class="[
+              'w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center mr-3 transition-colors',
+              isGuest ? 'bg-gray-200' : 'bg-blue-50 group-active:bg-[#003A6B]',
+            ]"
           >
             <LockClosedIcon
-              class="w-6 h-6 text-[#003A6B] group-active:text-white"
+              :class="[
+                'w-6 h-6',
+                isGuest
+                  ? 'text-gray-400'
+                  : 'text-[#003A6B] group-active:text-white',
+              ]"
             />
           </div>
           <div class="flex-1">
             <h3
-              class="font-bold text-[#03335C] text-xl font-bold leading-tight"
+              :class="[
+                'font-bold text-xl leading-tight',
+                isGuest ? 'text-gray-400' : 'text-[#03335C]',
+              ]"
             >
               Change Passcode
             </h3>
-            <p class="text-gray-500 text-sm mt-0.5">Update security PIN</p>
+            <p class="text-gray-400 text-sm mt-0.5">Update security PIN</p>
           </div>
         </button>
 

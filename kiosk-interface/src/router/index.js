@@ -32,6 +32,7 @@ import IDServices from "../views/id-services/IDServices.vue";
 import RequestReplacement from "../views/id-services/RequestReplacement.vue";
 import ChangePasscode from "../views/id-services/ChangePasscode.vue";
 import ReportLost from "../views/id-services/ReportLost.vue";
+import ApplyID from "../views/id-services/ApplyID.vue"; // <--- NEW IMPORT
 
 const routes = [
   // Root Redirect: Kiosk starts at the Idle/Welcome screen
@@ -70,7 +71,7 @@ const routes = [
         children: [{ path: ":docType", component: DocumentFormWrapper }],
       },
 
-      // ID Services (New Routes Added Here)
+      // ID Services
       { path: "id-services", name: "IDServices", component: IDServices },
       {
         path: "id-services/replacement",
@@ -86,6 +87,11 @@ const routes = [
         path: "id-services/report-lost",
         name: "ReportLost",
         component: ReportLost,
+      },
+      {
+        path: "id-services/apply", // <--- NEW ROUTE
+        name: "ApplyID",
+        component: ApplyID,
       },
 
       // Other Services

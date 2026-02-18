@@ -32,6 +32,12 @@ let inputBuffer = ''
 /** @type {ReturnType<typeof setTimeout> | null} Timer to clear the buffer on slow/manual input */
 let timeout = null
 
+// ============================================================
+// DEV MODE
+// ============================================================
+const isDevMode = import.meta.env.VITE_ENABLE_DEV_LOGIN === 'true'
+const manualUID = ref('')
+
 // --- Logic & Handlers ---
 
 /**
@@ -42,6 +48,7 @@ const resetScanner = () => {
   isProcessing.value = false
   inputBuffer = ''
   scannedUID.value = ''
+  manualUID.value = ''
   if (hiddenInput.value) hiddenInput.value.value = ''
 }
 
@@ -115,6 +122,14 @@ const handleRFIDInput = async (event) => {
   timeout = setTimeout(() => { inputBuffer = '' }, 200)
 }
 
+// ============================================================
+// DEV MODE
+// ============================================================
+const handleManualLogin = async () => {
+  if (!manualUID.value) return
+  await authenticateRFID(manualUID.value.trim())
+}
+
 /**
  * Returns user to the primary login selection screen.
  */
@@ -160,6 +175,26 @@ onUnmounted(() => {
           <p class="text-lg text-gray-500 mt-2">Keep your card near the scanner.</p>
         </div>
       </div>
+
+      <!-- ===== DEV MODE ===== -->
+      <div v-if="isDevMode && !isProcessing" class="mt-6 w-80">
+        <p class="text-sm text-gray-400 text-center mb-2">
+          Dev Mode: Manual RFID Entry
+        </p>
+        <input
+          v-model="manualUID"
+          type="text"
+          placeholder="Enter RFID UID"
+          class="border border-gray-300 p-2 w-full rounded text-center"
+        />
+        <button
+          @click="handleManualLogin"
+          class="mt-2 w-full bg-[#1B5886] text-white py-2 rounded hover:bg-[#164a70]"
+        >
+          Login
+        </button>
+      </div>
+      <!-- ===================== -->
 
       <input
         ref="hiddenInput"
