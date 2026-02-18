@@ -177,7 +177,7 @@ const columns = computed(() => [
     render(row) {
       return row.id
     }
-  },
+  },// change with number 1234...
   {
     title: 'Full Name',
     key: 'full_name',

@@ -266,6 +266,62 @@ def _generate_transaction_no(db: Session) -> str:
 
 
 # -------------------------------------------------
+# System Requirements Validation
+# -------------------------------------------------
+
+def _check_clean_blotter(db: Session, resident_id: int) -> bool:
+    """
+    Returns True if the resident has NO blotter records
+    (neither as complainant nor respondent).
+    """
+    from app.models.blotter import BlotterRecord
+    record = db.query(BlotterRecord).filter(
+        (BlotterRecord.complainant_id == resident_id) |
+        (BlotterRecord.respondent_id == resident_id)
+    ).first()
+    return record is None
+
+
+def _check_min_residency(resident: Resident, years: int) -> bool:
+    """
+    Returns True if the resident has lived here for at least `years` years.
+    Uses residency_start_date from the Resident model.
+    """
+    from datetime import date
+    if not resident.residency_start_date:
+        return False
+    today = date.today()
+    delta = today.year - resident.residency_start_date.year - (
+        (today.month, today.day) < (resident.residency_start_date.month, resident.residency_start_date.day)
+    )
+    return delta >= years
+
+
+def _validate_system_requirements(db: Session, resident: Resident, requirements: list):
+    for req in (requirements or []):
+        if req.get("type") != "system_check":
+            continue
+
+        check_id = req.get("id")
+        params = req.get("params") or {}
+
+        if check_id == "clean_blotter":
+            if not _check_clean_blotter(db, resident.id):
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail=f"Requirement not met: {req.get('label', 'Clean Blotter Record')}"
+                )
+
+        elif check_id == "min_residency":
+            years = params.get("years", 1)
+            if not _check_min_residency(resident, years):
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail=f"Requirement not met: {req.get('label', f'Minimum {years} year(s) of residency')}"
+                )
+
+
+# -------------------------------------------------
 # Kiosk Service Functions
 # -------------------------------------------------
 
@@ -302,7 +358,7 @@ def create_document_request(db: Session, payload: DocumentRequestCreate) -> Docu
     # 3. Validate resident based on document type
     if payload.resident_id is not None:
         # If resident_id is provided, validate it exists
-        _validate_resident(db, payload.resident_id)
+        resident = _validate_resident(db, payload.resident_id)
     elif not is_rfid_request:
         # If resident_id is None and it's NOT an RFID request, reject
         raise HTTPException(
@@ -317,7 +373,16 @@ def create_document_request(db: Session, payload: DocumentRequestCreate) -> Docu
         submitted_data=payload.form_data
     )
 
-    # 5. Persist the request
+    # 5. Validate system-check requirements (e.g. clean blotter)
+    #    Only runs when a resident_id is present — guest/RFID requests are exempt.
+    if payload.resident_id is not None:
+        _validate_system_requirements(
+            db=db,
+            resident=resident, 
+            requirements=doc_type.requirements or []
+        )
+
+    # 6. Persist the request
     request = DocumentRequest(
         resident_id=payload.resident_id,
         doctype_id=payload.doctype_id,
@@ -330,7 +395,7 @@ def create_document_request(db: Session, payload: DocumentRequestCreate) -> Docu
     db.commit()
     db.refresh(request)
 
-    # 6. Auto-generate PDF if template exists
+    # 7. Auto-generate PDF if template exists
     if doc_type.file:
         try:
             pdf_bytes = _generate_pdf_from_template(

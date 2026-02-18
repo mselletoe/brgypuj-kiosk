@@ -26,7 +26,7 @@ const menuGroups = [
       { label: 'Document Requests', icon: DocumentTextIcon, to: '/document-requests' },
       { label: 'Equipment Requests', icon: WrenchScrewdriverIcon, to: '/equipment-requests' },
       { label: 'Feedback and Reports', icon: ChatBubbleLeftRightIcon, to: '/feedback-and-reports' },
-      { label: 'SMS Announcements', icon: SpeakerWaveIcon, to: '/sms-announcements' },
+      // { label: 'SMS Announcements', icon: SpeakerWaveIcon, to: '/sms-announcements' },
     ]
   },
   {
@@ -35,6 +35,7 @@ const menuGroups = [
       { label: 'Document Services', icon: FolderOpenIcon, to: '/document-services' },
       { label: 'Equipment Inventory', icon: CircleStackIcon, to: '/equipment-inventory' },
       { label: 'Kiosk Announcements', icon: SpeakerWaveIcon, to: '/kiosk-announcements' },
+      { label: 'Blotter and KP Logs', icon: UserCircleIcon, to: '/blotter-kp-logs' },
       { label: 'FAQs Management', icon: QuestionMarkCircleIcon, to: '/faqs-management' },
       { label: 'Residents Information', icon: UserGroupIcon, to: '/residents-management' },
     ]
