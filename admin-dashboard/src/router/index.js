@@ -38,7 +38,7 @@ const routes = [
     path: '/',
     component: AdminLayout,
     redirect: '/overview',
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: false },
     children: [
       { path: 'overview', component: Overview },
 
