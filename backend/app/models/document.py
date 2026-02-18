@@ -14,6 +14,7 @@ class DocumentType(Base):
     file = Column(LargeBinary)
     fields = Column(JSON, server_default="'[]'")
     is_available = Column(Boolean, nullable=False, server_default="true")
+    requirements = Column(JSON, server_default="'[]'")
 
     document_requests = relationship("DocumentRequest", back_populates="doctype")
 
