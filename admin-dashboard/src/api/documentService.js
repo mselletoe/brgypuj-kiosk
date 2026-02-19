@@ -99,3 +99,24 @@ export function getNotes(requestId) {
 export function updateNotes(requestId, notes) {
   return api.put(`/admin/documents/requests/${requestId}/notes`, { notes })
 }
+
+/**
+ * Check if a resident meets all requirements for a document type.
+ * Used by admin to inspect eligibility before or during processing.
+ * @param {number} residentId
+ * @param {number} doctypeId
+ * @returns {Promise<EligibilityCheckResult>}
+ */
+export function checkResidentEligibility(residentId, doctypeId) {
+  return api.get(`/admin/documents/${residentId}/eligibility/${doctypeId}`)
+}
+
+/**
+ * Update the requirements list for a document type.
+ * @param {number} id - document type ID
+ * @param {Array} requirements - array of requirement objects
+ * @returns {Promise}
+ */
+export function updateDocumentRequirements(id, requirements) {
+  return api.put(`/admin/documents/types/${id}`, { requirements })
+}

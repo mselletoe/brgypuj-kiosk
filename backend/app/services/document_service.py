@@ -16,11 +16,14 @@ from fastapi import HTTPException, status
 from docxtpl import DocxTemplate
 from app.models.document import DocumentType, DocumentRequest
 from app.models.resident import Resident
+from app.models.blotter import BlotterRecord
 from app.schemas.document import (
     DocumentRequestCreate,
     DocumentRequestKioskResponse,
     DocumentTypeCreate,
     DocumentTypeUpdate,
+    EligibilityCheckResult, 
+    RequirementCheckResult
 )
 from pathlib import Path
 
@@ -274,7 +277,6 @@ def _check_clean_blotter(db: Session, resident_id: int) -> bool:
     Returns True if the resident has NO blotter records
     (neither as complainant nor respondent).
     """
-    from app.models.blotter import BlotterRecord
     record = db.query(BlotterRecord).filter(
         (BlotterRecord.complainant_id == resident_id) |
         (BlotterRecord.respondent_id == resident_id)
@@ -319,6 +321,128 @@ def _validate_system_requirements(db: Session, resident: Resident, requirements:
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                     detail=f"Requirement not met: {req.get('label', f'Minimum {years} year(s) of residency')}"
                 )
+
+
+def check_resident_eligibility(
+    db, resident_id: int, doctype_id: int
+) -> dict:
+    # --- Fetch document type ---
+    doc_type = db.query(DocumentType).filter(DocumentType.id == doctype_id).first()
+    if not doc_type:
+        return {
+            "eligible": False,
+            "resident_id": resident_id,
+            "doctype_id": doctype_id,
+            "checks": [{
+                "id": "doctype_exists",
+                "label": "Document type exists",
+                "type": "system_check",
+                "passed": False,
+                "message": "Document type not found."
+            }]
+        }
+
+    # --- Fetch resident ---
+    resident = db.query(Resident).filter(Resident.id == resident_id).first()
+    if not resident:
+        return {
+            "eligible": False,
+            "resident_id": resident_id,
+            "doctype_id": doctype_id,
+            "checks": [{
+                "id": "resident_exists",
+                "label": "Resident exists",
+                "type": "system_check",
+                "passed": False,
+                "message": "Resident not found."
+            }]
+        }
+
+    requirements = doc_type.requirements or []
+    checks = []
+    all_passed = True
+
+    for req in requirements:
+        req_id = req.get("id", "unknown")
+        req_label = req.get("label", req_id)
+        req_type = req.get("type", "document")
+        params = req.get("params") or {}
+
+        if req_type == "document":
+            # Document requirements are informational — the system can't auto-verify
+            # whether a resident physically has the paper. Mark as informational.
+            checks.append({
+                "id": req_id,
+                "label": req_label,
+                "type": "document",
+                "passed": None,  # Cannot auto-check
+                "message": "Must be presented at the barangay hall."
+            })
+
+        elif req_type == "system_check":
+
+            if req_id == "clean_blotter":
+                # Check if resident appears in any blotter record
+                blotter_records = db.query(BlotterRecord).filter(
+                    (BlotterRecord.complainant_id == resident_id) |
+                    (BlotterRecord.respondent_id == resident_id)
+                ).all()
+
+                if blotter_records:
+                    # Build a readable summary of the blotter records
+                    record_nos = ", ".join(r.blotter_no for r in blotter_records)
+                    checks.append({
+                        "id": req_id,
+                        "label": req_label,
+                        "type": "system_check",
+                        "passed": False,
+                        "message": (
+                            f"Resident has {len(blotter_records)} blotter record(s): "
+                            f"{record_nos}. Clean blotter record is required."
+                        )
+                    })
+                    all_passed = False
+                else:
+                    checks.append({
+                        "id": req_id,
+                        "label": req_label,
+                        "type": "system_check",
+                        "passed": True,
+                        "message": "No blotter records found."
+                    })
+
+            elif req_id == "min_residency":
+                years_required = params.get("years", 1)
+                passed = _check_min_residency(resident, years_required)
+                checks.append({
+                    "id": req_id,
+                    "label": req_label,
+                    "type": "system_check",
+                    "passed": passed,
+                    "message": (
+                        f"Minimum {years_required} year(s) of residency required. "
+                        + ("Passed." if passed else "Requirement not met.")
+                    )
+                })
+                if not passed:
+                    all_passed = False
+
+            else:
+                # Unknown system_check — log it as informational
+                checks.append({
+                    "id": req_id,
+                    "label": req_label,
+                    "type": "system_check",
+                    "passed": None,
+                    "message": f"Unknown check '{req_id}' — skipped."
+                })
+
+    return {
+        "eligible": all_passed,
+        "resident_id": resident_id,
+        "doctype_id": doctype_id,
+        "checks": checks
+    }
 
 
 # -------------------------------------------------
@@ -560,6 +684,51 @@ def get_document_type_with_file(db: Session, doctype_id: int):
         .filter(DocumentType.id == doctype_id)
         .first()
     )
+
+
+def get_resident_blotter_summary(db, resident_id: int) -> dict:
+
+    complainant_records = db.query(BlotterRecord).filter(
+        BlotterRecord.complainant_id == resident_id
+    ).all()
+
+    respondent_records = db.query(BlotterRecord).filter(
+        BlotterRecord.respondent_id == resident_id
+    ).all()
+
+    combined = []
+
+    for r in complainant_records:
+        combined.append({
+            "id": r.id,
+            "blotter_no": r.blotter_no,
+            "role": "complainant",
+            "incident_date": r.incident_date.isoformat() if r.incident_date else None,
+            "incident_type": r.incident_type,
+            "created_at": r.created_at.isoformat()
+        })
+
+    for r in respondent_records:
+        combined.append({
+            "id": r.id,
+            "blotter_no": r.blotter_no,
+            "role": "respondent",
+            "incident_date": r.incident_date.isoformat() if r.incident_date else None,
+            "incident_type": r.incident_type,
+            "created_at": r.created_at.isoformat()
+        })
+
+    # Sort by most recent first
+    combined.sort(key=lambda x: x["created_at"], reverse=True)
+
+    return {
+        "resident_id": resident_id,
+        "has_blotter": len(combined) > 0,
+        "total_count": len(combined),
+        "as_complainant": len(complainant_records),
+        "as_respondent": len(respondent_records),
+        "records": combined
+    }
 
 
 def upload_document_type_file(

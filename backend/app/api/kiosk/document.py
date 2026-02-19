@@ -12,11 +12,13 @@ from app.schemas.document import (
     DocumentRequestKioskResponse,
     DocumentTypeKioskOut,
     DocumentRequestKioskOut,
+    EligibilityCheckResult
 )
 from app.services.document_service import (
     get_available_document_types,
     create_document_request,
     get_kiosk_request_history,
+    check_resident_eligibility
 )
 
 router = APIRouter(prefix="/documents")
@@ -65,3 +67,15 @@ def get_my_document_requests(resident_id: int, db: Session = Depends(get_db)):
     Retrieves the request history for a specific resident based on their ID.
     """
     return get_kiosk_request_history(db, resident_id)
+
+
+@router.get(
+    "/types/{doctype_id}/eligibility",
+    response_model=EligibilityCheckResult,
+)
+def check_eligibility(
+    doctype_id: int,
+    resident_id: int,       # passed as query param: ?resident_id=5
+    db: Session = Depends(get_db)
+):
+    return check_resident_eligibility(db, resident_id=resident_id, doctype_id=doctype_id)

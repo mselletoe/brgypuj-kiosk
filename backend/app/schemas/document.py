@@ -51,6 +51,7 @@ class DocumentTypeUpdate(BaseModel):
     price: Optional[Decimal] = None
     fields: Optional[List[Dict[str, Any]]] = None
     is_available: Optional[bool] = None
+    requirements: Optional[List[Dict[str, Any]]] = None
 
 
 # ---------- OUTPUT SCHEMAS ----------
@@ -61,6 +62,7 @@ class DocumentTypeKioskOut(DocumentTypeBase):
     Includes the ID for referencing in requests.
     """
     id: int
+    requirements: List[Dict[str, Any]] = []
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -89,6 +91,26 @@ class DocumentTypeProcessingOut(BaseModel):
     file: bytes
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class RequirementCheckResult(BaseModel):
+    """Result for a single requirement check."""
+    id: str
+    label: str
+    type: str           # "system_check" or "document"
+    passed: Optional[bool] = None   # None = not applicable / not checkable
+    message: Optional[str] = None   # Human-readable detail
+
+
+class EligibilityCheckResult(BaseModel):
+    """
+    Returned by GET /kiosk/documents/types/{doctype_id}/eligibility?resident_id=X
+    and GET /admin/residents/{resident_id}/blotter-summary
+    """
+    eligible: bool
+    resident_id: int
+    doctype_id: int
+    checks: List[RequirementCheckResult]
 
 
 # =========================================================
