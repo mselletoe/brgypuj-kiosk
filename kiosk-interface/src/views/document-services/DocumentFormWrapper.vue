@@ -26,6 +26,8 @@ const currentStep = ref('form')
 const formData = ref({})
 const showSuccessModal = ref(false)
 const isFadingOut = ref(false)
+const showErrorModal = ref(false)
+const errorMessage = ref('')
 
 // --- Business Logic State ---
 const residentData = ref(null)
@@ -234,8 +236,11 @@ const handleSubmit = async (data) => {
     isSubmitting.value = false
     
     // Show user-friendly error message
-    const errorMessage = err?.response?.data?.detail || 'Failed to submit document request. Please try again.'
-    alert(errorMessage)
+    errorMessage.value =
+    err?.response?.data?.detail ||
+    'Failed to submit document request. Please try again.'
+
+    showErrorModal.value = true
   }
 }
 
@@ -469,6 +474,22 @@ onMounted(async () => {
       </div>
     </transition>
 
+    <transition name="fade-blur">
+      <div
+        v-if="showErrorModal"
+        class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50"
+      >
+        <Modal
+          title="Request Cannot Be Processed"
+          :message="errorMessage"
+          primaryButtonText="OK"
+          :showPrimaryButton="true"
+          :showSecondaryButton="false"
+          :showNewRequest="false"
+          @primary-click="handleDone"
+        />
+      </div>
+    </transition>
   </div>
 </template>
 
