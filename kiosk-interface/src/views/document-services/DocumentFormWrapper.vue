@@ -274,7 +274,7 @@ onMounted(async () => {
 
         <!-- LEFT PANEL -->
         <div class="col-span-3">
-          <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-8 min-h-[400px]">
+          <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-8 min-h-[280px]">
 
             <div v-if="isLoadingResidentData" class="text-center py-8">
               <Loading color="#03335C" size="12px" spacing="50px" />
@@ -306,9 +306,12 @@ onMounted(async () => {
         <div class="col-span-2">
           <div class="bg-[#EBF5FF] rounded-2xl shadow-lg border border-[#B0D7F8] p-6 min-h-[280px]">
 
-            <h2 class="text-base font-bold text-[#03335C] mb-4 tracking-tight">
+            <h2 class="text-lg font-bold text-[#03335C] mb-2 tracking-tight">
               Requirements
             </h2>
+            <p class="text-sm italic text-[#03335C] mb-4 tracking-tight">
+              Review the following requirements below. For further details, please refer to the information desk at the counter.
+            </p>
 
             <!-- No requirements -->
             <div
@@ -397,15 +400,6 @@ onMounted(async () => {
                 </div>
 
               </div>
-
-              <!-- Guest mode note: system checks can't be verified -->
-              <p
-                v-if="!isRfidUser && config?.requirements?.some(r => r.type === 'system_check')"
-                class="text-xs text-[#5A8DB8] italic pt-1"
-              >
-                Scan your RFID card to verify system requirements automatically.
-              </p>
-
             </div>
           </div>
         </div>
