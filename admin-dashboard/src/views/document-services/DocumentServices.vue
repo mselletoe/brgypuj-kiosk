@@ -1,9 +1,10 @@
 <script setup>
 import { ref, onMounted, h, computed, watch } from 'vue'
-import { NDataTable, NInput, NButton, NCheckbox, useMessage, NUpload, NUploadDragger } from 'naive-ui'
+import { NDataTable, NInput, NButton, NCheckbox, useMessage } from 'naive-ui'
 import { PencilSquareIcon, TrashIcon, XMarkIcon, CheckIcon } from '@heroicons/vue/24/outline'
 import PageTitle from '@/components/shared/PageTitle.vue'
 import FieldEditor from './FieldEditor.vue'
+import RequirementsEditor from './RequirementsEditor.vue'
 import ConfirmModal from '@/components/shared/ConfirmationModal.vue'
 import {
   getDocumentTypes,
@@ -11,7 +12,8 @@ import {
   updateDocumentType,
   deleteDocumentType,
   uploadDocumentTemplate,
-  downloadDocumentTemplate
+  downloadDocumentTemplate,
+  updateDocumentRequirements
 } from '@/api/documentService'
 
 const message = useMessage()
@@ -49,6 +51,7 @@ async function fetchServices() {
       price: Number(d.price),
       available: d.is_available,
       fields: d.fields || [],
+      requirements: d.requirements || [],
       has_template: d.has_template || false
     }))
   } catch (error) {
@@ -81,6 +84,7 @@ async function addService() {
       price: Number(data.price),
       available: data.is_available,
       fields: data.fields || [],
+      requirements: data.requirements || [],
       has_template: false
     })
 
@@ -95,9 +99,6 @@ async function addService() {
       fields: []
     }
   } catch (error) {
-    console.error('Full error:', error)
-    console.error('Error response:', error.response)
-    
     const errorMsg = error.response?.data?.detail || 'Failed to add document type.'
     message.error(errorMsg)
   }
@@ -122,6 +123,7 @@ async function updateService(service) {
         price: Number(data.price),
         available: data.is_available,
         fields: data.fields || [],
+        requirements: services.value[idx].requirements,
         has_template: services.value[idx].has_template
       }
     }
@@ -305,6 +307,37 @@ async function saveFields(updatedFields, serviceId) {
 }
 
 // ======================================
+// Requirements Editor
+// ======================================
+const showReqModal = ref(false)
+const editingReqService = ref(null)
+
+function editRequirements(service) {
+  editingReqService.value = service
+  showReqModal.value = true
+}
+
+async function saveRequirements(updatedRequirements, serviceId) {
+  if (updatedRequirements === null) {
+    message.warning('Please fill in all requirement fields before saving.')
+    return
+  }
+
+  const service = services.value.find(s => s.id === serviceId)
+  if (!service) return
+
+  try {
+    await updateDocumentRequirements(service.id, updatedRequirements)
+    service.requirements = updatedRequirements
+    message.success('Requirements updated successfully.')
+    showReqModal.value = false
+  } catch (err) {
+    console.error(err)
+    message.error('Failed to update requirements.')
+  }
+}
+
+// ======================================
 // Filtering & Search
 // ======================================
 const filteredServices = computed(() => {
@@ -334,7 +367,7 @@ const columns = computed(() => [
   {
     title: '',
     key: 'select',
-    width: 50,
+    width: 40,
     render(row) {
       return h(NCheckbox, {
         checked: selectedIds.value.includes(row.id),
@@ -363,21 +396,6 @@ const columns = computed(() => [
         })
       }
       return row.request_type_name
-    }
-  },
-  {
-    title: 'Description',
-    key: 'description',
-    render(row) {
-      if (editingId.value === row.id) {
-        return h(NInput, {
-          value: row.description,
-          onUpdateValue(v) {
-            row.description = v
-          }
-        })
-      }
-      return row.description
     }
   },
   {
@@ -421,76 +439,23 @@ const columns = computed(() => [
   {
     title: 'Actions',
     key: 'actions',
-    width: 300,
+    width: 500,
     render(row) {
       if (editingId.value === row.id) {
         return h('div', { class: 'flex gap-2' }, [
-          h(
-            NButton,
-            {
-              type: 'success',
-              size: 'small',
-              onClick: () => updateService(row)
-            },
-            { default: () => 'Save' }
-          ),
-          h(
-            NButton,
-            {
-              type: 'default',
-              size: 'small',
-              onClick: () => (editingId.value = null)
-            },
-            { default: () => 'Cancel' }
-          )
+          h(NButton, { type: 'success', size: 'small', onClick: () => updateService(row) }, { default: () => 'Save' }),
+          h(NButton, { type: 'default', size: 'small', onClick: () => (editingId.value = null) }, { default: () => 'Cancel' })
         ])
       }
 
-      return h('div', { class: 'flex gap-2 items-center' }, [
-        h(
-          'button',
-          {
-            onClick: () => (editingId.value = row.id),
-            class: 'p-1.5 text-orange-500 hover:bg-orange-50 rounded transition'
-          },
-          [h(PencilSquareIcon, { class: 'w-5 h-5' })]
-        ),
-        h(
-          'button',
-          {
-            onClick: () => requestDelete(row.id),
-            class: 'p-1.5 text-red-500 hover:bg-red-50 rounded transition'
-          },
-          [h(TrashIcon, { class: 'w-5 h-5' })]
-        ),
-        h(
-          NButton,
-          {
-            type: 'info',
-            size: 'small',
-            onClick: () => editFields(row)
-          },
-          { default: () => 'Fields' }
-        ),
-        h(
-          NButton,
-          {
-            type: 'warning',
-            size: 'small',
-            onClick: () => handleUploadTemplate(row)
-          },
-          { default: () => row.has_template ? 'Replace' : 'Upload' }
-        ),
+      return h('div', { class: 'flex gap-2 items-center flex-wrap' }, [
+        h('button', { onClick: () => (editingId.value = row.id), class: 'p-1.5 text-orange-500 hover:bg-orange-50 rounded transition' }, [h(PencilSquareIcon, { class: 'w-5 h-5' })]),
+        h('button', { onClick: () => requestDelete(row.id), class: 'p-1.5 text-red-500 hover:bg-red-50 rounded transition' }, [h(TrashIcon, { class: 'w-5 h-5' })]),
+        h(NButton, { type: 'info', size: 'small', onClick: () => editFields(row) }, { default: () => 'Fields' }),
+        h(NButton, { type: 'default', size: 'small', onClick: () => editRequirements(row) }, { default: () => 'Requirements' }),
+        h(NButton, { type: 'warning', size: 'small', onClick: () => handleUploadTemplate(row) }, { default: () => row.has_template ? 'Replace' : 'Upload' }),
         row.has_template
-          ? h(
-              NButton,
-              {
-                type: 'success',
-                size: 'small',
-                onClick: () => handleDownload(row)
-              },
-              { default: () => 'Download' }
-            )
+          ? h(NButton, { type: 'success', size: 'small', onClick: () => handleDownload(row) }, { default: () => 'Download' })
           : null
       ].filter(Boolean))
     }
@@ -643,6 +608,15 @@ onMounted(fetchServices)
       @close="showFieldModal = false"
       @saved="saveFields"
       :service-id="editingFields?.serviceId"
+    />
+
+    <!-- Requirements Editor -->
+    <RequirementsEditor
+      :show="showReqModal"
+      :requirements-data="editingReqService?.requirements"
+      :service-id="editingReqService?.id"
+      @close="showReqModal = false"
+      @saved="saveRequirements"
     />
   </div>
 

@@ -28,3 +28,22 @@ export const createDocumentRequest = async (payload) => {
     throw err
   }
 }
+
+/**
+ * Check if a resident is eligible to request a specific document type.
+ * Returns a breakdown of each requirement (passed/failed/informational).
+ * @param {number} doctypeId
+ * @param {number} residentId
+ * @returns {Promise<Object>} { eligible, resident_id, doctype_id, checks[] }
+ */
+export const checkEligibility = async (doctypeId, residentId) => {
+  try {
+    const response = await api.get(`/kiosk/documents/types/${doctypeId}/eligibility`, {
+      params: { resident_id: residentId }
+    })
+    return response.data
+  } catch (err) {
+    console.error('Failed to check eligibility:', err)
+    throw err
+  }
+}

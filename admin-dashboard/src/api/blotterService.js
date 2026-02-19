@@ -88,3 +88,21 @@ export const bulkDeleteBlotters = async (ids) => {
     throw err
   }
 }
+
+/**
+ * Get blotter record summary for a resident.
+ * Returns all records where they appear as complainant or respondent.
+ * Used to show blotter flags on the resident detail view and
+ * during document request processing.
+ * @param {number} residentId
+ * @returns {Promise<Object>} { has_blotter, total_count, as_complainant, as_respondent, records[] }
+ */
+export const getResidentBlotterSummary = async (residentId) => {
+  try {
+    const response = await api.get(`/admin/documents/${residentId}/blotter-summary`)
+    return response.data
+  } catch (err) {
+    console.error('Failed to fetch resident blotter summary:', err)
+    throw err
+  }
+}

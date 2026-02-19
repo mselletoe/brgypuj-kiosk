@@ -17,12 +17,14 @@ from app.schemas.document import (
     DocumentTypeUpdate,
     DocumentRequestAdminOut,
     DocumentRequestAdminDetail,
-    DocumentTypeProcessingOut
+    DocumentTypeProcessingOut,
+    EligibilityCheckResult
 )
 from app.services.document_service import (
     bulk_undo_requests,
     get_all_document_types,
     create_document_type,
+    get_resident_blotter_summary,
     release_request,
     update_document_type,
     get_all_document_requests,
@@ -40,6 +42,7 @@ from app.services.document_service import (
     get_request_notes, 
     update_request_notes,
     regenerate_request_pdf,
+    check_resident_eligibility
 )
 from app.services.document_service import PDF_STORAGE_DIR
 
@@ -164,6 +167,19 @@ def upload_document_type_template(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Document type not found",
         )
+
+
+@router.get("/{resident_id}/blotter-summary")
+def get_blotter_summary(resident_id: int, db: Session = Depends(get_db)):
+    return get_resident_blotter_summary(db, resident_id)
+
+
+@router.get(
+    "/{resident_id}/eligibility/{doctype_id}",
+    response_model=EligibilityCheckResult
+)
+def admin_check_eligibility(resident_id: int, doctype_id: int, db: Session = Depends(get_db)):
+    return check_resident_eligibility(db, resident_id=resident_id, doctype_id=doctype_id)
 
 
 # =========================================================

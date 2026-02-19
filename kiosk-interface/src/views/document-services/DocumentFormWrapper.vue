@@ -13,7 +13,7 @@ import Modal from '@/components/shared/Modal.vue'
 import Button from '@/components/shared/Button.vue'
 import Loading from '@/components/shared/Loading.vue'
 import { useAuthStore } from '@/stores/auth'
-import { getDocumentTypes, createDocumentRequest } from '@/api/documentService'
+import { getDocumentTypes, createDocumentRequest, checkEligibility } from '@/api/documentService'
 import { getResidentAutofillData } from '@/api/residentService'
 
 // --- Composition Utilities ---
@@ -26,6 +26,8 @@ const currentStep = ref('form')
 const formData = ref({})
 const showSuccessModal = ref(false)
 const isFadingOut = ref(false)
+const showErrorModal = ref(false)
+const errorMessage = ref('')
 
 // --- Business Logic State ---
 const residentData = ref(null)
@@ -38,6 +40,7 @@ const loadingDocuments = ref(true)
 const errorDocuments = ref(null)
 const transactionNo = ref('')
 const documentFormRef = ref(null)
+const eligibilityResult = ref(null)
 
 const submitFromWrapper = () => {
   if (documentFormRef.value) {
@@ -79,6 +82,7 @@ const fetchDocuments = async () => {
         id: doc.id,
         title: doc.doctype_name,
         fields: doc.fields || [],
+        requirements: doc.requirements || [],
         available: true
       }
     })
@@ -113,6 +117,58 @@ const fetchResidentData = async () => {
     isLoadingResidentData.value = false
   }
 }
+
+/**
+ * Fetches eligibility check results for authenticated residents.
+ * Only runs if the document type has system_check requirements.
+ */
+const fetchEligibility = async () => {
+  if (!isRfidUser.value || !config.value?.id) return
+
+  const hasSystemChecks = config.value.requirements?.some(r => r.type === 'system_check')
+  if (!hasSystemChecks) return
+
+  try {
+    eligibilityResult.value = await checkEligibility(config.value.id, auth.residentId)
+  } catch (err) {
+    console.error('Failed to fetch eligibility:', err)
+    eligibilityResult.value = null
+  }
+}
+
+/**
+ * Merges static requirements with live eligibility check results.
+ * Document-type requirements show as informational.
+ * System checks show their pass/fail status if available.
+ */
+const mergedRequirements = computed(() => {
+  const reqs = config.value?.requirements || []
+  if (!eligibilityResult.value) {
+    return reqs.map(r => ({ ...r, passed: null, message: null }))
+  }
+
+  const checksMap = {}
+  for (const check of eligibilityResult.value.checks) {
+    checksMap[check.id] = check
+  }
+
+  return reqs.map(r => {
+    const live = checksMap[r.id]
+    return {
+      ...r,
+      passed: live?.passed ?? null,
+      message: live?.message ?? null
+    }
+  })
+})
+
+/**
+ * True if any system_check requirement has explicitly failed.
+ * Used to visually warn the resident before they submit.
+ */
+const hasBlockingFailure = computed(() => {
+  return mergedRequirements.value.some(r => r.type === 'system_check' && r.passed === false)
+})
 
 /**
  * Handles backwards navigation between preview/form steps or exits to the list.
@@ -180,14 +236,18 @@ const handleSubmit = async (data) => {
     isSubmitting.value = false
     
     // Show user-friendly error message
-    const errorMessage = err?.response?.data?.detail || 'Failed to submit document request. Please try again.'
-    alert(errorMessage)
+    errorMessage.value =
+    err?.response?.data?.detail ||
+    'Failed to submit document request. Please try again.'
+
+    showErrorModal.value = true
   }
 }
 
 onMounted(async () => {
   await fetchDocuments()
   await fetchResidentData()
+  await fetchEligibility()
 })
 </script>
 
@@ -214,7 +274,7 @@ onMounted(async () => {
 
         <!-- LEFT PANEL -->
         <div class="col-span-3">
-          <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-8 min-h-[400px]">
+          <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-8 min-h-[280px]">
 
             <div v-if="isLoadingResidentData" class="text-center py-8">
               <Loading color="#03335C" size="12px" spacing="50px" />
@@ -245,7 +305,102 @@ onMounted(async () => {
         <!-- RIGHT PANEL (EMPTY) -->
         <div class="col-span-2">
           <div class="bg-[#EBF5FF] rounded-2xl shadow-lg border border-[#B0D7F8] p-6 min-h-[280px]">
-            <!-- Blank for now -->
+
+            <h2 class="text-lg font-bold text-[#03335C] mb-2 tracking-tight">
+              Requirements
+            </h2>
+            <p class="text-sm italic text-[#03335C] mb-4 tracking-tight">
+              Review the following requirements below. For further details, please refer to the information desk at the counter.
+            </p>
+
+            <!-- No requirements -->
+            <div
+              v-if="!config?.requirements?.length"
+              class="flex flex-col items-center justify-center py-10 text-center"
+            >
+              <p class="text-sm text-[#5A8DB8]">No requirements needed for this document.</p>
+            </div>
+
+            <!-- Requirements list -->
+            <div v-else class="space-y-3">
+
+              <!-- Blocking failure warning (authenticated users only) -->
+              <div
+                v-if="hasBlockingFailure"
+                class="bg-red-50 border border-red-200 rounded-xl p-3 flex items-start gap-2"
+              >
+                <svg class="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                </svg>
+                <p class="text-xs text-red-700 font-medium">
+                  You may not be eligible for this document. Review the failed requirements below.
+                </p>
+              </div>
+
+              <!-- Each requirement row -->
+              <div
+                v-for="(req, index) in mergedRequirements"
+                :key="index"
+                class="flex items-start gap-3 bg-white rounded-xl p-3 border"
+                :class="{
+                  'border-red-300 bg-red-50': req.passed === false,
+                  'border-green-300 bg-green-50': req.passed === true,
+                  'border-[#B0D7F8]': req.passed === null
+                }"
+              >
+                <!-- Status icon -->
+                <div class="flex-shrink-0 mt-0.5">
+                  <!-- Failed -->
+                  <svg v-if="req.passed === false" class="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                  </svg>
+                  <!-- Passed -->
+                  <svg v-else-if="req.passed === true" class="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                  </svg>
+                  <!-- Neutral / document type -->
+                  <svg v-else class="w-5 h-5 text-[#5A8DB8]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+
+                <!-- Text -->
+                <div class="flex-1 min-w-0">
+                  <p
+                    class="text-sm font-semibold leading-tight"
+                    :class="{
+                      'text-red-700': req.passed === false,
+                      'text-green-700': req.passed === true,
+                      'text-[#03335C]': req.passed === null
+                    }"
+                  >
+                    {{ req.label }}
+                  </p>
+
+                  <!-- Type badge -->
+                  <span
+                    class="inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded-full mt-1"
+                    :class="req.type === 'system_check' ? 'bg-blue-100 text-blue-600' : 'bg-amber-100 text-amber-600'"
+                  >
+                    {{ req.type === 'system_check' ? 'System Check' : 'Document' }}
+                  </span>
+
+                  <!-- Message (only shown when eligibility data is available) -->
+                  <p
+                    v-if="req.message"
+                    class="text-xs mt-1"
+                    :class="{
+                      'text-red-600': req.passed === false,
+                      'text-green-600': req.passed === true,
+                      'text-[#5A8DB8]': req.passed === null
+                    }"
+                  >
+                    {{ req.message }}
+                  </p>
+                </div>
+
+              </div>
+            </div>
           </div>
         </div>
 
@@ -313,6 +468,22 @@ onMounted(async () => {
       </div>
     </transition>
 
+    <transition name="fade-blur">
+      <div
+        v-if="showErrorModal"
+        class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50"
+      >
+        <Modal
+          title="Request Cannot Be Processed"
+          :message="errorMessage"
+          primaryButtonText="OK"
+          :showPrimaryButton="true"
+          :showSecondaryButton="false"
+          :showNewRequest="false"
+          @primary-click="handleDone"
+        />
+      </div>
+    </transition>
   </div>
 </template>
 

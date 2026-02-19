@@ -1,7 +1,6 @@
 import { createRouter, createWebHistory } from "vue-router";
 import { useAdminAuthStore } from "@/stores/auth";
 
-<<<<<<< HEAD
 import AdminLayout from "@/layouts/AdminLayout.vue";
 import Overview from "@/views/Overview.vue";
 import DocumentRequests from "@/views/requests/document-requests/DocumentRequest.vue";
@@ -20,27 +19,7 @@ import AccountSettings from "@/views/settings/AccountSettings.vue";
 import HelpAndSupport from "@/views/Help&Support.vue";
 import FAQsManagement from "@/views/faqs-management/FAQsManagement.vue";
 import ResidentsManagement from "@/views/residents-management/ResidentsManagement.vue";
-=======
-import AdminLayout from '@/layouts/AdminLayout.vue'
-import Overview from '@/views/Overview.vue'
-import DocumentRequests from '@/views/requests/document-requests/DocumentRequest.vue'
-import DocumentServices from '@/views/document-services/DocumentServices.vue'
-import KioskAnnouncements from '@/views/announcements/KioskAnnouncements.vue'
-import SMSAnnouncements from '@/views/announcements/SMSAnnouncements.vue'
-import Residents from '@/views/Residents.vue'
-import Auth from '@/views/Auth.vue'
-import CreateAccount from '@/views/CreateAccount.vue'
-import EquipmentInventory from '@/views/equipment-inventory/EquipmentInventory.vue'
-import SystemSettings from '@/views/settings/SystemSettings.vue'
-import EquipmentRequests from '@/views/requests/equipment-requests/EquipmentRequest.vue'
-import FeedbackAndReports from '@/views/feedback-and-reports/FeedbackAndReports.vue'
-import ComponentShowcase from '@/components/ComponentShowcase.vue'
-import AccountSettings from '@/views/settings/AccountSettings.vue'
-import HelpAndSupport from '@/views/Help&Support.vue'
-import FAQsManagement from '@/views/faqs-management/FAQsManagement.vue'
-import ResidentsManagement from '@/views/residents-management/ResidentsManagement.vue'
-import BlotterAndKPLogs from '@/views/blotters-and-kp/BlotterAndKPLogs.vue'
->>>>>>> ee75b909550504001f8d010a8b27483ce974b875
+import BlotterAndKPLogs from "@/views/blotters-and-kp/BlotterAndKPLogs.vue";
 
 const routes = [
   {
@@ -82,7 +61,6 @@ const routes = [
         props: true,
       },
 
-<<<<<<< HEAD
       { path: "document-services", component: DocumentServices },
       { path: "kiosk-announcements", component: KioskAnnouncements },
       { path: "sms-announcements", component: SMSAnnouncements },
@@ -93,25 +71,10 @@ const routes = [
       { path: "account-settings", component: AccountSettings },
       { path: "help-and-support", component: HelpAndSupport },
       { path: "faqs-management", component: FAQsManagement },
+      { path: "blotter-kp-logs", component: BlotterAndKPLogs },
     ],
   },
 ];
-=======
-      { path: 'document-services', component: DocumentServices },
-      { path: 'kiosk-announcements', component: KioskAnnouncements },
-      { path: 'sms-announcements', component: SMSAnnouncements },
-      { path: 'residents-management', component: ResidentsManagement },
-      { path: 'equipment-inventory', component: EquipmentInventory },
-      { path: 'system-settings', component: SystemSettings },
-      { path: 'component-showcase', component: ComponentShowcase },
-      { path: 'account-settings', component: AccountSettings },
-      { path: 'help-and-support', component: HelpAndSupport },
-      { path: 'faqs-management', component: FAQsManagement },
-      { path: 'blotter-kp-logs', component: BlotterAndKPLogs },
-    ]
-  }
-]
->>>>>>> ee75b909550504001f8d010a8b27483ce974b875
 
 const router = createRouter({
   history: createWebHistory(),
