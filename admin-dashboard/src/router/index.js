@@ -60,13 +60,8 @@ const routes = [
   {
     path: "/",
     component: AdminLayout,
-<<<<<<< HEAD
     redirect: "/overview",
     meta: { requiresAuth: true },
-=======
-    redirect: '/overview',
-    meta: { requiresAuth: false },
->>>>>>> 4c7ca6d04d82b78d2694f45f7cbb99505cadb0c7
     children: [
       { path: "overview", component: Overview },
 
@@ -89,23 +84,6 @@ const routes = [
         props: true,
       },
 
-<<<<<<< HEAD
-      { path: "document-services", component: DocumentServices },
-      { path: "kiosk-announcements", component: KioskAnnouncements },
-      { path: "sms-announcements", component: SMSAnnouncements },
-      { path: "residents-management", component: ResidentsManagement },
-      { path: "equipment-inventory", component: EquipmentInventory },
-      { path: "system-settings", component: SystemSettings },
-      { path: "component-showcase", component: ComponentShowcase },
-      { path: "account-settings", component: AccountSettings },
-      { path: "help-and-support", component: HelpAndSupport },
-      { path: "faqs-management", component: FAQsManagement },
-      { path: "contact-information", component: ContactInformation },
-      { path: "blotter-kp-logs", component: BlotterAndKPLogs },
-    ],
-  },
-];
-=======
       { path: 'document-services', component: DocumentServices },
       { path: 'kiosk-announcements', component: KioskAnnouncements },
       { path: 'sms-announcements', component: SMSAnnouncements },
@@ -120,7 +98,6 @@ const routes = [
     ]
   }
 ]
->>>>>>> 4c7ca6d04d82b78d2694f45f7cbb99505cadb0c7
 
 const router = createRouter({
   history: createWebHistory(),
