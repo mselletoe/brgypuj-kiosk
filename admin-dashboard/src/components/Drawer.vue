@@ -36,14 +36,15 @@ const menuGroups = [
       { label: 'Equipment Inventory', icon: CircleStackIcon, to: '/equipment-inventory' },
       { label: 'Kiosk Announcements', icon: SpeakerWaveIcon, to: '/kiosk-announcements' },
       { label: 'Blotter and KP Logs', icon: UserCircleIcon, to: '/blotter-kp-logs' },
-      { label: 'FAQs Management', icon: QuestionMarkCircleIcon, to: '/faqs-management' },
       { label: 'Residents Information', icon: UserGroupIcon, to: '/residents-management' },
     ]
   },
   {
-    title: 'SETTINGS',
+    title: 'HELP & SUPPORT',
     items: [
-      { label: 'System Settings', icon: Cog6ToothIcon, to: '/system-settings' },
+      { label: 'FAQs Management', icon: QuestionMarkCircleIcon, to: '/faqs-management' },
+      { label: 'Contact Information', icon: UserCircleIcon, to: '/contact-information' },
+      // { label: 'System Settings', icon: Cog6ToothIcon, to: '/system-settings' },
     ]
   }
 ]
