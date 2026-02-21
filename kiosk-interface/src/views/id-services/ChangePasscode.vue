@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import ArrowBackButton from "@/components/shared/ArrowBackButton.vue";
 import Button from "@/components/shared/Button.vue";
@@ -22,6 +22,8 @@ const confirmPin = ref("");
 
 const isSubmitting = ref(false);
 const showSuccessModal = ref(false);
+const isShaking = ref(false);
+const verificationError = ref("");
 const pinLength = 4;
 
 const stepInfo = computed(() => {
@@ -45,17 +47,22 @@ const stepInfo = computed(() => {
 });
 
 const handleKeypad = (num) => {
-  if (pinBuffer.value.length < pinLength) pinBuffer.value += num;
+  if (pinBuffer.value.length < pinLength) {
+    pinBuffer.value += num;
+    verificationError.value = "";
+  }
 };
 
 const handleBackspace = () => {
   pinBuffer.value = pinBuffer.value.slice(0, -1);
+  verificationError.value = "";
 };
 
 const goBack = () => {
   if (step.value > 1) {
     step.value--;
     pinBuffer.value = "";
+    verificationError.value = "";
   } else {
     router.push("/id-services");
   }
@@ -74,8 +81,12 @@ const handleNext = () => {
     pinBuffer.value = "";
   } else if (step.value === 3) {
     if (newPin.value !== pinBuffer.value) {
-      alert("Passcodes do not match!");
-      pinBuffer.value = "";
+      isShaking.value = true;
+      verificationError.value = "Passcodes do not match!";
+      setTimeout(() => {
+        isShaking.value = false;
+        pinBuffer.value = "";
+      }, 500);
       return;
     }
     submitChange();
@@ -166,17 +177,26 @@ const handleModalDone = () => router.push("/id-services");
           <div
             class="bg-white p-7 rounded-3xl shadow-[0_5px_15px_-5px_rgba(0,0,0,0.08)] border border-gray-100 flex flex-col items-center h-full justify-center"
           >
-            <div class="flex gap-4 mb-8">
-              <div
-                v-for="i in pinLength"
-                :key="i"
-                :class="[
-                  'w-4 h-4 rounded-full border-2 transition-all',
-                  pinBuffer.length >= i
-                    ? 'bg-[#03335C] border-[#03335C]'
-                    : 'bg-transparent border-gray-300',
-                ]"
-              ></div>
+            <div class="relative flex flex-col items-center mb-8">
+              <div :class="['flex gap-4', { 'animate-shake': isShaking }]">
+                <div
+                  v-for="i in pinLength"
+                  :key="i"
+                  :class="[
+                    'w-4 h-4 rounded-full border-2 transition-all',
+                    pinBuffer.length >= i
+                      ? 'bg-[#03335C] border-[#03335C]'
+                      : 'bg-transparent border-gray-300',
+                  ]"
+                ></div>
+              </div>
+
+              <p
+                v-if="verificationError"
+                class="absolute top-[22px] text-red-500 text-sm tracking-tight whitespace-nowrap"
+              >
+                {{ verificationError }}
+              </p>
             </div>
 
             <div class="grid grid-cols-3 gap-3 w-full">
@@ -233,7 +253,6 @@ const handleModalDone = () => router.push("/id-services");
   scrollbar-width: none;
 }
 
-/* FADE & BLUR TRANSITION */
 .modal-backdrop {
   backdrop-filter: blur(8px);
 }
@@ -254,7 +273,6 @@ const handleModalDone = () => router.push("/id-services");
   backdrop-filter: blur(8px);
 }
 
-/* CONTENT ANIMATION (Copied from ApplyID) */
 .animate-fadeIn {
   animation: fadeIn 0.4s ease-out forwards;
 }
@@ -266,6 +284,29 @@ const handleModalDone = () => router.push("/id-services");
   to {
     opacity: 1;
     transform: scale(1);
+  }
+}
+
+.animate-shake {
+  animation: shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+@keyframes shake {
+  10%,
+  90% {
+    transform: translate3d(-1px, 0, 0);
+  }
+  20%,
+  80% {
+    transform: translate3d(2px, 0, 0);
+  }
+  30%,
+  50%,
+  70% {
+    transform: translate3d(-4px, 0, 0);
+  }
+  40%,
+  60% {
+    transform: translate3d(4px, 0, 0);
   }
 }
 </style>
