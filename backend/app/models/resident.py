@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, SmallInteger, String, Date, Boolean, TIMESTAMP, CheckConstraint, ForeignKey
+from sqlalchemy import Column, Integer, SmallInteger, String, Date, Boolean, TIMESTAMP, CheckConstraint, ForeignKey, LargeBinary
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.base import Base
@@ -26,6 +26,7 @@ class Resident(Base):
     email = Column(String(255), unique=True)
     phone_number = Column(String(15))
     rfid_pin = Column(String(255))
+    photo = Column(LargeBinary, nullable=True)
     registered_at = Column(TIMESTAMP, server_default=func.current_timestamp())
     
     blotter_records_as_complainant = relationship("BlotterRecord", foreign_keys="BlotterRecord.complainant_id", back_populates="complainant")
@@ -64,6 +65,7 @@ class ResidentRFID(Base):
     resident_id = Column(Integer, ForeignKey("residents.id", ondelete="CASCADE"), nullable=False)
     rfid_uid = Column(String(16), unique=True, nullable=False)
     created_at = Column(TIMESTAMP, nullable=False, server_default=func.current_timestamp())
+    expiration_date = Column(Date, nullable=True)
     is_active = Column(Boolean, nullable=False, server_default="true")
 
     resident = relationship("Resident", back_populates="rfids")

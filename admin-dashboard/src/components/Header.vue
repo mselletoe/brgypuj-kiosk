@@ -9,7 +9,7 @@
 import { h, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { NDropdown } from 'naive-ui'
-import { UserCircleIcon, QuestionMarkCircleIcon, BellIcon, ArrowLeftOnRectangleIcon } from '@heroicons/vue/24/solid'
+import { UserCircleIcon, QuestionMarkCircleIcon, BellIcon, ArrowLeftOnRectangleIcon, ChatBubbleLeftRightIcon, Cog6ToothIcon } from '@heroicons/vue/24/solid'
 import { useAdminAuthStore } from '@/stores/auth'
 
 const router = useRouter()
@@ -52,6 +52,14 @@ const goToHelp = () => {
   router.push('/help-and-support')
 }
 
+const goToMessages = () => {
+  router.push('/sms-announcements')
+}
+
+const goToSettings = () => {
+  router.push('/system-settings')
+}
+
 /**
  * Reactive computed properties to display administrator metadata.
  * Fallbacks are provided for scenarios where the auth store is still rehydrating.
@@ -62,16 +70,40 @@ const role = computed(() => adminAuth.admin?.role || 'Administrator')
 
 <template>
   <header class="pb-8 flex items-center justify-between w-[99%]">
-    <div class="bg-white rounded-md w-[700px] h-[40px]"></div>
+    <div class="bg-white rounded-md w-[600px] h-[40px]"></div>
 
     <div class="flex items-center gap-2">
-      <button @click="goToHelp" class="p-2 text-[#1F2937] hover:text-[#2D4465] rounded-full transition-colors">
+      <!-- Help -->
+      <button 
+        @click="goToHelp"
+        class="p-2 text-[#1F2937] hover:text-[#2D4465] rounded-full transition-colors"
+      >
         <QuestionMarkCircleIcon class="h-6 w-6" />
       </button>
 
-      <button class="p-2 text-[#1F2937] rounded-full hover:text-[#2D4465] transition-colors relative">
+      <!-- Messages -->
+      <button 
+        @click="goToMessages"
+        class="p-2 text-[#1F2937] hover:text-[#2D4465] rounded-full transition-colors relative"
+      >
+        <ChatBubbleLeftRightIcon class="h-6 w-6" />
+      </button>
+
+      <!-- Notifications -->
+      <button 
+        class="p-2 text-[#1F2937] hover:text-[#2D4465] rounded-full transition-colors relative"
+      >
         <BellIcon class="h-6 w-6" />
       </button>
+
+      <!-- Settings -->
+      <button 
+        @click="goToSettings"
+        class="p-2 text-[#1F2937] hover:text-[#2D4465] rounded-full transition-colors"
+      >
+        <Cog6ToothIcon class="h-6 w-6" />
+      </button>
+
       <n-dropdown
         trigger="click"
         :options="dropdownOptions"
