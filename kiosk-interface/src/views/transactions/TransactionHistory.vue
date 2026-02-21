@@ -1,9 +1,39 @@
 <script setup>
 import { useRouter } from 'vue-router'
 import ArrowBackButton from '@/components/shared/ArrowBackButton.vue'
+import TransactionCard from '@/views/transactions/TransactionHistoryCard.vue'
+import { ref } from 'vue'
 
 const router = useRouter()
 const goBack = () => router.push('/home')
+
+const transactions = ref([
+  {
+    id: 1,
+    type: 'document',
+    reference: 'DR-0010',
+    title: 'Barangay Clearance',
+    createdAt: '2024-09-09',
+    status: 'completed'
+  },
+  {
+    id: 2,
+    type: 'equipment',
+    reference: 'EB-1023',
+    title: '2x Tents, 30x Monoblocs',
+    createdAt: '2024-09-09',
+    status: 'completed'
+  },
+  {
+    id: 3,
+    type: 'document',
+    reference: 'DR-1291',
+    title: 'Barangay Clearance',
+    createdAt: '2024-09-09',
+    status: 'rejected'
+  }
+])
+
 </script>
 
 <template>
@@ -21,8 +51,23 @@ const goBack = () => router.push('/home')
       </div>
     </div>
 
-    <div>
-      <!-- Transaction history content goes here -->
+    <!-- WHITE CONTAINER -->
+    <div
+      class="flex flex-col w-full bg-white rounded-2xl border-[#C1C1C1] border-[2px]"
+      style="padding: 35px; box-shadow: 0 15px 40px rgba(0,1,4,0.1);"
+    >
+      <div class="flex flex-col gap-6 w-full">
+        <TransactionCard
+          v-for="item in transactions"
+          :key="item.id"
+          :type="item.type"
+          :reference="item.reference"
+          :title="item.title"
+          :createdAt="item.createdAt"
+          :status="item.status"
+        />
+      </div>
     </div>
+
   </div>
 </template>
