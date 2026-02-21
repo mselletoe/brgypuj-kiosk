@@ -22,19 +22,19 @@ const confirmPin = ref("");
 
 const isSubmitting = ref(false);
 const showSuccessModal = ref(false);
-const pinLength = 6;
+const pinLength = 4;
 
 const stepInfo = computed(() => {
   if (step.value === 1)
     return {
       title: "Verify Identity",
-      desc: "Please enter your current 6-digit passcode to authorize this change.",
+      desc: "Please enter your current 4-digit passcode to authorize this change.",
       icon: LockClosedIcon,
     };
   if (step.value === 2)
     return {
       title: "New Passcode",
-      desc: "Create a new 6-digit security PIN. Avoid using simple sequences.",
+      desc: "Create a new 4-digit security PIN. Avoid using simple sequences.",
       icon: KeyIcon,
     };
   return {
@@ -97,7 +97,7 @@ const handleModalDone = () => router.push("/id-services");
   <div
     class="flex flex-col w-full h-full bg-white overflow-hidden select-none no-scrollbar"
   >
-    <div v-if="!showSuccessModal" class="flex flex-col h-full">
+    <div class="flex flex-col h-full">
       <div class="flex items-center mb-0 gap-7 flex-shrink-0">
         <ArrowBackButton @click="goBack" />
         <div>
@@ -111,7 +111,7 @@ const handleModalDone = () => router.push("/id-services");
       </div>
 
       <div
-        class="flex-1 flex flex-row items-stretch justify-center gap-10 px-4 pt-8 pb-12"
+        class="flex-1 flex flex-row items-stretch justify-center gap-10 px-4 pt-8 pb-12 animate-fadeIn"
       >
         <div class="flex-1 max-w-[420px] flex flex-col">
           <div
@@ -207,12 +207,65 @@ const handleModalDone = () => router.push("/id-services");
       </div>
     </div>
 
-    <Modal
-      v-else
-      title="Passcode Updated!"
-      message="Your security PIN has been successfully changed."
-      primary-button-text="Done"
-      @primary-click="handleModalDone"
-    />
+    <Transition name="fade-blur">
+      <div
+        v-if="showSuccessModal"
+        class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-8 modal-backdrop"
+      >
+        <Modal
+          title="Passcode Updated!"
+          message="Your security PIN has been successfully changed."
+          :show-secondary-button="false"
+          primary-button-text="Done"
+          @primary-click="handleModalDone"
+        />
+      </div>
+    </Transition>
   </div>
 </template>
+
+<style scoped>
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* FADE & BLUR TRANSITION */
+.modal-backdrop {
+  backdrop-filter: blur(8px);
+}
+.fade-blur-enter-active,
+.fade-blur-leave-active {
+  transition:
+    opacity 0.5s ease,
+    backdrop-filter 0.5s ease;
+}
+.fade-blur-enter-from,
+.fade-blur-leave-to {
+  opacity: 0;
+  backdrop-filter: blur(0px);
+}
+.fade-blur-enter-to,
+.fade-blur-leave-from {
+  opacity: 1;
+  backdrop-filter: blur(8px);
+}
+
+/* CONTENT ANIMATION (Copied from ApplyID) */
+.animate-fadeIn {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+</style>
