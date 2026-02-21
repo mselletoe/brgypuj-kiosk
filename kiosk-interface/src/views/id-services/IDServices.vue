@@ -16,13 +16,12 @@ import {
 const router = useRouter();
 const authStore = useAuthStore();
 
-// Check if user is logged in
-const isGuest = computed(() => !authStore.user);
+// FIX: Use the correct store getter for guest mode
+const isGuest = computed(() => authStore.isGuest);
 
 // Navigation Functions
 const handleTopButton = () => {
   if (isGuest.value) {
-    // Route for new application (You'll need to create this route later)
     router.push("/id-services/apply");
   } else {
     router.push("/id-services/replacement");
@@ -32,14 +31,14 @@ const handleTopButton = () => {
 const handleChangePasscode = () => router.push("/id-services/change-pin");
 const handleReportLost = () => router.push("/id-services/report-lost");
 
-// Resident Data Logic (Only used if NOT guest)
+// FIX: Map correctly to authStore.resident and authStore.rfidUid
 const resident = computed(() => {
-  const user = authStore.user || {};
+  const res = authStore.resident || {};
   return {
-    firstName: user.first_name || "Keanno",
-    lastName: user.last_name || "Macatangay",
-    id: user.id || "2023-0042",
-    rfid: authStore.rfid || "73-24-11-89",
+    firstName: res.first_name || "Unknown",
+    lastName: res.last_name || "Resident",
+    id: res.id || "N/A",
+    rfid: authStore.rfidUid || "N/A",
   };
 });
 

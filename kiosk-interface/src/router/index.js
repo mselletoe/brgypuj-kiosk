@@ -32,7 +32,7 @@ import IDServices from "../views/id-services/IDServices.vue";
 import RequestReplacement from "../views/id-services/RequestReplacement.vue";
 import ChangePasscode from "../views/id-services/ChangePasscode.vue";
 import ReportLost from "../views/id-services/ReportLost.vue";
-import ApplyID from "../views/id-services/ApplyID.vue"; // <--- NEW IMPORT
+import ApplyID from "../views/id-services/ApplyID.vue";
 
 const routes = [
   // Root Redirect: Kiosk starts at the Idle/Welcome screen
@@ -89,9 +89,10 @@ const routes = [
         component: ReportLost,
       },
       {
-        path: "id-services/apply", // <--- NEW ROUTE
+        path: "id-services/apply",
         name: "ApplyID",
         component: ApplyID,
+        meta: { noBottomPadding: true }, // Removes bottom padding for this specific view
       },
 
       // Other Services
@@ -127,23 +128,11 @@ const router = createRouter({
   routes,
 });
 
-// Navigation Guard with DEV BYPASS
+// Navigation Guard (CLEANED - NO BYPASS)
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore();
 
   if (!authStore.isAuthenticated) authStore.restore();
-
-  // 🚧 DEV BYPASS
-  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    console.log("⚠️ DEV MODE: Bypassing RFID Check");
-    authStore.setRFID(
-      { id: "2023-0042", first_name: "Keanno", last_name: "Macatangay" },
-      "FAKE-RFID-TAG-888",
-    );
-    next();
-    return;
-  }
-  // 🚧 END BYPASS
 
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     next("/login");
