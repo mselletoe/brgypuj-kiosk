@@ -17,6 +17,8 @@ const router = useRouter();
 const currentPhase = ref("selection"); // 'selection' | 'camera'
 const isSubmitting = ref(false);
 const showSuccessModal = ref(false);
+const showErrorModal = ref(false);
+const showVerificationModal = ref(false); // New Verification Modal State
 const referenceId = ref("");
 
 // Selection State
@@ -24,10 +26,47 @@ const lastNameLetter = ref("");
 const firstNameLetter = ref("");
 const selectedResident = ref(null);
 
+// Verification State
+const verifyMonth = ref("");
+const verifyDay = ref("");
+const verifyYear = ref("");
+const verificationError = ref("");
+
+const months = [
+  { name: "January", value: "01" },
+  { name: "February", value: "02" },
+  { name: "March", value: "03" },
+  { name: "April", value: "04" },
+  { name: "May", value: "05" },
+  { name: "June", value: "06" },
+  { name: "July", value: "07" },
+  { name: "August", value: "08" },
+  { name: "September", value: "09" },
+  { name: "October", value: "10" },
+  { name: "November", value: "11" },
+  { name: "December", value: "12" },
+];
+
+// Generate days 1-31
+const days = Array.from({ length: 31 }, (_, i) =>
+  (i + 1).toString().padStart(2, "0"),
+);
+
+// Generate years (Current year 2026 down to 1900)
+const currentYear = new Date().getFullYear();
+const years = Array.from({ length: currentYear - 1899 }, (_, i) =>
+  (currentYear - i).toString(),
+);
+
 // Dropdown Visibility State
 const showLastNameDropdown = ref(false);
 const showFirstNameDropdown = ref(false);
 const showResidentDropdown = ref(false);
+
+// New Verification Dropdown States
+const showMonthDropdown = ref(false);
+const showDayDropdown = ref(false);
+const showYearDropdown = ref(false);
 
 const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
@@ -47,7 +86,7 @@ const mockResidents = [
     lastName: "Agoncillo",
     address: "Block 12 Lot 1",
     birthdate: "2001-11-03",
-    rfid: "N/A",
+    rfid: "12345678",
   },
   {
     id: 3,
@@ -67,15 +106,15 @@ const mockResidents = [
   },
 ];
 
-// Computed Filter
 const filteredResidents = computed(() => {
-  if (!lastNameLetter.value) return [];
-  return mockResidents.filter((r) =>
-    r.lastName.startsWith(lastNameLetter.value),
-  );
+  if (!lastNameLetter.value || !firstNameLetter.value) return [];
+  return mockResidents.filter((r) => {
+    const matchLast = r.lastName.startsWith(lastNameLetter.value);
+    const matchFirst = r.firstName.startsWith(firstNameLetter.value);
+    return matchLast && matchFirst;
+  });
 });
 
-// --- DROPDOWN LOGIC ---
 const toggleDropdown = (menu) => {
   showLastNameDropdown.value =
     menu === "lastName" ? !showLastNameDropdown.value : false;
@@ -83,6 +122,11 @@ const toggleDropdown = (menu) => {
     menu === "firstName" ? !showFirstNameDropdown.value : false;
   showResidentDropdown.value =
     menu === "resident" ? !showResidentDropdown.value : false;
+
+  // Verification Dropdowns
+  showMonthDropdown.value = menu === "month" ? !showMonthDropdown.value : false;
+  showDayDropdown.value = menu === "day" ? !showDayDropdown.value : false;
+  showYearDropdown.value = menu === "year" ? !showYearDropdown.value : false;
 };
 
 // --- CAMERA LOGIC ---
@@ -98,9 +142,7 @@ let countdownInterval = null;
 const startCamera = async () => {
   try {
     stream.value = await navigator.mediaDevices.getUserMedia({ video: true });
-    if (videoRef.value) {
-      videoRef.value.srcObject = stream.value;
-    }
+    if (videoRef.value) videoRef.value.srcObject = stream.value;
   } catch (err) {
     console.error("Camera access denied:", err);
   }
@@ -150,8 +192,30 @@ const retakePhoto = () => {
 // --- NAVIGATION & ACTIONS ---
 const proceedToCamera = () => {
   if (!selectedResident.value) return;
-  currentPhase.value = "camera";
-  startCamera();
+  if (selectedResident.value.rfid !== "N/A") {
+    showErrorModal.value = true;
+    return;
+  }
+  verifyMonth.value = "";
+  verifyDay.value = "";
+  verifyYear.value = "";
+  verificationError.value = "";
+  showVerificationModal.value = true;
+};
+
+const handleVerification = () => {
+  if (!verifyMonth.value || !verifyDay.value || !verifyYear.value) {
+    verificationError.value = "Please complete the date.";
+    return;
+  }
+  const inputDate = `${verifyYear.value}-${verifyMonth.value}-${verifyDay.value}`;
+  if (inputDate === selectedResident.value.birthdate) {
+    showVerificationModal.value = false;
+    currentPhase.value = "camera";
+    startCamera();
+  } else {
+    verificationError.value = "Birthdate does not match our records.";
+  }
 };
 
 const backToSelection = () => {
@@ -173,9 +237,6 @@ const handleReset = () => {
   lastNameLetter.value = "";
   firstNameLetter.value = "";
   selectedResident.value = null;
-  showLastNameDropdown.value = false;
-  showFirstNameDropdown.value = false;
-  showResidentDropdown.value = false;
 };
 
 const submitApplication = () => {
@@ -203,10 +264,24 @@ const selectLastNameLetter = (letter) => {
 const selectFirstNameLetter = (letter) => {
   firstNameLetter.value = letter;
   showFirstNameDropdown.value = false;
+  selectedResident.value = null;
 };
 const selectResident = (resident) => {
   selectedResident.value = resident;
   showResidentDropdown.value = false;
+};
+
+const selectMonth = (m) => {
+  verifyMonth.value = m.value;
+  showMonthDropdown.value = false;
+};
+const selectDay = (d) => {
+  verifyDay.value = d;
+  showDayDropdown.value = false;
+};
+const selectYear = (y) => {
+  verifyYear.value = y;
+  showYearDropdown.value = false;
 };
 </script>
 
@@ -230,35 +305,41 @@ const selectResident = (resident) => {
       <div class="flex-1 flex flex-col justify-center items-center pb-8">
         <div
           :class="[
-            'w-full bg-white rounded-[28px] shadow-[0_4px_15px_rgba(0,0,0,0.1)] border border-gray-100 p-[25px] relative flex flex-col transition-all duration-500 ease-in-out',
-            currentPhase === 'selection'
-              ? 'h-[290px] max-w-[1050px]'
-              : 'h-[380px] max-w-[780px]',
+            'w-full max-w-[1050px] bg-white rounded-[28px] shadow-[0_4px_15px_rgba(0,0,0,0.1)] border border-gray-100 p-[30px] relative flex flex-col transition-all duration-500 ease-in-out',
+            currentPhase === 'selection' ? 'h-[240px]' : 'h-[380px]',
           ]"
         >
           <div
             v-if="currentPhase === 'selection'"
-            class="flex w-full h-full gap-10 items-center"
+            class="flex w-full h-full items-center justify-start animate-fadeIn"
           >
-            <div class="flex-1 flex flex-col relative w-full h-full">
-              <h2 class="text-2xl font-bold text-[#03335C] mb-0.5">
+            <div class="w-full flex flex-col relative px-2">
+              <h2 class="text-[25px] font-bold text-[#03335C] text-left">
                 Resident Selection
               </h2>
-              <p class="text-gray-500 italic text-xs mb-4">
+              <p class="text-gray-500 italic text-xs mb-6 text-left">
                 Select the Resident to be linked to the new RFID card
               </p>
+
               <div class="space-y-4 w-full z-20">
-                <div class="flex gap-6 w-full">
-                  <div class="flex-1 relative">
-                    <div class="flex items-center gap-2 mb-1.5">
+                <div class="flex gap-10 w-full">
+                  <div class="flex flex-1 items-center gap-3">
+                    <div
+                      class="flex items-center gap-2 flex-shrink-0 min-w-[140px]"
+                    >
                       <CalendarDaysIcon class="w-5 h-5 text-[#03335C]" />
-                      <span
-                        class="text-[#03335C] font-medium text-[11px] uppercase tracking-wider"
-                        >First letter of
-                        <span class="font-bold">LAST NAME</span></span
-                      >
+                      <div class="flex flex-col leading-tight">
+                        <span
+                          class="text-[9px] uppercase font-bold text-gray-400"
+                          >First Letter of</span
+                        >
+                        <span
+                          class="text-[#03335C] font-black text-sm uppercase tracking-tight"
+                          >Last Name</span
+                        >
+                      </div>
                     </div>
-                    <div class="relative">
+                    <div class="flex-1 relative">
                       <button
                         @click="toggleDropdown('lastName')"
                         class="w-full h-11 border border-gray-300 rounded-xl px-4 flex items-center justify-between text-[#03335C] font-bold bg-white text-base hover:border-[#03335C] transition-colors"
@@ -281,16 +362,24 @@ const selectResident = (resident) => {
                       </div>
                     </div>
                   </div>
-                  <div class="flex-1 relative">
-                    <div class="flex items-center gap-2 mb-1.5">
+
+                  <div class="flex flex-1 items-center gap-3">
+                    <div
+                      class="flex items-center gap-2 flex-shrink-0 min-w-[140px]"
+                    >
                       <CalendarDaysIcon class="w-5 h-5 text-[#03335C]" />
-                      <span
-                        class="text-[#03335C] font-medium text-[11px] uppercase tracking-wider"
-                        >First letter of
-                        <span class="font-bold">FIRST NAME</span></span
-                      >
+                      <div class="flex flex-col leading-tight">
+                        <span
+                          class="text-[9px] uppercase font-bold text-gray-400"
+                          >First Letter of</span
+                        >
+                        <span
+                          class="text-[#03335C] font-black text-sm uppercase tracking-tight"
+                          >First Name</span
+                        >
+                      </div>
                     </div>
-                    <div class="relative">
+                    <div class="flex-1 relative">
                       <button
                         @click="toggleDropdown('firstName')"
                         class="w-full h-11 border border-gray-300 rounded-xl px-4 flex items-center justify-between text-[#03335C] font-bold bg-white text-base hover:border-[#03335C] transition-colors"
@@ -314,83 +403,55 @@ const selectResident = (resident) => {
                     </div>
                   </div>
                 </div>
-                <div class="relative">
-                  <div class="flex items-center gap-2 mb-1.5">
-                    <UserIcon class="w-5 h-5 text-[#03335C]" />
-                    <span class="text-[#03335C] font-bold text-sm tracking-wide"
-                      >Select Resident</span
-                    >
-                  </div>
-                  <button
-                    @click="toggleDropdown('resident')"
-                    class="w-full h-11 border border-gray-300 rounded-xl px-4 flex items-center justify-between text-[#03335C] font-bold bg-white text-base hover:border-[#03335C] transition-colors"
-                    :disabled="!lastNameLetter"
-                  >
-                    <span
-                      v-if="selectedResident"
-                      class="truncate text-[#03335C]"
-                      >{{ selectedResident.lastName }},
-                      {{ selectedResident.firstName }}</span
-                    >
-                    <span v-else class="text-gray-400 truncate opacity-60"
-                      >Select Resident...</span
-                    >
-                    <ChevronDownIcon class="w-5 h-5 text-[#03335C]" />
-                  </button>
+
+                <div class="flex items-center gap-3 w-full">
                   <div
-                    v-if="showResidentDropdown && lastNameLetter"
-                    class="absolute top-full left-0 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-50 p-1 max-h-[220px] overflow-y-auto custom-scroll"
+                    class="flex items-center gap-2 flex-shrink-0 min-w-[140px]"
                   >
-                    <button
-                      v-for="r in filteredResidents"
-                      :key="r.id"
-                      @click="selectResident(r)"
-                      class="w-full text-left py-2 px-3 hover:bg-blue-50 rounded-lg font-bold text-[#03335C] text-sm border-b border-gray-50 last:border-0"
+                    <UserIcon class="w-5 h-5 text-[#03335C]" />
+                    <span
+                      class="text-[#03335C] font-bold text-[11px] uppercase tracking-tight"
+                      >Resident Name</span
                     >
-                      {{ r.lastName }}, {{ r.firstName }}
+                  </div>
+                  <div class="flex-1 relative">
+                    <button
+                      @click="toggleDropdown('resident')"
+                      :disabled="!lastNameLetter || !firstNameLetter"
+                      class="w-full h-11 border border-gray-300 rounded-xl px-4 flex items-center justify-between text-[#03335C] font-bold bg-white text-base hover:border-[#03335C] transition-colors disabled:opacity-50 disabled:bg-gray-50"
+                    >
+                      <span
+                        v-if="selectedResident"
+                        class="truncate text-[#03335C]"
+                        >{{ selectedResident.lastName }},
+                        {{ selectedResident.firstName }}</span
+                      >
+                      <span v-else class="text-gray-400 truncate opacity-60">{{
+                        !lastNameLetter || !firstNameLetter
+                          ? "Select initials first..."
+                          : "Select Resident..."
+                      }}</span>
+                      <ChevronDownIcon class="w-5 h-5 text-[#03335C]" />
                     </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="w-[340px] flex flex-col h-full">
-              <div
-                class="bg-[#EAF6FB] rounded-2xl p-6 border border-[#BDE0EF] h-[215px] flex flex-col justify-center"
-              >
-                <h3 class="text-2xl font-bold text-[#03335C] text-center mb-1">
-                  Resident Details
-                </h3>
-                <p
-                  class="text-center text-[#03335C] text-xs italic opacity-70 mb-5"
-                >
-                  Check details before proceeding
-                </p>
-                <div class="space-y-3 text-[#03335C]">
-                  <div class="flex items-center">
-                    <span class="w-28 font-bold text-sm">RFID No.:</span
-                    ><span class="font-medium text-sm">{{
-                      selectedResident?.rfid || "---"
-                    }}</span>
-                  </div>
-                  <div class="flex items-center">
-                    <span class="w-28 font-bold text-sm">Name:</span
-                    ><span class="font-medium text-sm truncate">{{
-                      selectedResident
-                        ? `${selectedResident.firstName} ${selectedResident.lastName}`
-                        : "---"
-                    }}</span>
-                  </div>
-                  <div class="flex items-center">
-                    <span class="w-28 font-bold text-sm">Address:</span
-                    ><span class="font-medium text-sm truncate">{{
-                      selectedResident?.address || "---"
-                    }}</span>
-                  </div>
-                  <div class="flex items-center">
-                    <span class="w-28 font-bold text-sm">Birthdate:</span
-                    ><span class="font-medium text-sm">{{
-                      selectedResident?.birthdate || "---"
-                    }}</span>
+                    <div
+                      v-if="showResidentDropdown"
+                      class="absolute top-full left-0 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-50 p-1 max-h-[150px] overflow-y-auto custom-scroll"
+                    >
+                      <div
+                        v-if="filteredResidents.length === 0"
+                        class="p-3 text-center text-gray-400 text-sm"
+                      >
+                        No records found
+                      </div>
+                      <button
+                        v-for="r in filteredResidents"
+                        :key="r.id"
+                        @click="selectResident(r)"
+                        class="w-full text-left py-2 px-4 hover:bg-blue-50 rounded-lg font-bold text-[#03335C] text-base border-b border-gray-50 last:border-0"
+                      >
+                        {{ r.lastName }}, {{ r.firstName }}
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -399,11 +460,11 @@ const selectResident = (resident) => {
 
           <div
             v-else-if="currentPhase === 'camera'"
-            class="flex w-full h-full gap-8 items-center justify-center animate-fadeIn"
+            class="flex w-full h-full gap-20 items-center justify-center animate-fadeIn"
           >
-            <div class="flex-1 flex justify-start items-center h-full relative">
+            <div class="flex-shrink-0 h-full relative">
               <div
-                class="h-full aspect-square bg-black rounded-3xl overflow-hidden relative border-[6px] border-gray-100 shadow-[inset_0_4px_20px_rgba(0,0,0,0.5)] flex items-center justify-center flex-shrink-0"
+                class="h-full aspect-square bg-black rounded-3xl overflow-hidden relative border-[6px] border-gray-100 shadow-[inset_0_4px_20px_rgba(0,0,0,0.5)] flex items-center justify-center"
               >
                 <video
                   v-show="!photoData"
@@ -444,7 +505,7 @@ const selectResident = (resident) => {
               </div>
             </div>
             <div
-              class="w-[340px] flex flex-col justify-center h-full flex-shrink-0"
+              class="w-[380px] flex flex-col justify-center h-full flex-shrink-0"
             >
               <div class="flex-1 flex flex-col justify-center">
                 <h2 class="text-3xl font-bold text-[#03335C] mb-1">
@@ -457,7 +518,7 @@ const selectResident = (resident) => {
                   class="bg-[#EAF6FB] rounded-2xl p-6 border border-[#BDE0EF]"
                 >
                   <p
-                    class="text-[#03335C] text-xs uppercase font-bold tracking-wider opacity-60 mb-2"
+                    class="text-[#03335C] text-xs uppercase font-bold tracking-wider opacity-60 mb-1"
                   >
                     Applying For:
                   </p>
@@ -532,6 +593,131 @@ const selectResident = (resident) => {
 
     <Transition name="fade-blur">
       <div
+        v-if="showVerificationModal"
+        class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-8 modal-backdrop"
+      >
+        <div
+          class="bg-white rounded-[28px] p-10 max-w-[500px] w-full shadow-2xl relative"
+        >
+          <h2 class="text-2xl font-bold text-[#03335C] mb-2">
+            Verify Identity
+          </h2>
+          <p class="text-gray-500 text-sm mb-6">
+            Please enter the birthdate for
+            <strong
+              >{{ selectedResident?.firstName }}
+              {{ selectedResident?.lastName }}</strong
+            >
+            to proceed.
+          </p>
+          <div class="flex gap-3 mb-4">
+            <div class="flex-1 relative">
+              <label
+                class="block text-[10px] font-bold text-gray-400 uppercase mb-1"
+                >Month</label
+              >
+              <button
+                @click="toggleDropdown('month')"
+                class="w-full h-11 border border-gray-300 rounded-xl px-3 flex items-center justify-between text-[#03335C] font-bold bg-white text-sm hover:border-[#03335C]"
+              >
+                {{
+                  months.find((m) => m.value === verifyMonth)?.name || "Select"
+                }}
+                <ChevronDownIcon class="w-4 h-4" />
+              </button>
+              <div
+                v-if="showMonthDropdown"
+                class="absolute top-full left-0 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-[60] p-1 flex flex-col h-40 overflow-y-auto custom-scroll"
+              >
+                <button
+                  v-for="m in months"
+                  :key="m.value"
+                  @click="selectMonth(m)"
+                  class="w-full text-left py-2 px-3 hover:bg-blue-50 rounded-lg font-bold text-[#03335C] text-sm"
+                >
+                  {{ m.name }}
+                </button>
+              </div>
+            </div>
+            <div class="flex-1 relative">
+              <label
+                class="block text-[10px] font-bold text-gray-400 uppercase mb-1"
+                >Day</label
+              >
+              <button
+                @click="toggleDropdown('day')"
+                class="w-full h-11 border border-gray-300 rounded-xl px-3 flex items-center justify-between text-[#03335C] font-bold bg-white text-sm hover:border-[#03335C]"
+              >
+                {{ verifyDay || "DD" }}
+                <ChevronDownIcon class="w-4 h-4" />
+              </button>
+              <div
+                v-if="showDayDropdown"
+                class="absolute top-full left-0 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-[60] p-1 flex flex-col h-40 overflow-y-auto custom-scroll"
+              >
+                <button
+                  v-for="d in days"
+                  :key="d"
+                  @click="selectDay(d)"
+                  class="w-full text-center py-2 hover:bg-blue-50 rounded-lg font-bold text-[#03335C] text-sm"
+                >
+                  {{ d }}
+                </button>
+              </div>
+            </div>
+            <div class="flex-1 relative">
+              <label
+                class="block text-[10px] font-bold text-gray-400 uppercase mb-1"
+                >Year</label
+              >
+              <button
+                @click="toggleDropdown('year')"
+                class="w-full h-11 border border-gray-300 rounded-xl px-3 flex items-center justify-between text-[#03335C] font-bold bg-white text-sm hover:border-[#03335C]"
+              >
+                {{ verifyYear || "YYYY" }}
+                <ChevronDownIcon class="w-4 h-4" />
+              </button>
+              <div
+                v-if="showYearDropdown"
+                class="absolute top-full left-0 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-[60] p-1 flex flex-col h-40 overflow-y-auto custom-scroll"
+              >
+                <button
+                  v-for="y in years"
+                  :key="y"
+                  @click="selectYear(y)"
+                  class="w-full text-center py-2 hover:bg-blue-50 rounded-lg font-bold text-[#03335C] text-sm"
+                >
+                  {{ y }}
+                </button>
+              </div>
+            </div>
+          </div>
+          <p
+            v-if="verificationError"
+            class="text-red-500 text-xs font-bold mb-4 animate-shake"
+          >
+            {{ verificationError }}
+          </p>
+          <div class="flex gap-4 mt-8">
+            <Button
+              variant="outline"
+              class="flex-1"
+              @click="showVerificationModal = false"
+              >Cancel</Button
+            >
+            <Button
+              variant="secondary"
+              class="flex-1"
+              @click="handleVerification"
+              >Verify & Proceed</Button
+            >
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+    <Transition name="fade-blur">
+      <div
         v-if="showSuccessModal"
         class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-8 modal-backdrop"
       >
@@ -544,6 +730,23 @@ const selectResident = (resident) => {
           :show-secondary-button="false"
           primary-button-text="Done"
           @primary-click="handleModalDone"
+        />
+      </div>
+    </Transition>
+
+    <Transition name="fade-blur">
+      <div
+        v-if="showErrorModal"
+        class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-8 modal-backdrop"
+      >
+        <Modal
+          title="Existing RFID Found"
+          message="This resident already has an existing RFID number. You cannot request a new card while an existing one is active. Please disable the current card first."
+          :show-reference-id="false"
+          :show-primary-button="true"
+          :show-secondary-button="false"
+          primary-button-text="Close"
+          @primary-click="showErrorModal = false"
         />
       </div>
     </Transition>
@@ -568,8 +771,6 @@ const selectResident = (resident) => {
   background-color: #bde0ef;
   border-radius: 20px;
 }
-
-/* FADE & BLUR TRANSITION */
 .modal-backdrop {
   backdrop-filter: blur(8px);
 }
@@ -589,7 +790,6 @@ const selectResident = (resident) => {
   opacity: 1;
   backdrop-filter: blur(8px);
 }
-
 .animate-fadeIn {
   animation: fadeIn 0.4s ease-out forwards;
 }
@@ -601,6 +801,28 @@ const selectResident = (resident) => {
   to {
     opacity: 1;
     transform: scale(1);
+  }
+}
+.animate-shake {
+  animation: shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+@keyframes shake {
+  10%,
+  90% {
+    transform: translate3d(-1px, 0, 0);
+  }
+  20%,
+  80% {
+    transform: translate3d(2px, 0, 0);
+  }
+  30%,
+  50%,
+  70% {
+    transform: translate3d(-4px, 0, 0);
+  }
+  40%,
+  60% {
+    transform: translate3d(4px, 0, 0);
   }
 }
 </style>

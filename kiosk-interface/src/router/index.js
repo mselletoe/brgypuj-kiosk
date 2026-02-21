@@ -1,8 +1,3 @@
-/**
- * @file router/index.js
- * @description Centralized routing configuration with Navigation Guards.
- */
-
 import { createRouter, createWebHistory } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import UserLayout from "@/layouts/UserLayout.vue";
@@ -29,18 +24,12 @@ import TransactionHistory from "../views/transactions/TransactionHistory.vue";
 
 // ID Services Views
 import IDServices from "../views/id-services/IDServices.vue";
-import RequestReplacement from "../views/id-services/RequestReplacement.vue";
 import ChangePasscode from "../views/id-services/ChangePasscode.vue";
 import ReportLost from "../views/id-services/ReportLost.vue";
 import ApplyID from "../views/id-services/ApplyID.vue";
 
 const routes = [
-  // Root Redirect: Kiosk starts at the Idle/Welcome screen
   { path: "/", redirect: "/idle" },
-
-  /**
-   * PUBLIC ROUTES
-   */
   { path: "/display", name: "Display", component: Display },
   { path: "/idle", name: "Idle", component: Idle },
   { path: "/announcements", name: "Announcements", component: Announcements },
@@ -53,31 +42,19 @@ const routes = [
     component: InAnnouncements,
   },
 
-  /**
-   * PROTECTED ROUTES (UserLayout)
-   */
   {
     path: "/",
     component: UserLayout,
     meta: { requiresAuth: true },
     children: [
       { path: "home", name: "Home", component: KioskHome },
-
-      // Document Services
       {
         path: "document-services",
         name: "DocumentServices",
         component: DocumentServices,
         children: [{ path: ":docType", component: DocumentFormWrapper }],
       },
-
-      // ID Services
       { path: "id-services", name: "IDServices", component: IDServices },
-      {
-        path: "id-services/replacement",
-        name: "RequestReplacement",
-        component: RequestReplacement,
-      },
       {
         path: "id-services/change-pin",
         name: "ChangePasscode",
@@ -92,10 +69,8 @@ const routes = [
         path: "id-services/apply",
         name: "ApplyID",
         component: ApplyID,
-        meta: { noBottomPadding: true }, // Removes bottom padding for this specific view
+        meta: { noBottomPadding: true },
       },
-
-      // Other Services
       {
         path: "equipment-borrowing",
         name: "EquipmentBorrowing",
@@ -119,7 +94,6 @@ const routes = [
     ],
   },
 
-  // Catch-all
   { path: "/:pathMatch(.*)*", redirect: "/idle" },
 ];
 
@@ -128,10 +102,8 @@ const router = createRouter({
   routes,
 });
 
-// Navigation Guard (CLEANED - NO BYPASS)
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore();
-
   if (!authStore.isAuthenticated) authStore.restore();
 
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {

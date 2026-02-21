@@ -7,7 +7,6 @@ import {
   UserCircleIcon,
   QrCodeIcon,
   ExclamationTriangleIcon,
-  ArrowPathIcon,
   LockClosedIcon,
   IdentificationIcon,
   PlusIcon,
@@ -16,22 +15,14 @@ import {
 const router = useRouter();
 const authStore = useAuthStore();
 
-// FIX: Use the correct store getter for guest mode
 const isGuest = computed(() => authStore.isGuest);
 
-// Navigation Functions
-const handleTopButton = () => {
-  if (isGuest.value) {
-    router.push("/id-services/apply");
-  } else {
-    router.push("/id-services/replacement");
-  }
-};
+// Both guest and logged-in users now use the Apply process
+const handleApplyRFID = () => router.push("/id-services/apply");
 
 const handleChangePasscode = () => router.push("/id-services/change-pin");
 const handleReportLost = () => router.push("/id-services/report-lost");
 
-// FIX: Map correctly to authStore.resident and authStore.rfidUid
 const resident = computed(() => {
   const res = authStore.resident || {};
   return {
@@ -108,7 +99,6 @@ const goBack = () => router.push("/home");
             >
               <UserCircleIcon class="w-24 h-24 opacity-80" />
             </div>
-
             <div class="flex-1 overflow-hidden">
               <p class="text-[11px] opacity-60 uppercase tracking-wider mb-1">
                 Full Name
@@ -184,24 +174,23 @@ const goBack = () => router.push("/home");
 
       <div class="flex flex-col gap-4 w-[350px]">
         <button
-          @click="handleTopButton"
+          @click="handleApplyRFID"
           class="flex-1 flex items-center px-6 bg-white rounded-2xl shadow-sm border-2 border-gray-100 active:border-[#21C05C] active:bg-gray-50 transition-all group text-left"
         >
           <div
             class="w-10 h-10 bg-green-50 rounded-full flex-shrink-0 flex items-center justify-center mr-3 group-active:bg-[#21C05C] transition-colors"
           >
-            <component
-              :is="isGuest ? PlusIcon : ArrowPathIcon"
-              class="w-6 h-6 text-[#21C05C] group-active:text-white"
-            />
+            <PlusIcon class="w-6 h-6 text-[#21C05C] group-active:text-white" />
           </div>
           <div class="flex-1">
             <h3 class="font-bold text-[#03335C] text-xl leading-tight">
-              {{ isGuest ? "Apply for RFID" : "Request Replacement" }}
+              Apply for RFID
             </h3>
             <p class="text-gray-500 text-sm mt-0.5">
               {{
-                isGuest ? "New resident application" : "Get a new physical card"
+                isGuest
+                  ? "New resident application"
+                  : "Replace or request new card"
               }}
             </p>
           </div>
