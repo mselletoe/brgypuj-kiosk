@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from "vue-router";
 import { useAdminAuthStore } from "@/stores/auth";
 
+<<<<<<< HEAD
 import AdminLayout from "@/layouts/AdminLayout.vue";
 import Overview from "@/views/Overview.vue";
 import DocumentRequests from "@/views/requests/document-requests/DocumentRequest.vue";
@@ -21,6 +22,27 @@ import FAQsManagement from "@/views/help-and-support/FAQsManagement.vue";
 import ContactInformation from "@/views/help-and-support/ContactInformation.vue";
 import ResidentsManagement from "@/views/residents-management/ResidentsManagement.vue";
 import BlotterAndKPLogs from "@/views/blotters-and-kp/BlotterAndKPLogs.vue";
+=======
+import AdminLayout from '@/layouts/AdminLayout.vue'
+import Overview from '@/views/Overview.vue'
+import DocumentRequests from '@/views/requests/document-requests/DocumentRequest.vue'
+import DocumentServices from '@/views/document-services/DocumentServices.vue'
+import KioskAnnouncements from '@/views/announcements/KioskAnnouncements.vue'
+import SMSAnnouncements from '@/views/announcements/SMSAnnouncements.vue'
+import Residents from '@/views/Residents.vue'
+import Auth from '@/views/Auth.vue'
+import CreateAccount from '@/views/CreateAccount.vue'
+import EquipmentInventory from '@/views/equipment-inventory/EquipmentInventory.vue'
+import SystemSettings from '@/views/settings/SystemSettings.vue'
+import EquipmentRequests from '@/views/requests/equipment-requests/EquipmentRequest.vue'
+import FeedbackAndReports from '@/views/feedback-and-reports/FeedbackAndReports.vue'
+import ComponentShowcase from '@/components/ComponentShowcase.vue'
+import AccountSettings from '@/views/settings/AccountSettings.vue'
+import HelpAndSupport from '@/views/Help&Support.vue'
+import FAQsManagement from '@/views/faqs-management/FAQsManagement.vue'
+import ResidentsManagement from '@/views/residents-management/ResidentsManagement.vue'
+import Notification from '@/views/notifications/Notification.vue'
+>>>>>>> 4c7ca6d04d82b78d2694f45f7cbb99505cadb0c7
 
 const routes = [
   {
@@ -38,8 +60,13 @@ const routes = [
   {
     path: "/",
     component: AdminLayout,
+<<<<<<< HEAD
     redirect: "/overview",
     meta: { requiresAuth: true },
+=======
+    redirect: '/overview',
+    meta: { requiresAuth: false },
+>>>>>>> 4c7ca6d04d82b78d2694f45f7cbb99505cadb0c7
     children: [
       { path: "overview", component: Overview },
 
@@ -62,6 +89,7 @@ const routes = [
         props: true,
       },
 
+<<<<<<< HEAD
       { path: "document-services", component: DocumentServices },
       { path: "kiosk-announcements", component: KioskAnnouncements },
       { path: "sms-announcements", component: SMSAnnouncements },
@@ -77,6 +105,22 @@ const routes = [
     ],
   },
 ];
+=======
+      { path: 'document-services', component: DocumentServices },
+      { path: 'kiosk-announcements', component: KioskAnnouncements },
+      { path: 'sms-announcements', component: SMSAnnouncements },
+      { path: 'residents-management', component: ResidentsManagement },
+      { path: 'equipment-inventory', component: EquipmentInventory },
+      { path: 'system-settings', component: SystemSettings },
+      { path: 'component-showcase', component: ComponentShowcase },
+      { path: 'account-settings', component: AccountSettings },
+      { path: 'notifications', component: Notification },
+      { path: 'help-and-support', component: HelpAndSupport },
+      { path: 'faqs-management', component: FAQsManagement }
+    ]
+  }
+]
+>>>>>>> 4c7ca6d04d82b78d2694f45f7cbb99505cadb0c7
 
 const router = createRouter({
   history: createWebHistory(),

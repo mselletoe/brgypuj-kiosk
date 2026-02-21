@@ -1,186 +1,237 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import commentSvg from '@/assets/vectors/Comment.svg?url' 
-import ArrowBackButton from '@/components/shared/ArrowBackButton.vue'
-import Button from '@/components/shared/Button.vue'
-import yellowStarSvg from '@/assets/vectors/YellowStar.svg?url'
-import Modal from '@/components/shared/Modal.vue'
-import { submitFeedback } from '@/api/feedbackService'
-import { useAuthStore } from '@/stores/auth'
+import { ref, onMounted, computed } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import commentSvg from "@/assets/vectors/Comment.svg?url";
+import ArrowBackButton from "@/components/shared/ArrowBackButton.vue";
+import Button from "@/components/shared/Button.vue";
+import yellowStarSvg from "@/assets/vectors/YellowStar.svg?url";
+import Modal from "@/components/shared/Modal.vue";
+import { submitFeedback } from "@/api/feedbackService";
+import { useAuthStore } from "@/stores/auth";
 
-const route = useRoute()
-const router = useRouter()
-const authStore = useAuthStore()
-const starCount = ref(0)
-const ratingText = ref('')
-const experienceCategory = ref('general')
-const additionalComments = ref('')
-const isSubmitting = ref(false)
+const route = useRoute();
+const router = useRouter();
+const authStore = useAuthStore();
+const starCount = ref(0);
+const ratingText = ref("");
+const experienceCategory = ref("general");
+const additionalComments = ref("");
+const isSubmitting = ref(false);
 
-const isModalVisible = ref(false)
+const isModalVisible = ref(false);
 
 const closeModal = () => {
-  isModalVisible.value = false
-  router.push({ path: '/feedback' })
-}
+  isModalVisible.value = false;
+  router.push({ path: "feedback" });
+};
 
 onMounted(() => {
   if (route.query.stars) {
-    starCount.value = Number(route.query.stars)
+    starCount.value = Number(route.query.stars);
   }
   if (route.query.ratingText) {
-    ratingText.value = route.query.ratingText
+    ratingText.value = route.query.ratingText;
   }
   if (route.query.category) {
-    experienceCategory.value = route.query.category
+    experienceCategory.value = route.query.category;
   }
-})
+});
 
 const ratingTextColor = computed(() => {
-    switch (starCount.value) {
-        case 1:
-            return '#CF1331'
-        case 2:
-            return '#D36F28'
-        case 3:
-            return '#FFCE0A'
-        case 4:
-            return '#97B13B'
-        case 5:
-            return '#21C05C'
-        default:
-            return '#003a6b'
-    }
-})
+  switch (starCount.value) {
+    case 1:
+      return "#CF1331";
+    case 2:
+      return "#D36F28";
+    case 3:
+      return "#FFCE0A";
+    case 4:
+      return "#97B13B";
+    case 5:
+      return "#21C05C";
+    default:
+      return "#003a6b";
+  }
+});
 
 const goBackToRating = () => {
-  router.push({ path: '/rating', query: { category: experienceCategory.value } })
-}
-
-const handleCancel = () => {
-  router.push({ path: '/feedback' })
-}
-
-const handleSubmit = async () => {
-  if (isSubmitting.value) return
-
-  isSubmitting.value = true
-
-  try {
-    const residentId = authStore.residentId
-
-    const payload = {
-      resident_id: residentId,
-      category: experienceCategory.value,
-      rating: starCount.value,
-      additional_comments: additionalComments.value || null
-    }
-
-    await submitFeedback(payload)
-    
-    isModalVisible.value = true
-  } catch (error) {
-    console.error('Failed to submit feedback:', error)
-    alert('Failed to submit feedback. Please try again.')
-  } finally {
-    isSubmitting.value = false
-  }
-}
+  router.go(-1);
+};
 </script>
 
-<template>
-  <div class="flex flex-col w-full h-full">
-    <!-- Header -->
-    <div class="flex items-center mb-6 gap-7 flex-shrink-0">
-      <ArrowBackButton @click="goBackToRating"/>
-      <div>
-        <h1 class="text-[45px] text-[#03335C] font-bold tracking-tight -mt-2">Share Your Thoughts</h1>
-        <p class="text-[#03335C] -mt-2">Tell us more about your experience</p>
-      </div>
-    </div>
+<style scoped>
+/* --- LAYOUT CHANGES: Locked screen, no scrollbar, padding for header --- */
+.feedback-layout {
+  position: fixed;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden !important;
+  background-color: #ffffff;
+  font-family: "Poppins";
+  color: #003a6b;
+  box-sizing: border-box;
+  /* Padding top 110px pushes content below the Global Header */
+  padding: 110px 2rem 2rem 2rem;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
 
-    <!-- Main -->
-    <div class="flex-1">
-      <!-- Rating display -->
-      <div class="flex flex-wrap items-center justify-center w-full mb-[23px] text-xl">
-        <h2 class="font-bold mr-[5px] whitespace-nowrap">
-          Your Rating:
-        </h2>
+/* Hide scrollbar for Chrome/Safari */
+.feedback-layout::-webkit-scrollbar {
+  display: none;
+}
 
-        <template v-for="n in Number(starCount)" :key="n">
-          <img
-            :src="yellowStarSvg"
-            alt="Yellow Star"
-            class="w-[22px] h-[22px] mx-[1px]"
-          />
-        </template>
+/* TYPOGRAPHY */
+.title-text {
+  font-size: 40px;
+  font-weight: 700;
+  line-height: 50px;
+  letter-spacing: -0.03em;
+  color: #003a6b;
+  margin: 0 0 3px 0;
+  text-align: center;
+  width: auto;
+  max-width: 100%;
+}
+.subtitle-text {
+  font-size: 13px;
+  text-align: center;
+  margin-bottom: 10px;
+  color: #003a6b;
+  font-weight: 500;
+  max-width: 100%;
+}
 
-        <h2
-          class="font-bold ml-[5px]"
-          :style="{ color: ratingTextColor }"
-        >
-          {{ ratingText }}
-        </h2>
-      </div>
+/* RATING DISPLAY */
+.rating-display-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 23px;
+  width: 100%;
+  flex-wrap: wrap;
+}
+.new-title-prefix {
+  font-size: 13px;
+  margin: 0 5px 0 0;
+  color: #003a6b;
+  font-weight: bold;
+  white-space: nowrap;
+}
+.new-title-text {
+  font-size: 13px;
+  margin: 0 0 0 5px;
+  font-weight: bold;
+  max-width: 100%;
+}
+.yellow-star-icon {
+  width: 22px;
+  height: 22px;
+  margin: 0 1px;
+}
 
-      <!-- Additional comments title -->
-      <div class="flex items-center w-full mb-2">
-        <img
-          :src="commentSvg"
-          alt="Comment Icon"
-          class="w-6 h-6 mr-[5px]"
-        />
-        <h3 class="text-[13px] font-bold text-left text-[#003a6b]">
-          Additional Comments (Optional)
-        </h3>
-      </div>
+/* INPUT & LABELS */
+.additional-title-wrapper {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: 816px;
+  margin-bottom: 10px;
+}
+.comment-icon {
+  width: 24px;
+  height: 24px;
+  margin-right: 5px;
+}
+.additional-title-text {
+  font-size: 13px;
+  margin: 0;
+  text-align: left;
+  color: #003a6b;
+  font-weight: bold;
+}
 
-      <!-- Textarea -->
-      <textarea
-        v-model="additionalComments"
-        class="w-full h-[200px] p-[15px]
-              bg-white text-[13px] text-[#003a6b]
-              border-2 border-[#003a6b] rounded-[10px]
-              shadow-[3px_3px_6px_rgba(0,0,0,0.2)]
-              resize-none outline-none box-border
-              placeholder:text-[#003a6b]"
-        placeholder="Share any specific suggestions, compliments, and concerns..."
-      ></textarea>
-    </div>
+.comments-input {
+  width: 100%;
+  max-width: 816px;
+  height: 200px;
+  background-color: #ffffff;
+  border: 2px solid #003a6b;
+  border-radius: 10px;
+  box-shadow: 3px 3px 6px rgba(0, 0, 0, 0.2);
+  font-family: "Poppins";
+  font-size: 13px;
+  font-weight: 400;
+  color: #003a6b;
+  padding: 15px;
+  resize: none;
+  outline: none;
+  flex-shrink: 0;
+  margin-bottom: 30px;
+  box-sizing: border-box;
+}
+.comments-input::placeholder {
+  color: #003a6b;
+  opacity: 1;
+}
 
-    <!-- Buttons -->
-    <div class="flex gap-6 mt-6 justify-between items-center bottom-0 flex-shrink-0">
-      <Button
-        variant="outline"
-        @click="handleCancel"
-        :disabled="isSubmitting"
-      >
-        Cancel
-      </Button>
-      <Button
-        variant="secondary"
-        @click="handleSubmit"
-        :disabled="isSubmitting"
-      >
-        {{ isSubmitting ? 'Submitting...' : 'Submit' }}
-      </Button>
-    </div>
+/* BUTTONS */
+.buttons-container {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 816px;
+}
+.back-button,
+.submit-button {
+  height: 40px;
+  padding: 0 25px;
+  border-radius: 10px;
+  box-shadow: 3px 3px 6px rgba(0, 0, 0, 0.2);
+  font-family: "Poppins";
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.2s,
+    color 0.2s,
+    border-color 0.2s;
+}
 
-    <!-- Modals -->
-    <div
-      v-if="isModalVisible"
-      class="fixed inset-0 z-[1000]
-            flex items-center justify-center
-            bg-black/40"
-    >
-      <Modal
-        title="Feedback Submitted!"
-        message="Thank you for taking the time to share your thoughts with us."
-        :showSecondaryButton="false"
-        primaryButtonText="Done"
-        @primary-click="closeModal"
-      />
-    </div>
-  </div>
-</template>
+.back-button {
+  background-color: #ffffff;
+  border: 1px solid #003a6b;
+  color: #003a6b;
+}
+.back-button:hover {
+  background-color: #f0f0f0;
+}
+
+.submit-button {
+  background-color: #003a6b;
+  border: 1px solid #003a6b;
+  color: #ffffff;
+}
+.submit-button:hover {
+  background-color: #002a4b;
+}
+
+/* MODAL OVERLAY */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+</style>
