@@ -17,7 +17,8 @@ import FeedbackAndReports from "@/views/feedback-and-reports/FeedbackAndReports.
 import ComponentShowcase from "@/components/ComponentShowcase.vue";
 import AccountSettings from "@/views/settings/AccountSettings.vue";
 import HelpAndSupport from "@/views/Help&Support.vue";
-import FAQsManagement from "@/views/faqs-management/FAQsManagement.vue";
+import FAQsManagement from "@/views/help-and-support/FAQsManagement.vue";
+import ContactInformation from "@/views/help-and-support/ContactInformation.vue";
 import ResidentsManagement from "@/views/residents-management/ResidentsManagement.vue";
 import BlotterAndKPLogs from "@/views/blotters-and-kp/BlotterAndKPLogs.vue";
 
@@ -71,6 +72,7 @@ const routes = [
       { path: "account-settings", component: AccountSettings },
       { path: "help-and-support", component: HelpAndSupport },
       { path: "faqs-management", component: FAQsManagement },
+      { path: "contact-information", component: ContactInformation },
       { path: "blotter-kp-logs", component: BlotterAndKPLogs },
     ],
   },
