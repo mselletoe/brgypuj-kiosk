@@ -1,49 +1,65 @@
 <script setup>
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import ArrowBackButton from '@/components/shared/ArrowBackButton.vue'
 import TransactionCard from '@/views/transactions/TransactionHistoryCard.vue'
-import { ref } from 'vue'
+import { useAuthStore } from '@/stores/auth'
+import { getTransactionHistory } from '@/api/transactionService'
 
 const router = useRouter()
+const auth = useAuthStore()
 const goBack = () => router.push('/home')
 
-const transactions = ref([
-  {
-    id: 1,
-    type: 'document',
-    reference: 'DR-0010',
-    title: 'Barangay Clearance',
-    rfidNo: 'A3F9-2C11-8E40',
-    createdAt: '2024-09-09',
-    status: 'completed'
-  },
-  {
-    id: 2,
-    type: 'equipment',
-    reference: 'EB-1023',
-    title: '2x Tents, 30x Monoblocs',
-    rfidNo: 'B7D1-4A02-1F93',
-    createdAt: '2024-09-09',
-    status: 'completed'
-  },
-  {
-    id: 3,
-    type: 'document',
-    reference: 'DR-1291',
-    title: 'Barangay Clearance',
-    rfidNo: 'C2E5-9B34-7D61',
-    createdAt: '2024-09-09',
-    status: 'rejected'
-  },
-  {
-    id: 4,
-    type: 'rfid',
-    title: 'Gate Entry Log',
-    rfidNo: 'D8F3-1C57-2A84',
-    createdAt: '2024-09-10',
-    status: 'completed'
+const transactions = ref([])
+const isLoading = ref(false)
+const error = ref(null)
+
+/**
+ * Maps the backend response shape to the props TransactionHistoryCard expects.
+ *
+ * Backend sends:
+ *   { id, transaction_type, transaction_name, transaction_no,
+ *     rfid_uid, status, created_at }
+ *
+ * Card expects:
+ *   { id, type, title, reference, rfidNo, createdAt, status }
+ */
+function mapTransaction(entry) {
+  return {
+    id:        entry.id,
+    type:      entry.transaction_type,               // "document" | "equipment" | "rfid"
+    title:     entry.transaction_name,               // "Barangay Clearance" / "2x Tent, …"
+    reference: entry.transaction_no,                 // "DR-0010" / "EB-1023"
+    rfidNo:    entry.rfid_uid ?? null,
+    createdAt: formatDate(entry.created_at),
+    status:    entry.status.toLowerCase(),           // "completed" | "rejected"
   }
-])
+}
+
+function formatDate(isoString) {
+  if (!isoString) return '—'
+  return new Date(isoString).toLocaleDateString('en-PH', {
+    year: 'numeric', month: 'short', day: 'numeric'
+  })
+}
+
+async function fetchHistory() {
+  if (!auth.residentId) return
+
+  isLoading.value = true
+  error.value = null
+
+  try {
+    const data = await getTransactionHistory(auth.residentId)
+    transactions.value = data.map(mapTransaction)
+  } catch (err) {
+    error.value = 'Failed to load transaction history. Please try again.'
+  } finally {
+    isLoading.value = false
+  }
+}
+
+onMounted(fetchHistory)
 </script>
 
 <template>
@@ -63,7 +79,24 @@ const transactions = ref([
 
     <!-- WHITE CONTAINER -->
     <div class="flex flex-col w-full bg-white p-8 shadow-lg rounded-2xl border border-gray-200 overflow-y-auto mb-3">
-      <div class="flex flex-col gap-4 w-full">
+
+      <!-- Loading state -->
+      <div v-if="isLoading" class="flex justify-center items-center py-16">
+        <p class="text-[#03335C] text-base font-medium">Loading transactions…</p>
+      </div>
+
+      <!-- Error state -->
+      <div v-else-if="error" class="flex justify-center items-center py-16">
+        <p class="text-red-500 text-base font-medium">{{ error }}</p>
+      </div>
+
+      <!-- Empty state -->
+      <div v-else-if="transactions.length === 0" class="flex justify-center items-center py-16">
+        <p class="text-gray-400 text-base font-medium">No transactions found.</p>
+      </div>
+
+      <!-- Transaction list -->
+      <div v-else class="flex flex-col gap-4 w-full">
         <TransactionCard
           v-for="item in transactions"
           :key="item.id"
@@ -75,7 +108,7 @@ const transactions = ref([
           :status="item.status"
         />
       </div>
-    </div>
 
+    </div>
   </div>
 </template>

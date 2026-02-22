@@ -58,6 +58,19 @@ def _entry_exists(db: Session, transaction_no: str) -> bool:
     )
 
 
+def _build_equipment_title(request) -> str:
+    """
+    Builds a human-readable summary of the borrowed items.
+    e.g. "2x Tent, 30x Monobloc Chair"
+    Falls back to "Equipment Request" if items are not loaded.
+    """
+    try:
+        parts = [f"{item.quantity}x {item.item_name}" for item in request.items]
+        return ", ".join(parts) if parts else "Equipment Request"
+    except Exception:
+        return "Equipment Request"
+
+
 # -------------------------------------------------
 # Writers (called from document_service / equipment_service)
 # -------------------------------------------------
@@ -73,7 +86,7 @@ def record_document_transaction(db: Session, request) -> None:
 
     Args:
         db: Active database session.
-        request: DocumentRequest ORM instance (with .resident eagerly loaded).
+        request: DocumentRequest ORM instance (with .resident and .doctype eagerly loaded).
     """
     history_status = DOCUMENT_STATUS_MAP.get(request.status)
     if not history_status:
@@ -85,8 +98,16 @@ def record_document_transaction(db: Session, request) -> None:
     # Snapshot the RFID at this moment in time
     rfid_uid = _get_resident_rfid(request.resident) if request.resident else None
 
+    # Use the specific document type name (e.g. "Barangay Clearance") as the title.
+    # Falls back to the generic label if the relationship isn't loaded.
+    try:
+        transaction_name = request.doctype.doctype_name
+    except Exception:
+        transaction_name = "Document Request"
+
     entry = TransactionHistory(
-        transaction_name="Document Request",
+        transaction_type="document",          # ← clean type enum for the frontend
+        transaction_name=transaction_name,    # ← e.g. "Barangay Clearance"
         transaction_no=request.transaction_no,
         resident_id=request.resident_id,
         rfid_uid=rfid_uid,
@@ -107,7 +128,7 @@ def record_equipment_transaction(db: Session, request) -> None:
 
     Args:
         db: Active database session.
-        request: EquipmentRequest ORM instance (with .resident eagerly loaded).
+        request: EquipmentRequest ORM instance (with .resident and .items eagerly loaded).
     """
     history_status = EQUIPMENT_STATUS_MAP.get(request.status)
     if not history_status:
@@ -119,8 +140,12 @@ def record_equipment_transaction(db: Session, request) -> None:
     # Snapshot the RFID at this moment in time
     rfid_uid = _get_resident_rfid(request.resident) if request.resident else None
 
+    # Build a readable item summary as the title (e.g. "2x Tent, 30x Monobloc Chair")
+    transaction_name = _build_equipment_title(request)
+
     entry = TransactionHistory(
-        transaction_name="Equipment Request",
+        transaction_type="equipment",         # ← clean type enum for the frontend
+        transaction_name=transaction_name,    # ← e.g. "2x Tent, 30x Monobloc Chair"
         transaction_no=request.transaction_no,
         resident_id=request.resident_id,
         rfid_uid=rfid_uid,
@@ -137,7 +162,8 @@ def record_equipment_transaction(db: Session, request) -> None:
 #         return
 #     rfid_uid = activity.rfid_uid  # Already known from the activity itself
 #     entry = TransactionHistory(
-#         transaction_name="RFID Activity",
+#         transaction_type="rfid",
+#         transaction_name="Gate Entry Log",
 #         transaction_no=activity.transaction_no,
 #         resident_id=activity.resident_id,
 #         rfid_uid=rfid_uid,
@@ -168,9 +194,10 @@ def get_transaction_history(db: Session, resident_id: int) -> list[dict]:
     return [
         {
             "id": entry.id,
-            "transaction_name": entry.transaction_name,
+            "transaction_type": entry.transaction_type,   # "document" | "equipment" | "rfid"
+            "transaction_name": entry.transaction_name,   # e.g. "Barangay Clearance"
             "transaction_no": entry.transaction_no,
-            "rfid_uid": entry.rfid_uid,     # Snapshotted value — no join needed
+            "rfid_uid": entry.rfid_uid,
             "status": entry.status,
             "created_at": entry.created_at,
         }

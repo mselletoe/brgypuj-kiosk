@@ -28,8 +28,8 @@ const statusText = computed(() => props.status === 'completed' ? 'Completed' : '
 
 const typeLabel = computed(() => {
   switch (props.type) {
-    case 'document':  return 'Document Transaction'
-    case 'equipment': return 'Equipment Transaction'
+    case 'document':  return 'Document Request'
+    case 'equipment': return 'Equipment Request'
     case 'rfid':      return 'RFID Activity'
     default:          return ''
   }
