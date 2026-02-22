@@ -5,3 +5,4 @@ from .equipment import EquipmentInventory, EquipmentRequest, EquipmentRequestIte
 from .announcement import Announcement
 from .misc import Feedback, RFIDReport
 from .blotter import BlotterRecord
+from .transaction import TransactionHistory 

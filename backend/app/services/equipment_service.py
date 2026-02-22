@@ -6,7 +6,7 @@ configuration of equipment inventory and resident-facing borrowing request proce
 """
 import random
 from datetime import datetime
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import and_
 from fastapi import HTTPException, status
 from app.models.equipment import EquipmentInventory, EquipmentRequest, EquipmentRequestItem
@@ -18,7 +18,7 @@ from app.schemas.equipment import (
     EquipmentInventoryUpdate,
     EquipmentAutofillData,
 )
-
+from app.services.transaction_service import record_equipment_transaction
 
 # -------------------------------------------------
 # Internal Helpers
@@ -349,7 +349,12 @@ def bulk_delete_equipment_inventory(db: Session, ids: list[int]):
 # -------------------------------------------------
 
 def _get_request(db: Session, request_id: int):
-    return db.query(EquipmentRequest).filter(EquipmentRequest.id == request_id).first()
+    return (
+        db.query(EquipmentRequest)
+        .options(joinedload(EquipmentRequest.resident).joinedload(Resident.rfids))
+        .filter(EquipmentRequest.id == request_id)
+        .first()
+    )
 
 
 def get_all_equipment_requests(db: Session):
@@ -406,6 +411,8 @@ def reject_equipment_request(db: Session, request_id: int):
 
     req.status = "Rejected"
     db.commit()
+    db.refresh(req)
+    record_equipment_transaction(db, req)
     return True
 
 
@@ -441,6 +448,8 @@ def mark_as_returned(db: Session, request_id: int):
     req.status = "Returned"
     req.returned_at = datetime.now()
     db.commit()
+    db.refresh(req)
+    record_equipment_transaction(db, req)
     return True
 
 

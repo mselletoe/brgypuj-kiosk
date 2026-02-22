@@ -11,7 +11,7 @@ import os
 import platform
 from io import BytesIO
 from datetime import datetime
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from fastapi import HTTPException, status
 from docxtpl import DocxTemplate
 from app.models.document import DocumentType, DocumentRequest
@@ -26,6 +26,7 @@ from app.schemas.document import (
     RequirementCheckResult
 )
 from pathlib import Path
+from app.services.transaction_service import record_document_transaction
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 PDF_STORAGE_DIR = BASE_DIR / "storage" / "documents"
@@ -641,7 +642,12 @@ def delete_document_type(db: Session, doctype_id: int):
 
 
 def _get_request(db: Session, request_id: int):
-    return db.query(DocumentRequest).filter(DocumentRequest.id == request_id).first()
+    return (
+        db.query(DocumentRequest)
+        .options(joinedload(DocumentRequest.resident).joinedload(Resident.rfids))
+        .filter(DocumentRequest.id == request_id)
+        .first()
+    )
 
 
 def get_all_document_requests(db: Session):
@@ -760,6 +766,8 @@ def reject_request(db: Session, request_id: int):
         return False
     req.status = "Rejected"
     db.commit()
+    db.refresh(req)
+    record_document_transaction(db, req)
     return True
 
 
@@ -769,6 +777,8 @@ def release_request(db: Session, request_id: int):
         return False
     req.status = "Released"
     db.commit()
+    db.refresh(req)
+    record_document_transaction(db, req)
     return True
 
 

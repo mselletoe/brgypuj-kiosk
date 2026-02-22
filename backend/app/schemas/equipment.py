@@ -102,7 +102,6 @@ class EquipmentRequestCreate(EquipmentRequestBase):
     """
     Validation schema for incoming Kiosk submissions.
     Includes the resident_id linked to the authenticated RFID session.
-    resident_id can be None for guest mode.
     """
     resident_id: int
     use_autofill: bool = False  # Whether to use resident data for autofill
