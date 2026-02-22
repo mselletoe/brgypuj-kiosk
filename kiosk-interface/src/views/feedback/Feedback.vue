@@ -54,7 +54,7 @@ const goBack = () => {
         style="background: linear-gradient(to bottom, #2B6194, #1E466B);"
       >
         <img :src="item.icon" :alt="item.name" class="w-1/2 mb-6 brightness-0 invert" />
-        <p class="text-white text-[24px] font-bold text-center leading-tight px-4" v-html="item.label"></p>
+        <p class="text-white text-[18px] font-bold text-center leading-tight px-4" v-html="item.label"></p>
       </div>
     </div>
   </div>

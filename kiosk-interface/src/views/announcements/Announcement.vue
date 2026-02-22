@@ -1,86 +1,88 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { SpeakerWaveIcon, SpeakerXMarkIcon } from '@heroicons/vue/24/solid'
 import logoPath from '@/assets/images/Pob1Logo.svg'
 import ArrowBackButton from '@/components/shared/ArrowBackButton.vue'
-import lnk from '@/assets/images/lnk.jpg'
-import ugnayan from '@/assets/images/ugnayan.jpg'
-import odl from '@/assets/images/odl.jpg'
-import mlp from '@/assets/images/mlp.png'
-import ganda from '@/assets/images/ig.png'
+import { getActiveAnnouncements } from '@/api/announcementService'
 
 const isMuted = ref(false)
 const router = useRouter()
+
+const announcements = ref([])
+const loading = ref(true)
+const error = ref(null)
+
 const currentLang = ref('FIL')
 
 const toggleMute = () => (isMuted.value = !isMuted.value)
 const toggleLang = () =>
   (currentLang.value = currentLang.value === 'FIL' ? 'ENG' : 'FIL')
-
 const goBack = () => router.push('/home')
 
-const announcements = ref([
-  {
-    id: 1,
-    title: 'Linggo ng Kabataan Awarding',
-    date: 'October 18, 2025, Saturday',
-    location: 'Barangay Hall of Poblacion I',
-    time: '9:00 AM Onwards',
-    image: lnk
-  },
-  {
-    id: 2,
-    title: 'Ugnayan sa Barangay',
-    date: 'October 5, 2025, Sunday',
-    location: 'Municipal Covered Court',
-    time: '8:30 AM - 12:00 PM',
-    image: ugnayan
-  },
-  {
-    id: 3,
-    title: 'One Day Basketball League',
-    date: 'October 12, 2025, Sunday',
-    location: 'Loma Covered Court',
-    time: '9:00 AM Onwards',
-    image: odl
-  },
-  {
-    id: 4,
-    title: 'My Little Pony',
-    date: 'October 12, 2025, Sunday',
-    location: 'Loma Covered Court',
-    time: '9:00 AM Onwards',
-    image: mlp
-  },
-  {
-    id: 5,
-    title: 'IG ni Ganda',
-    date: 'March 23, 2026, Monday',
-    location: 'Amadeo, Cavite',
-    time: '9:00 AM Onwards',
-    image: ganda
+// ── Image helper ──────────────────────────────────────────────
+const getImageUrl = (base64) => {
+  if (!base64) return null
+  return `data:image/jpeg;base64,${base64}`
+}
+
+// ── Date / Time formatters ────────────────────────────────────
+const formatDate = (date) => {
+  if (!date) return ''
+  return new Date(date + 'T00:00:00').toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  })
+}
+
+const formatDay = (date) => {
+  if (!date) return ''
+  return new Date(date + 'T00:00:00').toLocaleDateString('en-US', {
+    weekday: 'long',
+  })
+}
+
+// ── Fetch ─────────────────────────────────────────────────────
+const fetchAnnouncements = async () => {
+  try {
+    loading.value = true
+    error.value = null
+    const data = await getActiveAnnouncements()
+    announcements.value = data
+  } catch (err) {
+    console.error('Failed to fetch announcements:', err)
+    error.value = 'Unable to load announcements. Please try again later.'
+    setTimeout(fetchAnnouncements, 10000)
+  } finally {
+    loading.value = false
   }
-])
+}
 
+let pollInterval = null
+
+onMounted(() => {
+  fetchAnnouncements()
+  pollInterval = setInterval(fetchAnnouncements, 300000)
+})
+
+onBeforeUnmount(() => {
+  if (pollInterval) clearInterval(pollInterval)
+})
+
+// ── Carousel logic ────────────────────────────────────────────
 const activeIndex = ref(0)
-
-// displayIndex updates immediately when a slide is triggered so dots move with the cards
 const displayIndex = ref(0)
-
-// Track sliding animation state
 const isAnimating = ref(false)
 const translateX = ref(0)
 
-// Card width + gap
 const CARD_W = 420
 const GAP = 32
 const CARD_SLOT = CARD_W + GAP
 
-// Always render exactly 5 cards (-2,-1,0,+1,+2) around active.
-// Viewport clips to 3 cards wide. Track always full — no blank edges.
 const windowItems = computed(() => {
   const total = announcements.value.length
+  if (total === 0) return []
   return [-2, -1, 0, 1, 2].map(offset => {
     const idx = (activeIndex.value + offset + total) % total
     return { ...announcements.value[idx], _offset: offset }
@@ -92,7 +94,6 @@ const animateTo = (direction) => {
   isAnimating.value = true
   translateX.value = -direction * CARD_SLOT
 
-  // Update displayIndex immediately so dots move with the sliding cards
   displayIndex.value =
     (displayIndex.value + direction + announcements.value.length) %
     announcements.value.length
@@ -112,68 +113,6 @@ const prevSlide = () => animateTo(-1)
 const setSlide = (index) => {
   if (isAnimating.value || index === displayIndex.value) return
   animateTo(index > displayIndex.value ? 1 : -1)
-}
-
-// ── Language helpers ──────────────────────────────────────────────
-
-const isFil = computed(() => currentLang.value === 'FIL')
-
-// Filipino month names
-const filMonths = {
-  January: 'Enero', February: 'Pebrero', March: 'Marso',
-  April: 'Abril', May: 'Mayo', June: 'Hunyo',
-  July: 'Hulyo', August: 'Agosto', September: 'Setyembre',
-  October: 'Oktubre', November: 'Nobyembre', December: 'Disyembre'
-}
-
-// "October 18, 2025, Saturday" → "Ika-18 ng Oktubre, 2025"
-const translateDate = (dateStr) => {
-  if (!isFil.value) return dateStr
-  const match = dateStr.match(/^(\w+)\s+(\d+),\s+(\d{4})/)
-  if (!match) return dateStr
-  const [, month, day, year] = match
-  const filMonth = filMonths[month] || month
-  return `Ika-${day} ng ${filMonth}, ${year}`
-}
-
-// Returns "umaga", "tanghali", "hapon", or "gabi" based on hour + period
-const getPartOfDay = (clock, period) => {
-  const hour = parseInt(clock.split(':')[0])
-  if (period.toUpperCase() === 'AM') return 'umaga'
-  if (hour === 12) return 'tanghali'
-  if (hour >= 6) return 'gabi'
-  return 'hapon'
-}
-
-// Translates a single time token e.g. "9:00 AM" → "Ika-9:00 ng umaga"
-const translateSingle = (t) => {
-  const m = t.trim().match(/^(\d+:\d+)\s*(AM|PM)$/i)
-  if (!m) return t.trim()
-  const [, clock, period] = m
-  return `Ika-${clock} ng ${getPartOfDay(clock, period)}`
-}
-
-// "9:00 AM Onwards"    → "Mula Ika-9:00 ng umaga"
-// "8:30 AM - 12:00 PM" → "Ika-8:30 ng umaga - Ika-12:00 ng tanghali"
-const translateTime = (timeStr) => {
-  if (!isFil.value) return timeStr
-
-  if (timeStr.toLowerCase().includes('onwards')) {
-    const timePart = timeStr.replace(/\s*onwards/i, '').trim()
-    return `Mula ${translateSingle(timePart)}`
-  }
-
-  if (timeStr.includes(' - ')) {
-    return timeStr.split(' - ').map(translateSingle).join(' - ')
-  }
-
-  return translateSingle(timeStr)
-}
-
-// "Barangay Hall of Poblacion I" → "Barangay Hall ng Poblacion I"
-const translateLocation = (location) => {
-  if (!isFil.value) return location
-  return location.replace('Barangay Hall of', 'Barangay Hall ng')
 }
 </script>
 
@@ -222,7 +161,7 @@ const translateLocation = (location) => {
             }"
           ></div>
 
-          <!-- Labels — always visible, color changes based on which side is active -->
+          <!-- Labels -->
           <div
             class="flex-1 flex items-center justify-center font-bold rounded-xl"
             style="position: relative; z-index: 1; transition: color 0.3s ease;"
@@ -244,121 +183,153 @@ const translateLocation = (location) => {
     <!-- MAIN -->
     <main class="flex flex-col flex-1">
 
-      <!-- BACK BUTTON + TITLE on the same row -->
+      <!-- BACK BUTTON + TITLE -->
       <div class="flex items-center justify-between mb-6">
         <ArrowBackButton @click="goBack" />
 
         <h1
           class="text-[45px] font-bold text-center leading-[0.95]
           bg-gradient-to-r from-[#03335C] to-[#3291E3]
-          bg-clip-text text-transparent lang-fade"
+          bg-clip-text text-transparent"
         >
-          <template v-if="isFil">
-            MGA ANUNSYO NG<br /> BARANGAY
-          </template>
-          <template v-else>
-            BARANGAY <br /> ANNOUNCEMENTS
-          </template>
+          BARANGAY <br /> ANNOUNCEMENTS
         </h1>
 
-        <!-- Invisible spacer to keep title truly centered -->
         <div style="visibility: hidden; pointer-events: none;">
           <ArrowBackButton />
         </div>
       </div>
 
-      <!-- CAROUSEL -->
-      <div class="flex flex-1 items-center justify-center gap-4">
+      <!-- LOADING STATE -->
+      <div
+        v-if="loading"
+        class="flex-1 flex items-center justify-center"
+      >
+        <div class="text-center">
+          <div class="inline-block h-14 w-14 animate-spin rounded-full border-4 border-solid border-[#03335C] border-r-transparent"></div>
+          <p class="text-[#03335C] text-lg mt-4 font-semibold">Loading announcements...</p>
+        </div>
+      </div>
 
-        <!-- LEFT ARROW — flex-shrink-0 so it never gets squeezed off screen -->
-        <button
-          v-if="announcements.length > 1"
-          @click.stop.prevent="prevSlide"
-          class="text-[#03335C] transition-opacity duration-300 hover:opacity-100 opacity-70 flex-shrink-0"
-        >
-          <svg class="w-16 h-16" fill="currentColor" viewBox="0 0 20 20">
-            <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+      <!-- ERROR STATE -->
+      <div
+        v-else-if="error"
+        class="flex-1 flex items-center justify-center"
+      >
+        <div class="text-center px-6">
+          <svg class="w-16 h-16 text-red-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
-        </button>
+          <h2 class="text-[#03335C] text-2xl font-bold mb-2">Connection Error</h2>
+          <p class="text-[#03335C] text-lg opacity-80">{{ error }}</p>
+          <p class="text-[#03335C] text-sm mt-3 opacity-60">Retrying automatically...</p>
+        </div>
+      </div>
 
-        <!--
-          Viewport: flex-1 fills all remaining space between the arrows.
-          overflow-hidden clips the sliding track.
-          mask-image fades edges to transparent — solid center, fade to nothing on sides.
-          Fully responsive at any screen size.
-        -->
-        <div
-          class="flex-1 overflow-hidden"
-          style="
-            mask-image: linear-gradient(to right, transparent 0%, black 22%, black 78%, transparent 100%);
-            -webkit-mask-image: linear-gradient(to right, transparent 0%, black 22%, black 78%, transparent 100%);
-          "
-        >
-          <!-- Centering wrapper keeps the 5-card track centered. Flexbox places card[2] at center. -->
-          <div class="flex items-center justify-center">
-            <!-- Sliding track: translateX shifts ±CARD_SLOT, snaps back after animation -->
-            <div
-              class="flex flex-shrink-0"
-              :style="{
-                gap: `${GAP}px`,
-                transform: `translateX(${translateX}px)`,
-                transition: isAnimating ? 'transform 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94)' : 'none'
-              }"
-            >
+      <!-- NO ANNOUNCEMENTS -->
+      <div
+        v-else-if="announcements.length === 0"
+        class="flex-1 flex items-center justify-center"
+      >
+        <div class="text-center">
+          <p class="text-[#03335C] text-2xl font-semibold opacity-70">No announcements available.</p>
+          <p class="text-[#03335C] text-base mt-2 opacity-50">Check back later for updates.</p>
+        </div>
+      </div>
+
+      <!-- CAROUSEL -->
+      <template v-else>
+        <div class="flex flex-1 items-center justify-center gap-4">
+
+          <!-- LEFT ARROW -->
+          <button
+            v-if="announcements.length > 1"
+            @click.stop.prevent="prevSlide"
+            class="text-[#03335C] transition-opacity duration-300 hover:opacity-100 opacity-70 flex-shrink-0"
+          >
+            <svg class="w-16 h-16" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+            </svg>
+          </button>
+
+          <!-- VIEWPORT -->
+          <div
+            class="flex-1 overflow-hidden"
+            style="
+              mask-image: linear-gradient(to right, transparent 0%, black 15%, black 85%, transparent 100%);
+              -webkit-mask-image: linear-gradient(to right, transparent 0%, black 15%, black 85%, transparent 100%);
+            "
+          >
+            <div class="flex items-center justify-center">
               <div
-                v-for="(item) in windowItems"
-                :key="`${item.id}-${item._offset}`"
-                class="h-[300px] flex-shrink-0 text-white rounded-3xl overflow-hidden"
+                class="flex flex-shrink-0"
                 :style="{
-                  width: `${CARD_W}px`,
-                  backgroundImage: `url(${item.image})`,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  position: 'relative'
+                  gap: `${GAP}px`,
+                  transform: `translateX(${translateX}px)`,
+                  transition: isAnimating ? 'transform 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94)' : 'none'
                 }"
               >
-                <!-- Dark content overlay -->
                 <div
-                  class="h-full w-full flex flex-col items-center justify-center text-center px-10"
-                  style="background: rgba(3, 51, 92, 0.75);"
+                  v-for="item in windowItems"
+                  :key="`${item.id}-${item._offset}`"
+                  class="h-[300px] flex-shrink-0 text-white rounded-3xl overflow-hidden"
+                  :style="{
+                    width: `${CARD_W}px`,
+                    backgroundImage: item.image_base64
+                      ? `url(${getImageUrl(item.image_base64)})`
+                      : 'none',
+                    backgroundColor: item.image_base64 ? undefined : '#03335C',
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    position: 'relative'
+                  }"
                 >
-                  <h2 class="text-[34px] font-extrabold leading-tight mb-3 lang-fade">
-                    {{ item.title }}
-                  </h2>
-                  <p class="text-[16px] lang-fade">{{ translateDate(item.date) }}</p>
-                  <p class="text-[16px] lang-fade">{{ translateLocation(item.location) }}</p>
-                  <p class="text-[16px] lang-fade">{{ translateTime(item.time) }}</p>
+                  <!-- Dark overlay + content -->
+                  <div
+                    class="h-full w-full flex flex-col items-center justify-center text-center px-10"
+                    style="background: rgba(3, 51, 92, 0.75);"
+                  >
+                    <h2 class="text-[34px] font-extrabold leading-tight mb-3">
+                      {{ item.title }}
+                    </h2>
+                    <p v-if="item.event_date" class="text-[16px]">
+                      {{ formatDate(item.event_date) }}, {{ formatDay(item.event_date) }}
+                    </p>
+                    <p v-if="item.location" class="text-[16px]">{{ item.location }}</p>
+                    <p v-if="item.event_time" class="text-[16px]">{{ item.event_time }}</p>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
+
+          <!-- RIGHT ARROW -->
+          <button
+            v-if="announcements.length > 1"
+            @click.stop.prevent="nextSlide"
+            class="text-[#03335C] transition-opacity duration-300 hover:opacity-100 opacity-70 flex-shrink-0"
+          >
+            <svg class="w-16 h-16" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+            </svg>
+          </button>
+
         </div>
 
-        <!-- RIGHT ARROW — flex-shrink-0 so it never gets squeezed off screen -->
-        <button
-          v-if="announcements.length > 1"
-          @click.stop.prevent="nextSlide"
-          class="text-[#03335C] transition-opacity duration-300 hover:opacity-100 opacity-70 flex-shrink-0"
-        >
-          <svg class="w-16 h-16" fill="currentColor" viewBox="0 0 20 20">
-            <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
-          </svg>
-        </button>
+        <!-- DOTS -->
+        <div class="flex justify-center gap-2 mt-6">
+          <button
+            v-for="(item, index) in announcements"
+            :key="item.id"
+            @click="setSlide(index)"
+            class="h-3 rounded-full transition-all duration-300 ease-in-out"
+            :class="index === displayIndex
+              ? 'bg-[#1B5886] w-7'
+              : 'border-[#1B5886] w-3 border-[2px]'"
+          />
+        </div>
+      </template>
 
-      </div>
-
-      <!-- DOTS — bound to displayIndex so they move immediately with the cards -->
-      <div class="flex justify-center gap-2 mt-6">
-        <button
-          v-for="(item, index) in announcements"
-          :key="item.id"
-          @click="setSlide(index)"
-          class="h-3 rounded-full transition-all duration-300 ease-in-out"
-          :class="index === displayIndex
-            ? 'bg-[#1B5886] w-7'
-            : 'border-[#1B5886] w-3 border-[2px]'"
-        />
-      </div>
     </main>
   </div>
 </template>
@@ -366,10 +337,5 @@ const translateLocation = (location) => {
 <style scoped>
 .announcement-page {
   background: radial-gradient(circle at top left, #3291E3 0%, #ffffff 44%);
-}
-
-/* Smooth fade transition on all translated text when language toggles */
-.lang-fade {
-  transition: opacity 0.35s ease;
 }
 </style>

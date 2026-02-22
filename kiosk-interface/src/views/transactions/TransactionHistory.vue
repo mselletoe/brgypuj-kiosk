@@ -53,7 +53,7 @@ const transactions = ref([
 
     <!-- WHITE CONTAINER -->
     <div
-      class="flex flex-col w-full bg-white rounded-2xl border-[#C1C1C1] border-[2px]"
+      class="flex flex-col w-full bg-white rounded-2xl shadow-lg border border-gray-200 p-4"
       style="padding: 35px; box-shadow: 0 15px 40px rgba(0,1,4,0.1);"
     >
       <div class="flex flex-col gap-6 w-full">

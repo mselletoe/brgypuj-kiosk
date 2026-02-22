@@ -37,7 +37,7 @@ const goBack = () => router.push("/home");
 </script>
 
 <template>
-  <div class="flex flex-col w-full h-full bg-white overflow-hidden select-none">
+  <div class="flex flex-col w-full h-full">
     <div class="flex items-center mb-4 gap-7 flex-shrink-0">
       <ArrowBackButton @click="goBack" />
       <div>

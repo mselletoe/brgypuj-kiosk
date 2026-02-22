@@ -161,12 +161,12 @@ const role = computed(() => adminAuth.admin?.role || 'Administrator')
         @select="handleSelect"
         placement="bottom-end"
       >
-        <button class="btn btn-sm btn-ghost px-2 rounded-md w-[220px] h-[40px] hover:bg-[#D6E9FE] text-start flex items-center justify-between">
+        <button class="px-2 rounded-md h-[40px] hover:bg-[#D6E9FE] text-start flex gap-2 items-center justify-between">
           <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded-full bg-white flex items-center justify-center overflow-hidden border border-gray-200">
+            <div class="w-10 h-10 rounded-full bg-white flex items-center justify-center overflow-hidden border border-gray-200">
               <img src="https://api.dicebear.com/7.x/adventurer/svg?seed=Jett" alt="Avatar" class="w-full h-full object-cover bg-blue-50" />
             </div>
-            <div class="flex flex-col">
+            <div class="flex flex-col mr-2">
               <span class="text-sm font-bold text-gray-800">{{ username }}</span>
               <span class="text-[10px] text-gray-500">{{ role }}</span>
             </div>
