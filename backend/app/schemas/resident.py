@@ -32,6 +32,7 @@ class ResidentRFIDCreate(BaseModel):
     """Schema for creating/registering an RFID card"""
     rfid_uid: str = Field(..., min_length=1, max_length=16)
     is_active: bool = Field(default=True)
+    expiration_date: Optional[date] = None
 
 
 class ResidentCreate(ResidentBase):
@@ -41,6 +42,7 @@ class ResidentCreate(ResidentBase):
     # Nested objects
     address: AddressCreate
     rfid: ResidentRFIDCreate
+    photo: Optional[bytes] = None
     
     @field_validator('residency_start_date')
     @classmethod
@@ -68,6 +70,7 @@ class ResidentUpdate(BaseModel):
     email: Optional[EmailStr] = None
     phone_number: Optional[str] = Field(None, max_length=15)
     residency_start_date: Optional[date] = None
+    photo: Optional[bytes] = None
     
     @field_validator('birthdate')
     @classmethod
@@ -91,6 +94,7 @@ class ResidentRFIDUpdate(BaseModel):
     """Schema for updating RFID information"""
     rfid_uid: Optional[str] = Field(None, min_length=1, max_length=16)
     is_active: Optional[bool] = None
+    expiration_date: Optional[date] = None
 
 # ============================================================================
 # Response Schemas (Output)
@@ -125,6 +129,7 @@ class ResidentRFIDResponse(BaseModel):
     rfid_uid: str
     is_active: bool
     created_at: str
+    expiration_date: Optional[date] = None
     
     model_config = {"from_attributes": True}
 
@@ -158,6 +163,7 @@ class ResidentDetailResponse(BaseModel):
     gender: str
     birthdate: str  # Formatted date
     age: int
+    photo: Optional[bytes] = None
     
     # Contact Info
     email: Optional[str] = None
