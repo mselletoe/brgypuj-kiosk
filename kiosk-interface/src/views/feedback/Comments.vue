@@ -39,18 +39,12 @@ onMounted(() => {
 
 const ratingTextColor = computed(() => {
     switch (starCount.value) {
-        case 1:
-            return '#CF1331'
-        case 2:
-            return '#D36F28'
-        case 3:
-            return '#FFCE0A'
-        case 4:
-            return '#97B13B'
-        case 5:
-            return '#21C05C'
-        default:
-            return '#003a6b'
+        case 1: return '#CF1331'
+        case 2: return '#D36F28'
+        case 3: return '#FFCE0A'
+        case 4: return '#97B13B'
+        case 5: return '#21C05C'
+        default: return '#003a6b'
     }
 })
 
