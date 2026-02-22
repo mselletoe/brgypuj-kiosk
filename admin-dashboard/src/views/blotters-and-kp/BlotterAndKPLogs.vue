@@ -407,7 +407,12 @@ const modalTitle = computed(() => {
       </div>
 
       <div class="flex items-center gap-3">
-        <n-input v-model:value="searchQuery" placeholder="Search" style="width: 250px" clearable />
+        <input
+          v-model="searchQuery"
+          type="text"
+          placeholder="Search"
+          class="border border-gray-200 text-gray-700 rounded-md py-2 px-3 w-[250px] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-gray-400"
+        />
 
         <button class="p-2 border border-gray-400 rounded-lg hover:bg-gray-50 transition-colors">
           <FunnelIcon class="w-5 h-5 text-gray-700" />

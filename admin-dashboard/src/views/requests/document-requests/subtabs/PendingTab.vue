@@ -275,10 +275,10 @@ const filteredRequests = computed(() => {
       v-else-if="filteredRequests.length === 0" 
       class="text-center p-10 text-gray-500"
     >
-      <h3 class="text-lg font-medium text-gray-700">No Pending Requests</h3>
+      <h3 class="text-lg font-medium text-gray-700">No Pending Document Requests</h3>
       <p class="text-gray-500">
         <span v-if="searchQuery">No requests match your search.</span>
-        <span v-else>All pending requests have been processed.</span>
+        <span v-else>All pending document requests have been processed.</span>
       </p>
     </div>
 
