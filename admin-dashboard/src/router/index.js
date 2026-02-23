@@ -21,7 +21,7 @@ import FAQsManagement from "@/views/help-and-support/FAQsManagement.vue";
 import ContactInformation from "@/views/help-and-support/ContactInformation.vue";
 import ResidentsManagement from "@/views/residents-management/ResidentsManagement.vue";
 import BlotterAndKPLogs from "@/views/blotters-and-kp/BlotterAndKPLogs.vue";
-import Notification from '@/views/notifications/Notification.vue'
+import Notification from "@/views/notifications/Notification.vue";
 
 const routes = [
   {
@@ -40,7 +40,7 @@ const routes = [
     path: "/",
     component: AdminLayout,
     redirect: "/overview",
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: false },
     children: [
       { path: "overview", component: Overview },
 
@@ -71,7 +71,7 @@ const routes = [
       { path: "system-settings", component: SystemSettings },
       { path: "component-showcase", component: ComponentShowcase },
       { path: "account-settings", component: AccountSettings },
-      { path: 'notifications', component: Notification },
+      { path: "notifications", component: Notification },
       { path: "help-and-support", component: HelpAndSupport },
       { path: "faqs-management", component: FAQsManagement },
       { path: "contact-information", component: ContactInformation },
