@@ -6,3 +6,4 @@ from .announcement import Announcement
 from .misc import Feedback, RFIDReport
 from .blotter import BlotterRecord
 from .transaction import TransactionHistory 
+from .faqs import FAQ
