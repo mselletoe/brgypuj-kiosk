@@ -31,3 +31,29 @@ class RFIDLoginResponse(BaseModel):
     first_name: str
     last_name: str
     has_pin: bool
+
+class SetPinRequest(BaseModel):
+    """
+    Schema for the first-time PIN setup request.
+    Called when a resident has the default '0000' sentinel PIN and needs to set a real one.
+    """
+    resident_id: int
+    pin: str
+    rfid_uid: str
+
+
+class VerifyPinRequest(BaseModel):
+    """
+    Schema for PIN verification during standard login.
+    Called when a resident already has a configured (hashed) PIN.
+    """
+    resident_id: int
+    pin: str
+
+
+class VerifyPinResponse(BaseModel):
+    """
+    Schema for the PIN verification result.
+    The frontend checks response.data.valid to determine login success.
+    """
+    valid: bool

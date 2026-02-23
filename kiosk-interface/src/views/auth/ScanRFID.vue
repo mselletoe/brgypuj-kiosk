@@ -54,12 +54,13 @@ const resetScanner = () => {
 
 /**
  * Communicates with the backend to authenticate the scanned RFID UID.
- * * @param {string} uid - The unique identifier captured from the RFID card.
+ * @param {string} uid - The unique identifier captured from the RFID card.
  * @returns {Promise<void>}
  * @flow 
- * 1. Request status from backend.
- * 2. If 'has_pin' is true, move to PIN verification.
- * 3. If 'has_pin' is false, grant immediate access to home.
+ * 1. Request resident data from backend using only the RFID UID.
+ * 2. Always route to the PIN screen — AuthPIN.vue handles both:
+ *    - 'has_pin: false' → PIN setup flow (first-time / default '0000')
+ *    - 'has_pin: true'  → PIN verification flow (returning resident)
  */
 const authenticateRFID = async (uid) => {
   try {
@@ -68,29 +69,20 @@ const authenticateRFID = async (uid) => {
     const res = await api.post('kiosk/auth/rfid', { rfid_uid: uid })
     const data = res.data
 
-    if (data.has_pin) {
-      // Residents with security enabled are stored in a temporary state
-      authStore.setTemporaryRFIDData({
-        resident: {
-          id: data.resident_id,
-          first_name: data.first_name,
-          last_name: data.last_name
-        },
-        uid: uid
-      })
-      router.push('/auth-pin')
-    } else {
-      // Residents without security are logged in directly
-      authStore.setRFID(
-        {
-          id: data.resident_id,
-          first_name: data.first_name,
-          last_name: data.last_name
-        },
-        uid
-      )
-      router.replace('/home')
-    }
+    // Always store temporary data and route to PIN screen.
+    // PIN is mandatory — there is no bypass to home from here.
+    authStore.setTemporaryRFIDData({
+      resident: {
+        id: data.resident_id,
+        first_name: data.first_name,
+        last_name: data.last_name
+      },
+      uid: uid,
+      has_pin: data.has_pin  // Passed to AuthPIN to determine setup vs verify mode
+    })
+
+    router.push('/auth-pin')
+
   } catch (err) {
     // Standard error handling for inactive/unrecognized tags
     alert('Invalid or inactive RFID card.')
@@ -101,7 +93,7 @@ const authenticateRFID = async (uid) => {
 /**
  * Global Keyboard Event Listener.
  * Intercepts keyboard-emulated input from hardware scanners.
- * * @param {KeyboardEvent} event - The raw keyboard event.
+ * @param {KeyboardEvent} event - The raw keyboard event.
  */
 const handleRFIDInput = async (event) => {
   if (isProcessing.value) return
@@ -138,7 +130,6 @@ const goBack = () => {
 }
 
 // --- Lifecycle Hooks ---
-
 
 onMounted(async () => {
   // Ensure the hidden input is focused immediately for hardware capture

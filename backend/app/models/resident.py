@@ -25,7 +25,7 @@ class Resident(Base):
     residency_start_date = Column(Date, server_default=func.current_date(), nullable=False)
     email = Column(String(255), unique=True)
     phone_number = Column(String(15))
-    rfid_pin = Column(String(255))
+    rfid_pin = Column(String(255), nullable=False)
     photo = Column(LargeBinary, nullable=True)
     registered_at = Column(TIMESTAMP, server_default=func.current_timestamp())
     

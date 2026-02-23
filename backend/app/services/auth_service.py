@@ -12,6 +12,10 @@ from app.models.admin import Admin
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+# Sentinel value assigned to all residents during the NOT NULL migration.
+# Residents with this value have not yet configured a real PIN.
+RFID_PIN_DEFAULT = '0000'
+
 def rfid_login(db: Session, rfid_uid: str):
     """
     Validates an RFID UID and retrieves the associated Resident profile.
@@ -30,6 +34,9 @@ def rfid_login(db: Session, rfid_uid: str):
     Note:
         The 'has_pin' attribute is dynamically attached to the Resident object 
         to assist the frontend in determining the security challenge flow.
+        
+        A resident is considered to NOT have a PIN if their rfid_pin is NULL 
+        or equals the migration default value '0000'.
     """
 
     # Execute a joined query to fetch both Resident details and RFID status in one trip
@@ -50,10 +57,11 @@ def rfid_login(db: Session, rfid_uid: str):
     # Unpack the tuple returned by the joined query
     resident, rfid = result
 
-    # Business Logic: Determine if the resident has already configured a security PIN.
-    # Checks the 'rfid_pin' column in the Resident table.
-    # This boolean flag is used by the Pydantic schema for serialization.
-    resident.has_pin = resident.rfid_pin is not None
+    # Business Logic: Determine if the resident has configured a real security PIN.
+    # '0000' is the sentinel value set during migration for residents without a PIN.
+    # We treat both NULL and '0000' as "no PIN configured" so the frontend
+    # routes them to the PIN setup screen instead of the verify screen.
+    resident.has_pin = resident.rfid_pin not in (None, RFID_PIN_DEFAULT)
     
     return resident
 
