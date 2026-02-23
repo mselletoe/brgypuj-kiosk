@@ -22,6 +22,7 @@ import {
   updateResidentRFID,
   fetchPuroks 
 } from '@/api/residentService'
+import { fetchResidentTransactionHistory } from '@/api/transactionService'
 
 const props = defineProps({
   show: {
@@ -114,43 +115,57 @@ const genderOptions = [
 
 const purokOptions = ref([])
 
-// Transaction history (mock data for now - you can replace with real API call)
-const transactionHistory = ref([
-  {
-    transactionNumber: 'DR-1203',
-    request: 'RFID Card',
-    createdOn: '12/12/12',
-    status: 'Completed'
-  },
-  {
-    transactionNumber: 'EB-1239',
-    request: '2x Event Tent, 1x Sound System, 1x Folding Tables',
-    createdOn: '12/12/12',
-    status: 'Returned'
-  }
-])
+// Transaction history (only loaded in view mode)
+const transactionHistory = ref([])
+const transactionLoading = ref(false)
 
 const transactionColumns = [
   {
-    title: 'Transaction Number',
-    key: 'transactionNumber',
-    width: 180
+    title: 'Transaction No.',
+    key: 'transaction_no',
+    width: 160
+  },
+  {
+    title: 'Type',
+    key: 'transaction_type',
+    width: 110,
+    render(row) {
+      const map = { document: 'Document', equipment: 'Equipment', rfid: 'RFID' }
+      return map[row.transaction_type] ?? row.transaction_type
+    }
   },
   {
     title: 'Request',
-    key: 'request'
+    key: 'transaction_name'
   },
   {
-    title: 'Created on',
-    key: 'createdOn',
-    width: 120
+    title: 'Created On',
+    key: 'created_at',
+    width: 130,
+    render(row) {
+      return new Date(row.created_at).toLocaleDateString('en-US', {
+        year: 'numeric', month: 'short', day: 'numeric'
+      })
+    }
   },
   {
     title: 'Status',
     key: 'status',
-    width: 120
+    width: 110
   }
 ]
+
+async function loadTransactionHistory() {
+  transactionLoading.value = true
+  try {
+    transactionHistory.value = await fetchResidentTransactionHistory(props.residentId)
+  } catch (error) {
+    console.error('Failed to load transaction history:', error)
+    message.error('Failed to load transaction history')
+  } finally {
+    transactionLoading.value = false
+  }
+}
 
 // Modal title
 const modalTitle = computed(() => {
@@ -179,9 +194,12 @@ onMounted(async () => {
 watch(() => props.show, async (newVal) => {
   if (newVal) {
     if (props.mode === 'view' && props.residentId) {
-      // Load resident details
+      // Load resident details and transaction history
       await loadResidentDetails()
+      await loadTransactionHistory()
     } else if (props.mode === 'add') {
+      // Reset transaction history for clean state
+      transactionHistory.value = []
       // Reset form for new resident
       resetForm()
     }
@@ -510,14 +528,17 @@ function handleClose() {
             </div>
           </div>
 
-          <div>
+          <div v-if="mode === 'view'">
             <NCollapse>
               <NCollapseItem title="Transaction History" name="transactions">
+                <NSpin v-if="transactionLoading" size="small" class="py-4" />
                 <NDataTable
+                  v-else
                   :columns="transactionColumns"
                   :data="transactionHistory"
                   :bordered="false"
                   size="small"
+                  :empty-text="'No transaction history found'"
                 />
               </NCollapseItem>
             </NCollapse>
