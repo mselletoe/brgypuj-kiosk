@@ -6,7 +6,7 @@ import api from './http';
  */
 const getKioskFAQs = async () => {
   try {
-    const response = await api.get('/faqs/kiosk');
+    const response = await api.get('/kiosk/faqs/kiosk');
     return response.data;
   } catch (err) {
     console.error('Failed to fetch FAQs:', err);
