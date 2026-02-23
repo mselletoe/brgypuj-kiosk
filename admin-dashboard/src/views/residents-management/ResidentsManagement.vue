@@ -24,6 +24,8 @@ const showFilterModal = ref(false)
 const showResidentModal = ref(false)
 const currentResident = ref(null)
 const modalMode = ref('add')
+const showSingleDeleteModal = ref(false)
+const pendingDeleteId = ref(null)
 
 // ======================================
 // Data Loading
@@ -137,10 +139,17 @@ async function confirmDelete() {
 }
 
 async function handleDeleteSingle(id) {
+  pendingDeleteId.value = id
+  showSingleDeleteModal.value = true
+}
+
+async function confirmSingleDelete() {
   try {
-    await deleteResidentAPI(id)
+    await deleteResidentAPI(pendingDeleteId.value)
     message.success('Resident deleted successfully')
-    loadResidents() // Reload the table
+    showSingleDeleteModal.value = false
+    pendingDeleteId.value = null
+    loadResidents()
   } catch (error) {
     console.error('Failed to delete resident:', error)
     message.error('Failed to delete resident')
@@ -172,12 +181,12 @@ const columns = computed(() => [
   },
   {
     title: '#',
-    key: 'id',
+    key: 'index',
     width: 50,
-    render(row) {
-      return row.id
+    render(_row, index) {
+      return index + 1
     }
-  },// change with number 1234...
+  },
   {
     title: 'Full Name',
     key: 'full_name',
@@ -264,18 +273,26 @@ const columns = computed(() => [
         </button>
 
         <!-- Bulk Delete Button -->
-        <button
-          @click="requestBulkDelete"
-          :disabled="selectionState === 'none'"
-          class="p-2 border border-red-400 rounded-lg transition-colors"
-          :class="
-            selectionState === 'none'
-              ? 'opacity-50 cursor-not-allowed'
-              : 'hover:bg-red-50'
-          "
-        >
-          <TrashIcon class="w-5 h-5 text-red-500" />
-        </button>
+        <div class="flex items-center gap-1.5">
+          <button
+            @click="requestBulkDelete"
+            :disabled="selectionState === 'none'"
+            class="p-2 border border-red-400 rounded-lg transition-colors"
+            :class="
+              selectionState === 'none'
+                ? 'opacity-50 cursor-not-allowed'
+                : 'hover:bg-red-50'
+            "
+          >
+            <TrashIcon class="w-5 h-5 text-red-500" />
+          </button>
+          <span
+            v-if="selectedCount > 0"
+            class="text-xs font-medium text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full"
+          >
+            {{ selectedCount }} selected
+          </span>
+        </div>
 
         <!-- Select All Toggle -->
         <div
@@ -350,6 +367,16 @@ const columns = computed(() => [
       cancel-text="Cancel"
       @confirm="confirmDelete"
       @cancel="showDeleteModal = false"
+    />
+
+    <ConfirmModal
+      :show="showSingleDeleteModal"
+      title="Delete this resident?"
+      description="This will permanently remove the resident and all associated data. This action cannot be undone."
+      confirm-text="Delete"
+      cancel-text="Cancel"
+      @confirm="confirmSingleDelete"
+      @cancel="showSingleDeleteModal = false; pendingDeleteId = null"
     />
   </div>
 </template>

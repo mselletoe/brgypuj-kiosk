@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch, computed, onMounted } from 'vue'
+import { ref, watch, computed, onMounted, h } from 'vue'
 import { 
   NModal,
   NInput, 
@@ -23,6 +23,7 @@ import {
   fetchPuroks 
 } from '@/api/residentService'
 import { fetchResidentTransactionHistory } from '@/api/transactionService'
+import { fetchResidentBlotterRecords } from '@/api/blotterService'
 
 const props = defineProps({
   show: {
@@ -167,6 +168,79 @@ async function loadTransactionHistory() {
   }
 }
 
+// Blotter records (only loaded in view mode)
+const blotterRecords = ref([])
+const blotterLoading = ref(false)
+
+const blotterColumns = [
+  {
+    title: 'Blotter No.',
+    key: 'blotter_no',
+    width: 130,
+    render(row) {
+      return h('span', { class: 'font-bold text-blue-700' }, row.blotter_no)
+    }
+  },
+  {
+    title: 'Role',
+    key: 'role',
+    width: 115,
+    render(row) {
+      return row.role || '—'
+    }
+  },
+  {
+    title: 'Incident Type',
+    key: 'incident_type',
+    render(row) {
+      return row.incident_type || '—'
+    }
+  },
+  {
+    title: 'Incident Date',
+    key: 'incident_date',
+    width: 130,
+    render(row) {
+      // Handle both raw API string (incident_date) and normalized timestamp (date)
+      const raw = row.incident_date || (row.date ? new Date(row.date).toISOString().split('T')[0] : null)
+      if (!raw) return '—'
+      return new Date(raw).toLocaleDateString('en-US', {
+        year: 'numeric', month: 'short', day: 'numeric'
+      })
+    }
+  },
+  {
+    title: 'Incident Place',
+    key: 'incident_place',
+    render(row) {
+      return row.incident_place || '—'
+    }
+  },
+  {
+    title: 'Filed On',
+    key: 'created_at',
+    width: 130,
+    render(row) {
+      if (!row.created_at) return '—'
+      return new Date(row.created_at).toLocaleDateString('en-US', {
+        year: 'numeric', month: 'short', day: 'numeric'
+      })
+    }
+  }
+]
+
+async function loadBlotterRecords() {
+  blotterLoading.value = true
+  try {
+    blotterRecords.value = await fetchResidentBlotterRecords(props.residentId)
+  } catch (error) {
+    console.error('Failed to load blotter records:', error)
+    message.error('Failed to load blotter records')
+  } finally {
+    blotterLoading.value = false
+  }
+}
+
 // Modal title
 const modalTitle = computed(() => {
   if (props.mode === 'add') return 'Register New Resident'
@@ -194,12 +268,14 @@ onMounted(async () => {
 watch(() => props.show, async (newVal) => {
   if (newVal) {
     if (props.mode === 'view' && props.residentId) {
-      // Load resident details and transaction history
+      // Load resident details, transaction history, and blotter records
       await loadResidentDetails()
       await loadTransactionHistory()
+      await loadBlotterRecords()
     } else if (props.mode === 'add') {
-      // Reset transaction history for clean state
+      // Reset all data for clean state
       transactionHistory.value = []
+      blotterRecords.value = []
       // Reset form for new resident
       resetForm()
     }
@@ -539,6 +615,18 @@ function handleClose() {
                   :bordered="false"
                   size="small"
                   :empty-text="'No transaction history found'"
+                />
+              </NCollapseItem>
+
+              <NCollapseItem title="Blotter Records" name="blotter">
+                <NSpin v-if="blotterLoading" size="small" class="py-4" />
+                <NDataTable
+                  v-else
+                  :columns="blotterColumns"
+                  :data="blotterRecords"
+                  :bordered="false"
+                  size="small"
+                  :empty-text="'No blotter records found'"
                 />
               </NCollapseItem>
             </NCollapse>

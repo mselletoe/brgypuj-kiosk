@@ -73,6 +73,8 @@ class BlotterRecordOut(BlotterRecordBase):
     """
     Standard blotter record data for Admin Dashboard list views.
     Includes the auto-generated blotter number and linked resident info.
+    The optional `role` field is populated when fetching records scoped
+    to a specific resident (e.g. "Complainant" or "Respondent").
     """
     id: int
     blotter_no: str
@@ -82,6 +84,9 @@ class BlotterRecordOut(BlotterRecordBase):
 
     respondent_id: Optional[int] = None
     respondent_resident_name: Optional[str] = None
+
+    # Populated by the /resident/{id} endpoint to indicate involvement
+    role: Optional[str] = None
 
     created_at: datetime
 

@@ -16,6 +16,7 @@ from app.schemas.blotter import (
 from app.services.blotter_service import (
     get_all_blotter_records,
     get_blotter_record_by_id,
+    get_blotter_records_by_resident,
     create_blotter_record,
     update_blotter_record,
     delete_blotter_record,
@@ -107,6 +108,30 @@ def list_blotter_records(db: Session = Depends(get_db)):
     """
     records = get_all_blotter_records(db)
     return [_format_record(r) for r in records]
+
+
+@router.get("/resident/{resident_id}", response_model=list[BlotterRecordOut])
+def list_blotter_records_by_resident(resident_id: int, db: Session = Depends(get_db)):
+    """
+    Retrieves all blotter records where the given resident is involved
+    as either complainant or respondent. Each record includes a `role`
+    field indicating the resident's involvement. Ordered by most recent first.
+    """
+    records = get_blotter_records_by_resident(db, resident_id)
+
+    result = []
+    for r in records:
+        formatted = _format_record(r)
+        # Annotate which role this resident played in each record
+        if r.complainant_id == resident_id:
+            formatted["role"] = "Complainant"
+        elif r.respondent_id == resident_id:
+            formatted["role"] = "Respondent"
+        else:
+            formatted["role"] = None
+        result.append(formatted)
+
+    return result
 
 
 @router.post("", response_model=BlotterRecordOut, status_code=status.HTTP_201_CREATED)

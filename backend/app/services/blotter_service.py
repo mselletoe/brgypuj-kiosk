@@ -132,6 +132,26 @@ def get_blotter_record_by_id(db: Session, blotter_id: int) -> BlotterRecord | No
     return _get_record(db, blotter_id)
 
 
+def get_blotter_records_by_resident(db: Session, resident_id: int) -> list[BlotterRecord]:
+    """
+    Admin: Retrieves all blotter records where the given resident appears
+    as either the complainant or the respondent. Ordered by most recent first.
+    """
+    return (
+        db.query(BlotterRecord)
+        .options(
+            joinedload(BlotterRecord.complainant),
+            joinedload(BlotterRecord.respondent),
+        )
+        .filter(
+            (BlotterRecord.complainant_id == resident_id) |
+            (BlotterRecord.respondent_id == resident_id)
+        )
+        .order_by(BlotterRecord.created_at.desc())
+        .all()
+    )
+
+
 def create_blotter_record(db: Session, payload: BlotterRecordCreate) -> BlotterRecord:
     """
     Admin: Creates a new blotter record with an auto-generated blotter number.

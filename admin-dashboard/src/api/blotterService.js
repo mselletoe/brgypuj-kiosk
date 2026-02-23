@@ -1,108 +1,56 @@
+/**
+ * @file blotterService.js
+ * @description Blotter Records Service Module
+ * Provides functions for managing barangay blotter records.
+ */
 import api from './http'
 
-/**
- * Fetch all blotter records for admin dashboard
- * @returns {Promise<Array>} array of blotter records
- */
+// ============================================================================
+// READ Operations
+// ============================================================================
+
 export const getAllBlotters = async () => {
-  try {
-    const response = await api.get('/admin/blotter')
-    return response.data
-  } catch (err) {
-    console.error('Failed to fetch blotter records:', err)
-    throw err
-  }
+  const res = await api.get('/admin/blotter')
+  return res.data
 }
 
-/**
- * Fetch a single blotter record by ID
- * @param {number} blotterId
- * @returns {Promise<Object>} blotter record detail
- */
-export const getBlotterById = async (blotterId) => {
-  try {
-    const response = await api.get(`/admin/blotter/${blotterId}`)
-    return response.data
-  } catch (err) {
-    console.error('Failed to fetch blotter record:', err)
-    throw err
-  }
+export const fetchResidentBlotterRecords = async (residentId) => {
+  const res = await api.get(`/admin/blotter/resident/${residentId}`)
+  return res.data
 }
 
-/**
- * Create a new blotter record
- * @param {Object} payload - blotter record data
- * @returns {Promise<Object>} created blotter record
- */
+export const fetchBlotterRecordDetail = async (blotterId) => {
+  const res = await api.get(`/admin/blotter/${blotterId}`)
+  return res.data
+}
+
+// ============================================================================
+// CREATE Operations
+// ============================================================================
+
 export const createBlotter = async (payload) => {
-  try {
-    const response = await api.post('/admin/blotter', payload)
-    return response.data
-  } catch (err) {
-    console.error('Failed to create blotter record:', err)
-    throw err
-  }
+  const res = await api.post('/admin/blotter', payload)
+  return res.data
 }
 
-/**
- * Update an existing blotter record
- * @param {number} blotterId
- * @param {Object} payload - fields to update
- * @returns {Promise<Object>} updated blotter record
- */
-export const updateBlotter = async (blotterId, payload) => {
-  try {
-    const response = await api.put(`/admin/blotter/${blotterId}`, payload)
-    return response.data
-  } catch (err) {
-    console.error('Failed to update blotter record:', err)
-    throw err
-  }
+// ============================================================================
+// UPDATE Operations
+// ============================================================================
+
+export const updateBlotter = async (blotterId, updateData) => {
+  const res = await api.put(`/admin/blotter/${blotterId}`, updateData)
+  return res.data
 }
 
-/**
- * Delete a specific blotter record
- * @param {number} blotterId
- * @returns {Promise<void>}
- */
+// ============================================================================
+// DELETE Operations
+// ============================================================================
+
 export const deleteBlotter = async (blotterId) => {
-  try {
-    await api.delete(`/admin/blotter/${blotterId}`)
-  } catch (err) {
-    console.error('Failed to delete blotter record:', err)
-    throw err
-  }
+  await api.delete(`/admin/blotter/${blotterId}`)
 }
 
-/**
- * Bulk delete blotter records
- * @param {Array<number>} ids - array of blotter IDs to delete
- * @returns {Promise<Object>} deletion count confirmation
- */
 export const bulkDeleteBlotters = async (ids) => {
-  try {
-    const response = await api.post('/admin/blotter/bulk-delete', ids)
-    return response.data
-  } catch (err) {
-    console.error('Failed to bulk delete blotter records:', err)
-    throw err
-  }
-}
-
-/**
- * Get blotter record summary for a resident.
- * Returns all records where they appear as complainant or respondent.
- * Used to show blotter flags on the resident detail view and
- * during document request processing.
- * @param {number} residentId
- * @returns {Promise<Object>} { has_blotter, total_count, as_complainant, as_respondent, records[] }
- */
-export const getResidentBlotterSummary = async (residentId) => {
-  try {
-    const response = await api.get(`/admin/documents/${residentId}/blotter-summary`)
-    return response.data
-  } catch (err) {
-    console.error('Failed to fetch resident blotter summary:', err)
-    throw err
-  }
+  const res = await api.post('/admin/blotter/bulk-delete', ids)
+  return res.data
 }
