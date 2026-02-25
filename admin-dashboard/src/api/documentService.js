@@ -1,5 +1,9 @@
 import api from './http'
 
+// ──────────────────────────────────────────────────────────────
+// DOCUMENT TYPES
+// ──────────────────────────────────────────────────────────────
+
 export function getDocumentTypes() {
   return api.get('/admin/documents/types')
 }
@@ -35,24 +39,49 @@ export function downloadDocumentTemplate(id, filename = 'template') {
     link.setAttribute('download', `${filename}.docx`)
     document.body.appendChild(link)
     link.click()
-    
+
     // Cleanup
     link.remove()
     window.URL.revokeObjectURL(url)
-    
+
     return response
   })
 }
 
+
+// ──────────────────────────────────────────────────────────────
+// DOCUMENT REQUESTS
+// NOTE: The list returned by getDocumentRequests() now includes
+//       I.D Application rows (doctype_id === null).
+//       Use isIDApplication(row) to detect them and apply the
+//       correct card styling / action routing in the UI.
+// ──────────────────────────────────────────────────────────────
+
+/**
+ * Returns true when a request row is an I.D Application.
+ * These rows have doctype_id === null and doctype_name === "I.D Application".
+ * The frontend should render them with the RFID (red) card variant.
+ *
+ * @param {{ doctype_id: number | null }} request
+ * @returns {boolean}
+ */
+export function isIDApplication(request) {
+  return request.doctype_id === null || request.doctype_id == null
+}
+
+/**
+ * Fetch all document requests including I.D Applications.
+ * I.D Application rows have doctype_id = null and doctype_name = "I.D Application".
+ * @returns {Promise}
+ */
 export function getDocumentRequests() {
   return api.get('/admin/documents/requests')
 }
 
-
 export function viewRequestPdf(requestId) {
   const backendBaseUrl = api.defaults.baseURL
   const pdfUrl = `${backendBaseUrl}/admin/documents/requests/${requestId}/pdf`
-  
+
   window.open(pdfUrl, '_blank')
 }
 

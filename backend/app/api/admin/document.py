@@ -187,19 +187,35 @@ def admin_check_eligibility(resident_id: int, doctype_id: int, db: Session = Dep
 # =========================================================
 
 def _format_request_for_admin(request):
-    """Helper to format request with resident data"""
-    # Get the active RFID UID if resident exists
-    rfid_display = "Guest Mode"
-    phone_number = None
+    """Helper to format request with resident data.
 
-    if request.resident:
-        # Get the active RFID from the relationship
-        active_rfid = next(
-            (rfid.rfid_uid for rfid in request.resident.rfids if rfid.is_active),
-            None
-        )
-        rfid_display = active_rfid if active_rfid else "No RFID"
-        phone_number = request.resident.phone_number
+    ID Applications have doctype_id = NULL and no doctype relationship.
+    In that case we hardcode the type as 'I.D Application' and use the
+    session_rfid stored in form_data as the display UID.
+    """
+    is_id_application = request.doctype_id is None
+
+    # ── Resolve RFID display ─────────────────────────────────────────────
+    if is_id_application:
+        # ID Applications store the session RFID (or "Guest Mode") in form_data
+        rfid_display = (request.form_data or {}).get("session_rfid", "Guest Mode")
+        phone_number = request.resident.phone_number if request.resident else None
+    else:
+        rfid_display = "Guest Mode"
+        phone_number = None
+        if request.resident:
+            active_rfid = next(
+                (rfid.rfid_uid for rfid in request.resident.rfids if rfid.is_active),
+                None
+            )
+            rfid_display = active_rfid if active_rfid else "No RFID"
+            phone_number = request.resident.phone_number
+
+    # ── Resolve doctype fields ───────────────────────────────────────────
+    doctype_id   = request.doctype_id if not is_id_application else None
+    doctype_name = "I.D Application" if is_id_application else (
+        request.doctype.doctype_name if request.doctype else "Unknown"
+    )
 
     return {
         "id": request.id,
@@ -210,8 +226,8 @@ def _format_request_for_admin(request):
         "resident_last_name": request.resident.last_name if request.resident else None,
         "resident_phone": phone_number,
         "resident_rfid": rfid_display,
-        "doctype_id": request.doctype_id,
-        "doctype_name": request.doctype.doctype_name,
+        "doctype_id": doctype_id,
+        "doctype_name": doctype_name,
         "price": request.price,
         "status": request.status,
         "payment_status": request.payment_status,

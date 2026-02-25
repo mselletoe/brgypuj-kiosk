@@ -653,13 +653,14 @@ def _get_request(db: Session, request_id: int):
 def get_all_document_requests(db: Session):
     """
     Admin: Monitors all incoming document requests with resident information.
+    Includes both regular document requests AND ID Applications (doctype_id IS NULL).
     """
     from sqlalchemy.orm import joinedload
-    
+
     return (
         db.query(DocumentRequest)
         .options(
-            joinedload(DocumentRequest.resident),
+            joinedload(DocumentRequest.resident).joinedload(Resident.rfids),
             joinedload(DocumentRequest.doctype)
         )
         .order_by(DocumentRequest.requested_at.desc())

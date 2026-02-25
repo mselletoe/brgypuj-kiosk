@@ -26,10 +26,12 @@ const handleReportLost = () => router.push("/id-services/report-lost");
 const resident = computed(() => {
   const res = authStore.resident || {};
   return {
-    firstName: res.first_name || "Unknown",
-    lastName: res.last_name || "Resident",
+    firstName: res.first_name || "",
+    middleName: res.middle_name || "",
+    lastName: res.last_name || "",
     id: res.id || "N/A",
     rfid: authStore.rfidUid || "N/A",
+    address: res.address || "No Address Available",
   };
 });
 
@@ -50,10 +52,9 @@ const goBack = () => router.push("/home");
       </div>
     </div>
 
-    <div
-      class="flex flex-row items-stretch justify-center gap-6 px-0.5 pt-2 pb-8 flex-1"
-    >
-      <div class="flex-1 max-w-[650px]">
+    <div class="flex flex-row items-stretch justify-center gap-6 px-0.5 pt-2 pb-8 flex-1">
+      <div class="flex-1">
+        <!-- Logged In User -->
         <div
           v-if="!isGuest"
           class="relative h-full bg-gradient-to-br from-[#003A6B] to-[#005B96] rounded-3xl shadow-[0_10px_30px_-5px_rgba(0,0,0,0.15)] overflow-hidden text-white p-8 flex flex-col justify-between transform transition-transform active:scale-[0.99] duration-300 border border-white/10"
@@ -104,16 +105,16 @@ const goBack = () => router.push("/home");
                 Full Name
               </p>
               <h2
-                class="text-3xl font-bold truncate mb-4 drop-shadow-sm tracking-tight leading-none"
+                class="text-2xl font-bold mb-4 drop-shadow-sm tracking-tight leading-none"
               >
-                {{ resident.firstName }}<br />{{ resident.lastName }}
+                {{ resident.firstName }} {{ resident.middleName }} {{ resident.lastName }}
               </h2>
               <div>
-                <p class="text-[11px] opacity-60 uppercase tracking-wider mb-1">
-                  Resident ID No.
+                <p class="text-[11px] opacity-60 uppercase mb-1">
+                  Address
                 </p>
-                <p class="font-mono text-2xl tracking-wide font-semibold">
-                  {{ resident.id }}
+                <p class="text-lg font-semibold leading-tight">
+                  {{ resident.address }}
                 </p>
               </div>
             </div>
@@ -127,7 +128,7 @@ const goBack = () => router.push("/home");
                 RFID UID
               </p>
               <p
-                class="font-mono text-lg tracking-[0.25em] opacity-90 font-medium"
+                class="font-mono text-xl tracking-[0.25em] opacity-90 font-medium"
               >
                 {{ resident.rfid }}
               </p>
@@ -136,6 +137,7 @@ const goBack = () => router.push("/home");
           </div>
         </div>
 
+        <!-- Guest -->
         <div
           v-else
           class="relative h-full bg-gradient-to-br from-[#003A6B] to-[#005B96] rounded-3xl shadow-[0_10px_30px_-5px_rgba(0,0,0,0.15)] overflow-hidden text-white p-8 flex flex-col justify-center items-center text-center border border-white/10"
@@ -172,7 +174,7 @@ const goBack = () => router.push("/home");
         </div>
       </div>
 
-      <div class="flex flex-col gap-4 w-[350px]">
+      <div class="flex flex-col gap-4 w-[360px]">
         <button
           @click="handleApplyRFID"
           class="flex-1 flex items-center px-6 bg-white rounded-2xl shadow-sm border-2 border-gray-100 active:border-[#21C05C] active:bg-gray-50 transition-all group text-left"

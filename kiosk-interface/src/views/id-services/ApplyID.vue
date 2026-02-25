@@ -1,9 +1,11 @@
 <script setup>
-import { ref, computed, onUnmounted } from "vue";
+import { ref, computed, watch, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
+import { useAuthStore } from "@/stores/auth";
 import ArrowBackButton from "@/components/shared/ArrowBackButton.vue";
 import Modal from "@/components/shared/Modal.vue";
 import Button from "@/components/shared/Button.vue";
+import { searchResidents, verifyBirthdate, applyForID } from "@/api/idService";
 import {
   CalendarDaysIcon,
   UserIcon,
@@ -12,25 +14,29 @@ import {
 } from "@heroicons/vue/24/outline";
 
 const router = useRouter();
+const authStore = useAuthStore();
 
 // State & Phases
 const currentPhase = ref("selection"); // 'selection' | 'camera'
 const isSubmitting = ref(false);
 const showSuccessModal = ref(false);
 const showErrorModal = ref(false);
-const showVerificationModal = ref(false); // New Verification Modal State
+const showVerificationModal = ref(false);
 const referenceId = ref("");
 
 // Selection State
 const lastNameLetter = ref("");
 const firstNameLetter = ref("");
 const selectedResident = ref(null);
+const residentList = ref([]);
+const isFetching = ref(false);
 
 // Verification State
 const verifyMonth = ref("");
 const verifyDay = ref("");
 const verifyYear = ref("");
 const verificationError = ref("");
+const isVerifying = ref(false);
 
 const months = [
   { name: "January", value: "01" },
@@ -47,12 +53,10 @@ const months = [
   { name: "December", value: "12" },
 ];
 
-// Generate days 1-31
 const days = Array.from({ length: 31 }, (_, i) =>
   (i + 1).toString().padStart(2, "0"),
 );
 
-// Generate years (Current year 2026 down to 1900)
 const currentYear = new Date().getFullYear();
 const years = Array.from({ length: currentYear - 1899 }, (_, i) =>
   (currentYear - i).toString(),
@@ -62,57 +66,31 @@ const years = Array.from({ length: currentYear - 1899 }, (_, i) =>
 const showLastNameDropdown = ref(false);
 const showFirstNameDropdown = ref(false);
 const showResidentDropdown = ref(false);
-
-// New Verification Dropdown States
 const showMonthDropdown = ref(false);
 const showDayDropdown = ref(false);
 const showYearDropdown = ref(false);
 
 const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
-// Mock Database
-const mockResidents = [
-  {
-    id: 1,
-    firstName: "Aaron",
-    lastName: "Abad",
-    address: "Block 5 Lot 2",
-    birthdate: "1998-05-12",
-    rfid: "N/A",
-  },
-  {
-    id: 2,
-    firstName: "Adrian",
-    lastName: "Agoncillo",
-    address: "Block 12 Lot 1",
-    birthdate: "2001-11-03",
-    rfid: "12345678",
-  },
-  {
-    id: 3,
-    firstName: "Bea",
-    lastName: "Alonzo",
-    address: "Block 3 Lot 8",
-    birthdate: "1995-02-14",
-    rfid: "N/A",
-  },
-  {
-    id: 7,
-    firstName: "Keanno",
-    lastName: "Macatangay",
-    address: "Makati Homes 2",
-    birthdate: "2003-01-15",
-    rfid: "N/A",
-  },
-];
-
-const filteredResidents = computed(() => {
-  if (!lastNameLetter.value || !firstNameLetter.value) return [];
-  return mockResidents.filter((r) => {
-    const matchLast = r.lastName.startsWith(lastNameLetter.value);
-    const matchFirst = r.firstName.startsWith(firstNameLetter.value);
-    return matchLast && matchFirst;
-  });
+// -------------------------------------------------------
+// Fetch residents from API whenever both letters are set
+// -------------------------------------------------------
+watch([lastNameLetter, firstNameLetter], async ([last, first]) => {
+  if (!last || !first) {
+    residentList.value = [];
+    selectedResident.value = null;
+    return;
+  }
+  isFetching.value = true;
+  try {
+    // Format: "LastPrefix, FirstPrefix" — matches backend split logic
+    residentList.value = await searchResidents(`${last}, ${first}`);
+    selectedResident.value = null;
+  } catch {
+    residentList.value = [];
+  } finally {
+    isFetching.value = false;
+  }
 });
 
 const toggleDropdown = (menu) => {
@@ -122,8 +100,6 @@ const toggleDropdown = (menu) => {
     menu === "firstName" ? !showFirstNameDropdown.value : false;
   showResidentDropdown.value =
     menu === "resident" ? !showResidentDropdown.value : false;
-
-  // Verification Dropdowns
   showMonthDropdown.value = menu === "month" ? !showMonthDropdown.value : false;
   showDayDropdown.value = menu === "day" ? !showDayDropdown.value : false;
   showYearDropdown.value = menu === "year" ? !showYearDropdown.value : false;
@@ -190,12 +166,21 @@ const retakePhoto = () => {
 };
 
 // --- NAVIGATION & ACTIONS ---
+
+/**
+ * Called when resident is selected and "Next: Take Photo" is clicked.
+ * Guard: block if resident already has an active RFID (has_rfid = true).
+ * Otherwise open the birthdate verification modal.
+ */
 const proceedToCamera = () => {
   if (!selectedResident.value) return;
-  if (selectedResident.value.rfid !== "N/A") {
+
+  // has_rfid comes from the API — true means an active card is already linked
+  if (selectedResident.value.has_rfid) {
     showErrorModal.value = true;
     return;
   }
+
   verifyMonth.value = "";
   verifyDay.value = "";
   verifyYear.value = "";
@@ -203,18 +188,38 @@ const proceedToCamera = () => {
   showVerificationModal.value = true;
 };
 
-const handleVerification = () => {
+/**
+ * Sends birthdate to the API for verification.
+ * On success: closes modal and moves to camera phase.
+ * On failure: shows inline error.
+ */
+const handleVerification = async () => {
   if (!verifyMonth.value || !verifyDay.value || !verifyYear.value) {
     verificationError.value = "Please complete the date.";
     return;
   }
+
   const inputDate = `${verifyYear.value}-${verifyMonth.value}-${verifyDay.value}`;
-  if (inputDate === selectedResident.value.birthdate) {
-    showVerificationModal.value = false;
-    currentPhase.value = "camera";
-    startCamera();
-  } else {
-    verificationError.value = "Birthdate does not match our records.";
+  isVerifying.value = true;
+  verificationError.value = "";
+
+  try {
+    const result = await verifyBirthdate({
+      resident_id: selectedResident.value.resident_id,
+      birthdate: inputDate,
+    });
+
+    if (result.verified) {
+      showVerificationModal.value = false;
+      currentPhase.value = "camera";
+      startCamera();
+    } else {
+      verificationError.value = "Birthdate does not match our records.";
+    }
+  } catch {
+    verificationError.value = "Verification failed. Please try again.";
+  } finally {
+    isVerifying.value = false;
   }
 };
 
@@ -237,17 +242,37 @@ const handleReset = () => {
   lastNameLetter.value = "";
   firstNameLetter.value = "";
   selectedResident.value = null;
+  residentList.value = [];
 };
 
-const submitApplication = () => {
+/**
+ * Submits the ID application to the backend.
+ * Passes rfid_uid from auth store if logged in, null if guest.
+ */
+const submitApplication = async () => {
   if (!selectedResident.value || !photoData.value) return;
+
   isSubmitting.value = true;
   stopCamera();
-  setTimeout(() => {
-    isSubmitting.value = false;
-    referenceId.value = `APP-${Math.floor(100000 + Math.random() * 900000)}`;
+
+  try {
+    const result = await applyForID({
+      resident_id: selectedResident.value.resident_id,
+      rfid_uid: authStore.rfidUid || null,
+      photo: photoData.value,   // base64 PNG string from canvas capture
+    });
+
+    referenceId.value = result.transaction_no;
     showSuccessModal.value = true;
-  }, 1500);
+  } catch (err) {
+    // Surface API error message if available
+    const msg = err?.response?.data?.detail || "Submission failed. Please try again.";
+    console.error("ID application failed:", msg);
+    // Re-open camera so user can retry
+    startCamera();
+  } finally {
+    isSubmitting.value = false;
+  }
 };
 
 const handleModalDone = () => router.push("/id-services");
@@ -261,11 +286,13 @@ const selectLastNameLetter = (letter) => {
   showLastNameDropdown.value = false;
   selectedResident.value = null;
 };
+
 const selectFirstNameLetter = (letter) => {
   firstNameLetter.value = letter;
   showFirstNameDropdown.value = false;
   selectedResident.value = null;
 };
+
 const selectResident = (resident) => {
   selectedResident.value = resident;
   showResidentDropdown.value = false;
@@ -323,6 +350,7 @@ const selectYear = (y) => {
 
               <div class="space-y-4 w-full z-20">
                 <div class="flex gap-10 w-full">
+                  <!-- Last Name Letter -->
                   <div class="flex flex-1 items-center gap-3">
                     <div
                       class="flex items-center gap-2 flex-shrink-0 min-w-[140px]"
@@ -363,6 +391,7 @@ const selectYear = (y) => {
                     </div>
                   </div>
 
+                  <!-- First Name Letter -->
                   <div class="flex flex-1 items-center gap-3">
                     <div
                       class="flex items-center gap-2 flex-shrink-0 min-w-[140px]"
@@ -404,6 +433,7 @@ const selectYear = (y) => {
                   </div>
                 </div>
 
+                <!-- Resident Name Dropdown -->
                 <div class="flex items-center gap-3 w-full">
                   <div
                     class="flex items-center gap-2 flex-shrink-0 min-w-[140px]"
@@ -417,15 +447,17 @@ const selectYear = (y) => {
                   <div class="flex-1 relative">
                     <button
                       @click="toggleDropdown('resident')"
-                      :disabled="!lastNameLetter || !firstNameLetter"
+                      :disabled="!lastNameLetter || !firstNameLetter || isFetching"
                       class="w-full h-11 border border-gray-300 rounded-xl px-4 flex items-center justify-between text-[#03335C] font-bold bg-white text-base hover:border-[#03335C] transition-colors disabled:opacity-50 disabled:bg-gray-50"
                     >
+                      <span v-if="isFetching" class="text-gray-400 text-sm italic">Loading...</span>
                       <span
-                        v-if="selectedResident"
+                        v-else-if="selectedResident"
                         class="truncate text-[#03335C]"
-                        >{{ selectedResident.lastName }},
-                        {{ selectedResident.firstName }}</span
-                      >
+                        >{{ selectedResident.last_name }},
+                        {{ selectedResident.first_name }}
+                        <span v-if="selectedResident.middle_name">{{ selectedResident.middle_name }}</span>
+                      </span>
                       <span v-else class="text-gray-400 truncate opacity-60">{{
                         !lastNameLetter || !firstNameLetter
                           ? "Select initials first..."
@@ -438,18 +470,19 @@ const selectYear = (y) => {
                       class="absolute top-full left-0 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-50 p-1 max-h-[150px] overflow-y-auto custom-scroll"
                     >
                       <div
-                        v-if="filteredResidents.length === 0"
+                        v-if="residentList.length === 0"
                         class="p-3 text-center text-gray-400 text-sm"
                       >
                         No records found
                       </div>
                       <button
-                        v-for="r in filteredResidents"
-                        :key="r.id"
+                        v-for="r in residentList"
+                        :key="r.resident_id"
                         @click="selectResident(r)"
                         class="w-full text-left py-2 px-4 hover:bg-blue-50 rounded-lg font-bold text-[#03335C] text-base border-b border-gray-50 last:border-0"
                       >
-                        {{ r.lastName }}, {{ r.firstName }}
+                        {{ r.last_name }}, {{ r.first_name }}
+                        <span v-if="r.middle_name">{{ r.middle_name }}</span>
                       </button>
                     </div>
                   </div>
@@ -458,6 +491,7 @@ const selectYear = (y) => {
             </div>
           </div>
 
+          <!-- Camera Phase -->
           <div
             v-else-if="currentPhase === 'camera'"
             class="flex w-full h-full gap-20 items-center justify-center animate-fadeIn"
@@ -523,8 +557,8 @@ const selectYear = (y) => {
                     Applying For:
                   </p>
                   <p class="font-black text-[#03335C] text-2xl truncate">
-                    {{ selectedResident?.firstName }}
-                    {{ selectedResident?.lastName }}
+                    {{ selectedResident?.first_name }}
+                    {{ selectedResident?.last_name }}
                   </p>
                 </div>
               </div>
@@ -591,6 +625,7 @@ const selectYear = (y) => {
       </div>
     </div>
 
+    <!-- Birthdate Verification Modal -->
     <Transition name="fade-blur">
       <div
         v-if="showVerificationModal"
@@ -605,12 +640,13 @@ const selectYear = (y) => {
           <p class="text-gray-500 text-sm mb-6">
             Please enter the birthdate for
             <strong
-              >{{ selectedResident?.firstName }}
-              {{ selectedResident?.lastName }}</strong
+              >{{ selectedResident?.first_name }}
+              {{ selectedResident?.last_name }}</strong
             >
             to proceed.
           </p>
           <div class="flex gap-3 mb-4">
+            <!-- Month -->
             <div class="flex-1 relative">
               <label
                 class="block text-[10px] font-bold text-gray-400 uppercase mb-1"
@@ -639,6 +675,7 @@ const selectYear = (y) => {
                 </button>
               </div>
             </div>
+            <!-- Day -->
             <div class="flex-1 relative">
               <label
                 class="block text-[10px] font-bold text-gray-400 uppercase mb-1"
@@ -665,6 +702,7 @@ const selectYear = (y) => {
                 </button>
               </div>
             </div>
+            <!-- Year -->
             <div class="flex-1 relative">
               <label
                 class="block text-[10px] font-bold text-gray-400 uppercase mb-1"
@@ -702,20 +740,23 @@ const selectYear = (y) => {
             <Button
               variant="outline"
               class="flex-1"
+              :disabled="isVerifying"
               @click="showVerificationModal = false"
               >Cancel</Button
             >
             <Button
-              variant="secondary"
+              :variant="isVerifying ? 'disabled' : 'secondary'"
               class="flex-1"
+              :disabled="isVerifying"
               @click="handleVerification"
-              >Verify & Proceed</Button
+              >{{ isVerifying ? "Verifying..." : "Verify & Proceed" }}</Button
             >
           </div>
         </div>
       </div>
     </Transition>
 
+    <!-- Success Modal -->
     <Transition name="fade-blur">
       <div
         v-if="showSuccessModal"
@@ -734,6 +775,7 @@ const selectYear = (y) => {
       </div>
     </Transition>
 
+    <!-- Error Modal: Active RFID already exists -->
     <Transition name="fade-blur">
       <div
         v-if="showErrorModal"

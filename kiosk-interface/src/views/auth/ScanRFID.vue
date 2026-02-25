@@ -75,7 +75,9 @@ const authenticateRFID = async (uid) => {
       resident: {
         id: data.resident_id,
         first_name: data.first_name,
-        last_name: data.last_name
+        middle_name: data.middle_name,
+        last_name: data.last_name,
+        address: data.address
       },
       uid: uid,
       has_pin: data.has_pin  // Passed to AuthPIN to determine setup vs verify mode
