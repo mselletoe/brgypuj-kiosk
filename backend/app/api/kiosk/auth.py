@@ -20,7 +20,7 @@ from app.schemas.kiosk.auth import (
     VerifyPinResponse,
 )
 from app.services.auth_service import rfid_login
-from app.models.resident import Resident
+from app.models.resident import Resident, Address, Purok
 
 router = APIRouter(prefix="/auth")
 
@@ -62,12 +62,34 @@ def rfid_auth(payload: RFIDLoginRequest, db: Session = Depends(get_db)):
     if not resident:
         raise HTTPException(status_code=401, detail="Invalid or inactive RFID")
 
+    current_address = (
+        db.query(Address)
+        .filter(
+            Address.resident_id == resident.id,
+            Address.is_current == True
+        )
+        .join(Purok)
+        .first()
+    )
+
+    formatted_address = None
+
+    if current_address:
+        formatted_address = (
+            f"{current_address.house_no_street}, "
+            f"{current_address.purok.purok_name}, "
+            f"{current_address.barangay}, "
+            f"{current_address.municipality}, "
+            f"{current_address.province}"
+        )
     return {
         "mode": "rfid",
         "resident_id": resident.id,
         "first_name": resident.first_name,
+        "middle_name": resident.middle_name,
         "last_name": resident.last_name,
         "has_pin": resident.has_pin,
+        "address": formatted_address,
     }
 
 

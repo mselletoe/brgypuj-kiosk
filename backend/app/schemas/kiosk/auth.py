@@ -29,7 +29,9 @@ class RFIDLoginResponse(BaseModel):
     mode: str = "rfid"
     resident_id: int
     first_name: str
+    middle_name: Optional[str] = None
     last_name: str
+    address: Optional[str] = None
     has_pin: bool
 
 class SetPinRequest(BaseModel):
