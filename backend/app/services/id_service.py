@@ -19,7 +19,7 @@ from datetime import datetime
 from sqlalchemy.orm import Session, joinedload
 from fastapi import HTTPException, status
 from passlib.context import CryptContext
-
+import base64
 from app.models.resident import Resident, ResidentRFID
 from app.models.document import DocumentRequest
 from app.models.misc import RFIDReport
@@ -53,9 +53,6 @@ def _get_resident_or_404(db: Session, resident_id: int) -> Resident:
 def _get_active_rfid(resident: Resident) -> ResidentRFID | None:
     """Returns the currently active RFID record for a resident, or None."""
     return next((r for r in resident.rfids if r.is_active), None)
-
-
-
 
 
 def _generate_transaction_no(db: Session) -> str:
@@ -141,7 +138,6 @@ def apply_for_id(db: Session, resident_id: int, rfid_uid: str | None, photo: str
     - Prevents duplicate pending ID applications for the same resident.
     - Works for both guest (rfid_uid=None) and authenticated sessions.
     """
-    import base64
 
     resident = _get_resident_or_404(db, resident_id)
 

@@ -1,6 +1,9 @@
 from datetime import date
+from passlib.context import CryptContext
 from app.db.session import SessionLocal
 from app.models.resident import Resident
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 RESIDENTS = [
     {
@@ -139,15 +142,17 @@ def seed_residents():
             return
 
         for r in RESIDENTS:
-            db.add(Resident(**r))
+            # HASH THE PIN HERE before saving to DB
+            r_copy = r.copy()
+            r_copy["rfid_pin"] = pwd_context.hash(r["rfid_pin"])
+            
+            db.add(Resident(**r_copy))
 
         db.commit()
-        print("🌱 Residents seeded")
-
+        print("🌱 Residents seeded (with hashed PINs)")
     except Exception as e:
         db.rollback()
         print("❌ Error seeding residents:", e)
-
     finally:
         db.close()
 

@@ -14,6 +14,10 @@ def seed_admin():
 
         resident = db.query(Resident).first()
 
+        if not resident:
+            print("❌ Cannot seed admin: No residents found in database. Seed residents first!")
+            return
+        
         admin = Admin(
             resident_id=resident.id,
             username="admin",
