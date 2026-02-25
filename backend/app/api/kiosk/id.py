@@ -97,7 +97,7 @@ def verify_birthdate(payload: BirthdateVerifyRequest, db: Session = Depends(get_
     ),
 )
 def apply(payload: IDApplicationRequest, db: Session = Depends(get_db)):
-    return apply_for_id(db, payload.resident_id, payload.rfid_uid)
+    return apply_for_id(db, payload.resident_id, payload.rfid_uid, payload.photo)
 
 
 # =========================================================

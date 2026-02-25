@@ -44,9 +44,11 @@ class IDApplicationRequest(BaseModel):
     Available to both guest and authenticated (RFID) sessions.
     The rfid_uid field is set by the frontend from the active session;
     it is None when the request comes from a guest user.
+    The photo field is a base64-encoded PNG string captured from the kiosk camera.
     """
     resident_id: int
     rfid_uid: Optional[str] = None          # None → guest session
+    photo: Optional[str] = None             # base64 PNG, saved to residents.photo
 
 
 class BirthdateVerifyRequest(BaseModel):

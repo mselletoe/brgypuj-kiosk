@@ -259,6 +259,7 @@ const submitApplication = async () => {
     const result = await applyForID({
       resident_id: selectedResident.value.resident_id,
       rfid_uid: authStore.rfidUid || null,
+      photo: photoData.value,   // base64 PNG string from canvas capture
     });
 
     referenceId.value = result.transaction_no;

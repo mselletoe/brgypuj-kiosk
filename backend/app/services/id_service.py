@@ -129,7 +129,7 @@ def verify_resident_birthdate(db: Session, resident_id: int, birthdate) -> bool:
 # 3. APPLY FOR ID
 # =========================================================
 
-def apply_for_id(db: Session, resident_id: int, rfid_uid: str | None) -> dict:
+def apply_for_id(db: Session, resident_id: int, rfid_uid: str | None, photo: str | None) -> dict:
     """
     Creates a DocumentRequest for an ID Application.
 
@@ -137,9 +137,12 @@ def apply_for_id(db: Session, resident_id: int, rfid_uid: str | None) -> dict:
     feature and do not depend on any row in the document_types table.
     The type is identified by form_data["request_type"] = "ID Application".
 
+    - Saves the base64 photo to the resident's profile (residents.photo).
     - Prevents duplicate pending ID applications for the same resident.
     - Works for both guest (rfid_uid=None) and authenticated sessions.
     """
+    import base64
+
     resident = _get_resident_or_404(db, resident_id)
 
     # Guard: one pending ID application at a time
@@ -158,6 +161,20 @@ def apply_for_id(db: Session, resident_id: int, rfid_uid: str | None) -> dict:
             detail="You already have a pending ID application."
         )
 
+    # Save photo to resident profile if provided
+    # Frontend sends a base64 data URL: "data:image/png;base64,<data>"
+    if photo:
+        try:
+            # Strip the data URL prefix if present
+            if "," in photo:
+                photo = photo.split(",", 1)[1]
+            resident.photo = base64.b64decode(photo)
+        except Exception:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid photo data."
+            )
+
     # Resolve which RFID UID to display in the admin table
     # Priority: session RFID → any active RFID → "Guest Mode"
     active_rfid = _get_active_rfid(resident)
@@ -174,7 +191,7 @@ def apply_for_id(db: Session, resident_id: int, rfid_uid: str | None) -> dict:
         status="Pending",
         payment_status="unpaid",
         form_data={
-            "request_type": ID_APPLICATION_DOCTYPE_NAME,    # identifier for admin display
+            "request_type": ID_APPLICATION_DOCTYPE_NAME,
             "applicant_name": f"{resident.first_name} {resident.last_name}",
             "session_rfid": display_rfid,
             "requested_date": now.isoformat(),
