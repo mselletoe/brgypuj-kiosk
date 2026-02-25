@@ -46,7 +46,7 @@ const fetchPendingRequests = async () => {
     const allRequests = response.data.map(req => ({
       id: req.id,
       transaction_no: req.transaction_no,
-      type: req.doctype_name.toUpperCase() === 'RFID' ? 'rfid' : 'document',
+      type: (req.doctype_id === null || req.doctype_name.toUpperCase() === 'RFID') ? 'rfid' : 'document',
       status: req.status.toLowerCase(),
       requestType: req.doctype_name,
       requester: {
@@ -238,9 +238,11 @@ const filteredRequests = computed(() => {
   }
 
   if (props.filters?.documentType) {
-    result = result.filter(req =>
-      req.raw.doctype_id === props.filters.documentType
-    )
+    if (props.filters.documentType === 'id_application') {
+      result = result.filter(req => req.raw.doctype_id === null)
+    } else {
+      result = result.filter(req => req.raw.doctype_id === props.filters.documentType)
+    }
   }
 
   if (props.filters?.paymentStatus) {

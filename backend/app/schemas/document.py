@@ -167,14 +167,14 @@ class DocumentRequestAdminOut(BaseModel):
     id: int
     transaction_no: str
 
-    resident_id: int
+    resident_id: Optional[int]
     resident_first_name: Optional[str]
     resident_middle_name: Optional[str]
     resident_last_name: Optional[str]
     resident_rfid: Optional[str]
     resident_phone: Optional[str]
     
-    doctype_id: int
+    doctype_id: Optional[int]
     doctype_name: str
 
     status: str

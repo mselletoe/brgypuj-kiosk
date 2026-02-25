@@ -29,6 +29,7 @@ onMounted(async () => {
 
     documentTypeOptions.value = [
       { label: 'All Document Types', value: null },
+      { label: 'I.D Application', value: 'id_application' },
       ...data.map(type => ({
         label: type.doctype_name,
         value: type.id 
