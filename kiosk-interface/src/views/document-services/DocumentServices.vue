@@ -82,7 +82,7 @@ onMounted(fetchDocuments)
           v-for="doc in documents"
           :key="doc.request_type_name"
           :to="`/document-services/${doc.request_type_name.toLowerCase().replace(/\s+/g, '-')}`"
-          class="group flex flex-col p-6 rounded-2xl border border-gray-300 shadow-md bg-white hover:bg-[#003A6B] hover:text-white transition-all duration-300 ease-in-out"
+          class="group flex flex-col p-6 rounded-2xl border border-gray-200 shadow-lg bg-white hover:bg-[#003A6B] hover:text-white transition-all duration-300 ease-in-out"
         >
           <h2 class="text-[30px] text-[#003A6B] font-bold mb-2 group-hover:text-white transition-all duration-300 ease-in-out">
             {{ doc.request_type_name }}

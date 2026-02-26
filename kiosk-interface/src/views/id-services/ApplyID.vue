@@ -316,316 +316,310 @@ const selectYear = (y) => {
 </script>
 
 <template>
-  <div
-    class="flex flex-col w-full h-full bg-white overflow-hidden select-none no-scrollbar"
-  >
-    <div class="flex flex-col h-full">
-      <div class="flex items-center mb-4 gap-7 flex-shrink-0">
-        <ArrowBackButton @click="goBack" :disabled="isCountingDown" />
-        <div>
-          <h1 class="text-[45px] text-[#03335C] font-bold tracking-tight -mt-2">
-            Apply for RFID
-          </h1>
-          <p class="text-[#03335C] -mt-2">
-            Select a resident record to begin the application.
-          </p>
-        </div>
+  <div class="flex flex-col w-full h-full">
+    <!-- Header -->
+    <div class="flex items-center mb-6 gap-7 flex-shrink-0">
+      <ArrowBackButton @click="goBack" :disabled="isCountingDown" />
+      <div>
+        <h1 class="text-[45px] text-[#03335C] font-bold tracking-tight -mt-2">
+          Apply for RFID
+        </h1>
+        <p class="text-[#03335C] -mt-2">
+          Select a resident record to begin the application.
+        </p>
       </div>
+    </div>
 
-      <div class="flex-1 flex flex-col justify-center items-center pb-8">
+    <!-- Main -->
+    <div class="flex-1 mb-4">
+      <div class="w-full bg-white rounded-2xl border border-gray-200 shadow-lg p-6 flex flex-col transition-all duration-500 ease-in-out">
+        <!-- Resident Selection Form-->
         <div
-          :class="[
-            'w-full max-w-[1050px] bg-white rounded-[28px] shadow-[0_4px_15px_rgba(0,0,0,0.1)] border border-gray-100 p-[30px] relative flex flex-col transition-all duration-500 ease-in-out',
-            currentPhase === 'selection' ? 'h-[240px]' : 'h-[380px]',
-          ]"
+          v-if="currentPhase === 'selection'"
+          class="flex w-full h-full items-center justify-start animate-fadeIn"
         >
-          <div
-            v-if="currentPhase === 'selection'"
-            class="flex w-full h-full items-center justify-start animate-fadeIn"
-          >
-            <div class="w-full flex flex-col relative px-2">
-              <h2 class="text-[25px] font-bold text-[#03335C] text-left">
-                Resident Selection
-              </h2>
-              <p class="text-gray-500 italic text-xs mb-6 text-left">
-                Select the Resident to be linked to the new RFID card
-              </p>
+          <div class="w-full flex flex-col relative px-2">
+            <h2 class="text-[25px] font-bold text-[#03335C] text-left">
+              Resident Selection
+            </h2>
+            <p class="text-gray-500 italic text-xs mb-6 text-left">
+              Select the Resident to be linked to the new RFID card
+            </p>
 
-              <div class="space-y-4 w-full z-20">
-                <div class="flex gap-10 w-full">
-                  <!-- Last Name Letter -->
-                  <div class="flex flex-1 items-center gap-3">
-                    <div
-                      class="flex items-center gap-2 flex-shrink-0 min-w-[140px]"
-                    >
-                      <CalendarDaysIcon class="w-5 h-5 text-[#03335C]" />
-                      <div class="flex flex-col leading-tight">
-                        <span
-                          class="text-[9px] uppercase font-bold text-gray-400"
-                          >First Letter of</span
-                        >
-                        <span
-                          class="text-[#03335C] font-black text-sm uppercase tracking-tight"
-                          >Last Name</span
-                        >
-                      </div>
-                    </div>
-                    <div class="flex-1 relative">
-                      <button
-                        @click="toggleDropdown('lastName')"
-                        class="w-full h-11 border border-gray-300 rounded-xl px-4 flex items-center justify-between text-[#03335C] font-bold bg-white text-base hover:border-[#03335C] transition-colors"
-                      >
-                        {{ lastNameLetter || "Select" }}
-                        <ChevronDownIcon class="w-5 h-5 text-[#03335C]" />
-                      </button>
-                      <div
-                        v-if="showLastNameDropdown"
-                        class="absolute top-full left-0 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-50 p-1 flex flex-col h-48 overflow-y-auto custom-scroll"
-                      >
-                        <button
-                          v-for="l in alphabet"
-                          :key="l"
-                          @click="selectLastNameLetter(l)"
-                          class="w-full text-center py-2.5 px-2 hover:bg-blue-50 rounded-lg font-bold text-[#03335C]"
-                        >
-                          {{ l }}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- First Name Letter -->
-                  <div class="flex flex-1 items-center gap-3">
-                    <div
-                      class="flex items-center gap-2 flex-shrink-0 min-w-[140px]"
-                    >
-                      <CalendarDaysIcon class="w-5 h-5 text-[#03335C]" />
-                      <div class="flex flex-col leading-tight">
-                        <span
-                          class="text-[9px] uppercase font-bold text-gray-400"
-                          >First Letter of</span
-                        >
-                        <span
-                          class="text-[#03335C] font-black text-sm uppercase tracking-tight"
-                          >First Name</span
-                        >
-                      </div>
-                    </div>
-                    <div class="flex-1 relative">
-                      <button
-                        @click="toggleDropdown('firstName')"
-                        class="w-full h-11 border border-gray-300 rounded-xl px-4 flex items-center justify-between text-[#03335C] font-bold bg-white text-base hover:border-[#03335C] transition-colors"
-                      >
-                        {{ firstNameLetter || "Select" }}
-                        <ChevronDownIcon class="w-5 h-5 text-[#03335C]" />
-                      </button>
-                      <div
-                        v-if="showFirstNameDropdown"
-                        class="absolute top-full left-0 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-50 p-1 flex flex-col h-48 overflow-y-auto custom-scroll"
-                      >
-                        <button
-                          v-for="l in alphabet"
-                          :key="l"
-                          @click="selectFirstNameLetter(l)"
-                          class="w-full text-center py-2.5 px-2 hover:bg-blue-50 rounded-lg font-bold text-[#03335C]"
-                        >
-                          {{ l }}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Resident Name Dropdown -->
-                <div class="flex items-center gap-3 w-full">
+            <div class="space-y-4 w-full">
+              <div class="flex gap-10 w-full">
+                <!-- Last Name Letter -->
+                <div class="flex flex-1 items-center gap-3">
                   <div
                     class="flex items-center gap-2 flex-shrink-0 min-w-[140px]"
                   >
-                    <UserIcon class="w-5 h-5 text-[#03335C]" />
-                    <span
-                      class="text-[#03335C] font-bold text-[11px] uppercase tracking-tight"
-                      >Resident Name</span
-                    >
+                    <CalendarDaysIcon class="w-5 h-5 text-[#03335C]" />
+                    <div class="flex flex-col leading-tight">
+                      <span
+                        class="text-[9px] uppercase font-bold text-gray-400"
+                        >First Letter of</span
+                      >
+                      <span
+                        class="text-[#03335C] font-black text-sm uppercase tracking-tight"
+                        >Last Name</span
+                      >
+                    </div>
                   </div>
                   <div class="flex-1 relative">
                     <button
-                      @click="toggleDropdown('resident')"
-                      :disabled="!lastNameLetter || !firstNameLetter || isFetching"
-                      class="w-full h-11 border border-gray-300 rounded-xl px-4 flex items-center justify-between text-[#03335C] font-bold bg-white text-base hover:border-[#03335C] transition-colors disabled:opacity-50 disabled:bg-gray-50"
+                      @click="toggleDropdown('lastName')"
+                      class="w-full h-11 border border-gray-300 rounded-xl px-4 flex items-center justify-between text-[#03335C] font-bold bg-white text-base hover:border-[#03335C] transition-colors"
                     >
-                      <span v-if="isFetching" class="text-gray-400 text-sm italic">Loading...</span>
-                      <span
-                        v-else-if="selectedResident"
-                        class="truncate text-[#03335C]"
-                        >{{ selectedResident.last_name }},
-                        {{ selectedResident.first_name }}
-                        <span v-if="selectedResident.middle_name">{{ selectedResident.middle_name }}</span>
-                      </span>
-                      <span v-else class="text-gray-400 truncate opacity-60">{{
-                        !lastNameLetter || !firstNameLetter
-                          ? "Select initials first..."
-                          : "Select Resident..."
-                      }}</span>
+                      {{ lastNameLetter || "Select" }}
                       <ChevronDownIcon class="w-5 h-5 text-[#03335C]" />
                     </button>
                     <div
-                      v-if="showResidentDropdown"
-                      class="absolute top-full left-0 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-50 p-1 max-h-[150px] overflow-y-auto custom-scroll"
+                      v-if="showLastNameDropdown"
+                      class="absolute top-full left-0 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-50 p-1 flex flex-col h-48 overflow-y-auto custom-scroll"
                     >
-                      <div
-                        v-if="residentList.length === 0"
-                        class="p-3 text-center text-gray-400 text-sm"
-                      >
-                        No records found
-                      </div>
                       <button
-                        v-for="r in residentList"
-                        :key="r.resident_id"
-                        @click="selectResident(r)"
-                        class="w-full text-left py-2 px-4 hover:bg-blue-50 rounded-lg font-bold text-[#03335C] text-base border-b border-gray-50 last:border-0"
+                        v-for="l in alphabet"
+                        :key="l"
+                        @click="selectLastNameLetter(l)"
+                        class="w-full text-center py-2.5 px-2 hover:bg-blue-50 rounded-lg font-bold text-[#03335C]"
                       >
-                        {{ r.last_name }}, {{ r.first_name }}
-                        <span v-if="r.middle_name">{{ r.middle_name }}</span>
+                        {{ l }}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- First Name Letter -->
+                <div class="flex flex-1 items-center gap-3">
+                  <div
+                    class="flex items-center gap-2 flex-shrink-0 min-w-[140px]"
+                  >
+                    <CalendarDaysIcon class="w-5 h-5 text-[#03335C]" />
+                    <div class="flex flex-col leading-tight">
+                      <span
+                        class="text-[9px] uppercase font-bold text-gray-400"
+                        >First Letter of</span
+                      >
+                      <span
+                        class="text-[#03335C] font-black text-sm uppercase tracking-tight"
+                        >First Name</span
+                      >
+                    </div>
+                  </div>
+                  <div class="flex-1 relative">
+                    <button
+                      @click="toggleDropdown('firstName')"
+                      class="w-full h-11 border border-gray-300 rounded-xl px-4 flex items-center justify-between text-[#03335C] font-bold bg-white text-base hover:border-[#03335C] transition-colors"
+                    >
+                      {{ firstNameLetter || "Select" }}
+                      <ChevronDownIcon class="w-5 h-5 text-[#03335C]" />
+                    </button>
+                    <div
+                      v-if="showFirstNameDropdown"
+                      class="absolute top-full left-0 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-50 p-1 flex flex-col h-48 overflow-y-auto custom-scroll"
+                    >
+                      <button
+                        v-for="l in alphabet"
+                        :key="l"
+                        @click="selectFirstNameLetter(l)"
+                        class="w-full text-center py-2.5 px-2 hover:bg-blue-50 rounded-lg font-bold text-[#03335C]"
+                      >
+                        {{ l }}
                       </button>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
 
-          <!-- Camera Phase -->
-          <div
-            v-else-if="currentPhase === 'camera'"
-            class="flex w-full h-full gap-20 items-center justify-center animate-fadeIn"
-          >
-            <div class="flex-shrink-0 h-full relative">
-              <div
-                class="h-full aspect-square bg-black rounded-3xl overflow-hidden relative border-[6px] border-gray-100 shadow-[inset_0_4px_20px_rgba(0,0,0,0.5)] flex items-center justify-center"
-              >
-                <video
-                  v-show="!photoData"
-                  ref="videoRef"
-                  autoplay
-                  playsinline
-                  class="w-full h-full object-cover transform scale-x-[-1]"
-                ></video>
-                <img
-                  v-show="photoData"
-                  :src="photoData"
-                  alt="Captured ID"
-                  class="w-full h-full object-cover transform scale-x-[-1]"
-                />
-                <canvas ref="canvasRef" class="hidden"></canvas>
+              <!-- Resident Name Dropdown -->
+              <div class="flex items-center gap-3 w-full">
                 <div
-                  v-if="!photoData"
-                  class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"
+                  class="flex items-center gap-2 flex-shrink-0 min-w-[140px]"
                 >
-                  <template v-if="isCountingDown">
-                    <span
-                      class="text-[80px] font-black text-white drop-shadow-[0_4px_10px_rgba(0,0,0,0.8)] leading-none"
-                      >{{ countdown }}</span
-                    >
-                    <div
-                      class="bg-black/60 text-white px-5 py-1.5 rounded-full text-sm tracking-widest uppercase font-bold mt-3 animate-pulse backdrop-blur-sm"
-                    >
-                      Look at the camera!
-                    </div>
-                  </template>
-                  <div
-                    v-else
-                    class="absolute bottom-6 bg-black/60 backdrop-blur-md text-white px-4 py-1.5 rounded-full text-xs font-bold tracking-widest uppercase"
+                  <UserIcon class="w-5 h-5 text-[#03335C]" />
+                  <span
+                    class="text-[#03335C] font-bold text-[11px] uppercase tracking-tight"
+                    >Resident Name</span
                   >
-                    Align face in center
+                </div>
+                <div class="flex-1 relative">
+                  <button
+                    @click="toggleDropdown('resident')"
+                    :disabled="!lastNameLetter || !firstNameLetter || isFetching"
+                    class="w-full h-11 border border-gray-300 rounded-xl px-4 flex items-center justify-between text-[#03335C] font-bold bg-white text-base hover:border-[#03335C] transition-colors disabled:opacity-50 disabled:bg-gray-50"
+                  >
+                    <span v-if="isFetching" class="text-gray-400 text-sm italic">Loading...</span>
+                    <span
+                      v-else-if="selectedResident"
+                      class="truncate text-[#03335C]"
+                      >{{ selectedResident.last_name }},
+                      {{ selectedResident.first_name }}
+                      <span v-if="selectedResident.middle_name">{{ selectedResident.middle_name }}</span>
+                    </span>
+                    <span v-else class="text-gray-400 truncate opacity-60">{{
+                      !lastNameLetter || !firstNameLetter
+                        ? "Select initials first..."
+                        : "Select Resident..."
+                    }}</span>
+                    <ChevronDownIcon class="w-5 h-5 text-[#03335C]" />
+                  </button>
+                  <div
+                    v-if="showResidentDropdown"
+                    class="absolute top-full left-0 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-50 p-1 max-h-[150px] overflow-y-auto custom-scroll"
+                  >
+                    <div
+                      v-if="residentList.length === 0"
+                      class="p-3 text-center text-gray-400 text-sm"
+                    >
+                      No records found
+                    </div>
+                    <button
+                      v-for="r in residentList"
+                      :key="r.resident_id"
+                      @click="selectResident(r)"
+                      class="w-full text-left py-2 px-4 hover:bg-blue-50 rounded-lg font-bold text-[#03335C] text-base border-b border-gray-50 last:border-0"
+                    >
+                      {{ r.last_name }}, {{ r.first_name }}
+                      <span v-if="r.middle_name">{{ r.middle_name }}</span>
+                    </button>
                   </div>
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+
+        <!-- Camera Phase -->
+        <div
+          v-else-if="currentPhase === 'camera'"
+          class="flex w-full h-[340px] gap-20 items-center justify-center animate-fadeIn"
+        >
+          <div class="flex-shrink-0 h-full relative">
             <div
-              class="w-[380px] flex flex-col justify-center h-full flex-shrink-0"
+              class="h-full aspect-square bg-black rounded-3xl overflow-hidden relative flex items-center justify-center"
             >
-              <div class="flex-1 flex flex-col justify-center">
-                <h2 class="text-3xl font-bold text-[#03335C] mb-1">
-                  Capture ID Photo
-                </h2>
-                <p class="text-gray-500 italic text-sm mb-6">
-                  Take a clear photo for your new RFID Card.
-                </p>
-                <div
-                  class="bg-[#EAF6FB] rounded-2xl p-6 border border-[#BDE0EF]"
-                >
-                  <p
-                    class="text-[#03335C] text-xs uppercase font-bold tracking-wider opacity-60 mb-1"
+              <video
+                v-show="!photoData"
+                ref="videoRef"
+                autoplay
+                playsinline
+                class="w-full h-full object-cover transform scale-x-[-1]"
+              ></video>
+              <img
+                v-show="photoData"
+                :src="photoData"
+                alt="Captured ID"
+                class="w-full h-full object-cover transform scale-x-[-1]"
+              />
+              <canvas ref="canvasRef" class="hidden"></canvas>
+              <div
+                v-if="!photoData"
+                class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"
+              >
+                <template v-if="isCountingDown">
+                  <span
+                    class="text-[80px] font-black text-white drop-shadow-[0_4px_10px_rgba(0,0,0,0.8)] leading-none"
+                    >{{ countdown }}</span
                   >
-                    Applying For:
-                  </p>
-                  <p class="font-black text-[#03335C] text-2xl truncate">
-                    {{ selectedResident?.first_name }}
-                    {{ selectedResident?.last_name }}
-                  </p>
+                  <div
+                    class="bg-black/60 text-white px-5 py-1.5 rounded-full text-sm tracking-widest uppercase font-bold mt-3 animate-pulse backdrop-blur-sm"
+                  >
+                    Look at the camera!
+                  </div>
+                </template>
+                <div
+                  v-else
+                  class="absolute bottom-6 bg-black/60 backdrop-blur-md text-white px-4 py-1.5 rounded-full text-xs font-bold tracking-widest uppercase"
+                >
+                  Align face in center
                 </div>
               </div>
-              <div class="flex flex-col gap-3 mt-4">
-                <template v-if="!photoData">
-                  <Button
-                    :variant="isCountingDown ? 'disabled' : 'primary'"
-                    size="md"
-                    class="w-full justify-center text-lg py-4"
-                    :disabled="isCountingDown"
-                    @click="startCountdown"
-                  >
-                    <span class="flex items-center justify-center gap-2 w-full"
-                      ><CameraIcon v-if="!isCountingDown" class="w-6 h-6" />{{
-                        isCountingDown ? "Get Ready..." : "Capture Photo"
-                      }}</span
-                    >
-                  </Button>
-                </template>
-                <template v-else>
-                  <Button
-                    variant="outline"
-                    size="md"
-                    class="w-full justify-center text-lg py-3"
-                    @click="retakePhoto"
-                    :disabled="isSubmitting"
-                    >Retake Photo</Button
-                  >
-                  <Button
-                    :variant="isSubmitting ? 'disabled' : 'secondary'"
-                    size="md"
-                    class="w-full justify-center text-lg py-4"
-                    :disabled="isSubmitting"
-                    @click="submitApplication"
-                    >{{
-                      isSubmitting ? "Processing..." : "Submit Application"
-                    }}</Button
-                  >
-                </template>
+            </div>
+          </div>
+          <div
+            class="w-[380px] flex flex-col justify-center h-full flex-shrink-0"
+          >
+            <div class="flex-1 flex flex-col justify-center">
+              <h2 class="text-3xl font-bold text-[#03335C] mb-1">
+                Capture ID Photo
+              </h2>
+              <p class="text-gray-500 italic text-sm mb-6">
+                Take a clear photo for your new RFID Card.
+              </p>
+              <div
+                class="bg-[#EAF6FB] rounded-2xl p-6 border border-[#BDE0EF]"
+              >
+                <p
+                  class="text-[#03335C] text-xs uppercase font-bold tracking-wider opacity-60 mb-1"
+                >
+                  Applying For:
+                </p>
+                <p class="font-black text-[#03335C] text-2xl truncate">
+                  {{ selectedResident?.first_name }}
+                  {{ selectedResident?.last_name }}
+                </p>
               </div>
+            </div>
+            <div class="flex flex-col gap-3 mt-4">
+              <template v-if="!photoData">
+                <Button
+                  :variant="isCountingDown ? 'disabled' : 'primary'"
+                  size="md"
+                  class="w-full justify-center text-lg py-4"
+                  :disabled="isCountingDown"
+                  @click="startCountdown"
+                >
+                  <span class="flex items-center justify-center gap-2 w-full"
+                    ><CameraIcon v-if="!isCountingDown" class="w-6 h-6" />{{
+                      isCountingDown ? "Get Ready..." : "Capture Photo"
+                    }}</span
+                  >
+                </Button>
+              </template>
+              <template v-else>
+                <Button
+                  variant="outline"
+                  size="md"
+                  class="w-full justify-center text-lg py-3"
+                  @click="retakePhoto"
+                  :disabled="isSubmitting"
+                  >Retake Photo</Button
+                >
+                <Button
+                  :variant="isSubmitting ? 'disabled' : 'secondary'"
+                  size="md"
+                  class="w-full justify-center text-lg py-4"
+                  :disabled="isSubmitting"
+                  @click="submitApplication"
+                  >{{
+                    isSubmitting ? "Processing..." : "Submit Application"
+                  }}</Button
+                >
+              </template>
             </div>
           </div>
         </div>
       </div>
+    </div>
 
-      <div
-        v-if="currentPhase === 'selection'"
-        class="flex gap-6 mt-4 w-full max-w-[1050px] mx-auto justify-between items-center flex-shrink-0 px-4"
+    <div
+      v-if="currentPhase === 'selection'"
+      class="flex gap-6 mt-6 justify-between items-center flex-shrink-0"
+    >
+      <Button
+        variant="outline"
+        size="md"
+        @click="handleReset"
+        :disabled="!lastNameLetter && !firstNameLetter && !selectedResident"
+        >Reset Selection</Button
       >
-        <Button
-          variant="outline"
-          size="md"
-          @click="handleReset"
-          :disabled="!lastNameLetter && !firstNameLetter && !selectedResident"
-          >Reset Selection</Button
-        >
-        <Button
-          :variant="selectedResident ? 'secondary' : 'disabled'"
-          size="md"
-          :disabled="!selectedResident"
-          @click="proceedToCamera"
-          >Next: Take Photo</Button
-        >
-      </div>
+      <Button
+        :variant="selectedResident ? 'secondary' : 'disabled'"
+        size="md"
+        :disabled="!selectedResident"
+        @click="proceedToCamera"
+        >Next: Take Photo</Button
+      >
     </div>
 
     <!-- Birthdate Verification Modal -->

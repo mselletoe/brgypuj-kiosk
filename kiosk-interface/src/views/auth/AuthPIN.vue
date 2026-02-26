@@ -193,20 +193,8 @@ onMounted(() => {
 <template>
   <div class="h-screen w-screen bg-gradient-to-br from-[#003A6B] to-[#89CFF1] flex justify-center items-center font-poppins">
     <div class="bg-white w-[974px] h-[550px] rounded-lg shadow-2xl relative flex p-10">
-      
-      <Button 
-        @click="goBack" 
-        bgColor="bg-transparent"
-        textColor="text-[#013C6D]"
-        class="absolute bottom-10 left-10 w-auto px-4 text-[14px] rounded-[20px] h-[40px] border-2 border-[#013C6D] hover:bg-gray-100"
-      >
-        <span class="flex items-center gap-x-2">
-          <ArrowLeftIcon class="h-5 w-5" />
-          Go Back
-        </span>
-      </Button>
 
-      <div class="w-1/2 flex flex-col text-[#013C6D] pr-12">
+      <div class="flex-1 flex flex-col text-[#013C6D] pr-12">
         <div class="flex items-center gap-3 mb-10">
           <img src="@/assets/images/Pob1Logo.svg" alt="Barangay Logo" class="w-14 h-14">
           <div>
@@ -217,13 +205,24 @@ onMounted(() => {
 
         <div class="flex-grow flex flex-col justify-center items-center text-center">
           <div class="mb-20"> 
-            <h2 class="text-4xl font-bold mb-1 leading-tight">{{ title }}</h2> 
-            <p class="text-xl text-gray-500 leading-tight">{{ subtitle }}</p> 
+            <h2 class="text-4xl font-bold mb-2 leading-tight">{{ title }}</h2> 
+            <p class="text-lg text-gray-500 italic">{{ subtitle }}</p> 
           </div>
         </div>
+
+        <Button 
+          @click="goBack"
+          class="absolute bottom-8 left-8 w-auto px-3 text-[14px] rounded-[40px] h-[40px]"
+          variant="outline"
+        >
+          <span class="flex items-center gap-x-2">
+            <ArrowLeftIcon class="h-5 w-5" />
+            Go Back
+          </span>
+        </Button>
       </div>
 
-      <div class="w-1/2 flex flex-col items-center justify-center pl-12 border-l border-gray-200 relative">
+      <div class="flex flex-1 flex-col items-center justify-center pl-12 border-l border-gray-200 relative">
         <div class="w-full max-w-xs">
           <label class="text-sm font-medium text-gray-500 mb-1">
             {{ !authStore.tempHasPin ? 'Enter New 4-digit PIN' : 'Enter 4-digit PIN' }}
@@ -264,7 +263,7 @@ onMounted(() => {
             :disabled="!isPinComplete"
             :class="[
                 'w-full h-14 text-xl font-semibold rounded-lg mt-4 transition-colors text-white',
-                isPinComplete ? 'bg-[#013C6D] hover:bg-blue-800' : 'bg-gray-400 cursor-not-allowed'
+                isPinComplete ? 'bg-[#013C6D]' : 'bg-gray-400 cursor-not-allowed'
             ]"
           >
             Authenticate

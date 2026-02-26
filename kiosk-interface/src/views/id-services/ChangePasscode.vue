@@ -133,128 +133,127 @@ const handleModalDone = () => router.push("/id-services");
 </script>
 
 <template>
-  <div
-    class="flex flex-col w-full h-full bg-white overflow-hidden select-none no-scrollbar"
-  >
-    <div class="flex flex-col h-full">
-      <div class="flex items-center mb-0 gap-7 flex-shrink-0">
-        <ArrowBackButton @click="goBack" />
-        <div>
-          <h1 class="text-[45px] text-[#03335C] font-bold tracking-tight -mt-2">
-            Change Passcode
-          </h1>
-          <p class="text-[#03335C] -mt-2">
-            Secure your account by updating your security PIN.
-          </p>
+  <div class="flex flex-col w-full h-full">
+    <!-- Header -->
+    <div class="flex items-center mb-6 gap-7 flex-shrink-0">
+      <ArrowBackButton @click="goBack" />
+      <div>
+        <h1 class="text-[45px] text-[#03335C] font-bold tracking-tight -mt-2">
+          Change Passcode
+        </h1>
+        <p class="text-[#03335C] -mt-2">
+          Secure your account by updating your security PIN.
+        </p>
+      </div>
+    </div>
+
+    <!-- Main -->
+    <div class="flex-1 flex flex-row items-stretch justify-center gap-8 animate-fadeIn mb-4">
+      <!-- Verify -->
+      <div class="flex-1">
+        <div
+          class="bg-[#EBF5FF] p-8 rounded-2xl border border-[#B0D7F8] flex flex-col h-full shadow-lg"
+        >
+          <div class="flex-1">
+            <component
+              :is="stepInfo.icon"
+              class="w-10 h-10 text-[#03335C] mb-4"
+            />
+            <h2 class="text-3xl font-bold text-[#03335C] mb-2">
+              {{ stepInfo.title }}
+            </h2>
+            <p class="text-gray-500 text-base leading-snug mb-6">
+              {{ stepInfo.desc }}
+            </p>
+
+            <div class="flex gap-2">
+              <div
+                v-for="i in 3"
+                :key="i"
+                :class="[
+                  'h-2 rounded-full transition-all duration-300',
+                  step === i ? 'w-8 bg-[#03335C]' : 'w-2 bg-gray-300',
+                ]"
+              ></div>
+            </div>
+          </div>
+
+          <Button
+            @click="handleNext"
+            :disabled="pinBuffer.length !== pinLength || isSubmitting"
+            :variant="
+              pinBuffer.length !== pinLength || isSubmitting
+                ? 'disabled'
+                : 'primary'
+            "
+            class="w-full py-5 text-xl font-bold shadow-md shadow-blue-900/10"
+          >
+            {{
+              isSubmitting
+                ? "Processing..."
+                : step === 3
+                  ? "Confirm Change"
+                  : "Next Step"
+            }}
+          </Button>
         </div>
       </div>
 
-      <div
-        class="flex-1 flex flex-row items-stretch justify-center gap-10 px-4 pt-8 pb-12 animate-fadeIn"
-      >
-        <div class="flex-1 max-w-[420px] flex flex-col">
-          <div
-            class="bg-blue-50/50 p-8 rounded-3xl border border-blue-100/50 flex flex-col h-full shadow-sm"
-          >
-            <div class="flex-1">
-              <component
-                :is="stepInfo.icon"
-                class="w-10 h-10 text-[#03335C] mb-4"
-              />
-              <h2 class="text-3xl font-bold text-[#03335C] mb-2">
-                {{ stepInfo.title }}
-              </h2>
-              <p class="text-gray-500 text-base leading-snug mb-6">
-                {{ stepInfo.desc }}
-              </p>
-
-              <div class="flex gap-2">
-                <div
-                  v-for="i in 3"
-                  :key="i"
-                  :class="[
-                    'h-2 rounded-full transition-all duration-300',
-                    step === i ? 'w-8 bg-[#03335C]' : 'w-2 bg-gray-300',
-                  ]"
-                ></div>
-              </div>
+      <!-- Keypad -->
+      <div class="flex-1">
+        <div
+          class="bg-white p-7 rounded-2xl shadow-lg border border-gray-200 flex flex-col items-center h-full justify-center"
+        >
+          <div class="relative flex flex-col items-center mb-8">
+            <div :class="['flex gap-4', { 'animate-shake': isShaking }]">
+              <div
+                v-for="i in pinLength"
+                :key="i"
+                :class="[
+                  'w-4 h-4 rounded-full border-2 transition-all',
+                  pinBuffer.length >= i
+                    ? 'bg-[#03335C] border-[#03335C]'
+                    : 'bg-transparent border-gray-400',
+                ]"
+              ></div>
             </div>
 
-            <Button
-              @click="handleNext"
-              :disabled="pinBuffer.length !== pinLength || isSubmitting"
-              :variant="
-                pinBuffer.length !== pinLength || isSubmitting
-                  ? 'disabled'
-                  : 'primary'
-              "
-              class="w-full py-5 text-xl font-bold shadow-md shadow-blue-900/10"
+            <p
+              v-if="verificationError"
+              class="absolute top-[22px] text-red-500 text-sm tracking-tight whitespace-nowrap"
             >
-              {{
-                isSubmitting
-                  ? "Processing..."
-                  : step === 3
-                    ? "Confirm Change"
-                    : "Next Step"
-              }}
-            </Button>
+              {{ verificationError }}
+            </p>
           </div>
-        </div>
 
-        <div class="flex-1 max-w-[380px] flex flex-col">
-          <div
-            class="bg-white p-7 rounded-3xl shadow-[0_5px_15px_-5px_rgba(0,0,0,0.08)] border border-gray-100 flex flex-col items-center h-full justify-center"
-          >
-            <div class="relative flex flex-col items-center mb-8">
-              <div :class="['flex gap-4', { 'animate-shake': isShaking }]">
-                <div
-                  v-for="i in pinLength"
-                  :key="i"
-                  :class="[
-                    'w-4 h-4 rounded-full border-2 transition-all',
-                    pinBuffer.length >= i
-                      ? 'bg-[#03335C] border-[#03335C]'
-                      : 'bg-transparent border-gray-300',
-                  ]"
-                ></div>
-              </div>
-
-              <p
-                v-if="verificationError"
-                class="absolute top-[22px] text-red-500 text-sm tracking-tight whitespace-nowrap"
-              >
-                {{ verificationError }}
-              </p>
-            </div>
-
-            <div class="grid grid-cols-3 gap-3 w-full">
-              <button
-                v-for="n in 9"
-                :key="n"
-                @click="handleKeypad(n.toString())"
-                class="h-14 rounded-2xl bg-gray-50 text-[#03335C] text-2xl font-bold border border-gray-100 active:bg-gray-200 transition-colors"
-              >
-                {{ n }}
-              </button>
-              <div class="h-14"></div>
-              <button
-                @click="handleKeypad('0')"
-                class="h-14 rounded-2xl bg-gray-50 text-[#03335C] text-2xl font-bold border border-gray-100 active:bg-gray-200 transition-colors"
-              >
-                0
-              </button>
-              <button
-                @click="handleBackspace"
-                class="h-14 rounded-2xl bg-gray-50 text-[#03335C] flex items-center justify-center active:bg-orange-50 active:text-orange-600 transition-colors"
-              >
-                <BackspaceIcon class="w-7 h-7" />
-              </button>
-            </div>
+          <div class="grid grid-cols-3 gap-3 w-full">
+            <button
+              v-for="n in 9"
+              :key="n"
+              @click="handleKeypad(n.toString())"
+              class="h-14 rounded-xl bg-gray-100 text-[#03335C] text-2xl font-bold border border-gray-100 active:bg-gray-200 transition-colors"
+            >
+              {{ n }}
+            </button>
+            <div class="h-14"></div>
+            <button
+              @click="handleKeypad('0')"
+              class="h-14 rounded-xl bg-gray-100 text-[#03335C] text-2xl font-bold border border-gray-100 active:bg-gray-200 transition-colors"
+            >
+              0
+            </button>
+            <button
+              @click="handleBackspace"
+              class="h-14 rounded-xl bg-yellow-100/60 text-yellow-700 active:bg-yellow-200/60 flex items-center justify-center transition-colors"
+            >
+              <BackspaceIcon class="w-7 h-7" />
+            </button>
           </div>
         </div>
       </div>
     </div>
 
+    <!-- Success Modal -->
     <Transition name="fade-blur">
       <div
         v-if="showSuccessModal"

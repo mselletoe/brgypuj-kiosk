@@ -57,7 +57,7 @@ const goBack = () => router.push("/home");
         <!-- Logged In User -->
         <div
           v-if="!isGuest"
-          class="relative h-full bg-gradient-to-br from-[#003A6B] to-[#005B96] rounded-3xl shadow-[0_10px_30px_-5px_rgba(0,0,0,0.15)] overflow-hidden text-white p-8 flex flex-col justify-between transform transition-transform active:scale-[0.99] duration-300 border border-white/10"
+          class="relative h-full bg-gradient-to-br from-[#003A6B] to-[#005B96] rounded-3xl shadow-lg overflow-hidden text-white p-8 flex flex-col justify-between transform transition-transform active:scale-[0.99] duration-300 border border-white/10"
         >
           <div
             class="absolute top-0 right-0 w-80 h-80 bg-white/5 rounded-full -mr-24 -mt-24 pointer-events-none"
@@ -66,12 +66,12 @@ const goBack = () => router.push("/home");
             class="absolute bottom-0 left-0 w-64 h-64 bg-white/5 rounded-full -ml-16 -mb-16 pointer-events-none"
           ></div>
 
-          <div class="flex justify-between items-start z-10">
-            <div class="flex gap-4 items-center">
+          <div class="flex justify-between items-center z-10">
+            <div class="flex gap-2 items-center">
               <img
                 src="@/assets/images/Pob1Logo.svg"
                 alt="Logo"
-                class="w-14 h-14 bg-white rounded-full p-1 shadow-sm"
+                class="w-16 h-16 rounded-full shadow-sm"
               />
               <div>
                 <h3
@@ -80,15 +80,15 @@ const goBack = () => router.push("/home");
                   Brgy. Poblacion 1
                 </h3>
                 <p class="text-[11px] opacity-70 uppercase tracking-widest">
-                  Resident Identification
+                  Resident Identification Card
                 </p>
               </div>
             </div>
             <div
-              class="bg-[#21C05C]/20 backdrop-blur-md border border-[#21C05C] text-[#4ADE80] text-[11px] font-bold px-4 py-1.5 rounded-full flex items-center gap-2"
+              class="bg-[#21C05C]/20 backdrop-blur-md border border-[#1aeb66] text-[#32f77a] text-[11px] font-bold px-4 py-1.5 rounded-full flex items-center gap-2"
             >
               <span
-                class="w-2 h-2 bg-[#4ADE80] rounded-full animate-pulse"
+                class="w-2 h-2 bg-[#32f77a] rounded-full animate-pulse"
               ></span>
               ACTIVE
             </div>
@@ -128,7 +128,7 @@ const goBack = () => router.push("/home");
                 RFID UID
               </p>
               <p
-                class="font-mono text-xl tracking-[0.25em] opacity-90 font-medium"
+                class="font-mono text-2xl tracking-[0.25em] font-medium"
               >
                 {{ resident.rfid }}
               </p>
@@ -177,7 +177,7 @@ const goBack = () => router.push("/home");
       <div class="flex flex-col gap-4 w-[360px]">
         <button
           @click="handleApplyRFID"
-          class="flex-1 flex items-center px-6 bg-white rounded-2xl shadow-sm border-2 border-gray-100 active:border-[#21C05C] active:bg-gray-50 transition-all group text-left"
+          class="flex-1 flex items-center px-6 bg-white rounded-2xl shadow-lg border border-gray-200 active:border-[#21C05C] active:bg-gray-50 transition-all group text-left"
         >
           <div
             class="w-10 h-10 bg-green-50 rounded-full flex-shrink-0 flex items-center justify-center mr-3 group-active:bg-[#21C05C] transition-colors"
@@ -201,7 +201,7 @@ const goBack = () => router.push("/home");
         <button
           @click="!isGuest && handleChangePasscode()"
           :class="[
-            'flex-1 flex items-center px-6 rounded-2xl shadow-sm border-2 transition-all group text-left',
+            'flex-1 flex items-center px-6 rounded-2xl shadow-lg border border-gray-200 transition-all group text-left',
             isGuest
               ? 'bg-gray-50 border-gray-100 opacity-60 cursor-not-allowed'
               : 'bg-white border-gray-100 active:border-[#003A6B] active:bg-gray-50',
@@ -237,7 +237,7 @@ const goBack = () => router.push("/home");
 
         <button
           @click="handleReportLost"
-          class="flex-1 flex items-center px-6 bg-white rounded-2xl shadow-sm border-2 border-gray-100 active:border-[#F16C14] active:bg-gray-50 transition-all group text-left"
+          class="flex-1 flex items-center px-6 bg-white rounded-2xl shadow-lg border border-gray-200 active:border-[#F16C14] active:bg-gray-50 transition-all group text-left"
         >
           <div
             class="w-10 h-10 bg-orange-50 rounded-full flex-shrink-0 flex items-center justify-center mr-3 group-active:bg-[#F16C14] transition-colors"
