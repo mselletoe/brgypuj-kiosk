@@ -49,14 +49,19 @@ const fetchRejectedRequests = async () => {
     const allRequests = response.data.map(req => ({
       id: req.id,
       transaction_no: req.transaction_no,
-      type: req.doctype_name.toUpperCase() === 'RFID' ? 'rfid' : 'document',
+      type: (req.doctype_id === null || req.doctype_name.toUpperCase() === 'RFID') ? 'rfid' : 'document',
       status: req.status.toLowerCase(),
       requestType: req.doctype_name,
-      requester: {
-        firstName: req.resident_first_name || '',
-        middleName: req.resident_middle_name || '',
-        lastName: req.resident_last_name || ''
-      },
+      requester: (req.doctype_id === null && req.form_data?.session_rfid === 'Guest Mode')
+        ? { firstName: 'Guest', middleName: '', lastName: 'User' }
+        : {
+            firstName: req.resident_first_name || '',
+            middleName: req.resident_middle_name || '',
+            lastName: req.resident_last_name || ''
+          },
+      requestFor: req.doctype_id === null
+        ? (req.form_data?.request_for_name || null)
+        : null,
       rfidNo: req.resident_rfid || 'Guest Mode',
       requestedOn: new Date(req.requested_at).toLocaleDateString('en-US', {
         month: 'long',
@@ -343,6 +348,7 @@ const filteredRequests = computed(() => {
       :status="request.status"
       :request-type="request.requestType"
       :requester="request.requester"
+      :request-for="request.requestFor"
       :rfid-no="request.rfidNo"
       :requested-on="request.requestedOn"
       :amount="request.amount"

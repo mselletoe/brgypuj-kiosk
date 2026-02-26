@@ -49,12 +49,13 @@ const fetchPendingRequests = async () => {
       type: (req.doctype_id === null || req.doctype_name.toUpperCase() === 'RFID') ? 'rfid' : 'document',
       status: req.status.toLowerCase(),
       requestType: req.doctype_name,
-      requester: {
-        firstName: req.resident_first_name || '',
-        middleName: req.resident_middle_name || '',
-        lastName: req.resident_last_name || ''
-      },
-      // For I.D Applications: the resident the ID is being made for (from form_data)
+      requester: (req.doctype_id === null && req.form_data?.session_rfid === 'Guest Mode')
+        ? { firstName: 'Guest', middleName: '', lastName: 'User' }
+        : {
+            firstName: req.resident_first_name || '',
+            middleName: req.resident_middle_name || '',
+            lastName: req.resident_last_name || ''
+          },
       requestFor: req.doctype_id === null
         ? (req.form_data?.request_for_name || null)
         : null,

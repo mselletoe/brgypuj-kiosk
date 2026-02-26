@@ -98,12 +98,16 @@ def record_document_transaction(db: Session, request) -> None:
     # Snapshot the RFID at this moment in time
     rfid_uid = _get_resident_rfid(request.resident) if request.resident else None
 
-    # Use the specific document type name (e.g. "Barangay Clearance") as the title.
+    # ID Applications have doctype_id = NULL — use the fixed label directly.
+    # Otherwise use the specific document type name (e.g. "Barangay Clearance").
     # Falls back to the generic label if the relationship isn't loaded.
-    try:
-        transaction_name = request.doctype.doctype_name
-    except Exception:
-        transaction_name = "Document Request"
+    if request.doctype_id is None:
+        transaction_name = "I.D Application"
+    else:
+        try:
+            transaction_name = request.doctype.doctype_name
+        except Exception:
+            transaction_name = "Document Request"
 
     entry = TransactionHistory(
         transaction_type="document",          # ← clean type enum for the frontend
