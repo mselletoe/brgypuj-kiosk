@@ -114,13 +114,13 @@ const cancelExit = () => {
             </h3>
             <div class="mt-8 space-y-8">
               <div>
-                <label for="borrow-date" class="block text-base font-medium text-gray-700">
-                  Borrow Date *
+                <label for="borrow-date" class="block mb-2 font-bold text-[#003A6B]">
+                  Borrow Date <span class="text-red-500">*</span>
                 </label>
                 <VueDatePicker
                   id="borrow-date"
                   v-model="borrowDate"
-                  placeholder="Borrow Date *"
+                  placeholder="Borrow Date"
                   :enable-time-picker="false"
                   auto-apply
                   teleport-center
@@ -134,13 +134,13 @@ const cancelExit = () => {
                 </VueDatePicker>
               </div>
               <div>
-                <label for="return-date" class="block text-base font-medium text-gray-700">
-                  Return Date *
+                <label for="return-date" class="block mb-2 font-bold text-[#003A6B]">
+                  Return Date <span class="text-red-500">*</span>
                 </label>
                 <VueDatePicker
                   id="return-date"
                   v-model="returnDate"
-                  placeholder="Return Date *"
+                  placeholder="Return Date"
                   :enable-time-picker="false"
                   auto-apply
                   teleport-center
@@ -175,7 +175,7 @@ const cancelExit = () => {
             <div class="border-t border-gray-300 my-6"></div>
             <div class="flex justify-between text-3xl font-bold text-[#013C6D]">
               <span>Total Cost:</span>
-              <span>{{ formatCurrency(totalCost) }}</span>
+              <span class="text-[#09AA44]"">{{ formatCurrency(totalCost) }}</span>
             </div>
           </div>
         </div>

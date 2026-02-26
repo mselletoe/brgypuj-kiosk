@@ -210,7 +210,7 @@ const hasActiveFilters = computed(() => {
           :disabled="selectionState === 'none' || isPendingTab"
           :class="[
             (selectionState === 'none' || isPendingTab) 
-              ? 'opacity-30 grayscale cursor-not-allowed' 
+              ? 'opacity-50 cursor-not-allowed' 
               : 'hover:bg-orange-50 cursor-pointer'
           ]"
           class="p-2 border border-orange-400 rounded-lg transition-colors"

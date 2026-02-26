@@ -30,7 +30,7 @@ const toggleFAQ = (index) => {
     <div
       v-for="(faq, index) in faqs"
       :key="faq.id"
-      class="bg-white rounded-xl shadow border border-gray-200 overflow-hidden"
+      class="bg-white rounded-2xl shadow-sm border border-gray-300 overflow-hidden"
     >
       <button
         @click="toggleFAQ(index)"

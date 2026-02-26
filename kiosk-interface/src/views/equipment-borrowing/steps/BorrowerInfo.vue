@@ -155,7 +155,7 @@ const inputClass = "w-full px-4 py-3 text-base border border-gray-300 rounded-lg
 
     <!-- Main -->
     <div class="flex-1 overflow-y-auto custom-scrollbar">
-      <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+      <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-5">
         <!-- Box Title -->
         <h3 class="text-2xl font-bold text-[#013C6D] flex items-center gap-2">
           <DocumentTextIcon class="w-8 h-8" />
@@ -180,7 +180,7 @@ const inputClass = "w-full px-4 py-3 text-base border border-gray-300 rounded-lg
         <div class="mt-4 grid grid-cols-2 gap-x-6 gap-y-4">
           <!-- Contact Person -->
           <div>
-            <label for="contact-person" class="block text-base font-bold text-[#003A6B] mb-1">
+            <label for="contact-person" class="block text-base font-bold text-[#003A6B] mb-2">
               Contact Person <span class="text-red-600">*</span>
             </label>
             <input
@@ -196,7 +196,7 @@ const inputClass = "w-full px-4 py-3 text-base border border-gray-300 rounded-lg
 
           <!-- Contact Number -->
           <div>
-            <label for="contact-number" class="block text-base font-bold text-[#003A6B] mb-1">
+            <label for="contact-number" class="block text-base font-bold text-[#003A6B] mb-2">
               Contact Number <span class="text-red-600">*</span>
             </label>
             <input
@@ -212,7 +212,7 @@ const inputClass = "w-full px-4 py-3 text-base border border-gray-300 rounded-lg
 
           <!-- Purpose -->
           <div>
-            <label for="purpose" class="block text-base font-bold text-[#003A6B] mb-1">
+            <label for="purpose" class="block text-base font-bold text-[#003A6B] mb-2">
               Purpose of Borrowing <span class="text-red-600">*</span>
             </label>
             <select
