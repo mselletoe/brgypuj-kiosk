@@ -1,6 +1,8 @@
 <script setup>
-import { ref, computed, onUnmounted } from "vue";
+import { ref, computed, watch } from "vue";
 import { useRouter } from "vue-router";
+import { useAuthStore } from "@/stores/auth";
+import { searchResidents, getReportCardInfo, reportLostCard } from "@/api/idService";
 import ArrowBackButton from "@/components/shared/ArrowBackButton.vue";
 import Button from "@/components/shared/Button.vue";
 import Modal from "@/components/shared/Modal.vue";
@@ -13,74 +15,100 @@ import {
 } from "@heroicons/vue/24/outline";
 
 const router = useRouter();
+const authStore = useAuthStore();
 
-// Step Logic
+// Phase
 const currentPhase = ref("selection"); // 'selection' | 'pin'
+
+// PIN state
 const pinBuffer = ref("");
 const isSubmitting = ref(false);
+const isShaking = ref(false);
+const verificationError = ref("");
+const pinLength = 4;
+
+// Modals
 const showSuccessModal = ref(false);
 const showNoRfidModal = ref(false);
 const showConfirmModal = ref(false);
-const pinLength = 4;
-const isShaking = ref(false);
-const verificationError = ref("");
 
-// Selection State
+// Selection state
 const lastNameLetter = ref("");
 const firstNameLetter = ref("");
-const selectedResident = ref(null);
+const selectedResident = ref(null);   // full info from getReportCardInfo
+const residentList = ref([]);
+const isFetching = ref(false);
+const isCheckingCard = ref(false);
+
+// Dropdowns
 const showLastNameDropdown = ref(false);
 const showFirstNameDropdown = ref(false);
 const showResidentDropdown = ref(false);
 const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
-// Mock Database
-const mockResidents = [
-  { id: 1, firstName: "Aaron", lastName: "Abad", rfid: "N/A" },
-  { id: 2, firstName: "Adrian", lastName: "Agoncillo", rfid: "12345678" },
-  { id: 3, firstName: "Bea", lastName: "Alonzo", rfid: "N/A" },
-  { id: 7, firstName: "Keanno", lastName: "Macatangay", rfid: "N/A" },
-];
-
-const filteredResidents = computed(() => {
-  if (!lastNameLetter.value || !firstNameLetter.value) return [];
-  return mockResidents.filter((r) => {
-    const matchLast = r.lastName.startsWith(lastNameLetter.value);
-    const matchFirst = r.firstName.startsWith(firstNameLetter.value);
-    return matchLast && matchFirst;
-  });
-});
-
-const canProceedToPin = computed(() => {
-  return selectedResident.value && selectedResident.value.rfid !== "N/A";
+// -------------------------------------------------------
+// Fetch residents whenever both letters are set
+// -------------------------------------------------------
+watch([lastNameLetter, firstNameLetter], async ([last, first]) => {
+  if (!last || !first) {
+    residentList.value = [];
+    selectedResident.value = null;
+    return;
+  }
+  isFetching.value = true;
+  try {
+    residentList.value = await searchResidents(`${last}, ${first}`);
+    selectedResident.value = null;
+  } catch {
+    residentList.value = [];
+  } finally {
+    isFetching.value = false;
+  }
 });
 
 const toggleDropdown = (menu) => {
-  showLastNameDropdown.value =
-    menu === "lastName" ? !showLastNameDropdown.value : false;
-  showFirstNameDropdown.value =
-    menu === "firstName" ? !showFirstNameDropdown.value : false;
-  showResidentDropdown.value =
-    menu === "resident" ? !showResidentDropdown.value : false;
+  showLastNameDropdown.value = menu === "lastName" ? !showLastNameDropdown.value : false;
+  showFirstNameDropdown.value = menu === "firstName" ? !showFirstNameDropdown.value : false;
+  showResidentDropdown.value = menu === "resident" ? !showResidentDropdown.value : false;
 };
 
-// --- PIN LOGIC ---
+const selectLastNameLetter = (letter) => {
+  lastNameLetter.value = letter;
+  showLastNameDropdown.value = false;
+  selectedResident.value = null;
+};
+const selectFirstNameLetter = (letter) => {
+  firstNameLetter.value = letter;
+  showFirstNameDropdown.value = false;
+  selectedResident.value = null;
+};
+
+// On resident pick — immediately fetch card info to check has_rfid
+const selectResident = async (r) => {
+  showResidentDropdown.value = false;
+  isCheckingCard.value = true;
+  try {
+    const info = await getReportCardInfo(r.resident_id);
+    selectedResident.value = info; // { resident_id, first_name, last_name, rfid_uid, has_rfid }
+  } catch {
+    selectedResident.value = { ...r, has_rfid: false, rfid_uid: null };
+  } finally {
+    isCheckingCard.value = false;
+  }
+};
+
+// -------------------------------------------------------
+// PIN logic
+// -------------------------------------------------------
 const handleKeypad = (num) => {
   if (pinBuffer.value.length < pinLength) {
     pinBuffer.value += num;
     verificationError.value = "";
   }
 };
-
 const handleBackspace = () => {
   pinBuffer.value = pinBuffer.value.slice(0, -1);
   verificationError.value = "";
-};
-
-// --- NAVIGATION & ACTIONS ---
-const proceedToPin = () => {
-  if (!canProceedToPin.value) return;
-  currentPhase.value = "pin";
 };
 
 const triggerError = (msg) => {
@@ -92,29 +120,16 @@ const triggerError = (msg) => {
   }, 500);
 };
 
-const submitReport = () => {
-  if (pinBuffer.value.length !== pinLength) return;
-
-  // TEST LOGIC: Adrian uses 8765, everyone else uses 1234
-  let correctPin = "1234";
-  if (selectedResident.value?.lastName === "Agoncillo") {
-    correctPin = "8765";
+// -------------------------------------------------------
+// Navigation
+// -------------------------------------------------------
+const proceedToPin = () => {
+  if (!selectedResident.value) return;
+  if (!selectedResident.value.has_rfid) {
+    showNoRfidModal.value = true;
+    return;
   }
-
-  if (pinBuffer.value === correctPin) {
-    showConfirmModal.value = true;
-  } else {
-    triggerError("Incorrect PIN. Please try again.");
-  }
-};
-
-const handleFinalDeactivation = () => {
-  showConfirmModal.value = false;
-  isSubmitting.value = true;
-  setTimeout(() => {
-    isSubmitting.value = false;
-    showSuccessModal.value = true;
-  }, 1500);
+  currentPhase.value = "pin";
 };
 
 const goBack = () => {
@@ -131,25 +146,45 @@ const handleReset = () => {
   lastNameLetter.value = "";
   firstNameLetter.value = "";
   selectedResident.value = null;
+  residentList.value = [];
+};
+
+// -------------------------------------------------------
+// Submit — show confirm modal first, then call API
+// -------------------------------------------------------
+const submitReport = () => {
+  if (pinBuffer.value.length !== pinLength) return;
+  showConfirmModal.value = true;
+};
+
+const handleFinalDeactivation = async () => {
+  showConfirmModal.value = false;
+  isSubmitting.value = true;
+  try {
+    await reportLostCard({
+      resident_id: selectedResident.value.resident_id,
+      pin: pinBuffer.value,
+      rfid_uid: authStore.rfidUid || null,
+    });
+    // If logged-in user just reported their own card, log them out
+    if (authStore.isRFID && authStore.residentId === selectedResident.value.resident_id) {
+      authStore.logout();
+    }
+    showSuccessModal.value = true;
+  } catch (err) {
+    const status = err?.response?.status;
+    const detail = err?.response?.data?.detail || "Something went wrong. Please try again.";
+    if (status === 401) {
+      triggerError("Incorrect PIN. Please try again.");
+    } else {
+      triggerError(detail);
+    }
+  } finally {
+    isSubmitting.value = false;
+  }
 };
 
 const handleModalDone = () => router.push("/id-services");
-
-// Selection Setters
-const selectLastNameLetter = (letter) => {
-  lastNameLetter.value = letter;
-  showLastNameDropdown.value = false;
-  selectedResident.value = null;
-};
-const selectFirstNameLetter = (letter) => {
-  firstNameLetter.value = letter;
-  showFirstNameDropdown.value = false;
-  selectedResident.value = null;
-};
-const selectResident = (resident) => {
-  selectedResident.value = resident;
-  showResidentDropdown.value = false;
-};
 </script>
 
 <template>
@@ -178,6 +213,7 @@ const selectResident = (resident) => {
               : '',
           ]"
         >
+          <!-- Selection Phase -->
           <div
             v-if="currentPhase === 'selection'"
             class="flex w-full h-full items-center justify-start animate-fadeIn"
@@ -192,20 +228,13 @@ const selectResident = (resident) => {
 
               <div class="space-y-4 w-full z-20">
                 <div class="flex gap-10 w-full">
+                  <!-- Last Name Letter -->
                   <div class="flex flex-1 items-center gap-3">
-                    <div
-                      class="flex items-center gap-2 flex-shrink-0 min-w-[140px]"
-                    >
+                    <div class="flex items-center gap-2 flex-shrink-0 min-w-[140px]">
                       <CalendarDaysIcon class="w-5 h-5 text-[#03335C]" />
                       <div class="flex flex-col leading-tight">
-                        <span
-                          class="text-[9px] uppercase font-bold text-gray-400"
-                          >First Letter of</span
-                        >
-                        <span
-                          class="text-[#03335C] font-black text-sm uppercase tracking-tight"
-                          >Last Name</span
-                        >
+                        <span class="text-[9px] uppercase font-bold text-gray-400">First Letter of</span>
+                        <span class="text-[#03335C] font-black text-sm uppercase tracking-tight">Last Name</span>
                       </div>
                     </div>
                     <div class="flex-1 relative">
@@ -232,20 +261,13 @@ const selectResident = (resident) => {
                     </div>
                   </div>
 
+                  <!-- First Name Letter -->
                   <div class="flex flex-1 items-center gap-3">
-                    <div
-                      class="flex items-center gap-2 flex-shrink-0 min-w-[140px]"
-                    >
+                    <div class="flex items-center gap-2 flex-shrink-0 min-w-[140px]">
                       <CalendarDaysIcon class="w-5 h-5 text-[#03335C]" />
                       <div class="flex flex-col leading-tight">
-                        <span
-                          class="text-[9px] uppercase font-bold text-gray-400"
-                          >First Letter of</span
-                        >
-                        <span
-                          class="text-[#03335C] font-black text-sm uppercase tracking-tight"
-                          >First Name</span
-                        >
+                        <span class="text-[9px] uppercase font-bold text-gray-400">First Letter of</span>
+                        <span class="text-[#03335C] font-black text-sm uppercase tracking-tight">First Name</span>
                       </div>
                     </div>
                     <div class="flex-1 relative">
@@ -273,32 +295,24 @@ const selectResident = (resident) => {
                   </div>
                 </div>
 
+                <!-- Resident Dropdown -->
                 <div class="flex items-center gap-3 w-full">
-                  <div
-                    class="flex items-center gap-2 flex-shrink-0 min-w-[140px]"
-                  >
+                  <div class="flex items-center gap-2 flex-shrink-0 min-w-[140px]">
                     <UserIcon class="w-5 h-5 text-[#03335C]" />
-                    <span
-                      class="text-[#03335C] font-bold text-[11px] uppercase tracking-tight"
-                      >Resident Name</span
-                    >
+                    <span class="text-[#03335C] font-bold text-[11px] uppercase tracking-tight">Resident Name</span>
                   </div>
                   <div class="flex-1 relative">
                     <button
                       @click="toggleDropdown('resident')"
-                      :disabled="!lastNameLetter || !firstNameLetter"
+                      :disabled="!lastNameLetter || !firstNameLetter || isFetching || isCheckingCard"
                       class="w-full h-11 border border-gray-300 rounded-xl px-4 flex items-center justify-between text-[#03335C] font-bold bg-white text-base hover:border-[#03335C] transition-colors disabled:opacity-50 disabled:bg-gray-50"
                     >
-                      <span
-                        v-if="selectedResident"
-                        class="truncate text-[#03335C]"
-                        >{{ selectedResident.lastName }},
-                        {{ selectedResident.firstName }}</span
-                      >
+                      <span v-if="isFetching || isCheckingCard" class="text-gray-400 text-sm italic">Loading...</span>
+                      <span v-else-if="selectedResident" class="truncate text-[#03335C]">
+                        {{ selectedResident.last_name }}, {{ selectedResident.first_name }}
+                      </span>
                       <span v-else class="text-gray-400 truncate opacity-60">{{
-                        !lastNameLetter || !firstNameLetter
-                          ? "Select initials first..."
-                          : "Select Resident..."
+                        !lastNameLetter || !firstNameLetter ? "Select initials first..." : "Select Resident..."
                       }}</span>
                       <ChevronDownIcon class="w-5 h-5 text-[#03335C]" />
                     </button>
@@ -307,18 +321,19 @@ const selectResident = (resident) => {
                       class="absolute top-full left-0 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-50 p-1 max-h-[150px] overflow-y-auto custom-scroll"
                     >
                       <div
-                        v-if="filteredResidents.length === 0"
+                        v-if="residentList.length === 0"
                         class="p-3 text-center text-gray-400 text-sm"
                       >
                         No records found
                       </div>
                       <button
-                        v-for="r in filteredResidents"
-                        :key="r.id"
+                        v-for="r in residentList"
+                        :key="r.resident_id"
                         @click="selectResident(r)"
                         class="w-full text-left py-2 px-4 hover:bg-blue-50 rounded-lg font-bold text-[#03335C] text-base border-b border-gray-50 last:border-0"
                       >
-                        {{ r.lastName }}, {{ r.firstName }}
+                        {{ r.last_name }}, {{ r.first_name }}
+                        <span v-if="r.middle_name">{{ r.middle_name }}</span>
                       </button>
                     </div>
                   </div>
@@ -327,6 +342,7 @@ const selectResident = (resident) => {
             </div>
           </div>
 
+          <!-- PIN Phase -->
           <div
             v-else-if="currentPhase === 'pin'"
             class="flex w-full gap-10 items-stretch justify-center animate-fadeIn mt-4"
@@ -336,22 +352,15 @@ const selectResident = (resident) => {
                 class="bg-red-50 p-8 rounded-3xl border border-red-100 flex flex-col h-full shadow-sm"
               >
                 <div class="flex-1">
-                  <ExclamationTriangleIcon
-                    class="w-12 h-12 text-red-600 mb-4"
-                  />
-                  <h2 class="text-3xl font-bold text-[#03335C] mb-2">
-                    Critical Action
-                  </h2>
+                  <ExclamationTriangleIcon class="w-12 h-12 text-red-600 mb-4" />
+                  <h2 class="text-3xl font-bold text-[#03335C] mb-2">Critical Action</h2>
                   <p class="text-gray-600 text-base leading-snug mb-4">
                     Reporting the card for
                     <span class="font-bold text-[#03335C]">
-                      {{ selectedResident?.firstName }}
-                      {{ selectedResident?.lastName }}
+                      {{ selectedResident?.first_name }} {{ selectedResident?.last_name }}
                     </span>
                     will
-                    <span class="font-bold text-red-600 uppercase"
-                      >permanently disable</span
-                    >
+                    <span class="font-bold text-red-600 uppercase">permanently disable</span>
                     its RFID functions.
                   </p>
                   <p class="text-gray-500 text-sm leading-snug">
@@ -423,6 +432,7 @@ const selectResident = (resident) => {
         </div>
       </div>
 
+      <!-- Bottom bar (selection phase only) -->
       <div
         v-if="currentPhase === 'selection'"
         class="flex gap-6 mt-4 w-full max-w-[1050px] mx-auto justify-between items-center flex-shrink-0 px-4"
@@ -432,23 +442,25 @@ const selectResident = (resident) => {
           size="md"
           @click="handleReset"
           :disabled="!lastNameLetter && !firstNameLetter && !selectedResident"
-          >Reset Selection</Button
-        >
+        >Reset Selection</Button>
         <Button
-          :variant="canProceedToPin ? 'secondary' : 'disabled'"
+          :variant="selectedResident ? 'secondary' : 'disabled'"
           size="md"
-          :disabled="!canProceedToPin"
+          :disabled="!selectedResident || isCheckingCard"
           @click="proceedToPin"
         >
           {{
-            selectedResident && selectedResident.rfid === "N/A"
-              ? "No RFID Linked"
-              : "Next: Verify PIN"
+            isCheckingCard
+              ? "Checking..."
+              : selectedResident && !selectedResident.has_rfid
+                ? "No RFID Linked"
+                : "Next: Verify PIN"
           }}
         </Button>
       </div>
     </div>
 
+    <!-- Confirm Deactivation Modal -->
     <Transition name="fade-blur">
       <div
         v-if="showConfirmModal"
@@ -466,6 +478,7 @@ const selectResident = (resident) => {
       </div>
     </Transition>
 
+    <!-- Success Modal -->
     <Transition name="fade-blur">
       <div
         v-if="showSuccessModal"
@@ -477,6 +490,22 @@ const selectResident = (resident) => {
           :show-secondary-button="false"
           primary-button-text="Done"
           @primary-click="handleModalDone"
+        />
+      </div>
+    </Transition>
+
+    <!-- No RFID Modal -->
+    <Transition name="fade-blur">
+      <div
+        v-if="showNoRfidModal"
+        class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-8 modal-backdrop"
+      >
+        <Modal
+          title="No RFID Card Found"
+          message="This resident does not have an active RFID card linked to their account. There is nothing to deactivate."
+          :show-secondary-button="false"
+          primary-button-text="Close"
+          @primary-click="showNoRfidModal = false"
         />
       </div>
     </Transition>
@@ -501,7 +530,6 @@ const selectResident = (resident) => {
   background-color: #bde0ef;
   border-radius: 20px;
 }
-
 .modal-backdrop {
   backdrop-filter: blur(8px);
 }
@@ -521,41 +549,20 @@ const selectResident = (resident) => {
   opacity: 1;
   backdrop-filter: blur(8px);
 }
-
 .animate-fadeIn {
   animation: fadeIn 0.4s ease-out forwards;
 }
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
 }
-
 .animate-shake {
   animation: shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
 }
 @keyframes shake {
-  10%,
-  90% {
-    transform: translate3d(-1px, 0, 0);
-  }
-  20%,
-  80% {
-    transform: translate3d(2px, 0, 0);
-  }
-  30%,
-  50%,
-  70% {
-    transform: translate3d(-4px, 0, 0);
-  }
-  40%,
-  60% {
-    transform: translate3d(4px, 0, 0);
-  }
+  10%, 90% { transform: translate3d(-1px, 0, 0); }
+  20%, 80% { transform: translate3d(2px, 0, 0); }
+  30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+  40%, 60% { transform: translate3d(4px, 0, 0); }
 }
 </style>

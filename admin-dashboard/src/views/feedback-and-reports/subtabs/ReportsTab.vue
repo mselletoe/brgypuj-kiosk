@@ -153,10 +153,10 @@ onMounted(fetchReadyRequests)
       v-if="filteredRequests.length === 0" 
       class="text-center p-10 text-gray-500"
     >
-      <h3 class="text-lg font-medium text-gray-700">No Ready Requests</h3>
+      <h3 class="text-lg font-medium text-gray-700">No Reports Found</h3>
       <p class="text-gray-500">
-        <span v-if="searchQuery">No requests match your search.</span>
-        <span v-else>All requests are awaiting processing or have been released.</span>
+        <span v-if="searchQuery">No reports match your search.</span>
+        <span v-else>There are currently no reports as of the moment.</span>
       </p>
     </div>
 

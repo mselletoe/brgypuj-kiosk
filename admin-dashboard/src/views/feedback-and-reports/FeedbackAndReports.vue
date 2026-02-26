@@ -154,7 +154,7 @@ const triggerDelete = () => {
     </div>
 
     <!-- Content -->
-    <div class="overflow-y-auto h-[calc(100vh-260px)] pr-2">
+    <div class="overflow-y-auto h-[calc(100vh-260px)] pr-2 pt-2">
       <keep-alive>
         <component
           :is="currentTabComponent"

@@ -158,7 +158,7 @@ onMounted(fetchFeedbacks)
 </script>
 
 <template>
-  <div class="space-y-4 pt-4">
+  <div class="space-y-4">
     <div v-if="isLoading" class="text-center p-10 text-gray-500">
       Loading feedbacks...
     </div>
@@ -167,13 +167,15 @@ onMounted(fetchFeedbacks)
       {{ errorMessage }}
     </div>
 
-    <div
-      v-else-if="filteredFeedbacks.length === 0"
+    <div 
+      v-else-if="filteredFeedbacks.length === 0" 
       class="text-center p-10 text-gray-500"
     >
-      <h3 class="text-lg font-medium text-gray-700">
-        No Feedbacks Found
-      </h3>
+      <h3 class="text-lg font-medium text-gray-700">No Feedbacks Found</h3>
+      <p class="text-gray-500">
+        <span v-if="searchQuery">No feedbacks match your search.</span>
+        <span v-else>There are currently no feedbacks as of the moment.</span>
+      </p>
     </div>
 
     <FeedbackReportCard
