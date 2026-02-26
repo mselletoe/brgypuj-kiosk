@@ -31,7 +31,7 @@ defineEmits(['press', 'clear', 'backspace']);
 /* Scoped styles for the keypad buttons */
 .btn-keypad {
   /* MODIFIED: Made buttons smaller (h-14) and text smaller (text-xl) */
-  @apply h-14 bg-gray-100 rounded-xl text-xl font-medium text-[#03335C]
+  @apply h-14 bg-gray-100 rounded-xl text-xl text-[#03335C]
          hover:bg-gray-200 transition-colors
          focus:outline-none focus:ring-2 focus:ring-blue-500 font-bold;
 }
