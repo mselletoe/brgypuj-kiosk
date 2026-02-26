@@ -30,6 +30,7 @@ class ResidentSearchResult(BaseModel):
     last_name: str
     suffix: Optional[str] = None
     has_rfid: bool            # True if an active RFID is currently linked
+    has_pending: bool = False # True if a pending ID application already exists
 
 
 # =========================================================

@@ -21,6 +21,7 @@ const currentPhase = ref("selection"); // 'selection' | 'camera'
 const isSubmitting = ref(false);
 const showSuccessModal = ref(false);
 const showErrorModal = ref(false);
+const showPendingModal = ref(false);
 const showVerificationModal = ref(false);
 const referenceId = ref("");
 
@@ -178,6 +179,12 @@ const proceedToCamera = () => {
   // has_rfid comes from the API — true means an active card is already linked
   if (selectedResident.value.has_rfid) {
     showErrorModal.value = true;
+    return;
+  }
+
+  // has_pending comes from the API — true means a pending application already exists
+  if (selectedResident.value.has_pending) {
+    showPendingModal.value = true;
     return;
   }
 
@@ -786,6 +793,24 @@ const selectYear = (y) => {
           :show-secondary-button="false"
           primary-button-text="Close"
           @primary-click="showErrorModal = false"
+        />
+      </div>
+    </Transition>
+
+    <!-- Error Modal: Pending ID application already exists -->
+    <Transition name="fade-blur">
+      <div
+        v-if="showPendingModal"
+        class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-8 modal-backdrop"
+      >
+        <Modal
+          title="Application Already Pending"
+          message="This resident already has a pending ID application. You cannot submit another request until the current one has been processed. Please check back later or visit the barangay office."
+          :show-reference-id="false"
+          :show-primary-button="true"
+          :show-secondary-button="false"
+          primary-button-text="Close"
+          @primary-click="showPendingModal = false"
         />
       </div>
     </Transition>
