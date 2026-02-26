@@ -1,6 +1,8 @@
 <script setup>
 import { ref, computed, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
+import { useAuthStore } from "@/stores/auth";
+import { changePin } from "@/api/idService";
 import ArrowBackButton from "@/components/shared/ArrowBackButton.vue";
 import Button from "@/components/shared/Button.vue";
 import Modal from "@/components/shared/Modal.vue";
@@ -12,6 +14,7 @@ import {
 } from "@heroicons/vue/24/outline";
 
 const router = useRouter();
+const authStore = useAuthStore();
 
 // Step Logic
 const step = ref(1);
@@ -93,12 +96,37 @@ const handleNext = () => {
   }
 };
 
-const submitChange = () => {
+const submitChange = async () => {
   isSubmitting.value = true;
-  setTimeout(() => {
-    isSubmitting.value = false;
+  try {
+    await changePin({
+      resident_id: authStore.residentId,
+      current_pin: currentPin.value,
+      new_pin: newPin.value,
+    });
     showSuccessModal.value = true;
-  }, 1500);
+  } catch (err) {
+    const status = err?.response?.status;
+    const detail = err?.response?.data?.detail || "Something went wrong. Please try again.";
+
+    if (status === 401) {
+      // Wrong current PIN — send user back to step 1 with error
+      step.value = 1;
+      pinBuffer.value = "";
+      currentPin.value = "";
+      newPin.value = "";
+      confirmPin.value = "";
+      isShaking.value = true;
+      verificationError.value = "Incorrect current passcode.";
+      setTimeout(() => { isShaking.value = false; }, 500);
+    } else {
+      verificationError.value = detail;
+      isShaking.value = true;
+      setTimeout(() => { isShaking.value = false; pinBuffer.value = ""; }, 500);
+    }
+  } finally {
+    isSubmitting.value = false;
+  }
 };
 
 const handleModalDone = () => router.push("/id-services");
