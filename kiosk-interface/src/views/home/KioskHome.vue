@@ -66,7 +66,7 @@ function goTo(path) {
     </div>
 
     <div class="flex flex-col items-center w-full">
-      <div class="mt-4 flex w-full flex-wrap justify-between gap-4">
+      <div class="mt-4 flex w-full flex-wrap justify-between gap-3">
         
         <!-- Document Services -->
         <div 
@@ -95,9 +95,9 @@ function goTo(path) {
           class="flex h-[220px] min-w-[160px] flex-1 cursor-pointer flex-col items-center justify-center rounded-[15px] bg-[#21C05C] p-[10px] text-center shadow-[4px_4px_8px_rgba(0,0,0,0.25),inset_2px_2px_4px_rgba(255,255,255,0.6),inset_-2px_-2px_6px_rgba(0,0,0,0.15)] transition-all duration-150 hover:-translate-y-[3px] hover:scale-105 active:scale-[0.97]"
           @click="goTo('id-services')"
         >
-          <img alt="RFID Services" class="mb-[5px] h-[105px] w-[105px]" />
+          <img src="@/assets/vectors/RFIDServices.svg" alt="RFID Services" class="mb-[5px] h-[105px] w-[105px]" />
           <p class="m-0 mb-[5px] flex h-[40px] items-center justify-center text-[17px] font-bold leading-[20px] text-white">RFID Services</p>
-          <p class="m-0 text-[11px] font-normal leading-[12px] text-white">Request or Manage your Barangay RFID card.</p>
+          <p class="m-0 text-[11px] font-normal leading-[12px] text-white">Request or Manage<br>your Barangay RFID card.</p>
         </div>
 
         <!-- Help & Support -->
@@ -116,7 +116,7 @@ function goTo(path) {
           @click="goTo('feedback')"
         >
           <img src="@/assets/vectors/Feedback.svg" alt="Feedback" class="mb-[5px] h-[105px] w-[105px]" />
-          <p class="m-0 mb-[5px] flex h-[40px] items-center justify-center text-[17px] font-bold leading-[20px] text-white">Feedback</p>
+          <p class="m-0 mb-[2px] flex h-[40px] items-center justify-center text-[17px] font-bold leading-[0px] text-white">Feedback</p>
           <p class="m-0 text-[11px] font-normal leading-[12px] text-white">Help us improve the<br>Barangay Kiosk<br>experience</p>
         </div>      
       </div>

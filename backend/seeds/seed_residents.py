@@ -14,6 +14,7 @@ RESIDENTS = [
         "birthdate": date(1989, 3, 16),
         "email": "maxpeinzin@test.com",
         "phone_number": "09123456789",
+        "rfid_pin": "1234",
     },
     {
         "first_name": "Maxwell Laurent",
@@ -22,6 +23,7 @@ RESIDENTS = [
         "birthdate": date(1986, 9, 22),
         "email": "maxwelllaurent@test.com",
         "phone_number": "09327564789",
+        "rfid_pin": "1234",
     },
     {
         "first_name": "Maxrill Won",
@@ -30,6 +32,7 @@ RESIDENTS = [
         "birthdate": date(1992, 4, 30),
         "email": "maxrillwon@test.com",
         "phone_number": "09731285937",
+        "rfid_pin": "1234",
     },
     {
         "first_name": "Maze",
@@ -38,6 +41,7 @@ RESIDENTS = [
         "birthdate": date(1960, 2, 3),
         "email": "maze@test.com",
         "phone_number": "09437859094",
+        "rfid_pin": "1234",
     },
     {
         "first_name": "Maximor",
@@ -46,6 +50,7 @@ RESIDENTS = [
         "birthdate": date(1960, 7, 24),
         "email": "maximor@test.com",
         "phone_number": "09432567894",
+        "rfid_pin": "1234",
     },
     {
         "first_name": "Deib Lohr",
@@ -54,6 +59,7 @@ RESIDENTS = [
         "birthdate": date(1989, 8, 4),
         "email": "deiblohr@test.com",
         "phone_number": "09997435672",
+        "rfid_pin": "1234",
     },
     {
         "first_name": "Maxspaun Thaddeaus",
@@ -63,6 +69,7 @@ RESIDENTS = [
         "birthdate": date(2006, 8, 1),
         "email": "maxspaunthaddeaus@test.com",
         "phone_number": "09123456789",
+        "rfid_pin": "1234",
     },
     {
         "first_name": "Zarnaih",
@@ -71,6 +78,7 @@ RESIDENTS = [
         "birthdate": date(1988, 3, 12),
         "email": "zarnaih@test.com",
         "phone_number": "09456734563",
+        "rfid_pin": "1234",
     },
     {
         "first_name": "Lee Roi",
@@ -79,6 +87,7 @@ RESIDENTS = [
         "birthdate": date(1989, 9, 13),
         "email": "leeroi@test.com",
         "phone_number": "09223412567",
+        "rfid_pin": "1234",
     },
     {
         "first_name": "Zelestaire Donatelli",
@@ -88,6 +97,7 @@ RESIDENTS = [
         "birthdate": date(2007, 9, 19),
         "email": "zelestairedonatelli@test.com",
         "phone_number": "09234533789",
+        "rfid_pin": "1234",
     },
     {
         "first_name": "Randall",
@@ -96,6 +106,7 @@ RESIDENTS = [
         "birthdate": date(1986, 10, 10),
         "email": "randall@test.com",
         "phone_number": "09223412567",
+        "rfid_pin": "1234",
     },
     {
         "first_name": "Tokyo Athena",
@@ -105,6 +116,7 @@ RESIDENTS = [
         "birthdate": date(2002, 4, 9),
         "email": "tokyoathena@test.com",
         "phone_number": "09223234567",
+        "rfid_pin": "1234",
     },
     {
         "first_name": "Zeus Emmanuel",
@@ -114,6 +126,7 @@ RESIDENTS = [
         "birthdate": date(2000, 5, 21),
         "email": "zeusemmanuel@test.com",
         "phone_number": "09324566734",
+        "rfid_pin": "1234",
     },
     {
         "first_name": "Briane Leigh",
@@ -123,6 +136,7 @@ RESIDENTS = [
         "birthdate": date(2004, 7, 2),
         "email": "brianeleigh@test.com",
         "phone_number": "09234512345",
+        "rfid_pin": "1234",
     },
     {
         "first_name": "Jandryll Pierce",
@@ -131,6 +145,7 @@ RESIDENTS = [
         "birthdate": date(2004, 9, 17),
         "email": "jandryllpierce@test.com",
         "phone_number": "09125564567",
+        "rfid_pin": "1234",
     }, 
 ]
 
@@ -145,7 +160,7 @@ def seed_residents():
             # HASH THE PIN HERE before saving to DB
             r_copy = r.copy()
             r_copy["rfid_pin"] = pwd_context.hash(r["rfid_pin"])
-            
+
             db.add(Resident(**r_copy))
 
         db.commit()
