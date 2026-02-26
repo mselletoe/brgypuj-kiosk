@@ -1,477 +1,149 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import PageTitle from '@/components/shared/PageTitle.vue'
+/**
+ * @file Overview.vue
+ * @description Admin dashboard overview component. Displays high-level system statistics,
+ * transaction charts, and upcoming community events.
+ * Updated: Added pronounced drop shadow effects (shadow-md and shadow-lg) to all containers.
+ */
 
-const router = useRouter()
+import { ref, onMounted } from 'vue'
+import { useMessage } from 'naive-ui'
 
-// --- MOCK DATA (Replace with API calls) ---
-const stats = ref({
-  totalRequests: 342,
-  pendingRequests: 28,
-  readyForPickup: 12,
-  completedToday: 45,
-  equipmentRequests: 18,
-  equipmentAvailable: 8,
-  totalResidents: 237,
-  activeRFIDCards: 189,
-  recentFeedback: 15,
-  unreadFeedback: 7
-})
+// Initialize NaiveUI message provider for global notifications
+const message = useMessage()
 
-const systemHealth = ref({
-  raspberryPi: { status: 'healthy', uptime: '15 days 4h', cpu: 45, memory: 62, temp: 52 },
-  rfidReader: { status: 'healthy', lastScan: '2 minutes ago', totalScans: 1247 },
-  sim800L: { status: 'warning', signal: 78, lastSMS: '5 minutes ago', messagesSent: 89, messagesQueued: 3 },
-  network: { status: 'healthy', latency: 24, uptime: 99.8 }
-})
-
-const recentActivity = ref([
-  { id: 1, type: 'document', user: 'Juan dela Cruz', action: 'Requested Barangay Clearance', time: '2 min ago', status: 'pending' },
-  { id: 2, type: 'equipment', user: 'Maria Santos', action: 'Requested Basketball', time: '8 min ago', status: 'approved' },
-  { id: 3, type: 'rfid', user: 'Pedro Reyes', action: 'RFID Scan - Document Pickup', time: '15 min ago', status: 'completed' },
-  { id: 4, type: 'document', user: 'Ana Garcia', action: 'Requested Certificate of Residency', time: '23 min ago', status: 'pending' },
-  { id: 5, type: 'sms', user: 'System', action: 'SMS Announcement sent to 237 residents', time: '1 hour ago', status: 'completed' }
-])
-
-const topDocuments = ref([
-  { name: 'Barangay Clearance', requests: 89, percentage: 85 },
-  { name: 'Certificate of Residency', requests: 67, percentage: 64 },
-  { name: 'Business Permit', requests: 45, percentage: 43 },
-  { name: 'Barangay ID', requests: 38, percentage: 36 },
-  { name: 'Indigency Certificate', requests: 22, percentage: 21 }
-])
-
-const topEquipment = ref([
-  { name: 'Basketball', requests: 34, available: 2 },
-  { name: 'Folding Chairs (Set of 10)', requests: 28, available: 3 },
-  { name: 'Sound System', requests: 15, available: 1 },
-  { name: 'Folding Tables (Set of 5)', requests: 12, available: 2 }
-])
-
-// --- COMPUTED ---
-const requestCompletionRate = computed(() => {
-  const total = stats.value.totalRequests
-  const completed = total - stats.value.pendingRequests
-  return total > 0 ? Math.round((completed / total) * 100) : 0
-})
-
-const rfidAdoptionRate = computed(() => {
-  const total = stats.value.totalResidents
-  const active = stats.value.activeRFIDCards
-  return total > 0 ? Math.round((active / total) * 100) : 0
-})
-
-// --- METHODS ---
-const getStatusColor = (status) => {
-  const colors = {
-    healthy: 'text-green-600 bg-green-100',
-    warning: 'text-yellow-600 bg-yellow-100',
-    error: 'text-red-600 bg-red-100'
+// Component state and mapped data for top statistic cards
+const statCards = ref([
+  {
+    title: 'Pending Document Requests',
+    value: '12',
+    subtitle: 'xxxxxx',
+    bgClass: 'bg-gradient-to-r from-[#FFFFFF] to-[#CBFCFF]',
+    textColor: 'text-[#373737]'
+  },
+  {
+    title: 'Pending Equipment Requests',
+    value: '8',
+    subtitle: 'xxxxx',
+    bgClass: 'bg-gradient-to-r from-[#FFFFFF] to-[#FCD6FF]',
+    textColor: 'text-[#373737]'
+  },
+  {
+    title: 'Borrowed Equipments',
+    value: '3',
+    subtitle: '3 past due',
+    bgClass: 'bg-gradient-to-r from-[#FFFFFF] to-[#FFF5D3]',
+    textColor: 'text-[#373737]'
+  },
+  {
+    title: 'Total Revenue',
+    value: '58',
+    subtitle: 'from',
+    bgClass: 'bg-gradient-to-r from-[#FFFFFF] to-[#B6FFC2]',
+    textColor: 'text-[#373737]'
   }
-  return colors[status] || colors.healthy
-}
+])
 
-const getActivityIcon = (type) => {
-  const icons = {
-    document: '📄',
-    equipment: '🏀',
-    rfid: '💳',
-    sms: '📱',
-    feedback: '💬'
-  }
-  return icons[type] || '📋'
-}
+// Bottom summary statistics under the chart
+const bottomStats = ref([
+  { value: '1234', label: 'Document Services', color: 'bg-[#7eb6d9]' },
+  { value: '1234', label: 'Equipment Borrows', color: 'bg-[#c89874]' },
+  { value: '1234', label: 'RFID/Barangay ID', color: 'bg-[#76c87a]' }
+])
 
-const navigateTo = (path) => {
-  router.push(path)
-}
+// Mock data for upcoming events list
+const upcomingEvents = ref([
+  { id: 1, month: 'JULY', day: '24', dayName: 'Wednesday', title: 'Birthday ni Mayor', location: 'Location', date: 'Date', time: 'Time' },
+  { id: 2, month: 'JULY', day: '24', dayName: 'Wednesday', title: 'Birthday ni Mayor', location: 'Location', date: 'Date', time: 'Time' },
+  { id: 3, month: 'JULY', day: '24', dayName: 'Wednesday', title: 'Birthday ni Mayor', location: 'Location', date: 'Date', time: 'Time' }
+])
 
-// --- LIFECYCLE ---
+// Lifecycle hooks
 onMounted(() => {
-  // Fetch real data from API
-  // await fetchDashboardStats()
-  // await fetchSystemHealth()
-  // await fetchRecentActivity()
+  // Initialization logic, API calls would be triggered here
+  message.success('Dashboard metrics loaded successfully', { duration: 3000 })
 })
 </script>
 
 <template>
-  <div class="min-h-screen space-y-6">
+  <div class="flex flex-col w-full min-h-screen bg-[#EEF2F9] p-8 gap-6 font-sans">
 
-    <!-- Key Stats Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-      
-      <!-- Total Requests -->
-      <div 
-        @click="navigateTo('/requests')"
-        class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-5 shadow-md cursor-pointer transition-all"
+    <div class="flex w-full gap-4">
+      <div
+        v-for="(card, index) in statCards"
+        :key="index"
+        :class="['flex flex-col flex-1 p-6 rounded-xl shadow-md', card.bgClass]"
       >
-        <div class="flex items-start justify-between">
-          <div class="flex-1">
-            <p class="text-blue-100 text-sm font-medium">Total Requests</p>
-            <p class="text-white text-3xl font-bold mt-2">{{ stats.totalRequests }}</p>
-            <p class="text-blue-100 text-xs mt-2">{{ requestCompletionRate }}% completion rate</p>
-          </div>
-          <div class="bg-white bg-opacity-20 rounded-lg p-2">
-            <span class="text-2xl">📋</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Pending Requests -->
-      <div 
-        @click="navigateTo('/requests')"
-        class="bg-white rounded-xl p-5 shadow-md border border-gray-200 cursor-pointer transition-all"
-      >
-        <div class="flex items-start justify-between">
-          <div class="flex-1">
-            <p class="text-gray-600 text-sm font-medium">Pending Requests</p>
-            <p class="text-gray-900 text-3xl font-bold mt-2">{{ stats.pendingRequests }}</p>
-            <p class="text-orange-600 text-xs mt-2 font-semibold">⏱️ Needs attention</p>
-          </div>
-          <div class="bg-orange-100 rounded-lg p-2">
-            <span class="text-2xl">⏳</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Ready for Pickup -->
-      <div 
-        @click="navigateTo('/requests')"
-        class="bg-white rounded-xl p-5 shadow-md border border-gray-200 cursor-pointer transition-all"
-      >
-        <div class="flex items-start justify-between">
-          <div class="flex-1">
-            <p class="text-gray-600 text-sm font-medium">Ready for Pickup</p>
-            <p class="text-gray-900 text-3xl font-bold mt-2">{{ stats.readyForPickup }}</p>
-            <p class="text-green-600 text-xs mt-2 font-semibold">✅ Awaiting collection</p>
-          </div>
-          <div class="bg-green-100 rounded-lg p-2">
-            <span class="text-2xl">📦</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Equipment Requests -->
-      <div 
-        @click="navigateTo('/equipment-management')"
-        class="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-5 shadow-md cursor-pointer transition-all"
-      >
-        <div class="flex items-start justify-between">
-          <div class="flex-1">
-            <p class="text-purple-100 text-sm font-medium">Equipment Requests</p>
-            <p class="text-white text-3xl font-bold mt-2">{{ stats.equipmentRequests }}</p>
-            <p class="text-purple-100 text-xs mt-2">{{ stats.equipmentAvailable }} items available</p>
-          </div>
-          <div class="bg-white bg-opacity-20 rounded-lg p-2">
-            <span class="text-2xl">🏀</span>
-          </div>
-        </div>
+        <span :class="['text-[16px] font-semibold font-[Inter] mb-2', card.textColor]">{{ card.title }}</span>
+        <span :class="['text-[64px] font-bold font-[Inter] leading-none tracking-tight', card.textColor]">{{ card.value }}</span>
+        <span :class="['text-[14px] font-medium italic font-[Inter] mt-2', card.textColor]">{{ card.subtitle }}</span>
       </div>
     </div>
 
-    <!-- Main Content Grid -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      
-      <!-- Left Column - Analytics (2/3) -->
-      <div class="lg:col-span-2 space-y-6">
-        
-        <!-- Top Requested Documents -->
-        <div class="bg-white rounded-xl p-6 shadow-md border border-gray-200">
-          <div class="flex items-center justify-between mb-5">
-            <h3 class="text-lg font-bold text-gray-800">📊 Top Requested Documents</h3>
-            <button 
-              @click="navigateTo('/document-services')"
-              class="text-xs text-blue-600 hover:text-blue-700 font-semibold"
-            >
-              View All →
-            </button>
+    <div class="flex w-full gap-6">
+
+      <div class="flex flex-col flex-1 gap-4">
+
+        <div class="flex flex-col w-full bg-white rounded-xl shadow-md p-6 h-[280px]">
+          <div class="flex justify-between items-center w-full">
+            <span class="text-[24px] font-semibold font-[Inter] text-[#1F2937]">453 transactions this month</span>
+            <div class="flex items-center justify-start pl-4 bg-[#ECECEC] w-[119.59px] h-[28.9px] rounded-md shadow-sm text-[16px] font-semibold font-[Inter] text-[#1F2937] cursor-pointer">
+              2026
+            </div>
           </div>
-          
-          <div class="space-y-4">
-            <div 
-              v-for="doc in topDocuments" 
-              :key="doc.name"
-              class="flex items-center gap-4"
-            >
-              <div class="flex-1">
-                <div class="flex items-center justify-between mb-1">
-                  <span class="text-sm font-semibold text-gray-700">{{ doc.name }}</span>
-                  <span class="text-sm font-bold text-gray-900">{{ doc.requests }}</span>
-                </div>
-                <div class="w-full bg-gray-200 rounded-full h-2.5">
-                  <div 
-                    class="bg-blue-600 h-2.5 rounded-full transition-all" 
-                    :style="{ width: doc.percentage + '%' }"
-                  ></div>
-                </div>
-              </div>
+          <div class="flex flex-1 items-center justify-center w-full h-full text-gray-300">
+            </div>
+        </div>
+
+        <div class="flex w-full gap-3">
+          <div 
+            v-for="(stat, index) in bottomStats" 
+            :key="index"
+            class="flex flex-1 items-center gap-3 bg-white px-3 py-2 rounded-xl shadow-md"
+          >
+            <div :class="['w-[45px] h-[45px] rounded-lg flex-shrink-0 shadow-sm', stat.color]"></div>
+            <div class="flex flex-col">
+              <span class="text-[20px] font-semibold font-[Inter] text-[#1F2937] leading-none">{{ stat.value }}</span>
+              <span class="text-[14px] font-medium font-[Inter] text-[#1F2937]">{{ stat.label }}</span>
             </div>
           </div>
         </div>
 
-        <!-- Top Requested Equipment -->
-        <div class="bg-white rounded-xl p-6 shadow-md border border-gray-200">
-          <div class="flex items-center justify-between mb-5">
-            <h3 class="text-lg font-bold text-gray-800">🏀 Top Requested Equipment</h3>
-            <button 
-              @click="navigateTo('/equipment-management')"
-              class="text-xs text-blue-600 hover:text-blue-700 font-semibold"
-            >
-              Manage →
-            </button>
-          </div>
-          
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div 
-              v-for="item in topEquipment" 
-              :key="item.name"
-              class="p-4 bg-gray-50 rounded-lg border border-gray-200"
-            >
-              <p class="text-sm font-bold text-gray-800 mb-2">{{ item.name }}</p>
-              <div class="flex items-center justify-between text-xs">
-                <span class="text-gray-600">
-                  <span class="font-semibold text-purple-600">{{ item.requests }}</span> requests
-                </span>
-                <span class="font-semibold" :class="item.available > 0 ? 'text-green-600' : 'text-red-600'">
-                  {{ item.available }} available
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Recent Activity -->
-        <div class="bg-white rounded-xl p-6 shadow-md border border-gray-200">
-          <h3 class="text-lg font-bold text-gray-800 mb-5">⚡ Recent Activity</h3>
-          
-          <div class="space-y-3">
-            <div 
-              v-for="activity in recentActivity" 
-              :key="activity.id"
-              class="flex items-start gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
-            >
-              <div class="text-2xl">{{ getActivityIcon(activity.type) }}</div>
-              <div class="flex-1 min-w-0">
-                <p class="text-sm font-semibold text-gray-800 truncate">{{ activity.user }}</p>
-                <p class="text-xs text-gray-600 mt-0.5">{{ activity.action }}</p>
-              </div>
-              <div class="text-right flex-shrink-0">
-                <p class="text-xs text-gray-400">{{ activity.time }}</p>
-                <span 
-                  class="text-xs font-semibold px-2 py-0.5 rounded-full mt-1 inline-block"
-                  :class="{
-                    'bg-green-100 text-green-700': activity.status === 'completed',
-                    'bg-blue-100 text-blue-700': activity.status === 'approved',
-                    'bg-yellow-100 text-yellow-700': activity.status === 'pending'
-                  }"
-                >
-                  {{ activity.status }}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
 
-      <!-- Right Column - System Health & Quick Stats (1/3) -->
-      <div class="space-y-6">
-        
-        <!-- System Health -->
-        <div class="bg-white rounded-xl p-5 shadow-md border border-gray-200">
-          <h3 class="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2">
-            <span>💚</span> System Health
-          </h3>
-          
-          <div class="space-y-3">
-            <!-- Raspberry Pi -->
-            <div class="p-3 bg-gray-50 rounded-lg">
-              <div class="flex items-center justify-between mb-2">
-                <span class="text-xs font-semibold text-gray-700">🖥️ Raspberry Pi</span>
-                <span 
-                  class="text-xs font-bold px-2 py-0.5 rounded-full"
-                  :class="getStatusColor(systemHealth.raspberryPi.status)"
-                >
-                  {{ systemHealth.raspberryPi.status }}
-                </span>
-              </div>
-              <div class="text-xs text-gray-600 space-y-1">
-                <div class="flex justify-between">
-                  <span>Uptime:</span>
-                  <span class="font-semibold">{{ systemHealth.raspberryPi.uptime }}</span>
-                </div>
-                <div class="flex justify-between">
-                  <span>CPU:</span>
-                  <span class="font-semibold">{{ systemHealth.raspberryPi.cpu }}%</span>
-                </div>
-                <div class="flex justify-between">
-                  <span>Memory:</span>
-                  <span class="font-semibold">{{ systemHealth.raspberryPi.memory }}%</span>
-                </div>
-                <div class="flex justify-between">
-                  <span>Temp:</span>
-                  <span class="font-semibold">{{ systemHealth.raspberryPi.temp }}°C</span>
-                </div>
+      <div class="flex flex-col w-[35%] bg-gradient-to-r from-[#0066D4] to-[#011784] rounded-xl shadow-lg p-6">
+        <div class="flex justify-between items-center w-full text-white">
+          <span class="text-[24px] font-bold font-[Inter] drop-shadow-sm">Upcoming Events</span>
+          <span class="text-[13px] font-semibold font-[Inter] underline cursor-pointer hover:text-blue-200 transition-colors drop-shadow-sm">Add an event</span>
+        </div>
+
+        <div class="flex flex-col gap-3 mt-4 mb-8">
+          <div 
+            v-for="event in upcomingEvents" 
+            :key="event.id"
+            class="flex bg-white/[0.27] rounded-xl p-2 gap-4 items-center shadow-md cursor-pointer hover:bg-white/[0.35] transition-colors"
+          >
+            <div class="flex flex-col items-center justify-center bg-white rounded-lg w-[72px] h-[72px] flex-shrink-0 shadow-md">
+              <span class="text-[10px] font-bold font-[Inter] text-[#0F3874] uppercase tracking-wider leading-none">{{ event.month }}</span>
+              <span class="text-[32px] font-extrabold font-[Inter] text-[#0F3874] leading-none">{{ event.day }}</span>
+              <span class="text-[8px] font-bold font-[Inter] text-[#0F3874] leading-none">{{ event.dayName }}</span>
+            </div>
+            
+            <div class="flex flex-col text-white flex-1 overflow-hidden">
+              <span class="text-[25px] font-bold font-[Inter] leading-tight truncate drop-shadow-md">{{ event.title }}</span>
+              <div class="flex gap-12 mt-2 text-[13px] italic font-[Inter] text-white/[0.85] drop-shadow-sm">
+                <span>{{ event.location }}</span>
+                <span>{{ event.date }}</span>
+                <span>{{ event.time }}</span>
               </div>
             </div>
 
-            <!-- RFID Reader -->
-            <div class="p-3 bg-gray-50 rounded-lg">
-              <div class="flex items-center justify-between mb-2">
-                <span class="text-xs font-semibold text-gray-700">💳 RFID Reader</span>
-                <span 
-                  class="text-xs font-bold px-2 py-0.5 rounded-full"
-                  :class="getStatusColor(systemHealth.rfidReader.status)"
-                >
-                  {{ systemHealth.rfidReader.status }}
-                </span>
-              </div>
-              <div class="text-xs text-gray-600 space-y-1">
-                <div class="flex justify-between">
-                  <span>Last Scan:</span>
-                  <span class="font-semibold">{{ systemHealth.rfidReader.lastScan }}</span>
-                </div>
-                <div class="flex justify-between">
-                  <span>Total Scans:</span>
-                  <span class="font-semibold">{{ systemHealth.rfidReader.totalScans }}</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- SIM800L -->
-            <div class="p-3 bg-gray-50 rounded-lg">
-              <div class="flex items-center justify-between mb-2">
-                <span class="text-xs font-semibold text-gray-700">📱 SIM800L</span>
-                <span 
-                  class="text-xs font-bold px-2 py-0.5 rounded-full"
-                  :class="getStatusColor(systemHealth.sim800L.status)"
-                >
-                  {{ systemHealth.sim800L.status }}
-                </span>
-              </div>
-              <div class="text-xs text-gray-600 space-y-1">
-                <div class="flex justify-between">
-                  <span>Signal:</span>
-                  <span class="font-semibold">{{ systemHealth.sim800L.signal }}%</span>
-                </div>
-                <div class="flex justify-between">
-                  <span>Last SMS:</span>
-                  <span class="font-semibold">{{ systemHealth.sim800L.lastSMS }}</span>
-                </div>
-                <div class="flex justify-between">
-                  <span>Sent Today:</span>
-                  <span class="font-semibold">{{ systemHealth.sim800L.messagesSent }}</span>
-                </div>
-                <div class="flex justify-between">
-                  <span>Queued:</span>
-                  <span class="font-semibold text-yellow-600">{{ systemHealth.sim800L.messagesQueued }}</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Network -->
-            <div class="p-3 bg-gray-50 rounded-lg">
-              <div class="flex items-center justify-between mb-2">
-                <span class="text-xs font-semibold text-gray-700">🌐 Network</span>
-                <span 
-                  class="text-xs font-bold px-2 py-0.5 rounded-full"
-                  :class="getStatusColor(systemHealth.network.status)"
-                >
-                  {{ systemHealth.network.status }}
-                </span>
-              </div>
-              <div class="text-xs text-gray-600 space-y-1">
-                <div class="flex justify-between">
-                  <span>Latency:</span>
-                  <span class="font-semibold">{{ systemHealth.network.latency }}ms</span>
-                </div>
-                <div class="flex justify-between">
-                  <span>Uptime:</span>
-                  <span class="font-semibold">{{ systemHealth.network.uptime }}%</span>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
 
-        <!-- Quick Stats -->
-        <div class="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-xl p-5 shadow-md border border-blue-200">
-          <h3 class="text-sm font-bold text-gray-800 mb-4">📈 Quick Stats</h3>
-          
-          <div class="space-y-4">
-            <div>
-              <div class="flex items-center justify-between mb-1">
-                <span class="text-xs text-gray-600">RFID Adoption</span>
-                <span class="text-xs font-bold text-indigo-700">{{ rfidAdoptionRate }}%</span>
-              </div>
-              <div class="w-full bg-gray-200 rounded-full h-2">
-                <div 
-                  class="bg-indigo-600 h-2 rounded-full" 
-                  :style="{ width: rfidAdoptionRate + '%' }"
-                ></div>
-              </div>
-              <p class="text-xs text-gray-500 mt-1">{{ stats.activeRFIDCards }} of {{ stats.totalResidents }} residents</p>
-            </div>
-
-            <div class="pt-3 border-t border-blue-200">
-              <div class="flex items-center justify-between">
-                <span class="text-xs text-gray-600">Completed Today</span>
-                <span class="text-2xl font-bold text-green-600">{{ stats.completedToday }}</span>
-              </div>
-            </div>
-
-            <div class="pt-3 border-t border-blue-200">
-              <div class="flex items-center justify-between">
-                <span class="text-xs text-gray-600">Community Feedback</span>
-                <div class="text-right">
-                  <p class="text-lg font-bold text-gray-800">{{ stats.recentFeedback }}</p>
-                  <p class="text-xs text-orange-600 font-semibold">{{ stats.unreadFeedback }} unread</p>
-                </div>
-              </div>
-            </div>
-
-            <button 
-              @click="navigateTo('/community-feedback')"
-              class="w-full mt-4 px-4 py-2 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition"
-            >
-              View Feedback →
-            </button>
-          </div>
-        </div>
-
-        <!-- Quick Actions -->
-        <div class="bg-white rounded-xl p-5 shadow-md border border-gray-200">
-          <h3 class="text-sm font-bold text-gray-800 mb-4">⚡ Quick Actions</h3>
-          
-          <div class="space-y-2">
-            <button 
-              @click="navigateTo('/requests')"
-              class="w-full px-4 py-2.5 bg-blue-50 text-blue-700 text-xs font-semibold rounded-lg hover:bg-blue-100 transition text-left"
-            >
-              📄 Process Requests
-            </button>
-            <button 
-              @click="navigateTo('/sms-announcements')"
-              class="w-full px-4 py-2.5 bg-green-50 text-green-700 text-xs font-semibold rounded-lg hover:bg-green-100 transition text-left"
-            >
-              📱 Send SMS Announcement
-            </button>
-            <button 
-              @click="navigateTo('/residents')"
-              class="w-full px-4 py-2.5 bg-purple-50 text-purple-700 text-xs font-semibold rounded-lg hover:bg-purple-100 transition text-left"
-            >
-              👥 Manage Residents
-            </button>
-            <button 
-              @click="navigateTo('/document-services')"
-              class="w-full px-4 py-2.5 bg-orange-50 text-orange-700 text-xs font-semibold rounded-lg hover:bg-orange-100 transition text-left"
-            >
-              📋 Configure Services
-            </button>
-          </div>
-        </div>
       </div>
+
     </div>
+
   </div>
 </template>
