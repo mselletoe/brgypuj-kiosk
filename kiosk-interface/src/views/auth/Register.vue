@@ -26,18 +26,18 @@ import Button from '@/components/shared/Button.vue'
 
     <div class="flex flex-1 gap-8 w-full">
       <!-- Left Panel -->
-      <div class="bg-white rounded-2xl shadow-lg p-6 flex-1 border-2 border-[#C1C1C1] text-[#003A6B]">
+      <div class="bg-white rounded-2xl shadow-lg p-6 flex-1 border border-gray-200 text-[#003A6B]">
         <p>Select a request transaction no.</p>
 
         <div class="grid grid-cols-4 mt-5 gap-6">
-          <div class="text-[#B1202A] bg-[#FFE6E6] rounded-xl shadow-sm px-4 py-3 border-2 border-[#FBBABA] text-center font-bold text-xl">
+          <div class="text-[#B1202A] bg-red-50 rounded-xl shadow-sm px-4 py-3 border-2 border-red-200 text-center font-bold text-xl">
             <p>1232</p>
           </div>
         </div>
       </div>
 
       <!-- Right Panel -->
-      <div class="flex flex-col text-[#003A6B] bg-[#E4F5FC] rounded-2xl shadow-lg p-6 w-[400px] border-2 border-[#A3CDDE] text-center">
+      <div class="flex flex-col text-[#003A6B] bg-[#EBF5FF] rounded-2xl shadow-lg p-6 w-[400px] border border-[#B0D7F8] text-center">
         <h2 class="font-bold text-2xl text-center">Resident Details</h2>
         <p class="italic text-[9px]">Please check the residents details before proceeding.</p>
         <div class="text-start mt-3">

@@ -28,7 +28,7 @@ const accentColorClass = computed(() => {
 });
 
 const badgeColorClass = computed(() => {
-  return props.type === 'report' ? 'bg-[#FFF0F0] border-[#FBBABA]' : 'bg-[#F0F5FF] border-[#D4DFF6]';
+  return props.type === 'report' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-blue-50 border-blue-200 text-blue-900';
 });
 </script>
 
@@ -46,9 +46,9 @@ const badgeColorClass = computed(() => {
         class="flex justify-center border rounded px-4 min-w-[90px]"
         :class="badgeColorClass"
       >
-        <div class="text-lg font-bold text-slate-700">{{ id }}</div>        
+        <div class="text-lg font-bold">{{ id }}</div>        
       </div>
-      <div class="text-[9px] text-gray-400 font-medium uppercase tracking-wider">Reference No.</div>
+      <div class="text-[9px] text-gray-400 font-medium">Reference No.</div>
     </div>
 
     <div class="flex-1 flex flex-col gap-3">

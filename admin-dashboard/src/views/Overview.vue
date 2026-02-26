@@ -75,7 +75,7 @@ onMounted(() => {
         :class="['flex flex-col flex-1 p-6 rounded-xl shadow-md', card.bgClass]"
       >
         <span :class="['text-[16px] font-semibold mb-2', card.textColor]">{{ card.title }}</span>
-        <span :class="['text-[48px] font-bold leading-none tracking-tight', card.textColor]">{{ card.value }}</span>
+        <span :class="['text-[40px] font-bold leading-none tracking-tight', card.textColor]">{{ card.value }}</span>
         <span :class="['text-[14px] font-medium italic mt-2', card.textColor]">{{ card.subtitle }}</span>
       </div>
     </div>
