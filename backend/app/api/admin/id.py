@@ -16,8 +16,10 @@ Admin-only endpoints for the ID Services feature.
   POST   /id-services/applications/bulk-delete
   POST   /id-services/applications/bulk-undo
 
-  POST   /id-services/reports/{id}/resolve
+  POST   /id-services/reports/{id}/undo            — reactivates the resident's RFID card
   DELETE /id-services/reports/{id}
+  POST   /id-services/reports/bulk-undo
+  POST   /id-services/reports/bulk-delete
 
 ID Applications are stored in the DocumentRequest table with doctype_id = NULL.
 The action endpoints are thin pass-throughs to the shared document_service helpers
@@ -36,6 +38,9 @@ from app.schemas.id import (
 from app.services.id_service import (
     get_all_id_applications,
     get_all_rfid_reports,
+    undo_rfid_report,
+    delete_rfid_report,
+    bulk_delete_rfid_reports,
 )
 from app.services.document_service import (
     approve_request,
@@ -84,9 +89,8 @@ def list_rfid_reports(db: Session = Depends(get_db)):
 
 
 # =========================================================
-# ADMIN DASHBOARD — ID APPLICATION ACTIONS
-# (pass-throughs to the shared document_service helpers;
-#  ID Applications are stored in DocumentRequest with doctype_id = NULL)
+# ID APPLICATION ACTIONS
+# (pass-throughs to the shared document_service helpers)
 # =========================================================
 
 @router.post("/applications/{request_id}/approve", summary="[Admin] Approve ID application")
@@ -154,30 +158,51 @@ def bulk_undo_id_applications(ids: list[int] = Body(...), db: Session = Depends(
 
 
 # =========================================================
-# ADMIN DASHBOARD — RFID REPORT ACTIONS
+# RFID REPORT ACTIONS
 # =========================================================
 
 @router.post(
-    "/reports/{report_id}/resolve",
-    summary="[Admin] Mark RFID report as resolved",
+    "/reports/bulk-undo",
+    summary="[Admin] Bulk undo RFID reports — reactivates residents' RFID cards",
 )
-def resolve_rfid_report(report_id: int, db: Session = Depends(get_db)):
-    report = db.query(RFIDReport).filter(RFIDReport.id == report_id).first()
-    if not report:
-        raise HTTPException(status_code=404, detail="Report not found")
-    report.status = "Resolved"
-    db.commit()
-    return {"detail": "Report resolved"}
+def bulk_undo_rfid_reports_endpoint(ids: list[int] = Body(...), db: Session = Depends(get_db)):
+    results = {"reverted": [], "failed": []}
+    for report_id in ids:
+        try:
+            undo_rfid_report(db, report_id)
+            results["reverted"].append(report_id)
+        except HTTPException:
+            results["failed"].append(report_id)
+    return {"detail": f"{len(results['reverted'])} reports reverted", **results}
+
+
+@router.post(
+    "/reports/bulk-delete",
+    summary="[Admin] Bulk delete RFID reports",
+)
+def bulk_delete_rfid_reports_endpoint(ids: list[int] = Body(...), db: Session = Depends(get_db)):
+    deleted_count = bulk_delete_rfid_reports(db, ids)
+    return {"detail": f"{deleted_count} reports deleted"}
+
+
+@router.post(
+    "/reports/{report_id}/undo",
+    summary="[Admin] Undo RFID report — reactivates the resident's RFID card",
+    description=(
+        "Finds the most recently deactivated RFID card for the resident, "
+        "sets is_active = True, and marks the report as Resolved."
+    ),
+)
+def undo_rfid_report_endpoint(report_id: int, db: Session = Depends(get_db)):
+    return undo_rfid_report(db, report_id)
 
 
 @router.delete(
     "/reports/{report_id}",
     summary="[Admin] Delete RFID report",
+    description="Hard-deletes the report record. Does NOT reactivate the RFID card.",
 )
-def delete_rfid_report(report_id: int, db: Session = Depends(get_db)):
-    report = db.query(RFIDReport).filter(RFIDReport.id == report_id).first()
-    if not report:
+def delete_rfid_report_endpoint(report_id: int, db: Session = Depends(get_db)):
+    if not delete_rfid_report(db, report_id):
         raise HTTPException(status_code=404, detail="Report not found")
-    db.delete(report)
-    db.commit()
     return {"detail": "Report deleted"}

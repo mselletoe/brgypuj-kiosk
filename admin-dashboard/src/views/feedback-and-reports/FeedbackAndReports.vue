@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { NTabs, NTabPane } from 'naive-ui'
-import { TrashIcon } from '@heroicons/vue/24/outline'
+import { TrashIcon, ArrowUturnLeftIcon } from '@heroicons/vue/24/outline'
 
 import PageTitle from '@/components/shared/PageTitle.vue'
 import FeedbackTab from '@/views/feedback-and-reports/subtabs/FeedbackTab.vue'
@@ -63,6 +63,11 @@ const triggerDelete = () => {
   if (!activeTabRef.value || selectedCount.value === 0) return
   activeTabRef.value.bulkDelete?.()
 }
+
+const triggerUndo = () => {
+  if (!activeTabRef.value || selectedCount.value === 0) return
+  activeTabRef.value.bulkUndo?.()
+}
 </script>
 
 <template>
@@ -85,6 +90,20 @@ const triggerDelete = () => {
           placeholder="Search"
           class="border border-gray-200 text-gray-700 rounded-md py-2 px-3 w-[250px] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-gray-400"
         />
+
+        <!-- Undo (reactivate RFID cards) -->
+        <button
+          @click="triggerUndo"
+          :disabled="selectionState === 'none'"
+          :class="[
+            selectionState === 'none'
+              ? 'opacity-50 cursor-not-allowed'
+              : 'hover:bg-orange-50'
+          ]"
+          class="p-2 border border-orange-400 rounded-lg transition-colors"
+        >
+          <ArrowUturnLeftIcon class="w-5 h-5 text-orange-500" />
+        </button>
 
         <!-- Delete -->
         <button

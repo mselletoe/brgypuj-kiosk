@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue';
-import { TrashIcon, StarIcon } from '@heroicons/vue/24/solid';
+import { TrashIcon, StarIcon, ArrowUturnLeftIcon } from '@heroicons/vue/24/solid';
 import { StarIcon as StarOutline } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
@@ -21,7 +21,7 @@ const props = defineProps({
   isResolved: { type: Boolean, default: false }
 });
 
-const emit = defineEmits(['delete', 'mark-lost', 'update:selected']);
+const emit = defineEmits(['delete', 'undo', 'update:selected']);
 
 const accentColorClass = computed(() => {
   return props.type === 'report' ? 'border-l-[#FF2B3A]' : 'border-l-[#0957FF]';
@@ -61,7 +61,7 @@ const badgeColorClass = computed(() => {
         <div class="flex flex-col gap-3">
           <!-- Full Name -->
           <div class="flex flex-col">
-            <span class="block text-[11px] text-gray-400 font-medium">Feedback from</span>
+            <span class="block text-[11px] text-gray-400 font-medium">{{ type === 'report' ? 'Report from' : 'Feedback from' }}</span>
             <span class="text-sm text-slate-700 font-bold">
               {{ requester.firstName }} {{ requester.middleName }} {{ requester.surname }}
             </span>
@@ -117,12 +117,19 @@ const badgeColorClass = computed(() => {
       />
 
       <div class="flex items-center gap-2">
+        <!-- Resolved badge — shown after undo has been applied -->
+        <span
+          v-if="type === 'report' && isResolved"
+          class="px-4 h-9 flex items-center bg-green-50 text-green-700 border border-green-300 rounded-md text-sm font-semibold"
+        >Resolved</span>
+
+        <!-- Undo button — reactivates the resident's RFID card -->
         <button
-          v-if="type === 'report' && !isResolved"
-          @click="$emit('mark-lost', id)"
-          class="px-4 h-9 bg-white text-red-600 border border-[#FF2B3A] hover:bg-red-50 rounded-md text-sm font-semibold transition-all"
+          v-else-if="type === 'report'"
+          @click="$emit('undo', id)"
+          class="w-9 h-9 justify-center bg-white text-orange-600 border border-orange-400 hover:bg-orange-50 rounded-md text-sm font-semibold transition-all flex items-center gap-1.5"
         >
-          Mark as Lost
+          <ArrowUturnLeftIcon class="w-4 h-4" />
         </button>
 
         <button

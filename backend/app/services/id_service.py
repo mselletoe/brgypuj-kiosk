@@ -422,3 +422,73 @@ def get_all_id_applications(db: Session) -> list:
         })
 
     return result
+
+def undo_rfid_report(db: Session, report_id: int) -> dict:
+    """
+    Admin: Undoes a lost-card report by reactivating the resident's RFID card.
+    Sets the most recently deactivated RFID card back to is_active = True
+    and marks the RFIDReport record as Resolved.
+
+    Raises:
+        404 — report not found
+        400 — no deactivated RFID card found to restore
+    """
+    from fastapi import HTTPException, status as http_status
+
+    report = (
+        db.query(RFIDReport)
+        .options(joinedload(RFIDReport.resident).joinedload(Resident.rfids))
+        .filter(RFIDReport.id == report_id)
+        .first()
+    )
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+
+    if not report.resident:
+        raise HTTPException(status_code=400, detail="No resident linked to this report")
+
+    # Find the most recently deactivated card to reactivate
+    inactive_rfids = sorted(
+        [r for r in report.resident.rfids if not r.is_active],
+        key=lambda x: x.created_at,
+        reverse=True
+    )
+    if not inactive_rfids:
+        raise HTTPException(
+            status_code=400,
+            detail="No deactivated RFID card found to restore for this resident."
+        )
+
+    # Reactivate the card
+    card_to_restore = inactive_rfids[0]
+    card_to_restore.is_active = True
+
+    # Mark the report resolved
+    report.status = "Resolved"
+
+    db.commit()
+
+    return {"success": True, "rfid_uid": card_to_restore.rfid_uid}
+
+
+def delete_rfid_report(db: Session, report_id: int) -> bool:
+    """
+    Admin: Hard-deletes an RFID lost-card report record.
+    Does NOT reactivate the RFID card — use undo_rfid_report for that.
+    """
+    report = db.query(RFIDReport).filter(RFIDReport.id == report_id).first()
+    if not report:
+        return False
+    db.delete(report)
+    db.commit()
+    return True
+
+
+def bulk_delete_rfid_reports(db: Session, ids: list[int]) -> int:
+    """
+    Admin: Bulk hard-delete multiple RFID report records.
+    Returns the count of deleted records.
+    """
+    count = db.query(RFIDReport).filter(RFIDReport.id.in_(ids)).delete(synchronize_session=False)
+    db.commit()
+    return count

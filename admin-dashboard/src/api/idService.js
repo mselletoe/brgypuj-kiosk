@@ -71,10 +71,18 @@ export function bulkUndoIDApplications(ids) {
 // ADMIN — RFID REPORT ACTIONS
 // ──────────────────────────────────────────────────────────────
 
-export function resolveRFIDReport(id) {
-  return api.post(`/admin/id-services/reports/${id}/resolve`)
+export function undoRFIDReport(id) {
+  return api.post(`/admin/id-services/reports/${id}/undo`)
+}
+
+export function bulkUndoRFIDReports(ids) {
+  return api.post('/admin/id-services/reports/bulk-undo', ids)
 }
 
 export function deleteRFIDReport(id) {
   return api.delete(`/admin/id-services/reports/${id}`)
+}
+
+export function bulkDeleteRFIDReports(ids) {
+  return api.post('/admin/id-services/reports/bulk-delete', ids)
 }
