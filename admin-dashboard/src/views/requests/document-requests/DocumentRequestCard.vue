@@ -37,6 +37,10 @@ const props = defineProps({
     type: Object,
     required: true
   },
+  requestFor: {
+    type: String,
+    default: null   // only set for I.D Applications
+  },
   rfidNo: {
     type: String,
     required: true
@@ -273,11 +277,20 @@ const handleButtonClick = (buttonId, btn) => {
           </div>          
         </div>
 
-        <!-- Requested Date -->
-        <div class="flex flex-col">
-          <span class="text-[11px] text-gray-400 font-medium">Requested on</span>
-          <span class="text-sm text-slate-700 font-bold">{{ requestedOn }}</span>
+        <div class="flex flex-col gap-3">
+          <!-- Requested Date -->
+          <div class="flex flex-col">
+            <span class="text-[11px] text-gray-400 font-medium">Requested on</span>
+            <span class="text-sm text-slate-700 font-bold">{{ requestedOn }}</span>
+          </div>
+
+          <!-- Request For (ID Applications only) -->
+          <div v-if="requestFor" class="flex flex-col">
+            <span class="text-[11px] text-gray-400 font-medium">Request for</span>
+            <span class="text-sm text-slate-700 font-bold">{{ requestFor }}</span>
+          </div>
         </div>
+
       </div>
     </div>
 

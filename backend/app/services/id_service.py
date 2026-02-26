@@ -126,7 +126,13 @@ def verify_resident_birthdate(db: Session, resident_id: int, birthdate) -> bool:
 # 3. APPLY FOR ID
 # =========================================================
 
-def apply_for_id(db: Session, resident_id: int, rfid_uid: str | None, photo: str | None) -> dict:
+def apply_for_id(
+    db: Session,
+    resident_id: int | None,
+    applicant_resident_id: int,
+    rfid_uid: str | None,
+    photo: str | None,
+) -> dict:
     """
     Creates a DocumentRequest for an ID Application.
 
@@ -134,18 +140,31 @@ def apply_for_id(db: Session, resident_id: int, rfid_uid: str | None, photo: str
     feature and do not depend on any row in the document_types table.
     The type is identified by form_data["request_type"] = "ID Application".
 
-    - Saves the base64 photo to the resident's profile (residents.photo).
-    - Prevents duplicate pending ID applications for the same resident.
-    - Works for both guest (rfid_uid=None) and authenticated sessions.
+    resident_id            — the logged-in user (None for guest). Stored as
+                             DocumentRequest.resident_id so "Request from" resolves
+                             correctly in the admin dashboard (same as other doc types).
+                             For guests, falls back to applicant_resident_id so the
+                             FK is never NULL.
+    applicant_resident_id  — the resident selected via the form. Stored in form_data
+                             as request_for_id / request_for_name ("Request for").
+
+    - Saves the base64 photo to the *applicant* resident's profile (residents.photo).
+    - Prevents duplicate pending ID applications for the same applicant.
+    - Works for both guest (resident_id=None) and authenticated sessions.
     """
 
-    resident = _get_resident_or_404(db, resident_id)
+    # Resolve the applicant (the resident the ID is being made for)
+    applicant = _get_resident_or_404(db, applicant_resident_id)
 
-    # Guard: one pending ID application at a time
+    # Resolve the requester (the logged-in user, or fall back to applicant for guest)
+    requester_id = resident_id if resident_id is not None else applicant_resident_id
+    requester = _get_resident_or_404(db, requester_id)
+
+    # Guard: one pending ID application per applicant at a time
     duplicate = (
         db.query(DocumentRequest)
         .filter(
-            DocumentRequest.resident_id == resident_id,
+            DocumentRequest.form_data["request_for_id"].astext == str(applicant_resident_id),
             DocumentRequest.doctype_id.is_(None),
             DocumentRequest.status == "Pending",
         )
@@ -154,26 +173,25 @@ def apply_for_id(db: Session, resident_id: int, rfid_uid: str | None, photo: str
     if duplicate:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="You already have a pending ID application."
+            detail="This resident already has a pending ID application."
         )
 
-    # Save photo to resident profile if provided
+    # Save photo to the applicant's profile if provided
     # Frontend sends a base64 data URL: "data:image/png;base64,<data>"
     if photo:
         try:
-            # Strip the data URL prefix if present
             if "," in photo:
                 photo = photo.split(",", 1)[1]
-            resident.photo = base64.b64decode(photo)
+            applicant.photo = base64.b64decode(photo)
         except Exception:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid photo data."
             )
 
-    # Resolve which RFID UID to display in the admin table
-    # Priority: session RFID → any active RFID → "Guest Mode"
-    active_rfid = _get_active_rfid(resident)
+    # Resolve RFID display for the admin table
+    # Priority: session RFID → requester's active RFID → "Guest Mode"
+    active_rfid = _get_active_rfid(requester)
     display_rfid = rfid_uid or (active_rfid.rfid_uid if active_rfid else None) or "Guest Mode"
 
     tx_no = _generate_transaction_no(db)
@@ -181,14 +199,17 @@ def apply_for_id(db: Session, resident_id: int, rfid_uid: str | None, photo: str
 
     request = DocumentRequest(
         transaction_no=tx_no,
-        resident_id=resident_id,
-        doctype_id=None,        # NULL — ID Applications are not a document type
+        resident_id=requester_id,   # logged-in user (or applicant for guest)
+        doctype_id=None,            # NULL — ID Applications are not a document type
         price=0,
         status="Pending",
         payment_status="unpaid",
         form_data={
             "request_type": ID_APPLICATION_DOCTYPE_NAME,
-            "applicant_name": f"{resident.first_name} {resident.last_name}",
+            # "Request for" — the resident selected via the form
+            "request_for_id": applicant_resident_id,
+            "request_for_name": f"{applicant.first_name} {applicant.last_name}",
+            # Legacy / display helpers
             "session_rfid": display_rfid,
             "requested_date": now.isoformat(),
         },
@@ -201,8 +222,8 @@ def apply_for_id(db: Session, resident_id: int, rfid_uid: str | None, photo: str
 
     return {
         "transaction_no": request.transaction_no,
-        "resident_first_name": resident.first_name,
-        "resident_last_name": resident.last_name,
+        "resident_first_name": applicant.first_name,
+        "resident_last_name": applicant.last_name,
         "requested_at": request.requested_at,
     }
 

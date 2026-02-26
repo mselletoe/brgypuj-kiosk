@@ -45,8 +45,12 @@ class IDApplicationRequest(BaseModel):
     The rfid_uid field is set by the frontend from the active session;
     it is None when the request comes from a guest user.
     The photo field is a base64-encoded PNG string captured from the kiosk camera.
+
+    resident_id       — the logged-in user's ID (None for guest sessions).
+    applicant_resident_id — the resident selected via the form ("Request for").
     """
-    resident_id: int
+    resident_id: Optional[int] = None       # logged-in user; None → guest session
+    applicant_resident_id: int              # the resident the ID is being applied for
     rfid_uid: Optional[str] = None          # None → guest session
     photo: Optional[str] = None             # base64 PNG, saved to residents.photo
 

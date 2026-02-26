@@ -257,7 +257,10 @@ const submitApplication = async () => {
 
   try {
     const result = await applyForID({
-      resident_id: selectedResident.value.resident_id,
+      // logged-in user (null for guest — backend falls back to applicant for FK)
+      resident_id: authStore.residentId || null,
+      // the resident selected via the form ("Request for")
+      applicant_resident_id: selectedResident.value.resident_id,
       rfid_uid: authStore.rfidUid || null,
       photo: photoData.value,   // base64 PNG string from canvas capture
     });

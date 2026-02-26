@@ -54,6 +54,10 @@ const fetchPendingRequests = async () => {
         middleName: req.resident_middle_name || '',
         lastName: req.resident_last_name || ''
       },
+      // For I.D Applications: the resident the ID is being made for (from form_data)
+      requestFor: req.doctype_id === null
+        ? (req.form_data?.request_for_name || null)
+        : null,
       rfidNo: req.resident_rfid || 'Guest Mode',
       requestedOn: new Date(req.requested_at).toLocaleDateString('en-US', {
         month: 'long',
@@ -293,6 +297,7 @@ const filteredRequests = computed(() => {
       :status="request.status"
       :request-type="request.requestType"
       :requester="request.requester"
+      :request-for="request.requestFor"
       :rfid-no="request.rfidNo"
       :requested-on="request.requestedOn"
       :amount="request.amount"

@@ -92,12 +92,20 @@ def verify_birthdate(payload: BirthdateVerifyRequest, db: Session = Depends(get_
     summary="Submit an ID application",
     description=(
         "Creates a DocumentRequest of type 'ID Application'. "
-        "Available to both guest (rfid_uid=null) and authenticated sessions. "
-        "The request appears in the admin Document Requests dashboard."
+        "Available to both guest (resident_id=null) and authenticated sessions. "
+        "The request appears in the admin Document Requests dashboard.\n\n"
+        "resident_id            — the logged-in user ('Request from'). Null for guests.\n"
+        "applicant_resident_id  — the resident selected via the form ('Request for')."
     ),
 )
 def apply(payload: IDApplicationRequest, db: Session = Depends(get_db)):
-    return apply_for_id(db, payload.resident_id, payload.rfid_uid, payload.photo)
+    return apply_for_id(
+        db,
+        payload.resident_id,
+        payload.applicant_resident_id,
+        payload.rfid_uid,
+        payload.photo,
+    )
 
 
 # =========================================================
