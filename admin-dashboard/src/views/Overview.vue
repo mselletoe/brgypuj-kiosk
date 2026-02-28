@@ -5,7 +5,7 @@
  */
 import { ref, shallowRef, computed, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
-import { Bar } from "vue-chartjs";
+import { Bar, Doughnut } from "vue-chartjs";
 import {
   Chart as ChartJS,
   Title,
@@ -14,6 +14,7 @@ import {
   BarElement,
   CategoryScale,
   LinearScale,
+  ArcElement,
 } from "chart.js";
 
 import { fetchResidents } from "@/api/residentService";
@@ -28,6 +29,7 @@ ChartJS.register(
   BarElement,
   CategoryScale,
   LinearScale,
+  ArcElement,
 );
 
 const router = useRouter();
@@ -47,37 +49,15 @@ const stats = ref({
 
 const auditLogs = ref([]);
 
+// --- RAW DATA STORAGE FOR CHARTS ---
+const rawDocsList = shallowRef([]);
+const rawEquipsList = shallowRef([]);
+
+// --- BAR CHART LOGIC (Weekly / Monthly / Yearly) ---
+const selectedTimeScale = ref("monthly");
 const chartData = shallowRef({
-  labels: [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
-  ],
-  datasets: [
-    {
-      label: "Documents",
-      backgroundColor: "#3B82F6",
-      data: Array(12).fill(0),
-      borderRadius: 6,
-      barPercentage: 0.6,
-    },
-    {
-      label: "Equipment",
-      backgroundColor: "#10B981",
-      data: Array(12).fill(0),
-      borderRadius: 6,
-      barPercentage: 0.6,
-    },
-  ],
+  labels: Array.of(),
+  datasets: Array.of(),
 });
 
 const chartOptions = {
@@ -98,10 +78,204 @@ const chartOptions = {
       beginAtZero: true,
       border: { display: false },
       grid: { color: "#f3f4f6" },
-      ticks: { font: { family: "Inter" } },
+      ticks: { font: { family: "Inter", precision: 0 } },
     },
     x: { grid: { display: false }, ticks: { font: { family: "Inter" } } },
   },
+};
+
+const updateBarChart = () => {
+  const now = new Date();
+  let labels = Array.of();
+  let docCounts = Array.of();
+  let equipCounts = Array.of();
+
+  if (selectedTimeScale.value === "weekly") {
+    // --- LAST 7 DAYS ---
+    labels = Array(7).fill("");
+    docCounts = Array(7).fill(0);
+    equipCounts = Array(7).fill(0);
+
+    // Generate the last 7 days labels (e.g., "Mon", "Tue")
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(now.getDate() - i);
+      labels[6 - i] = d.toLocaleDateString("en-US", { weekday: "short" });
+    }
+
+    const todayStart = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+    );
+
+    const processItem = (itemDateStr, countsArray) => {
+      const d = new Date(itemDateStr);
+      if (isNaN(d)) return;
+      const itemStart = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      const diffTime = todayStart.getTime() - itemStart.getTime();
+      const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+      if (diffDays >= 0 && diffDays < 7) {
+        countsArray[6 - diffDays]++;
+      }
+    };
+
+    rawDocsList.value.forEach((d) =>
+      processItem(d.created_at || d.requested_at, docCounts),
+    );
+    rawEquipsList.value.forEach((e) =>
+      processItem(e.requested_at || e.created_at, equipCounts),
+    );
+  } else if (selectedTimeScale.value === "monthly") {
+    // --- THIS YEAR (12 MONTHS) ---
+    labels = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
+    docCounts = Array(12).fill(0);
+    equipCounts = Array(12).fill(0);
+    const currentYear = now.getFullYear();
+
+    rawDocsList.value.forEach((d) => {
+      const dDate = new Date(d.created_at || d.requested_at);
+      if (!isNaN(dDate) && dDate.getFullYear() === currentYear) {
+        docCounts[dDate.getMonth()]++;
+      }
+    });
+
+    rawEquipsList.value.forEach((e) => {
+      const eDate = new Date(e.requested_at || e.created_at);
+      if (!isNaN(eDate) && eDate.getFullYear() === currentYear) {
+        equipCounts[eDate.getMonth()]++;
+      }
+    });
+  } else if (selectedTimeScale.value === "yearly") {
+    // --- LAST 5 YEARS ---
+    const currentYear = now.getFullYear();
+    labels = [
+      currentYear - 4,
+      currentYear - 3,
+      currentYear - 2,
+      currentYear - 1,
+      currentYear,
+    ].map(String);
+    docCounts = Array(5).fill(0);
+    equipCounts = Array(5).fill(0);
+
+    rawDocsList.value.forEach((d) => {
+      const dDate = new Date(d.created_at || d.requested_at);
+      if (!isNaN(dDate)) {
+        const yearDiff = currentYear - dDate.getFullYear();
+        if (yearDiff >= 0 && yearDiff < 5) docCounts[4 - yearDiff]++;
+      }
+    });
+
+    rawEquipsList.value.forEach((e) => {
+      const eDate = new Date(e.requested_at || e.created_at);
+      if (!isNaN(eDate)) {
+        const yearDiff = currentYear - eDate.getFullYear();
+        if (yearDiff >= 0 && yearDiff < 5) equipCounts[4 - yearDiff]++;
+      }
+    });
+  }
+
+  // Update chart with the chosen Purply-Pink and Orange-Yellow colors!
+  chartData.value = {
+    labels: labels,
+    datasets: Array.of(
+      {
+        label: "Documents",
+        backgroundColor: "#D946EF", // Purply pink
+        data: docCounts,
+        borderRadius: 6,
+        barPercentage: 0.6,
+      },
+      {
+        label: "Equipment",
+        backgroundColor: "#F59E0B", // Orange yellow
+        data: equipCounts,
+        borderRadius: 6,
+        barPercentage: 0.6,
+      },
+    ),
+  };
+};
+
+// --- DOUGHNUT CHART LOGIC ---
+const selectedDoughnutView = ref("documents");
+const rawDocCounts = ref({ labels: Array.of(), data: Array.of() });
+const rawEquipCounts = ref({ labels: Array.of(), data: Array.of() });
+const chartColors = [
+  "#8B5CF6",
+  "#EC4899",
+  "#3B82F6",
+  "#10B981",
+  "#F59E0B",
+  "#14B8A6",
+  "#F43F5E",
+];
+
+const doughnutChartData = shallowRef({
+  labels: Array.of(),
+  datasets: Array.of({
+    data: Array.of(),
+    backgroundColor: Array.of(),
+    borderWidth: 0,
+    hoverOffset: 4,
+  }),
+});
+
+const doughnutChartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  cutout: "75%",
+  plugins: {
+    legend: {
+      position: "bottom",
+      labels: {
+        usePointStyle: true,
+        boxWidth: 8,
+        padding: 20,
+        font: { family: "Inter", size: 12 },
+      },
+    },
+  },
+};
+
+const updateDoughnutChart = () => {
+  const isDoc = selectedDoughnutView.value === "documents";
+  const targetData = isDoc ? rawDocCounts.value : rawEquipCounts.value;
+
+  let finalLabels = Array.of("No Data");
+  let finalData = Array.of(1);
+  let finalColors = Array.of("#f3f4f6");
+
+  if (targetData.labels && targetData.labels.length > 0) {
+    finalLabels = targetData.labels;
+    finalData = targetData.data;
+    finalColors = chartColors.slice(0, targetData.labels.length);
+  }
+
+  doughnutChartData.value = {
+    labels: finalLabels,
+    datasets: Array.of({
+      data: finalData,
+      backgroundColor: finalColors,
+      borderWidth: 0,
+      hoverOffset: 6,
+    }),
+  };
 };
 
 const hasPendingActions = computed(
@@ -135,8 +309,13 @@ const loadDashboardData = async () => {
     stats.value.residents = residents.data
       ? residents.data.length
       : residents.length || 0;
+
+    // Store raw lists for the Bar Chart
     const docsData = docs.data || docs || [];
     const equipsData = equips.data || equips || [];
+    rawDocsList.value = docsData;
+    rawEquipsList.value = equipsData;
+
     const blottersData = blotters.data || blotters || [];
 
     stats.value.pendingDocs = docsData.filter(
@@ -150,24 +329,50 @@ const loadDashboardData = async () => {
     ).length;
 
     let logs = [];
-    docsData.forEach((d) =>
+    const docTypesCount = {};
+    const equipTypesCount = {};
+
+    // Process Documents
+    docsData.forEach((d) => {
+      const docName = d.doctype_name || "Other";
+      const docDate = new Date(d.created_at || d.requested_at);
+
+      docTypesCount[docName] = (docTypesCount[docName] || 0) + 1;
+
       logs.push({
         id: `doc-${d.id}`,
         action: "Document Request",
-        detail: d.doctype_name || "New request.",
-        date: new Date(d.created_at),
+        detail: docName,
+        date: docDate,
         type: "doc",
-      }),
-    );
-    equipsData.forEach((e) =>
+      });
+    });
+
+    // Process Equipment
+    equipsData.forEach((e) => {
+      const equipDate = new Date(e.requested_at || e.created_at);
+      let detailText = "Borrow request.";
+
+      if (e.items && e.items.length > 0) {
+        e.items.forEach((item) => {
+          const itemName = item.item_name || "Unknown Item";
+          equipTypesCount[itemName] =
+            (equipTypesCount[itemName] || 0) + item.quantity;
+        });
+        detailText = e.items
+          .map((item) => `${item.quantity}x ${item.item_name}`)
+          .join(", ");
+      }
+
       logs.push({
         id: `eq-${e.id}`,
         action: "Equipment Request",
-        detail: e.equipment_name || "Borrow request.",
-        date: new Date(e.created_at),
+        detail: detailText,
+        date: equipDate,
         type: "equip",
-      }),
-    );
+      });
+    });
+
     logs.sort((a, b) => b.date - a.date);
 
     auditLogs.value = logs.slice(0, 15).map((log) => {
@@ -190,47 +395,21 @@ const loadDashboardData = async () => {
       };
     });
 
-    const docCounts = Array(12).fill(0);
-    const equipCounts = Array(12).fill(0);
-    docsData.forEach((d) => {
-      docCounts[new Date(d.created_at).getMonth()]++;
-    });
-    equipsData.forEach((e) => {
-      equipCounts[new Date(e.created_at).getMonth()]++;
-    });
+    // Update the Bar Chart based on the default Time Scale
+    updateBarChart();
 
-    chartData.value = {
-      labels: [
-        "Jan",
-        "Feb",
-        "Mar",
-        "Apr",
-        "May",
-        "Jun",
-        "Jul",
-        "Aug",
-        "Sep",
-        "Oct",
-        "Nov",
-        "Dec",
-      ],
-      datasets: [
-        {
-          label: "Documents",
-          backgroundColor: "#3B82F6",
-          data: docCounts,
-          borderRadius: 6,
-          barPercentage: 0.6,
-        },
-        {
-          label: "Equipment",
-          backgroundColor: "#10B981",
-          data: equipCounts,
-          borderRadius: 6,
-          barPercentage: 0.6,
-        },
-      ],
+    // Prepare Doughnut Chart Counts
+    rawDocCounts.value = {
+      labels: Object.keys(docTypesCount),
+      data: Object.values(docTypesCount),
     };
+    rawEquipCounts.value = {
+      labels: Object.keys(equipTypesCount),
+      data: Object.values(equipTypesCount),
+    };
+
+    // Update the Doughnut chart based on the default view
+    updateDoughnutChart();
 
     if (stats.value.pendingDocs > 0 || stats.value.pendingEquip > 0) {
       setTimeout(() => {
@@ -254,7 +433,6 @@ onUnmounted(() => clearInterval(timeInterval.value));
 
 <template>
   <div class="flex flex-col w-full gap-8 animate-fade-in font-inter">
-    <!-- Header row -->
     <div v-if="!isLoading" class="flex items-center justify-between gap-6 px-1">
       <div class="flex flex-col gap-1">
         <h1
@@ -329,154 +507,199 @@ onUnmounted(() => clearInterval(timeInterval.value));
       </div>
     </div>
 
-    <!-- KPI Cards -->
-    <div
-      v-if="!isLoading"
-      class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
-    >
-      <!-- Residents -->
-      <div @click="router.push('/residents-management')" class="kpi-card group">
-        <div
-          class="color-strip bg-gradient-to-r from-[#FFFFFF] to-[#CBFCFF]"
-        ></div>
-        <div class="relative z-10 flex flex-col h-full">
-          <div class="flex items-center justify-between mb-4">
-            <span class="kpi-label">Residents</span>
-            <div class="kpi-icon text-cyan-500">
-              <svg
-                class="w-11 h-11"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="1.5"
-                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
-                />
-              </svg>
-            </div>
-          </div>
-          <span class="kpi-value">{{ stats.residents }}</span>
-          <span class="kpi-title">Registered Residents</span>
-          <span class="kpi-subtext">In the barangay database</span>
-        </div>
-      </div>
-
-      <!-- Documents -->
-      <div @click="router.push('/document-requests')" class="kpi-card group">
-        <div
-          class="color-strip bg-gradient-to-r from-[#FFFFFF] to-[#FCD6FF]"
-        ></div>
-        <div class="relative z-10 flex flex-col h-full">
-          <div class="flex items-center justify-between mb-4">
-            <span class="kpi-label">Documents</span>
-            <div class="kpi-icon text-purple-400">
-              <svg
-                class="w-11 h-11"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="1.5"
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
-            </div>
-          </div>
-          <span class="kpi-value">{{ stats.pendingDocs }}</span>
-          <span class="kpi-title">Document Requests</span>
-          <span class="kpi-subtext">Awaiting your approval</span>
-        </div>
-      </div>
-
-      <!-- Equipment -->
-      <div @click="router.push('/equipment-requests')" class="kpi-card group">
-        <div
-          class="color-strip bg-gradient-to-r from-[#FFFFFF] to-[#FFF5D3]"
-        ></div>
-        <div class="relative z-10 flex flex-col h-full">
-          <div class="flex items-center justify-between mb-4">
-            <span class="kpi-label">Equipment</span>
-            <div class="kpi-icon text-yellow-500">
-              <svg
-                class="w-11 h-11"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="1.5"
-                  d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                />
-              </svg>
-            </div>
-          </div>
-          <span class="kpi-value">{{ stats.pendingEquip }}</span>
-          <span class="kpi-title">Equipment Borrowed</span>
-          <span class="kpi-subtext">Active borrow requests</span>
-        </div>
-      </div>
-
-      <!-- Blotters -->
-      <div @click="router.push('/blotter-kp-logs')" class="kpi-card group">
-        <div
-          class="color-strip bg-gradient-to-r from-[#FFFFFF] to-[#B6FFC2]"
-        ></div>
-        <div class="relative z-10 flex flex-col h-full">
-          <div class="flex items-center justify-between mb-4">
-            <span class="kpi-label">Blotters</span>
-            <div class="kpi-icon text-green-500">
-              <svg
-                class="w-11 h-11"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="1.5"
-                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                />
-              </svg>
-            </div>
-          </div>
-          <span class="kpi-value">{{ stats.activeBlotters }}</span>
-          <span class="kpi-title">Blotter Cases</span>
-          <span class="kpi-subtext">Active &amp; unresolved cases</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Charts + Audit -->
-    <div v-if="!isLoading" class="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1">
-      <div
-        class="lg:col-span-2 bg-white rounded-[24px] p-8 shadow-sm border border-gray-100 flex flex-col"
-      >
-        <div class="mb-8 px-1">
-          <h2 class="text-xl font-bold text-gray-800 tracking-tight">
-            System Volume
-          </h2>
-          <p
-            class="text-xs font-semibold text-gray-400 uppercase tracking-widest mt-1"
+    <div v-if="!isLoading" class="flex flex-col xl:flex-row gap-6">
+      <div class="flex-1 flex flex-col gap-6 w-full">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div
+            @click="router.push('/residents-management')"
+            class="kpi-card group"
           >
-            Monthly Statistics
-          </p>
+            <div
+              class="color-strip bg-gradient-to-r from-[#FFFFFF] to-[#CBFCFF]"
+            ></div>
+            <div class="relative z-10 flex flex-col h-full">
+              <div class="flex items-center justify-between mb-4">
+                <span class="kpi-label">Residents</span>
+                <div class="kpi-icon text-cyan-500">
+                  <svg
+                    class="w-11 h-11"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="1.5"
+                      d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
+                  </svg>
+                </div>
+              </div>
+              <span class="kpi-value">{{ stats.residents }}</span>
+              <span class="kpi-title">Registered Residents</span>
+              <span class="kpi-subtext">In the barangay database</span>
+            </div>
+          </div>
+
+          <div
+            @click="router.push('/document-requests')"
+            class="kpi-card group"
+          >
+            <div
+              class="color-strip bg-gradient-to-r from-[#FFFFFF] to-[#FCD6FF]"
+            ></div>
+            <div class="relative z-10 flex flex-col h-full">
+              <div class="flex items-center justify-between mb-4">
+                <span class="kpi-label">Documents</span>
+                <div class="kpi-icon text-purple-400">
+                  <svg
+                    class="w-11 h-11"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="1.5"
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                </div>
+              </div>
+              <span class="kpi-value">{{ stats.pendingDocs }}</span>
+              <span class="kpi-title">Document Requests</span>
+              <span class="kpi-subtext">Awaiting your approval</span>
+            </div>
+          </div>
+
+          <div
+            @click="router.push('/equipment-requests')"
+            class="kpi-card group"
+          >
+            <div
+              class="color-strip bg-gradient-to-r from-[#FFFFFF] to-[#FFF5D3]"
+            ></div>
+            <div class="relative z-10 flex flex-col h-full">
+              <div class="flex items-center justify-between mb-4">
+                <span class="kpi-label">Equipment</span>
+                <div class="kpi-icon text-yellow-500">
+                  <svg
+                    class="w-11 h-11"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="1.5"
+                      d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                    />
+                  </svg>
+                </div>
+              </div>
+              <span class="kpi-value">{{ stats.pendingEquip }}</span>
+              <span class="kpi-title">Equipment Borrowed</span>
+              <span class="kpi-subtext">Active borrow requests</span>
+            </div>
+          </div>
+
+          <div @click="router.push('/blotter-kp-logs')" class="kpi-card group">
+            <div
+              class="color-strip bg-gradient-to-r from-[#FFFFFF] to-[#B6FFC2]"
+            ></div>
+            <div class="relative z-10 flex flex-col h-full">
+              <div class="flex items-center justify-between mb-4">
+                <span class="kpi-label">Blotters</span>
+                <div class="kpi-icon text-green-500">
+                  <svg
+                    class="w-11 h-11"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="1.5"
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                    />
+                  </svg>
+                </div>
+              </div>
+              <span class="kpi-value">{{ stats.activeBlotters }}</span>
+              <span class="kpi-title">Blotter Cases</span>
+              <span class="kpi-subtext">Active &amp; unresolved cases</span>
+            </div>
+          </div>
         </div>
-        <div class="flex-1 min-h-[320px] w-full px-1">
-          <Bar :data="chartData" :options="chartOptions" />
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-[450px]">
+          <div
+            class="lg:col-span-2 bg-white rounded-[24px] p-8 shadow-sm border border-gray-100 flex flex-col h-full"
+          >
+            <div class="mb-8 px-1 flex items-center justify-between">
+              <div>
+                <h2 class="text-xl font-bold text-gray-800 tracking-tight">
+                  Request Volume
+                </h2>
+                <p
+                  class="text-xs font-semibold text-gray-400 uppercase tracking-widest mt-1"
+                >
+                  Transaction Trends
+                </p>
+              </div>
+
+              <select
+                v-model="selectedTimeScale"
+                @change="updateBarChart"
+                class="text-[11px] font-bold text-gray-500 uppercase tracking-widest bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer transition-colors hover:bg-gray-100 hover:text-gray-700 w-auto"
+              >
+                <option value="weekly">Last 7 Days</option>
+                <option value="monthly">This Year</option>
+                <option value="yearly">Last 5 Years</option>
+              </select>
+            </div>
+
+            <div class="flex-1 w-full px-1 relative">
+              <div class="absolute inset-0">
+                <Bar :data="chartData" :options="chartOptions" />
+              </div>
+            </div>
+          </div>
+
+          <div
+            class="lg:col-span-1 bg-white rounded-[24px] p-8 shadow-sm border border-gray-100 flex flex-col h-full"
+          >
+            <div class="mb-6 px-1 flex flex-col items-center text-center">
+              <h2 class="text-xl font-bold text-gray-800 tracking-tight">
+                Requests Breakdown
+              </h2>
+              <select
+                v-model="selectedDoughnutView"
+                @change="updateDoughnutChart"
+                class="mt-3 text-[11px] font-bold text-gray-500 uppercase tracking-widest bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer transition-colors hover:bg-gray-100 hover:text-gray-700 w-auto"
+              >
+                <option value="documents">By Document Type</option>
+                <option value="equipment">By Equipment Type</option>
+              </select>
+            </div>
+            <div class="flex-1 w-full relative mt-2">
+              <div class="absolute inset-0 pb-4">
+                <Doughnut
+                  :data="doughnutChartData"
+                  :options="doughnutChartOptions"
+                />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
       <div
-        class="bg-white rounded-[24px] p-8 shadow-sm border border-gray-100 flex flex-col h-[500px]"
+        class="w-full xl:w-1/3 shrink-0 bg-white rounded-[24px] p-8 shadow-sm border border-gray-100 flex flex-col h-auto"
       >
         <div class="mb-8">
           <h2 class="text-xl font-bold text-gray-800 tracking-tight">
@@ -488,7 +711,7 @@ onUnmounted(() => clearInterval(timeInterval.value));
             Audit Trail
           </p>
         </div>
-        <div class="flex-1 overflow-y-auto custom-scrollbar px-4">
+        <div class="flex-1 overflow-y-auto custom-scrollbar px-4 min-h-0">
           <div class="ml-2 border-l-2 border-gray-50 space-y-6 pb-4">
             <div
               v-for="log in auditLogs"
@@ -497,7 +720,7 @@ onUnmounted(() => clearInterval(timeInterval.value));
             >
               <div
                 class="absolute -left-[7.5px] top-1 w-3.5 h-3.5 rounded-full border-2 border-white shadow-sm"
-                :class="log.type === 'doc' ? 'bg-blue-500' : 'bg-emerald-500'"
+                :class="log.type === 'doc' ? 'bg-[#D946EF]' : 'bg-[#F59E0B]'"
               ></div>
               <div class="flex justify-between items-start">
                 <span class="text-sm font-bold text-gray-700">{{
@@ -518,7 +741,6 @@ onUnmounted(() => clearInterval(timeInterval.value));
       </div>
     </div>
 
-    <!-- Loading -->
     <div
       v-if="isLoading"
       class="flex-1 flex flex-col items-center justify-center min-h-[400px]"
