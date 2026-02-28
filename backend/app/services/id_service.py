@@ -95,6 +95,22 @@ def search_residents_by_name(db: Session, query: str) -> list[dict]:
         .all()
     )
 
+    # For each resident, check if they already have a pending ID application.
+    # Uses the same filter as apply_for_id's duplicate guard (proven to work).
+    pending_applicant_ids = set()
+    for r in residents:
+        exists = (
+            db.query(DocumentRequest.id)
+            .filter(
+                DocumentRequest.form_data["request_for_id"].astext == str(r.id),
+                DocumentRequest.doctype_id.is_(None),
+                DocumentRequest.status == "Pending",
+            )
+            .first()
+        )
+        if exists:
+            pending_applicant_ids.add(r.id)
+
     return [
         {
             "resident_id": r.id,
@@ -103,6 +119,7 @@ def search_residents_by_name(db: Session, query: str) -> list[dict]:
             "last_name": r.last_name,
             "suffix": r.suffix,
             "has_rfid": any(rfid.is_active for rfid in r.rfids),
+            "has_pending": r.id in pending_applicant_ids,
         }
         for r in residents
     ]

@@ -124,7 +124,7 @@ const cancelExit = () => {
 
     <!-- Main -->
     <div class="flex-1 overflow-y-auto custom-scrollbar">
-      <div class="flex gap-3 mb-6">
+      <div class="flex gap-3 mb-4">
         <!-- Left -->
         <div class="w-1/2 bg-white rounded-2xl shadow-lg border border-gray-200 p-5">
           <h3 class="text-2xl font-bold text-[#013C6D] flex items-center gap-2">
@@ -133,7 +133,7 @@ const cancelExit = () => {
           </h3>
           <div class="mt-4">
             <h4 class="text-lg font-bold text-[#013C6D]">Selected Items Summary</h4>
-            <ul class="mt-2 space-y-0 min-h-32">
+            <ul class="mt-2 space-y-0">
               <li
                 v-for="item in selectedEquipment"
                 :key="item.id"
@@ -144,7 +144,7 @@ const cancelExit = () => {
               </li>
             </ul>
           </div>
-          <div class="mt-4">
+          <div class="mt-6">
             <h4 class="text-lg font-bold text-[#013C6D]">Borrowing Period</h4>
             <div class="mt-2 flex justify-between text-base text-gray-700 max-w-xs">
               <div>

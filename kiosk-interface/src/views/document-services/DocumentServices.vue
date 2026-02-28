@@ -77,7 +77,7 @@ onMounted(fetchDocuments)
 
     <!-- Document type Option box -->
     <div class="flex-1 overflow-y-auto custom-scrollbar">
-      <div v-if="isParent() && !loading && !error" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div v-if="isParent() && !loading && !error" class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
         <router-link
           v-for="doc in documents"
           :key="doc.request_type_name"

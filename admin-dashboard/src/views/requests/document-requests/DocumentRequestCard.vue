@@ -116,6 +116,10 @@ const accentColorClass = computed(() => {
   return props.type === 'rfid' ? 'border-l-[#FF2B3A]' : 'border-l-[#0957FF]';
 });
 
+const badgeColorClass = computed(() => {
+  return props.type === 'rfid' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-blue-50 border-blue-200 text-blue-900';
+});
+
 const buttonConfigs = {
   pending: {
     document: [
@@ -239,8 +243,11 @@ const handleButtonClick = (buttonId, btn) => {
   >
     <!-- Transaction Number -->
     <div class="flex flex-col items-center justify-center space-y-1">
-      <div class="flex justify-center bg-[#F0F5FF] border border-[#D4DFF6] rounded px-4 py-1 min-w-[90px]">
-        <div class="text-lg font-bold text-slate-700 leading-tight">{{ transactionNo }}</div>        
+      <div 
+        class="flex justify-center border rounded px-4 py-1 min-w-[90px]"
+        :class="badgeColorClass"
+      >
+        <div class="text-lg font-bold leading-tight">{{ transactionNo }}</div>        
       </div>
       <div class="text-[9px] text-gray-400 font-medium">Transaction No.</div>
     </div>
