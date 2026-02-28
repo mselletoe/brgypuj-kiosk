@@ -93,8 +93,8 @@ class EquipmentRequestBase(BaseModel):
     @classmethod
     def validate_return_date(cls, v, info):
         """Ensure return date is after borrow date"""
-        if 'borrow_date' in info.data and v <= info.data['borrow_date']:
-            raise ValueError('Return date must be after borrow date')
+        if 'borrow_date' in info.data and v < info.data['borrow_date']:
+            raise ValueError('Return date must be on or after borrow date')
         return v
 
 
@@ -103,7 +103,7 @@ class EquipmentRequestCreate(EquipmentRequestBase):
     Validation schema for incoming Kiosk submissions.
     Includes the resident_id linked to the authenticated RFID session.
     """
-    resident_id: int
+    resident_id: Optional[int] = None
     use_autofill: bool = False  # Whether to use resident data for autofill
 
 

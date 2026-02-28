@@ -75,7 +75,7 @@ def _calculate_total_cost(
     return_date: datetime
 ) -> float:
     
-    days = max(1, (return_date - borrow_date).days)
+    days = (return_date - borrow_date).days + 1
     
     total_cost = 0
     

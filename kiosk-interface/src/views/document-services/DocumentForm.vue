@@ -209,7 +209,7 @@ defineExpose({
     </div> -->
 
     <!-- Form Fields Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+    <div class="grid grid-cols-1 md:grid-cols gap-5">
       <div v-for="field in config.fields" :key="field.id || field.name" class="flex flex-col">
         <label class="flex items-center gap-2 mb-2 font-bold text-[#003A6B]">
           {{ field.label }}

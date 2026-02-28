@@ -30,6 +30,13 @@ const minBorrowDate = computed(() => {
   return phDate
 })
 
+const minReturnDate = computed(() => {
+  if (!borrowDate.value) return minBorrowDate.value
+  const d = new Date(borrowDate.value)
+  d.setHours(0, 0, 0, 0)
+  return d
+})
+
 const numberOfDays = computed(() => {
   if (!borrowDate.value || !returnDate.value) {
     return 1
@@ -145,7 +152,7 @@ const cancelExit = () => {
                   auto-apply
                   teleport-center
                   format="MM/dd/yyyy"
-                  :min-date="borrowDate"
+                  :min-date="minReturnDate"
                   input-class-name="w-full pl-10 pr-3 py-3 text-base border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#013C6D] focus:border-transparent"
                 >
                   <template #input-icon>
