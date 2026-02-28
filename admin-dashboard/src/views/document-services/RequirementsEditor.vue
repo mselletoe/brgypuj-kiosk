@@ -64,9 +64,21 @@ function onSystemCheckSelect(index, value) {
     req.label = req.label || 'Clean Blotter Record'
     req.params = null
   } else if (value === 'min_residency') {
-    req.label = req.label || 'Minimum Years of Residency'
-    req.params = { years: 1 }
+    req.label = req.label || 'Minimum Residency'
+    req.params = { years: 0, months: 6 }
+    updateResidencyLabel(index)
   }
+}
+
+function updateResidencyLabel(index) {
+  const req = editingRequirements.value[index]
+  if (req.id !== 'min_residency') return
+  const y = req.params?.years ?? 0
+  const m = req.params?.months ?? 0
+  const parts = []
+  if (y > 0) parts.push(`${y} year${y !== 1 ? 's' : ''}`)
+  if (m > 0) parts.push(`${m} month${m !== 1 ? 's' : ''}`)
+  req.label = `Minimum ${parts.join(' and ') || '0 months'} of Residency`
 }
 
 function handleSave() {
@@ -147,16 +159,31 @@ function handleClose() {
               size="small"
             />
 
-            <!-- min_residency param -->
-            <div v-if="req.id === 'min_residency'" class="flex items-center gap-2">
-              <span class="text-xs text-gray-500">Minimum years:</span>
-              <n-input
-                :value="String(req.params?.years ?? 1)"
-                type="number"
-                size="small"
-                style="width: 80px"
-                @update:value="(v) => req.params = { years: Number(v) }"
-              />
+            <!-- min_residency params: years + months -->
+            <div v-if="req.id === 'min_residency'" class="flex items-center gap-3 flex-wrap">
+              <div class="flex items-center gap-1.5">
+                <span class="text-xs text-gray-500">Years:</span>
+                <n-input
+                  :value="String(req.params?.years ?? 0)"
+                  type="number"
+                  size="small"
+                  style="width: 72px"
+                  @update:value="(v) => { req.params = { ...req.params, years: Math.max(0, Number(v)) }; updateResidencyLabel(index) }"
+                />
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="text-xs text-gray-500">Months:</span>
+                <n-input
+                  :value="String(req.params?.months ?? 0)"
+                  type="number"
+                  size="small"
+                  style="width: 72px"
+                  @update:value="(v) => { req.params = { ...req.params, months: Math.min(11, Math.max(0, Number(v))) }; updateResidencyLabel(index) }"
+                />
+              </div>
+              <span class="text-xs text-gray-400 italic">
+                ({{ (req.params?.years ?? 0) * 12 + (req.params?.months ?? 0) }} months total)
+              </span>
             </div>
           </div>
 

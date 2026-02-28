@@ -21,24 +21,41 @@ const toggleLang = () => (currentLang.value = currentLang.value === 'FIL' ? 'ENG
         <component :is="isMuted ? SpeakerXMarkIcon : SpeakerWaveIcon" class="h-7 w-7" />
       </button>
 
-      <div 
-        @click.stop="toggleLang" 
-        class="relative w-36 h-12 bg-[#49759B] rounded-2xl flex items-center cursor-pointer p-1.5 shadow-md transition-all"
+      <!-- Language toggle — same implementation as AnnouncementPage -->
+      <div
+        @click.stop="toggleLang"
+        class="w-36 h-12 bg-[#49759B] rounded-2xl flex cursor-pointer p-1"
+        style="position: relative;"
       >
-        <div 
-          class="absolute h-9 w-[46%] bg-white rounded-xl transition-all duration-300 ease-in-out"
-          :style="{ transform: currentLang === 'FIL' ? 'translateX(0)' : 'translateX(105%)' }"
+        <!-- Sliding white pill -->
+        <div
+          class="rounded-xl bg-white"
+          style="
+            position: absolute;
+            top: 4px;
+            bottom: 4px;
+            width: calc(50% - 4px);
+            transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+          "
+          :style="{
+            transform: currentLang === 'ENG' ? 'translateX(calc(100% + 0px))' : 'translateX(0px)'
+          }"
         ></div>
 
-        <div class="relative flex w-full font-bold text-sm z-10 pointer-events-none">
-          <span 
-            class="flex-1 transition-colors duration-300" 
-            :class="currentLang === 'FIL' ? 'text-[#49759B]' : 'text-white'"
-          >FIL</span>
-          <span 
-            class="flex-1 transition-colors duration-300" 
-            :class="currentLang === 'ENG' ? 'text-[#49759B]' : 'text-white'"
-          >ENG</span>
+        <!-- Labels -->
+        <div
+          class="flex-1 flex items-center justify-center font-bold rounded-xl"
+          style="position: relative; z-index: 1; transition: color 0.3s ease;"
+          :style="{ color: currentLang === 'FIL' ? '#49759B' : 'white' }"
+        >
+          FIL
+        </div>
+        <div
+          class="flex-1 flex items-center justify-center font-bold rounded-xl"
+          style="position: relative; z-index: 1; transition: color 0.3s ease;"
+          :style="{ color: currentLang === 'ENG' ? '#49759B' : 'white' }"
+        >
+          ENG
         </div>
       </div>
     </div>
@@ -67,8 +84,6 @@ const toggleLang = () => (currentLang.value = currentLang.value === 'FIL' ? 'ENG
         Touch anywhere to start
       </div>      
     </div>
-
-
 
     <img src="@/assets/images/Pob1Logo.svg" alt="Barangay Logo"
       class="absolute -bottom-56 -right-24 w-[600px] h-[600px] object-contain opacity-50 pointer-events-none"
