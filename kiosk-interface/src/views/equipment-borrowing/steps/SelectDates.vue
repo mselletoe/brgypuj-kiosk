@@ -175,7 +175,7 @@ const cancelExit = () => {
             <div class="border-t border-gray-300 my-6"></div>
             <div class="flex justify-between text-3xl font-bold text-[#013C6D]">
               <span>Total Cost:</span>
-              <span class="text-[#09AA44]"">{{ formatCurrency(totalCost) }}</span>
+              <span class="text-[#09AA44]">{{ formatCurrency(totalCost) }}</span>
             </div>
           </div>
         </div>
