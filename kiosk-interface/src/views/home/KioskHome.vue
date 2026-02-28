@@ -71,7 +71,7 @@ function goTo(path) {
         <!-- Document Services -->
         <div 
           v-if="!auth.isGuest"
-          class="flex h-[220px] min-w-[160px] flex-1 cursor-pointer flex-col items-center justify-center rounded-[15px] bg-[#2C67E7] p-[10px] text-center shadow-[4px_4px_8px_rgba(0,0,0,0.25),inset_2px_2px_4px_rgba(255,255,255,0.6),inset_-2px_-2px_6px_rgba(0,0,0,0.15)] transition-all duration-150 hover:-translate-y-[3px] hover:scale-105 active:scale-[0.97]"
+          class="flex h-[220px] min-w-[160px] flex-1 cursor-pointer flex-col items-center justify-center rounded-[15px] bg-[#2C67E7] p-[10px] text-center shadow-[4px_4px_8px_rgba(0,0,0,0.25),inset_2px_2px_4px_rgba(255,255,255,0.6),inset_-2px_-2px_6px_rgba(0,0,0,0.15)] transition-all duration-150 active:scale-[0.97]"
           @click="goTo('document-services')"
         >
           <img src="@/assets/vectors/DocumentServices.svg" alt="Document Services" class="mb-[5px] h-[105px] w-[105px]" />
@@ -82,7 +82,7 @@ function goTo(path) {
         <!-- Equipment Borrowing -->
         <div 
           v-if="!auth.isGuest"
-          class="flex h-[220px] min-w-[160px] flex-1 cursor-pointer flex-col items-center justify-center rounded-[15px] bg-[#F16C14] p-[10px] text-center shadow-[4px_4px_8px_rgba(0,0,0,0.25),inset_2px_2px_4px_rgba(255,255,255,0.6),inset_-2px_-2px_6px_rgba(0,0,0,0.15)] transition-all duration-150 hover:-translate-y-[3px] hover:scale-105 active:scale-[0.97]"
+          class="flex h-[220px] min-w-[160px] flex-1 cursor-pointer flex-col items-center justify-center rounded-[15px] bg-[#F16C14] p-[10px] text-center shadow-[4px_4px_8px_rgba(0,0,0,0.25),inset_2px_2px_4px_rgba(255,255,255,0.6),inset_-2px_-2px_6px_rgba(0,0,0,0.15)] transition-all duration-150 active:scale-[0.97]"
           @click="goTo('equipment-borrowing')"
         >
           <img src="@/assets/vectors/EquipmentBorrowing.svg" alt="Equipment Borrowing" class="mb-[5px] h-[105px] w-[105px]" />
@@ -92,7 +92,7 @@ function goTo(path) {
         
         <!-- RFID Services -->
         <div 
-          class="flex h-[220px] min-w-[160px] flex-1 cursor-pointer flex-col items-center justify-center rounded-[15px] bg-[#21C05C] p-[10px] text-center shadow-[4px_4px_8px_rgba(0,0,0,0.25),inset_2px_2px_4px_rgba(255,255,255,0.6),inset_-2px_-2px_6px_rgba(0,0,0,0.15)] transition-all duration-150 hover:-translate-y-[3px] hover:scale-105 active:scale-[0.97]"
+          class="flex h-[220px] min-w-[160px] flex-1 cursor-pointer flex-col items-center justify-center rounded-[15px] bg-[#21C05C] p-[10px] text-center shadow-[4px_4px_8px_rgba(0,0,0,0.25),inset_2px_2px_4px_rgba(255,255,255,0.6),inset_-2px_-2px_6px_rgba(0,0,0,0.15)] transition-all duration-150 active:scale-[0.97]"
           @click="goTo('id-services')"
         >
           <img src="@/assets/vectors/RFIDServices.svg" alt="RFID Services" class="mb-[5px] h-[105px] w-[105px]" />
@@ -102,7 +102,7 @@ function goTo(path) {
 
         <!-- Help & Support -->
         <div 
-          class="flex h-[220px] min-w-[160px] flex-1 cursor-pointer flex-col items-center justify-center rounded-[15px] bg-[#A451F3] p-[10px] text-center shadow-[4px_4px_8px_rgba(0,0,0,0.25),inset_2px_2px_4px_rgba(255,255,255,0.6),inset_-2px_-2px_6px_rgba(0,0,0,0.15)] transition-all duration-150 hover:-translate-y-[3px] hover:scale-105 active:scale-[0.97]"
+          class="flex h-[220px] min-w-[160px] flex-1 cursor-pointer flex-col items-center justify-center rounded-[15px] bg-[#A451F3] p-[10px] text-center shadow-[4px_4px_8px_rgba(0,0,0,0.25),inset_2px_2px_4px_rgba(255,255,255,0.6),inset_-2px_-2px_6px_rgba(0,0,0,0.15)] transition-all duration-150 active:scale-[0.97]"
           @click="goTo('help-and-support')"
         >
           <img src="@/assets/vectors/HelpSupport.svg" alt="Help & Support" class="mb-[5px] h-[105px] w-[105px]" />
@@ -112,7 +112,7 @@ function goTo(path) {
 
         <!-- Feedback -->
         <div 
-          class="flex h-[220px] min-w-[160px] flex-1 cursor-pointer flex-col items-center justify-center rounded-[15px] bg-[#13B3A1] p-[10px] text-center shadow-[4px_4px_8px_rgba(0,0,0,0.25),inset_2px_2px_4px_rgba(255,255,255,0.6),inset_-2px_-2px_6px_rgba(0,0,0,0.15)] transition-all duration-150 hover:-translate-y-[3px] hover:scale-105 active:scale-[0.97]"
+          class="flex h-[220px] min-w-[160px] flex-1 cursor-pointer flex-col items-center justify-center rounded-[15px] bg-[#13B3A1] p-[10px] text-center shadow-[4px_4px_8px_rgba(0,0,0,0.25),inset_2px_2px_4px_rgba(255,255,255,0.6),inset_-2px_-2px_6px_rgba(0,0,0,0.15)] transition-all duration-150 active:scale-[0.97]"
           @click="goTo('feedback')"
         >
           <img src="@/assets/vectors/Feedback.svg" alt="Feedback" class="mb-[5px] h-[105px] w-[105px]" />

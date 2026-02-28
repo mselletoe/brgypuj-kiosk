@@ -125,7 +125,7 @@ const setSlide = (index) => {
         <img :src="logoPath" class="w-[70px] h-[70px]" />
         <div>
           <h1 class="text-[18px] font-extrabold">Brgy. Poblacion I</h1>
-          <p class="text-[16px] opacity-90">Amadeo, Cavite - Kiosk System</p>
+          <p class="text-[16px] opacity-90 -mt-1">Amadeo, Cavite - Kiosk System</p>
         </div>
       </div>
 
