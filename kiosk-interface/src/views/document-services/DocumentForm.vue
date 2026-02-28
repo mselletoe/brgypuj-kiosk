@@ -9,7 +9,7 @@
 import { ref, watch } from 'vue'
 import VueDatePicker from '@vuepic/vue-datepicker'
 import '@vuepic/vue-datepicker/dist/main.css'
-import { CalendarIcon } from '@heroicons/vue/24/outline'
+import { CalendarIcon, ChevronDownIcon } from '@heroicons/vue/24/outline'
 import { LockClosedIcon } from '@heroicons/vue/24/solid'
 
 // --- Props Configuration ---
@@ -191,6 +191,19 @@ const handleContinue = () => {
   }
 }
 
+// Tracks which custom select dropdown is currently open
+const openDropdown = ref(null)
+
+const toggleSelectDropdown = (fieldName) => {
+  openDropdown.value = openDropdown.value === fieldName ? null : fieldName
+}
+
+const selectOption = (fieldName, option) => {
+  formData.value[fieldName] = option
+  openDropdown.value = null
+  errors.value[fieldName] = ''
+}
+
 defineExpose({
   handleContinue
 })
@@ -230,9 +243,9 @@ defineExpose({
           :readonly="isPreFilled(field.name) || props.isSubmitting"
           :disabled="isPreFilled(field.name) || props.isSubmitting"
           :class="[
-            errors[field.name] ? 'border-red-500 focus:ring-red-500' : 'border-[#464646] focus:ring-blue-500',
+            errors[field.name] ? 'border-red-500 focus:ring-red-500' : 'border-[#464646] ',
             isPreFilled(field.name) ? 'bg-gray-100 cursor-not-allowed text-gray-700' : 'bg-white',
-            'w-full p-3 border rounded-lg shadow-md transition-shadow duration-200 focus:shadow-lg focus:ring-2'
+            'w-full h-[48px] p-3 border border-gray-300 rounded-xl shadow-sm transition-shadow focus:outline-none focus:ring-2 focus:ring-[#013C6D]'
           ]"
         />
 
@@ -263,28 +276,48 @@ defineExpose({
           :readonly="isPreFilled(field.name) || props.isSubmitting"
           :disabled="isPreFilled(field.name) || props.isSubmitting"
           :class="[
-            errors[field.name] ? 'border-red-500 focus:ring-red-500' : 'border-[#464646] focus:ring-blue-500',
+            errors[field.name] ? 'border-red-500 focus:ring-red-500' : 'focus:ring-[#013C6D]',
             isPreFilled(field.name) ? 'bg-gray-100 cursor-not-allowed text-gray-700' : 'bg-white',
-            'w-full h-[48px] p-3 border rounded-lg shadow-md transition-shadow duration-200 focus:shadow-lg focus:ring-2 leading-tight resize-none placeholder:italic'
+            'w-full h-[48px] p-3 border border-gray-300 rounded-xl shadow-sm transition-shadow duration-200 focus:outline-none focus:ring-2 focus:ring-[#013C6D]'
           ]"
         ></textarea>
 
         <!-- Select -->
-        <select
+        <div
           v-else-if="field.type === 'select'"
-          v-model="formData[field.name]"
-          :disabled="isPreFilled(field.name) || props.isSubmitting"
-          :class="[
-            errors[field.name] ? 'border-red-500 focus:ring-red-500' : 'border-[#464646] focus:ring-blue-500',
-            isPreFilled(field.name) ? 'bg-gray-100 cursor-not-allowed text-gray-700' : 'bg-white',
-            'w-full p-3 border rounded-lg shadow-md transition-shadow duration-200 focus:shadow-lg focus:ring-2'
-          ]"
+          class="relative"
         >
-          <option value="">Select {{ field.label }}</option>
-          <option v-for="option in (Array.isArray(field.options) ? field.options : [])" :key="option" :value="option">
-            {{ option }}
-          </option>
-        </select>
+          <button
+            type="button"
+            @click="!isPreFilled(field.name) && !props.isSubmitting && toggleSelectDropdown(field.name)"
+            :disabled="isPreFilled(field.name) || props.isSubmitting"
+            :class="[
+              errors[field.name] ? 'border-red-500' : 'border-[#464646]',
+              isPreFilled(field.name) ? 'bg-gray-100 cursor-not-allowed ' : 'bg-white ',
+              'w-full h-[48px] border border-gray-300 rounded-xl px-3 flex items-center justify-between shadow-sm transition-colors duration-200 focus:ring-2 focus:ring-[#013C6D]'
+            ]"
+          >
+            <span :class="formData[field.name] ? 'text-[#03335C] font-bold' : 'text-gray-400'">
+              {{ formData[field.name] || `Select ${field.label}` }}
+            </span>
+            <LockClosedIcon v-if="isPreFilled(field.name)" class="w-4 h-4 text-blue-600" />
+            <ChevronDownIcon v-else class="w-5 h-5 text-[#03335C]" />
+          </button>
+          <div
+            v-if="openDropdown === field.name"
+            class="absolute top-full left-0 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-50 p-1 max-h-48 overflow-y-auto custom-scroll"
+          >
+            <button
+              v-for="option in (Array.isArray(field.options) ? field.options : [])"
+              :key="option"
+              type="button"
+              @click="selectOption(field.name, option)"
+              class="w-full text-left py-2.5 px-4 hover:bg-blue-50 rounded-lg font-bold text-[#03335C] text-sm border-b border-gray-50 last:border-0"
+            >
+              {{ option }}
+            </button>
+          </div>
+        </div>
 
         <!-- Error message -->
         <p v-if="errors[field.name]" class="text-red-500 text-xs mt-1 italic">

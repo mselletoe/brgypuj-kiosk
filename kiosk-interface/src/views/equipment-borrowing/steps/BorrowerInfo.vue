@@ -5,7 +5,7 @@ import Button from '@/components/shared/Button.vue';
 import Modal from '@/components/shared/Modal.vue';
 import Keyboard from '@/components/shared/Keyboard.vue';
 import { useAuthStore } from '@/stores/auth';
-import { DocumentTextIcon } from '@heroicons/vue/24/outline';
+import { DocumentTextIcon, ChevronDownIcon } from '@heroicons/vue/24/outline';
 import { getAutofillData } from '@/api/equipmentService';
 import { useRouter } from 'vue-router';
 
@@ -16,6 +16,7 @@ const residentId = computed(() => authStore.residentId);
 const showKeyboard = ref(false);
 const activeInput = ref(null);
 const showExitModal = ref(false);
+const showPurposeDropdown = ref(false);
 const router = useRouter();
 
 const props = defineProps({
@@ -85,6 +86,7 @@ const handleNext = () => {
 };
 
 const focusInput = (elementId, fieldName) => {
+  showPurposeDropdown.value = false;
   activeInput.value = fieldName;
   showKeyboard.value = true;
 
@@ -94,6 +96,11 @@ const focusInput = (elementId, fieldName) => {
       el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   });
+};
+
+const selectPurpose = (option) => {
+  localInfo.value.purpose = option;
+  showPurposeDropdown.value = false;
 };
 
 const handleKeyboardKeyPress = (char) => {
@@ -139,7 +146,7 @@ const cancelExit = () => {
   showExitModal.value = false;
 };
 
-const inputClass = "w-full px-4 py-3 text-base border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#013C6D]";
+const inputClass = "w-full px-4 py-3 text-base border border-gray-300 rounded-xl transition-shadow shadow-sm focus:outline-none focus:ring-2 focus:ring-[#013C6D]";
 </script>
 
 <template>
@@ -190,7 +197,7 @@ const inputClass = "w-full px-4 py-3 text-base border border-gray-300 rounded-lg
               placeholder="Name"
               :class="inputClass"
               @focus="focusInput('contact-person', 'contactPerson')"
-              :readonly="useAutofill" 
+              :readonly="useAutofill"
             />
           </div>
 
@@ -206,25 +213,41 @@ const inputClass = "w-full px-4 py-3 text-base border border-gray-300 rounded-lg
               placeholder="Phone Number"
               :class="inputClass"
               @focus="focusInput('contact-number', 'contactNumber')"
-              :readonly="useAutofill" 
+              :readonly="useAutofill"
             />
           </div>
 
           <!-- Purpose -->
           <div>
-            <label for="purpose" class="block text-base font-bold text-[#003A6B] mb-2">
+            <label class="block text-base font-bold text-[#003A6B] mb-2">
               Purpose of Borrowing <span class="text-red-600">*</span>
             </label>
-            <select
-              id="purpose"
-              v-model="localInfo.purpose"
-              :class="[inputClass, { 'text-gray-500': !localInfo.purpose }]"
-            >
-              <option :value="null" disabled>Select</option>
-              <option v-for="option in purposeOptions" :key="option" :value="option">
-                {{ option }}
-              </option>
-            </select>
+            <div class="relative">
+              <button
+                type="button"
+                @click="showPurposeDropdown = !showPurposeDropdown"
+                class="w-full h-[48px] border border-gray-300 rounded-xl px-4 flex items-center justify-between bg-white hover:border-[#03335C] transition-colors shadow-sm"
+              >
+                <span :class="localInfo.purpose ? 'text-[#03335C] font-bold text-base' : 'text-gray-400 italic text-sm'">
+                  {{ localInfo.purpose || 'Select' }}
+                </span>
+                <ChevronDownIcon class="w-5 h-5 text-[#03335C] flex-shrink-0" />
+              </button>
+              <div
+                v-if="showPurposeDropdown"
+                class="absolute top-full left-0 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-50 p-1 flex flex-col overflow-y-auto custom-scroll"
+              >
+                <button
+                  v-for="option in purposeOptions"
+                  :key="option"
+                  type="button"
+                  @click="selectPurpose(option)"
+                  class="w-full text-left py-2.5 px-4 hover:bg-blue-50 rounded-lg font-bold text-[#03335C] text-sm border-b border-gray-50 last:border-0"
+                >
+                  {{ option }}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -232,14 +255,9 @@ const inputClass = "w-full px-4 py-3 text-base border border-gray-300 rounded-lg
 
     <!-- Buttons -->
     <div class="flex gap-6 mt-6 justify-between items-center bottom-0 flex-shrink-0">
-      <Button
-        @click="handleBack"
-        variant="outline"
-        size="md"
-      >
+      <Button @click="handleBack" variant="outline" size="md">
         Back to Dates
       </Button>
-
       <Button
         @click="handleNext"
         :disabled="!isFormValid"
@@ -285,12 +303,10 @@ const inputClass = "w-full px-4 py-3 text-base border border-gray-300 rounded-lg
   padding-bottom: 210px;
   transition: padding-bottom 0.3s ease-out;
 }
-
 .slide-up-enter-active,
 .slide-up-leave-active {
   transition: transform 0.3s ease-out;
 }
-
 .slide-up-enter-from,
 .slide-up-leave-to {
   transform: translateY(100%);
