@@ -241,6 +241,23 @@ async function loadBlotterRecords() {
   }
 }
 
+// Photo preview computed from base64 bytes (backend returns bytes)
+const photoUrl = computed(() => {
+  if (!residentDetails.value?.photo) return null
+  // photo comes as a base64 string from the API
+  const photo = residentDetails.value.photo
+  if (typeof photo === 'string') {
+    return photo.startsWith('data:') ? photo : `data:image/jpeg;base64,${photo}`
+  }
+  return null
+})
+
+// Human-readable residency duration label
+const residencyLabel = computed(() => {
+  return residentDetails.value?.residency_label || 
+    `${residentDetails.value?.years_of_residency ?? 0} year(s)`
+})
+
 // Modal title
 const modalTitle = computed(() => {
   if (props.mode === 'add') return 'Register New Resident'
@@ -488,9 +505,54 @@ function handleClose() {
       </div>
 
       <!-- CONTENT -->
-      <div v-else class="px-6 py-6 space-y-6 overflow-y-auto">
+      <div v-else class="px-8 py-6 space-y-6 overflow-y-auto">
+
+        <!-- VIEW MODE: Resident Summary Banner (photo + key stats) -->
+        <div v-if="mode === 'view' && residentDetails" class="flex items-center gap-8 p-4 bg-gray-50 rounded-xl border border-gray-200">
+          <!-- Photo -->
+          <div class="flex-shrink-0">
+            <img
+              v-if="photoUrl"
+              :src="photoUrl"
+              alt="Resident photo"
+              class="w-20 h-20 rounded-full object-cover border-2 border-gray-300 shadow-sm"
+            />
+            <div
+              v-else
+              class="w-20 h-20 rounded-full bg-gray-200 border-2 border-gray-300 flex items-center justify-center shadow-sm"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            </div>
+          </div>
+          <!-- Stats -->
+          <div class="flex gap-8 justify-between">
+            <div class="flex flex-col">
+              <span class="text-xs text-gray-500 font-medium uppercase tracking-wide">Age</span>
+              <span class="text-2xl font-bold text-gray-800">{{ residentDetails.age }}</span>
+              <span class="text-xs text-gray-500">years old</span>
+            </div>
+            <div class="w-px bg-gray-300 self-stretch"></div>
+            <div class="flex flex-col">
+              <span class="text-xs text-gray-500 font-medium uppercase tracking-wide">Residency</span>
+              <span class="text-lg font-bold text-gray-800 leading-tight">{{ residencyLabel }}</span>
+              <span class="text-xs text-gray-500">since {{ residentDetails.residency_start_date }}</span>
+            </div>
+            <!-- <div class="w-px bg-gray-300 self-stretch"></div> -->
+            <!-- <div class="flex flex-col">
+              <span class="text-xs text-gray-500 font-medium uppercase tracking-wide">Address</span>
+              <span class="text-lg font-semibold text-gray-800 capitalize">{{ residentDetails.address }}</span>
+            </div> -->
+            <!-- <div class="w-px bg-gray-300 self-stretch"></div>
+            <div class="flex flex-col">
+              <span class="text-xs text-gray-500 font-medium uppercase tracking-wide">Birthdate</span>
+              <span class="text-sm font-semibold text-gray-800">{{ residentDetails.birthdate }}</span>
+            </div> -->
+          </div>
+        </div>
         <!-- ADD/EDIT MODE - Form -->
-        <div class="space-y-4">
+        <div class="flex flex-col gap-4">
           <!-- Name Fields -->
           <div class="grid grid-cols-4 gap-4">
             <div>
@@ -520,7 +582,7 @@ function handleClose() {
           </div>
 
           <!-- Gender, Birthdate, Residency Start -->
-          <div class="grid grid-cols-3 gap-4">
+          <div class="grid grid-cols-3 gap-4 mb-3">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1.5">
                 Gender <span class="text-red-500">*</span>
@@ -554,55 +616,78 @@ function handleClose() {
           </div>
 
           <!-- Contact Information -->
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm text-gray-700 mb-1.5">Phone Number</label>
-              <NInput v-model:value="formData.phone_number" placeholder="09123456789" />
-            </div>
-            <div>
-              <label class="block text-sm text-gray-700 mb-1.5">Email</label>
-              <NInput v-model:value="formData.email" type="email" placeholder="email@example.com" />
-            </div>
+          <div class="flex flex-col gap-2">
+            <span class="text-xs text-gray-500 font-medium uppercase tracking-wide">Contact Information</span>
+            <div class="grid grid-cols-2 gap-4 mb-3">
+              <div>
+                <label class="block text-sm text-gray-700 mb-1.5">Phone Number</label>
+                <NInput v-model:value="formData.phone_number" placeholder="09123456789" />
+              </div>
+              <div>
+                <label class="block text-sm text-gray-700 mb-1.5">Email</label>
+                <NInput v-model:value="formData.email" type="email" placeholder="email@example.com" />
+              </div>
+            </div>            
           </div>
 
           <!-- Address -->
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1.5">
-                House No./Blk/Street <span v-if="mode === 'add'" class="text-red-500">*</span>
-              </label>
-              <NInput v-model:value="formData.house_no_street" placeholder="House No./Blk/Street" />
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1.5">
-                Purok <span v-if="mode === 'add'" class="text-red-500">*</span>
-              </label>
-              <NSelect
-                v-model:value="formData.purok_id"
-                :options="purokOptions"
-                placeholder="Select Purok"
-              />
-            </div>
+          <div class="flex flex-col gap-2 mb-3">
+            <span class="text-xs text-gray-500 font-medium uppercase tracking-wide">Address</span>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                  House No./Blk/Street <span v-if="mode === 'add'" class="text-red-500">*</span>
+                </label>
+                <NInput v-model:value="formData.house_no_street" placeholder="House No./Blk/Street" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                  Purok <span v-if="mode === 'add'" class="text-red-500">*</span>
+                </label>
+                <NSelect
+                  v-model:value="formData.purok_id"
+                  :options="purokOptions"
+                  placeholder="Select Purok"
+                />
+              </div>
+            </div>          
           </div>
 
           <!-- RFID Information -->
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1.5">
-                RFID No. <span v-if="mode === 'add'" class="text-red-500">*</span>
-              </label>
-              <NInput v-model:value="formData.rfid_uid" placeholder="RFID Number" />
-            </div>
-            <div>
-              <label class="block text-sm text-gray-700 mb-1.5">RFID Status</label>
-              <div class="flex items-center gap-2 mt-2">
-                <NSwitch v-model:value="formData.is_active" />
-                <span class="text-sm text-gray-700">
-                  {{ formData.is_active ? 'Active' : 'Inactive' }}
-                </span>
+          <div class="flex flex-col gap-2">
+            <span class="text-xs text-gray-500 font-medium uppercase tracking-wide">Brgy. Identification Details</span>
+
+            <div class="grid grid-cols-2 gap-4">
+              <!-- Hardcoded: Brgy. I.D Number -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                  Brgy. I.D Number <span v-if="mode === 'add'" class="text-red-500">*</span>
+                </label>
+                <NInput placeholder="Brgy. I.D Number" />
+              </div>
+              <!-- --------------------------- -->
+              <div></div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                  RFID No. <span v-if="mode === 'add'" class="text-red-500">*</span>
+                </label>
+                <NInput v-model:value="formData.rfid_uid" placeholder="RFID Number" />
+              </div>
+              <div>
+                <label class="block text-sm text-gray-700 mb-1.5">RFID Status</label>
+                <div class="flex items-center gap-2 mt-2">
+                  <NSwitch v-model:value="formData.is_active" />
+                  <span class="text-sm text-gray-700">
+                    {{ formData.is_active ? 'Active' : 'Inactive' }}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
+
+
+          <hr class="bg-slate-300 my-5" />
 
           <div v-if="mode === 'view'">
             <NCollapse>

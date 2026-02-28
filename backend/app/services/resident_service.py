@@ -1,4 +1,5 @@
 from datetime import date
+import base64
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException, status
@@ -28,16 +29,41 @@ def calculate_age(birthdate: date) -> int:
     return age
 
 
-def calculate_years_of_residency(residency_start_date: date) -> int:
-    """Calculate years of residency from start date"""
+def calculate_residency_duration(residency_start_date: date) -> dict:
+    """
+    Calculate residency duration from start date.
+    Returns a dict with 'years', 'months', and a human-readable 'label'.
+    """
     today = date.today()
     years = today.year - residency_start_date.year
-    
+
     # Adjust if anniversary hasn't occurred this year
     if (today.month, today.day) < (residency_start_date.month, residency_start_date.day):
         years -= 1
-    
-    return max(0, years)  # Don't return negative years
+
+    years = max(0, years)
+
+    # Calculate remaining months after full years
+    start_after_years = residency_start_date.replace(
+        year=residency_start_date.year + years
+    )
+    months = (today.year - start_after_years.year) * 12 + (today.month - start_after_years.month)
+    if today.day < start_after_years.day:
+        months = max(0, months - 1)
+
+    if years == 0:
+        label = f"{months} month{'s' if months != 1 else ''}" if months > 0 else "Less than a month"
+    elif months == 0:
+        label = f"{years} year{'s' if years != 1 else ''}"
+    else:
+        label = f"{years} year{'s' if years != 1 else ''}, {months} month{'s' if months != 1 else ''}"
+
+    return {"years": years, "months": months, "label": label}
+
+
+def calculate_years_of_residency(residency_start_date: date) -> int:
+    """Calculate years of residency from start date (kept for backward compatibility)"""
+    return calculate_residency_duration(residency_start_date)["years"]
 
 
 def build_full_name(first_name: str, middle_name: Optional[str], 
@@ -178,7 +204,7 @@ def get_resident_detail(db: Session, resident_id: int) -> Optional[Dict]:
     
     # Calculate computed fields
     age = calculate_age(resident.birthdate)
-    years_residency = calculate_years_of_residency(resident.residency_start_date)
+    residency = calculate_residency_duration(resident.residency_start_date)
     
     return {
         # Basic Info
@@ -196,6 +222,7 @@ def get_resident_detail(db: Session, resident_id: int) -> Optional[Dict]:
         "gender": resident.gender,
         "birthdate": resident.birthdate.strftime("%m/%d/%Y"),
         "age": age,
+        "photo": base64.b64encode(resident.photo).decode("utf-8") if resident.photo else None,
         
         # Contact Info
         "email": resident.email,
@@ -203,7 +230,9 @@ def get_resident_detail(db: Session, resident_id: int) -> Optional[Dict]:
         
         # Residency Info
         "residency_start_date": resident.residency_start_date.strftime("%m/%d/%Y"),
-        "years_of_residency": years_residency,
+        "years_of_residency": residency["years"],
+        "residency_months": residency["months"],
+        "residency_label": residency["label"],
         
         # Address Info
         "current_address": {
@@ -513,7 +542,9 @@ def update_resident_address(db: Session, resident_id: int,
 def update_resident_rfid(db: Session, resident_id: int, 
                         rfid_data: ResidentRFIDUpdate) -> ResidentRFID:
     """
-    Update resident's active RFID.
+    Update resident's RFID (active or most recent).
+    Finds the RFID by resident, not just by active status — so deactivating
+    an RFID does NOT delete it, it only sets is_active = False.
     """
     resident = get_resident_by_id(db, resident_id)
     
@@ -523,23 +554,27 @@ def update_resident_rfid(db: Session, resident_id: int,
             detail=f"Resident with ID {resident_id} not found"
         )
     
-    # Get active RFID
-    active_rfid = next(
+    # Find the active RFID first; if none, fall back to the most recently created one.
+    # This ensures deactivating an RFID doesn't "lose" it — the record is kept in the DB.
+    target_rfid = next(
         (rfid for rfid in resident.rfids if rfid.is_active),
         None
     )
+    if not target_rfid and resident.rfids:
+        # Fallback: most recently created RFID (for re-activation scenarios)
+        target_rfid = max(resident.rfids, key=lambda r: r.created_at)
     
-    if not active_rfid:
+    if not target_rfid:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="No active RFID found for this resident"
+            detail="No RFID card found for this resident"
         )
     
     # Check UID uniqueness if being updated
-    if rfid_data.rfid_uid and rfid_data.rfid_uid != active_rfid.rfid_uid:
+    if rfid_data.rfid_uid and rfid_data.rfid_uid != target_rfid.rfid_uid:
         existing = db.query(ResidentRFID).filter(
             ResidentRFID.rfid_uid == rfid_data.rfid_uid,
-            ResidentRFID.id != active_rfid.id
+            ResidentRFID.id != target_rfid.id
         ).first()
         if existing:
             raise HTTPException(
@@ -550,12 +585,12 @@ def update_resident_rfid(db: Session, resident_id: int,
     # Update only provided fields
     update_data = rfid_data.model_dump(exclude_unset=True)
     for field, value in update_data.items():
-        setattr(active_rfid, field, value)
+        setattr(target_rfid, field, value)
     
     db.commit()
-    db.refresh(active_rfid)
+    db.refresh(target_rfid)
     
-    return active_rfid
+    return target_rfid
 
 
 # ============================================================================

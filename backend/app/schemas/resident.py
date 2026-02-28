@@ -163,7 +163,7 @@ class ResidentDetailResponse(BaseModel):
     gender: str
     birthdate: str  # Formatted date
     age: int
-    photo: Optional[bytes] = None
+    photo: Optional[str] = None        # base64-encoded string
     
     # Contact Info
     email: Optional[str] = None
@@ -172,6 +172,8 @@ class ResidentDetailResponse(BaseModel):
     # Residency Info
     residency_start_date: str  # Formatted date
     years_of_residency: int
+    residency_months: int = 0         # Remaining months after full years
+    residency_label: str = ""         # e.g. "2 years, 4 months" or "7 months"
     
     # Address Info (current address only)
     current_address: Optional[AddressResponse] = None
