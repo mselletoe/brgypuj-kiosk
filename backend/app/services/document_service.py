@@ -285,19 +285,25 @@ def _check_clean_blotter(db: Session, resident_id: int) -> bool:
     return record is None
 
 
-def _check_min_residency(resident: Resident, years: int) -> bool:
+def _check_min_residency(resident: Resident, years: int = 0, months: int = 0) -> bool:
     """
-    Returns True if the resident has lived here for at least `years` years.
+    Returns True if the resident has lived here for at least `years` years
+    and `months` additional months (e.g. years=1, months=6 → 18 months total).
     Uses residency_start_date from the Resident model.
     """
     from datetime import date
     if not resident.residency_start_date:
         return False
     today = date.today()
-    delta = today.year - resident.residency_start_date.year - (
-        (today.month, today.day) < (resident.residency_start_date.month, resident.residency_start_date.day)
+    # Total months of residency
+    total_months = (
+        (today.year - resident.residency_start_date.year) * 12
+        + (today.month - resident.residency_start_date.month)
     )
-    return delta >= years
+    if today.day < resident.residency_start_date.day:
+        total_months -= 1
+    required_months = years * 12 + months
+    return total_months >= required_months
 
 
 def _validate_system_requirements(db: Session, resident: Resident, requirements: list):
@@ -316,11 +322,19 @@ def _validate_system_requirements(db: Session, resident: Resident, requirements:
                 )
 
         elif check_id == "min_residency":
-            years = params.get("years", 1)
-            if not _check_min_residency(resident, years):
+            years = params.get("years", 0)
+            months = params.get("months", 0)
+            if not _check_min_residency(resident, years, months):
+                # Build a readable label e.g. "1 year, 6 months" or "6 months"
+                parts = []
+                if years:
+                    parts.append(f"{years} year{'s' if years != 1 else ''}")
+                if months:
+                    parts.append(f"{months} month{'s' if months != 1 else ''}")
+                duration = " and ".join(parts) or "required duration"
                 raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail=f"Requirement not met: {req.get('label', f'Minimum {years} year(s) of residency')}"
+                    detail=f"Requirement not met: {req.get('label', f'Minimum {duration} of residency')}"
                 )
 
 
@@ -413,15 +427,23 @@ def check_resident_eligibility(
                     })
 
             elif req_id == "min_residency":
-                years_required = params.get("years", 1)
-                passed = _check_min_residency(resident, years_required)
+                years_required = params.get("years", 0)
+                months_required = params.get("months", 0)
+                passed = _check_min_residency(resident, years_required, months_required)
+                # Build human-readable duration string
+                parts = []
+                if years_required:
+                    parts.append(f"{years_required} year{'s' if years_required != 1 else ''}")
+                if months_required:
+                    parts.append(f"{months_required} month{'s' if months_required != 1 else ''}")
+                duration = " and ".join(parts) or "required duration"
                 checks.append({
                     "id": req_id,
                     "label": req_label,
                     "type": "system_check",
                     "passed": passed,
                     "message": (
-                        f"Minimum {years_required} year(s) of residency required. "
+                        f"Minimum {duration} of residency required. "
                         + ("Passed." if passed else "Requirement not met.")
                     )
                 })
