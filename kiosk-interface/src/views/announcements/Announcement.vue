@@ -43,6 +43,15 @@ const formatDay = (date) => {
   })
 }
 
+// Converts "HH:MM" military time to "h:MM AM/PM"
+const formatTime = (timeStr) => {
+  if (!timeStr) return ''
+  const [h, m] = timeStr.split(':').map(Number)
+  const period = h >= 12 ? 'PM' : 'AM'
+  const hour = h % 12 || 12
+  return `${hour}:${String(m).padStart(2, '0')} ${period}`
+}
+
 // ── Fetch ─────────────────────────────────────────────────────
 const fetchAnnouncements = async () => {
   try {
@@ -140,7 +149,7 @@ const setSlide = (index) => {
           />
         </button>
 
-        <!-- TOGGLE: sliding pill that moves left↔right smoothly -->
+        <!-- TOGGLE: sliding pill -->
         <div
           @click="toggleLang"
           class="w-36 h-12 bg-[#49759B] rounded-2xl flex cursor-pointer p-1"
@@ -296,7 +305,7 @@ const setSlide = (index) => {
                       {{ formatDate(item.event_date) }}, {{ formatDay(item.event_date) }}
                     </p>
                     <p v-if="item.location" class="text-[16px]">{{ item.location }}</p>
-                    <p v-if="item.event_time" class="text-[16px]">{{ item.event_time }}</p>
+                    <p v-if="item.event_time" class="text-[16px]">{{ formatTime(item.event_time) }}</p>
                   </div>
                 </div>
               </div>

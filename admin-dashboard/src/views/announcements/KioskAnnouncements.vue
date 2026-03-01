@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useMessage } from 'naive-ui'
+import { useMessage, NInput, NButton, NSpin, NEmpty } from 'naive-ui'
 import { TrashIcon } from '@heroicons/vue/24/outline'
 import PageTitle from '@/components/shared/PageTitle.vue'
 import KioskAnnouncementCard from '@/views/announcements/KioskAnnouncementCard.vue'
@@ -44,14 +44,10 @@ const selectionState = computed(() => {
 const loadAnnouncements = async () => {
   loading.value = true
   try {
-    // First get the list of announcements
     const data = await getAllAnnouncements()
-    
-    // Then fetch full details (including images) for each announcement
     const detailedAnnouncements = await Promise.all(
       data.map(announcement => getAnnouncementById(announcement.id))
     )
-    
     announcements.value = detailedAnnouncements
   } catch (err) {
     console.error('Failed to fetch announcements:', err)
@@ -93,14 +89,12 @@ const handleSelectionUpdate = (announcementId, isSelected) => {
 /* -------------------- BULK DELETE -------------------- */
 const bulkDelete = () => {
   if (selectedAnnouncements.value.size === 0) return
-
   deleteTargetId.value = 'bulk'
   showDeleteModal.value = true
 }
 
 const confirmBulkDelete = async () => {
   loading.value = true
-  
   try {
     await bulkDeleteAnnouncements(Array.from(selectedAnnouncements.value))
     await loadAnnouncements()
@@ -133,7 +127,6 @@ const cancelEdit = () => {
 }
 
 const saveAnnouncement = async ({ formData, imageFile }) => {
-  // Validation
   if (!formData.title?.trim()) {
     message.warning('Title is required')
     return
@@ -159,16 +152,13 @@ const saveAnnouncement = async ({ formData, imageFile }) => {
     }
 
     if (creatingNew.value) {
-      // Create new announcement
       await createAnnouncement(announcementData, imageFile)
       message.success('Announcement created successfully')
     } else {
-      // Update existing announcement
       await updateAnnouncement(editingId.value, announcementData, imageFile, false)
       message.success('Announcement updated successfully')
     }
 
-    // Reload announcements
     await loadAnnouncements()
     cancelEdit()
   } catch (err) {
@@ -182,7 +172,6 @@ const saveAnnouncement = async ({ formData, imageFile }) => {
 const handleToggleStatus = async (announcement) => {
   try {
     await toggleAnnouncementStatus(announcement.id)
-    // Reload to get updated data
     await loadAnnouncements()
     message.success(`Announcement ${announcement.is_active ? 'deactivated' : 'activated'} successfully`)
   } catch (err) {
@@ -252,68 +241,64 @@ const deleteModalMessage = computed(() => {
       
       <div class="flex items-center gap-3">
         <!-- Search -->
-        <input
-          v-model="searchQuery"
-          type="text"
+        <NInput
+          v-model:value="searchQuery"
           placeholder="Search"
-          class="border border-gray-200 text-gray-700 rounded-md py-2 px-3 w-[250px] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-gray-400"
+          clearable
+          style="width: 250px;"
         />
 
         <!-- Delete Button -->
-        <button 
+        <NButton
           @click="bulkDelete"
           :disabled="selectionState === 'none'"
-          :class="[selectionState === 'none' ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-50']"
-          class="p-2 border border-red-400 rounded-lg transition-colors"
+          quaternary
+          circle
+          style="border: 1px solid #f87171;"
         >
-          <TrashIcon class="w-5 h-5 text-red-500" />
-        </button>
+          <template #icon>
+            <TrashIcon class="w-5 h-5 text-red-500" />
+          </template>
+        </NButton>
 
-        <!-- Select Checkbox -->
-        <div class="flex items-center border rounded-lg overflow-hidden"
+        <!-- Select All Checkbox -->
+        <div
+          class="flex items-center border rounded-lg overflow-hidden cursor-pointer"
           :class="selectionState !== 'none' ? 'border-blue-600' : 'border-gray-400'"
+          @click="handleMainSelectToggle"
         >
-          <button 
-            @click="handleMainSelectToggle"
-            class="p-2 hover:bg-gray-50 flex items-center"
-          >
-            <div class="w-5 h-5 border rounded flex items-center justify-center" 
-                 :class="selectionState !== 'none' ? 'bg-blue-600 border-blue-600' : 'border-gray-400'">
+          <div class="p-2 hover:bg-gray-50 flex items-center">
+            <div
+              class="w-5 h-5 border rounded flex items-center justify-center"
+              :class="selectionState !== 'none' ? 'bg-blue-600 border-blue-600' : 'border-gray-400'"
+            >
               <div v-if="selectionState === 'partial'" class="w-2 h-0.5 bg-white"></div>
               <svg v-if="selectionState === 'all'" class="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7" />
               </svg>
             </div>
-          </button>
+          </div>
         </div>
 
         <!-- Add Button -->
-        <button
-          @click="startCreate"
+        <NButton
+          type="primary"
           :disabled="loading || creatingNew"
-          class="px-4 py-2 bg-blue-600 text-white rounded-md font-medium text-sm hover:bg-blue-700 transition flex items-center gap-2"
+          @click="startCreate"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="h-5 w-5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M12 4v16m8-8H4" />
-          </svg>
+          <template #icon>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+          </template>
           Add
-        </button>
+        </NButton>
       </div>
     </div>
 
-    <!-- Loading State -->
+    <!-- Loading State (initial) -->
     <div v-if="loading && !announcements.length" class="flex-1 flex items-center justify-center">
-      <div class="text-center">
-        <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        <p class="text-gray-500 mt-2">Loading announcements...</p>
-      </div>
+      <NSpin size="large" />
     </div>
 
     <!-- Grid -->
@@ -357,31 +342,14 @@ const deleteModalMessage = computed(() => {
       </div>
 
       <!-- Empty State -->
-      <div
-        v-else
-        class="h-full flex flex-col items-center justify-center text-gray-500"
-      >
-        <svg 
-          class="w-20 h-20 text-gray-300 mb-4" 
-          fill="none" 
-          stroke="currentColor" 
-          viewBox="0 0 24 24"
-        >
-          <path 
-            stroke-linecap="round" 
-            stroke-linejoin="round" 
-            stroke-width="2" 
-            d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"
-          />
-        </svg>
-        <p class="text-lg font-medium mb-2">No announcements yet</p>
-        <p class="text-sm mb-4">Create your first announcement to get started</p>
-        <button
-          @click="startCreate"
-          class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
-        >
-          Create Announcement
-        </button>
+      <div v-else class="h-full flex flex-col items-center justify-center">
+        <NEmpty description="No announcements yet">
+          <template #extra>
+            <NButton type="primary" @click="startCreate">
+              Create Announcement
+            </NButton>
+          </template>
+        </NEmpty>
       </div>
     </div>
 
@@ -391,7 +359,7 @@ const deleteModalMessage = computed(() => {
       class="fixed inset-0 bg-black bg-opacity-10 flex items-center justify-center z-50"
     >
       <div class="bg-white rounded-lg p-4 shadow-xl">
-        <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <NSpin size="large" />
       </div>
     </div>
   </div>

@@ -243,9 +243,9 @@ defineExpose({
           :readonly="isPreFilled(field.name) || props.isSubmitting"
           :disabled="isPreFilled(field.name) || props.isSubmitting"
           :class="[
-            errors[field.name] ? 'border-red-500 focus:ring-red-500' : 'border-[#464646] ',
+            errors[field.name] ? 'border-red-500 focus:ring-red-500' : 'border-gray-300',
             isPreFilled(field.name) ? 'bg-gray-100 cursor-not-allowed text-gray-700' : 'bg-white',
-            'w-full h-[48px] p-3 border border-gray-300 rounded-xl shadow-sm transition-shadow focus:outline-none focus:ring-2 focus:ring-[#013C6D]'
+            'w-full h-[48px] px-4 py-3 border rounded-xl shadow-sm transition-shadow focus:outline-none focus:ring-2 focus:ring-[#013C6D]'
           ]"
         />
 
@@ -260,7 +260,10 @@ defineExpose({
           format="MM/dd/yyyy"
           :max-date="new Date()"
           :placeholder="formatPlaceholder(field.placeholder, field.label, isPreFilled(field.name))"
-          :input-class-name="isPreFilled(field.name) ? 'bg-gray-100 cursor-not-allowed' : ''"
+          :input-class-name="[
+            'w-full h-[48px] pl-10 pr-3 py-3 border border-gray-300 rounded-xl shadow-sm transition-shadow focus:outline-none focus:ring-2 focus:ring-[#013C6D]',
+            isPreFilled(field.name) ? 'bg-gray-100 cursor-not-allowed' : ''
+          ].join(' ')"
         >
           <template #input-icon>
             <LockClosedIcon v-if="isPreFilled(field.name)" class="w-5 h-5 text-blue-600 ml-3"/>
@@ -276,9 +279,9 @@ defineExpose({
           :readonly="isPreFilled(field.name) || props.isSubmitting"
           :disabled="isPreFilled(field.name) || props.isSubmitting"
           :class="[
-            errors[field.name] ? 'border-red-500 focus:ring-red-500' : 'focus:ring-[#013C6D]',
+            errors[field.name] ? 'border-red-500 focus:ring-red-500' : 'border-gray-300',
             isPreFilled(field.name) ? 'bg-gray-100 cursor-not-allowed text-gray-700' : 'bg-white',
-            'w-full h-[48px] p-3 border border-gray-300 rounded-xl shadow-sm transition-shadow duration-200 focus:outline-none focus:ring-2 focus:ring-[#013C6D]'
+            'w-full px-4 py-3 border rounded-xl shadow-sm transition-shadow focus:outline-none focus:ring-2 focus:ring-[#013C6D]'
           ]"
         ></textarea>
 
@@ -292,9 +295,9 @@ defineExpose({
             @click="!isPreFilled(field.name) && !props.isSubmitting && toggleSelectDropdown(field.name)"
             :disabled="isPreFilled(field.name) || props.isSubmitting"
             :class="[
-              errors[field.name] ? 'border-red-500' : 'border-[#464646]',
-              isPreFilled(field.name) ? 'bg-gray-100 cursor-not-allowed ' : 'bg-white ',
-              'w-full h-[48px] border border-gray-300 rounded-xl px-3 flex items-center justify-between shadow-sm transition-colors duration-200 focus:ring-2 focus:ring-[#013C6D]'
+              errors[field.name] ? 'border-red-500' : 'border-gray-300',
+              isPreFilled(field.name) ? 'bg-gray-100 cursor-not-allowed' : 'bg-white',
+              'w-full h-[48px] px-4 py-3 border rounded-xl shadow-sm transition-shadow flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-[#013C6D]'
             ]"
           >
             <span :class="formData[field.name] ? 'text-[#03335C] font-bold' : 'text-gray-400'">

@@ -58,7 +58,6 @@ const prevSlide = () => {
 
 const formatDate = (date) => {
   if (!date) return "";
-  // Add T00:00:00 to ensure consistent date parsing
   return new Date(date + 'T00:00:00').toLocaleDateString("en-US", {
     month: "long",
     day: "numeric",
@@ -68,10 +67,18 @@ const formatDate = (date) => {
 
 const formatDay = (date) => {
   if (!date) return "";
-  // Add T00:00:00 to ensure consistent date parsing
   return new Date(date + 'T00:00:00').toLocaleDateString("en-US", {
     weekday: "long",
   });
+};
+
+// Converts "HH:MM" military time to "h:MM AM/PM"
+const formatTime = (timeStr) => {
+  if (!timeStr) return "";
+  const [h, m] = timeStr.split(":").map(Number);
+  const period = h >= 12 ? "PM" : "AM";
+  const hour = h % 12 || 12;
+  return `${hour}:${String(m).padStart(2, "0")} ${period}`;
 };
 
 /**
@@ -198,7 +205,7 @@ onBeforeUnmount(() => {
                   <svg class="w-6 h-6 opacity-75 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" />
                   </svg>
-                  <span>{{ announcements[current]?.event_time }}</span>
+                  <span>{{ formatTime(announcements[current]?.event_time) }}</span>
                 </p>
 
                 <p class="text-white text-[22px] opacity-95 leading-[1.3] flex items-center gap-3">
