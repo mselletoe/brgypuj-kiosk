@@ -9,7 +9,7 @@ const isSidebarOpen = ref(false);
 </script>
 
 <template>
-  <div class="flex h-screen bg-[#F4F7FB] font-sans overflow-hidden">
+  <div class="flex h-screen bg-[#F4F7FB] overflow-hidden">
     <div
       class="flex flex-col bg-white border-r border-gray-200 transition-all duration-300 ease-in-out relative z-30 shadow-sm"
       :class="isSidebarOpen ? 'w-[250px]' : 'w-[80px]'"
@@ -35,7 +35,7 @@ const isSidebarOpen = ref(false);
           :src="logo"
           alt="Logo"
           class="object-contain transition-all duration-300 mt-3"
-          :class="isSidebarOpen ? 'h-[150px] w-[150px]' : 'h-[40px] w-[40px]'"
+          :class="isSidebarOpen ? 'h-[130px] w-[130px]' : 'h-[40px] w-[40px]'"
         />
       </div>
 

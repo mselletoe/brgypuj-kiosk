@@ -13,6 +13,7 @@
     min-height: 100vh;
     height: 100%;
     background-color: #EEF2F9;
+    font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
   }
 
   .n-button,
