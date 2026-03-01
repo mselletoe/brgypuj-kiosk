@@ -146,7 +146,7 @@ const cancelExit = () => {
   showExitModal.value = false;
 };
 
-const inputClass = "w-full px-4 py-3 text-base border border-gray-300 rounded-xl transition-shadow shadow-sm focus:outline-none focus:ring-2 focus:ring-[#013C6D]";
+const inputClass = "w-full h-[48px] px-4 py-3 border border-gray-300 rounded-xl shadow-sm transition-shadow focus:outline-none focus:ring-2 focus:ring-[#013C6D]";
 </script>
 
 <template>
@@ -226,7 +226,7 @@ const inputClass = "w-full px-4 py-3 text-base border border-gray-300 rounded-xl
               <button
                 type="button"
                 @click="showPurposeDropdown = !showPurposeDropdown"
-                class="w-full h-[48px] border border-gray-300 rounded-xl px-4 flex items-center justify-between bg-white hover:border-[#03335C] transition-colors shadow-sm"
+                class="w-full h-[48px] px-4 py-3 border border-gray-300 rounded-xl shadow-sm transition-shadow flex items-center justify-between bg-white focus:outline-none focus:ring-2 focus:ring-[#013C6D]"
               >
                 <span :class="localInfo.purpose ? 'text-[#03335C] font-bold text-base' : 'text-gray-400 italic text-sm'">
                   {{ localInfo.purpose || 'Select' }}

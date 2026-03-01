@@ -1,5 +1,6 @@
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
+import { NInput, NDatePicker, NTimePicker, NSwitch, NButton } from 'naive-ui';
 import { TrashIcon, PencilSquareIcon, PhotoIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
@@ -42,22 +43,52 @@ watch(() => props.announcement, (newVal) => {
   }
 }, { deep: true });
 
+// ── NDatePicker uses timestamps (ms); backend uses "YYYY-MM-DD" strings ──
+const dateTimestamp = computed({
+  get() {
+    if (!form.value.event_date) return null;
+    return new Date(form.value.event_date + 'T00:00:00').getTime();
+  },
+  set(ts) {
+    if (!ts) { form.value.event_date = ''; return; }
+    const d = new Date(ts);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    form.value.event_date = `${yyyy}-${mm}-${dd}`;
+  }
+});
+
+// ── NTimePicker uses timestamps (ms); backend uses "HH:MM" strings ──
+const timeTimestamp = computed({
+  get() {
+    if (!form.value.event_time) return null;
+    const [h, m] = form.value.event_time.split(':').map(Number);
+    const base = new Date();
+    base.setHours(h, m, 0, 0);
+    return base.getTime();
+  },
+  set(ts) {
+    if (!ts) { form.value.event_time = ''; return; }
+    const d = new Date(ts);
+    const h = String(d.getHours()).padStart(2, '0');
+    const m = String(d.getMinutes()).padStart(2, '0');
+    form.value.event_time = `${h}:${m}`;
+  }
+});
+
 const handleFileUpload = (event) => {
   const file = event.target.files[0];
   if (file) {
-    // Validate file type
     const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
     if (!validTypes.includes(file.type)) {
       alert('Please select a valid image file (JPEG, PNG, GIF, or WebP)');
       return;
     }
-
-    // Validate file size (5MB max)
     if (file.size > 5 * 1024 * 1024) {
       alert('Image size must be less than 5MB');
       return;
     }
-
     imageFile.value = file;
     const url = URL.createObjectURL(file);
     imagePreview.value = url;
@@ -67,7 +98,7 @@ const handleFileUpload = (event) => {
 
 const formatDate = (dateStr) => {
   if (!dateStr) return '';
-  const date = new Date(dateStr);
+  const date = new Date(dateStr + 'T00:00:00');
   return date.toLocaleDateString('en-US', {
     month: 'long',
     day: 'numeric',
@@ -77,12 +108,20 @@ const formatDate = (dateStr) => {
 
 const formatDay = (dateStr) => {
   if (!dateStr) return '';
-  const date = new Date(dateStr);
+  const date = new Date(dateStr + 'T00:00:00');
   return date.toLocaleDateString('en-US', { weekday: 'long' });
 };
 
+// Converts "HH:MM" to "h:MM AM/PM"
+const formatTime = (timeStr) => {
+  if (!timeStr) return '';
+  const [h, m] = timeStr.split(':').map(Number);
+  const period = h >= 12 ? 'PM' : 'AM';
+  const hour = h % 12 || 12;
+  return `${hour}:${String(m).padStart(2, '0')} ${period}`;
+};
+
 const handleSave = () => {
-  // Emit form data along with the image file
   emit('save', { 
     formData: form.value, 
     imageFile: imageFile.value 
@@ -174,7 +213,7 @@ const handleSave = () => {
           
           <div v-if="announcement.event_time">
             <p class="text-gray-400 font-medium text-[10px] uppercase tracking-wider">Time</p>
-            <p class="font-bold text-slate-700 text-sm mt-0.5">{{ announcement.event_time }}</p>
+            <p class="font-bold text-slate-700 text-sm mt-0.5">{{ formatTime(announcement.event_time) }}</p>
           </div>
           
           <div>
@@ -204,80 +243,74 @@ const handleSave = () => {
       <template v-else>
         <div class="space-y-3">
           <!-- Title -->
-          <input 
-            v-model="form.title" 
-            placeholder="Announcement Title" 
+          <NInput
+            v-model:value="form.title"
+            placeholder="Announcement Title"
             maxlength="255"
-            class="bg-white w-full text-lg font-bold p-2 border border-gray-200 rounded-md focus:border-blue-500 outline-none"
+            :input-props="{ style: 'font-weight: bold; font-size: 1.125rem;' }"
           />
-          
+
           <!-- Description -->
-          <textarea
-            v-model="form.description"
+          <NInput
+            v-model:value="form.description"
+            type="textarea"
             placeholder="Description (optional)"
-            rows="2"
-            class="bg-white w-full p-2 border border-gray-200 rounded-md text-sm outline-none resize-none focus:border-blue-500"
-          ></textarea>
-          
+            :rows="2"
+            :resizable="false"
+          />
+
           <!-- Event Date -->
           <div class="space-y-1">
             <label class="text-[10px] font-bold text-gray-400 uppercase">Event Date</label>
-            <input 
-              v-model="form.event_date" 
-              type="date" 
-              class="w-full p-2 border border-gray-200 rounded-md text-sm outline-none focus:border-blue-500" 
+            <NDatePicker
+              v-model:value="dateTimestamp"
+              type="date"
+              placeholder="Select date"
+              class="w-full"
+              :to="false"
+              clearable
             />
           </div>
 
           <!-- Event Time -->
           <div class="space-y-1">
             <label class="text-[10px] font-bold text-gray-400 uppercase">Event Time (optional)</label>
-            <input 
-              v-model="form.event_time" 
-              type="time"
-              class="w-full p-2 border border-gray-200 rounded-md text-sm outline-none focus:border-blue-500" 
+            <NTimePicker
+              v-model:value="timeTimestamp"
+              :use12-hours="true"
+              format="hh:mm a"
+              placeholder="Select time"
+              class="w-full"
+              :to="false"
+              clearable
             />
           </div>
 
           <!-- Location -->
           <div class="space-y-1">
             <label class="text-[10px] font-bold text-gray-400 uppercase">Location</label>
-            <input 
-              v-model="form.location" 
-              placeholder="Event Location" 
+            <NInput
+              v-model:value="form.location"
+              placeholder="Event Location"
               maxlength="255"
-              class="w-full p-2 border border-gray-200 rounded-md text-sm outline-none focus:border-blue-500" 
             />
           </div>
 
           <!-- Active Status -->
-          <div class="flex items-center gap-2">
-            <input 
-              v-model="form.is_active" 
-              type="checkbox" 
-              id="is_active"
-              class="rounded"
-            />
-            <label for="is_active" class="text-sm text-gray-700">
-              Active (visible on kiosk)
-            </label>
+          <div class="flex items-center gap-3">
+            <NSwitch v-model:value="form.is_active" />
+            <span class="text-sm text-gray-700">Active (visible on kiosk)</span>
           </div>
         </div>
 
         <!-- Action Buttons -->
         <div class="flex justify-end gap-2 mt-6">
-          <button 
-            @click="$emit('cancel')" 
-            class="px-5 py-2 border border-gray-300 rounded-md text-sm font-bold text-gray-600 hover:bg-gray-50 transition-colors"
-          >
+          <NButton @click="$emit('cancel')" secondary>
             Cancel
-          </button>
-          <button 
-            @click="handleSave" 
-            class="px-7 py-2 bg-blue-600 text-white rounded-md text-sm font-bold hover:bg-blue-700 transition-colors shadow-sm"
-          >
+          </NButton>
+          <NButton @click="handleSave" type="primary">
             Save
-          </button>
+          </NButton>
         </div>
       </template>
     </div>
