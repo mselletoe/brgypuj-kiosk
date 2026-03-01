@@ -111,7 +111,11 @@ const updateMarker = async () => {
     .map((i) => i.to)
     .find((to) => route.path.startsWith(to));
 
-  if (!activePath || !buttonRefs.value[activePath]) return;
+  // Fix: If there is no active path (e.g., we are on Settings), hide the marker!
+  if (!activePath || !buttonRefs.value[activePath]) {
+    markerVisible.value = false;
+    return;
+  }
 
   const btnEl =
     buttonRefs.value[activePath].$el ?? buttonRefs.value[activePath];

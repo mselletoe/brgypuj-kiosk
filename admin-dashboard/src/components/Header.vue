@@ -1,5 +1,5 @@
 <script setup>
-import { ref, h, computed, nextTick } from "vue";
+import { ref, h, computed } from "vue";
 import { useRouter } from "vue-router";
 import { NDropdown } from "naive-ui";
 import {
@@ -9,37 +9,15 @@ import {
   ArrowLeftOnRectangleIcon,
   ChatBubbleLeftRightIcon,
   Cog6ToothIcon,
-  MagnifyingGlassIcon,
-  XMarkIcon,
 } from "@heroicons/vue/24/solid";
 import { useAdminAuthStore } from "@/stores/auth";
+import GlobalSearch from "@/components/global-search/index.vue";
 
 const router = useRouter();
 const adminAuth = useAdminAuthStore();
 
 // State Management
 const showNotifications = ref(false);
-const isSearchExpanded = ref(false);
-const searchQuery = ref("");
-const searchInput = ref(null);
-
-// Toggle Search
-const toggleSearch = async () => {
-  isSearchExpanded.value = !isSearchExpanded.value;
-  if (isSearchExpanded.value) {
-    await nextTick();
-    searchInput.value?.focus();
-  } else {
-    searchQuery.value = "";
-  }
-};
-
-// Close if empty on blur
-const handleBlur = () => {
-  if (searchQuery.value === "") {
-    isSearchExpanded.value = false;
-  }
-};
 
 // Notifications Mock
 const recentNotifications = ref([
@@ -84,56 +62,8 @@ const role = computed(() => adminAuth.admin?.role || "Administrator");
     <div class="flex-1"></div>
 
     <div class="flex items-center gap-1.5">
-      <div
-        class="relative flex items-center transition-all duration-500 ease-in-out"
-        :class="isSearchExpanded ? 'w-[300px] md:w-[400px] mr-2' : 'w-11'"
-      >
-        <div
-          class="absolute inset-0 transition-all duration-500 ease-in-out rounded-xl border"
-          :class="
-            isSearchExpanded
-              ? 'bg-white border-gray-100 shadow-sm opacity-100 scale-100'
-              : 'bg-transparent border-transparent opacity-0 scale-95 pointer-events-none'
-          "
-        />
-
-        <div class="relative flex items-center w-full h-11 overflow-hidden">
-          <button
-            @click="toggleSearch"
-            class="w-11 h-11 flex items-center justify-center shrink-0 z-20 transition-all duration-500 rounded-full"
-            :class="[
-              isSearchExpanded
-                ? 'text-blue-600'
-                : 'text-gray-500 hover:text-blue-600 hover:bg-blue-50',
-            ]"
-          >
-            <MagnifyingGlassIcon class="h-6 w-6 stroke-current stroke-[2px]" />
-          </button>
-
-          <input
-            ref="searchInput"
-            v-model="searchQuery"
-            type="text"
-            placeholder="Search anything..."
-            class="flex-1 h-full bg-transparent border-none outline-none text-sm text-gray-700 transition-opacity duration-300 z-10 font-bold placeholder:font-medium"
-            :class="
-              isSearchExpanded ? 'opacity-100' : 'opacity-0 pointer-events-none'
-            "
-            @blur="handleBlur"
-          />
-
-          <button
-            v-if="isSearchExpanded && searchQuery !== ''"
-            @click="
-              searchQuery = '';
-              searchInput.focus();
-            "
-            class="absolute right-3 p-1 hover:bg-gray-100 rounded-full transition-all z-20"
-          >
-            <XMarkIcon class="h-4 w-4 text-gray-400 stroke-current stroke-1" />
-          </button>
-        </div>
-      </div>
+      <!-- 🔍 Global Search -->
+      <GlobalSearch />
 
       <button
         @click="router.push('/help-and-support')"
@@ -178,8 +108,9 @@ const role = computed(() => adminAuth.admin?.role || "Administrator");
             <span>Notifications</span>
             <span
               class="text-xs font-semibold text-blue-600 cursor-pointer hover:underline"
-              >Mark all read</span
             >
+              Mark all read
+            </span>
           </div>
           <div class="max-h-[320px] overflow-y-auto">
             <div
