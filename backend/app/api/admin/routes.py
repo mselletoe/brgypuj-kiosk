@@ -27,7 +27,7 @@ router.include_router(transaction.router)
 router.include_router(faqs.router)
 router.include_router(id.router)
 router.include_router(audit.router)
-router.include_router(search.router)  # ← this was missing
+router.include_router(search.router)
 
 
 @router.get("/health")

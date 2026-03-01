@@ -4,7 +4,7 @@ from app.api.deps import get_db
 from app.models.audit import AdminAuditLog
 from app.schemas.audit import AuditLogOut, AuditLogCreate
 
-router = APIRouter(prefix="/audit-logs", tags=["Audit Logs"])
+router = APIRouter(prefix="/audit-logs")
 
 @router.get("", response_model=list[AuditLogOut])
 def get_audit_logs(db: Session = Depends(get_db)):

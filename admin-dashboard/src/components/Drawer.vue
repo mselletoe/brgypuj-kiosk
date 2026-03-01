@@ -148,17 +148,17 @@ onMounted(updateMarker);
           v-for="(group, index) in menuGroups"
           :key="index"
           class="overflow-visible"
-          :class="index > 0 ? 'mt-6' : ''"
+          :class="index > 0 ? 'mt-3' : ''"
         >
           <h3
             v-if="group.title"
-            class="px-3 text-[10px] font-black text-gray-400 tracking-widest mb-2 transition-opacity duration-200 whitespace-nowrap"
+            class="px-3 text-[10px] font-black text-gray-400 tracking-widest mb-1 transition-opacity duration-200 whitespace-nowrap"
             :class="isOpen ? 'opacity-100' : 'opacity-0'"
           >
             {{ group.title }}
           </h3>
 
-          <ul class="space-y-1.5 overflow-visible">
+          <ul class="space-y-0.5 overflow-visible">
             <li
               v-for="item in group.items"
               :key="item.to"
@@ -183,7 +183,7 @@ onMounted(updateMarker);
                 <div class="nav-inner">
                   <component
                     :is="item.icon"
-                    class="w-[24px] h-[24px] shrink-0 nav-icon"
+                    class="w-[22px] h-[22px] shrink-0 nav-icon"
                   />
                   <span
                     class="nav-text font-bold text-[13.5px] whitespace-nowrap"
@@ -249,7 +249,7 @@ onMounted(updateMarker);
 .sliding-marker {
   position: absolute;
   left: 0;
-  height: 52px;
+  height: 49px;
   border-radius: 16px;
   pointer-events: none;
   z-index: 0;
@@ -266,7 +266,7 @@ onMounted(updateMarker);
 
 /* Closed: solid blue square with glow + liquid wave */
 .sliding-marker--closed {
-  width: 52px;
+  width: 49px;
   background-color: #0957ff;
   box-shadow: 0 6px 16px -4px rgba(9, 87, 255, 0.3);
   animation: liquid-wave 2s ease-in-out infinite alternate;
@@ -277,7 +277,7 @@ onMounted(updateMarker);
    ================================== */
 .open-mode {
   width: 100% !important;
-  height: 52px !important;
+  height: 49px !important;
   border-radius: 16px !important;
   padding: 0 !important;
   position: relative;
@@ -296,8 +296,8 @@ onMounted(updateMarker);
    CLOSED STATE (MINIMIZED)
    ================================== */
 .closed-mode {
-  width: 52px !important;
-  height: 52px !important;
+  width: 49px !important;
+  height: 49px !important;
   border-radius: 16px !important;
   padding: 0 !important;
   background-color: transparent !important;

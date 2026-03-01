@@ -29,7 +29,7 @@ const viewAllSettings = () => {
 
 <template>
   <div
-    class="w-full xl:w-1/3 shrink-0 bg-white rounded-[24px] p-8 shadow-sm border border-gray-100 flex flex-col h-[480px] xl:h-[600px]"
+    class="w-full xl:w-1/4 shrink-0 bg-white rounded-[24px] p-8 shadow-sm border border-gray-100 flex flex-col h-[480px] xl:h-[600px]"
   >
     <div class="mb-8 flex items-start justify-between">
       <div>

@@ -35,7 +35,7 @@ const isSidebarOpen = ref(false);
           :src="logo"
           alt="Logo"
           class="object-contain transition-all duration-300 mt-3"
-          :class="isSidebarOpen ? 'h-[150px] w-[150px]' : 'h-[40px] w-[40px]'"
+          :class="isSidebarOpen ? 'h-[130px] w-[130px]' : 'h-[40px] w-[40px]'"
         />
       </div>
 

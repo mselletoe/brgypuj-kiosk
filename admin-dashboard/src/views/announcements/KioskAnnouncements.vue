@@ -241,58 +241,59 @@ const deleteModalMessage = computed(() => {
       
       <div class="flex items-center gap-3">
         <!-- Search -->
-        <NInput
-          v-model:value="searchQuery"
+        <input
+          v-model="searchQuery"
+          type="text"
           placeholder="Search"
-          clearable
-          style="width: 250px;"
+          class="border border-gray-200 text-gray-700 rounded-md py-2 px-3 w-[250px] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-gray-400"
         />
 
         <!-- Delete Button -->
-        <NButton
+        <button 
           @click="bulkDelete"
           :disabled="selectionState === 'none'"
-          quaternary
-          circle
-          style="border: 1px solid #f87171;"
+          :class="[selectionState === 'none' ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-50']"
+          class="p-2 border border-red-400 rounded-lg transition-colors"
         >
-          <template #icon>
-            <TrashIcon class="w-5 h-5 text-red-500" />
-          </template>
-        </NButton>
+          <TrashIcon class="w-5 h-5 text-red-500" />
+        </button>
 
         <!-- Select All Checkbox -->
-        <div
-          class="flex items-center border rounded-lg overflow-hidden cursor-pointer"
+        <div class="flex items-center border rounded-lg overflow-hidden"
           :class="selectionState !== 'none' ? 'border-blue-600' : 'border-gray-400'"
-          @click="handleMainSelectToggle"
         >
-          <div class="p-2 hover:bg-gray-50 flex items-center">
-            <div
-              class="w-5 h-5 border rounded flex items-center justify-center"
-              :class="selectionState !== 'none' ? 'bg-blue-600 border-blue-600' : 'border-gray-400'"
-            >
+          <button 
+            @click="handleMainSelectToggle"
+            class="p-2 hover:bg-gray-50 flex items-center"
+          >
+            <div class="w-5 h-5 border rounded flex items-center justify-center" 
+                 :class="selectionState !== 'none' ? 'bg-blue-600 border-blue-600' : 'border-gray-400'">
               <div v-if="selectionState === 'partial'" class="w-2 h-0.5 bg-white"></div>
               <svg v-if="selectionState === 'all'" class="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7" />
               </svg>
             </div>
-          </div>
+          </button>
         </div>
 
         <!-- Add Button -->
-        <NButton
-          type="primary"
-          :disabled="loading || creatingNew"
+        <button
           @click="startCreate"
+          :disabled="loading || creatingNew"
+          class="px-4 py-2 bg-blue-600 text-white rounded-md font-medium text-sm hover:bg-blue-700 transition flex items-center gap-2"
         >
-          <template #icon>
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-            </svg>
-          </template>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-5 w-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M12 4v16m8-8H4" />
+          </svg>
           Add
-        </NButton>
+        </button>
       </div>
     </div>
 
