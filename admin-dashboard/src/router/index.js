@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from "vue-router";
 import { useAdminAuthStore } from "@/stores/auth";
 
 import AdminLayout from "@/layouts/AdminLayout.vue";
-import Overview from "@/views/Overview.vue";
+import Overview from "@/views/overview/Overview.vue";
 import DocumentRequests from "@/views/requests/document-requests/DocumentRequest.vue";
 import DocumentServices from "@/views/document-services/DocumentServices.vue";
 import KioskAnnouncements from "@/views/announcements/KioskAnnouncements.vue";

@@ -2,6 +2,8 @@
   "dependencies": {
     "@vicons/ionicons5": "^0.13.0",
     "@vuepic/vue-datepicker": "^11.0.3",
-    "uuid": "^13.0.0"
+    "chart.js": "^4.5.1",
+    "uuid": "^13.0.0",
+    "vue-chartjs": "^5.3.3"
   }
 }
