@@ -268,7 +268,7 @@ onMounted(async () => {
     </div>
 
     <!-- SCROLLABLE CONTENT AREA -->
-    <div class="flex-1 overflow-y-auto custom-scrollbar">
+    <div class="flex-1 overflow-y-auto">
 
       <div class="grid grid-cols-5 gap-8 items-stretch mb-4">
 

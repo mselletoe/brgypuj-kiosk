@@ -66,50 +66,35 @@ def list_document_types(db: Session = Depends(get_db),):
     return get_all_document_types(db)
 
 
-@router.post(
-    "/types",
-    response_model=DocumentTypeAdminOut,
-    status_code=status.HTTP_201_CREATED,
-)
-def create_type(payload: DocumentTypeCreate, db: Session = Depends(get_db),):
-    """
-    Configures a new document type template with dynamic field definitions.
-    """
-    return create_document_type(db, payload)
+@router.post("/types", response_model=DocumentTypeAdminOut, status_code=status.HTTP_201_CREATED)
+async def create_type(payload: DocumentTypeCreate, db: Session = Depends(get_db)):
+    result = create_document_type(db, payload)
+    await sse_manager.broadcast("doctype_created", {
+        "id": result.id,
+        "doctype_name": result.doctype_name
+    })
+    return result
 
 
-@router.put(
-    "/types/{doctype_id}",
-    response_model=DocumentTypeAdminOut,
-)
-def update_type(
-    doctype_id: int,
-    payload: DocumentTypeUpdate,
-    db: Session = Depends(get_db),
-):
-    """
-    Updates configuration, pricing, or field requirements for an existing document type.
-    """
+@router.put("/types/{doctype_id}", response_model=DocumentTypeAdminOut)
+async def update_type(doctype_id: int, payload: DocumentTypeUpdate, db: Session = Depends(get_db)):
     updated = update_document_type(db, doctype_id, payload)
     if not updated:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Document type not found",
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document type not found")
+    await sse_manager.broadcast("doctype_updated", {
+        "id": doctype_id
+    })
     return updated
 
 
-@router.delete(
-    "/types/{doctype_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
-)
-def delete_type(doctype_id: int, db: Session = Depends(get_db)):
+@router.delete("/types/{doctype_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_type(doctype_id: int, db: Session = Depends(get_db)):
     deleted = delete_document_type(db, doctype_id)
     if not deleted:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Document type not found",
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document type not found")
+    await sse_manager.broadcast("doctype_deleted", {
+        "id": doctype_id
+    })
 
 
 @router.get(

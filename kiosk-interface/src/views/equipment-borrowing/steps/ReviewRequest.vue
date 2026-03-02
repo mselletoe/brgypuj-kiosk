@@ -123,7 +123,7 @@ const cancelExit = () => {
     </div>
 
     <!-- Main -->
-    <div class="flex-1 overflow-y-auto custom-scrollbar">
+    <div class="flex-1 overflow-y-auto">
       <div class="flex gap-3 mb-4">
         <!-- Left -->
         <div class="w-1/2 bg-white rounded-2xl shadow-lg border border-gray-200 p-5">

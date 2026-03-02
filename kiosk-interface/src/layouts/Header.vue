@@ -35,16 +35,6 @@ const userDetail = computed(() =>
   authStore.isRFID ? "Authenticated via RFID" : "Logged in as Guest User"
 );
 
-// --- Logic & Handlers ---
-
-/**
- * Manually reloads the application state.
- * Used as a fallback/reset mechanism for the Kiosk UI.
- */
-const handleRefresh = () => {
-  window.location.reload();
-};
-
 /**
  * Updates the reactive date and time refs with current system values.
  * Formats time to 'HH:MM:SS AM/PM' and date to 'Weekday, Month Day, Year'.
@@ -67,7 +57,7 @@ const updateDateTime = () => {
   });
 };
 
-/** @type {ReturnType<typeof setInterval> | null} Reference to the clock sync timer */
+/** @type {ReturnType<typeof setInterval> | null}
 let interval;
 
 // --- Lifecycle Hooks ---
@@ -109,18 +99,6 @@ const logout = () => {
     </div>
 
     <div class="flex items-center space-x-4">
-      <button 
-        @click="handleRefresh"
-        class="flex h-10 w-10 items-center justify-center rounded-lg border-2 border-[#003A6B] text-[#003A6B] transition-transform active:scale-90"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
-          <path d="M21 3v5h-5"></path>
-          <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
-          <path d="M3 21v-5h5"></path>
-        </svg>
-      </button>
-
       <div 
         v-if="isGuest"
         class="flex flex-col items-center justify-center rounded-lg border-2 border-[#E8C462] bg-[#FFF9E5] px-4 py-1 min-w-[160px] leading-tight"

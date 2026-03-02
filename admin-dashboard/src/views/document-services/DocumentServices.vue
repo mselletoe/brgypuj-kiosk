@@ -15,6 +15,7 @@ import {
   downloadDocumentTemplate,
   updateDocumentRequirements
 } from '@/api/documentService'
+import { useRealtimeSync } from '@/composables/useRealtimeSync'
 
 const message = useMessage()
 
@@ -463,6 +464,20 @@ const columns = computed(() => [
 ])
 
 onMounted(fetchServices)
+
+useRealtimeSync({
+  doctype_created: () => {
+    fetchServices()
+  },
+  doctype_updated: (data) => {
+    const exists = services.value.find(s => s.id === data.id)
+    if (exists) fetchServices()
+  },
+  doctype_deleted: (data) => {
+    services.value = services.value.filter(s => s.id !== data.id)
+    selectedIds.value = selectedIds.value.filter(id => id !== data.id)
+  }
+})
 </script>
 
 <template>

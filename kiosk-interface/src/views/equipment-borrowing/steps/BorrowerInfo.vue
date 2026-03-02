@@ -161,7 +161,7 @@ const inputClass = "w-full h-[48px] px-4 py-3 border border-gray-300 rounded-xl 
     </div>
 
     <!-- Main -->
-    <div class="flex-1 overflow-y-auto custom-scrollbar">
+    <div class="flex-1 overflow-y-auto">
       <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-5">
         <!-- Box Title -->
         <h3 class="text-2xl font-bold text-[#013C6D] flex items-center gap-2">
