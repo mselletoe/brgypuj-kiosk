@@ -20,6 +20,7 @@ from app.services.document_service import (
     get_kiosk_request_history,
     check_resident_eligibility
 )
+from app.core.sse_manager import sse_manager
 
 router = APIRouter(prefix="/documents")
 
@@ -48,14 +49,20 @@ def list_available_document_types(db: Session = Depends(get_db)):
     response_model=DocumentRequestKioskResponse,
     status_code=status.HTTP_201_CREATED
 )
-def submit_document_request(
+async def submit_document_request(
     payload: DocumentRequestCreate,
     db: Session = Depends(get_db)
 ):
     """
     Processes a document request submission and returns a unique transaction number.
     """
-    return create_document_request(db, payload)
+    result = create_document_request(db, payload)
+    await sse_manager.broadcast("request_created", {
+        "id": result.id,
+        "transaction_no": result.transaction_no,
+        "status": "pending"
+    })
+    return result
 
 
 @router.get(

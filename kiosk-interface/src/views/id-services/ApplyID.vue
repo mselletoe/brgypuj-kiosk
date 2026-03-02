@@ -269,14 +269,15 @@ const submitApplication = async () => {
       // the resident selected via the form ("Request for")
       applicant_resident_id: selectedResident.value.resident_id,
       rfid_uid: authStore.rfidUid || null,
-      photo: photoData.value,   // base64 PNG string from canvas capture
+      photo: photoData.value, // base64 PNG string from canvas capture
     });
 
     referenceId.value = result.transaction_no;
     showSuccessModal.value = true;
   } catch (err) {
     // Surface API error message if available
-    const msg = err?.response?.data?.detail || "Submission failed. Please try again.";
+    const msg =
+      err?.response?.data?.detail || "Submission failed. Please try again.";
     console.error("ID application failed:", msg);
     // Re-open camera so user can retry
     startCamera();
@@ -339,7 +340,9 @@ const selectYear = (y) => {
 
     <!-- Main -->
     <div class="flex-1 mb-4">
-      <div class="w-full bg-white rounded-2xl border border-gray-200 shadow-lg p-6 flex flex-col transition-all duration-500 ease-in-out">
+      <div
+        class="w-full bg-white rounded-2xl border border-gray-200 shadow-lg p-6 flex flex-col transition-all duration-500 ease-in-out"
+      >
         <!-- Resident Selection Form-->
         <div
           v-if="currentPhase === 'selection'"
@@ -362,13 +365,12 @@ const selectYear = (y) => {
                   >
                     <CalendarDaysIcon class="w-5 h-5 text-[#03335C]" />
                     <div class="flex flex-col leading-tight">
-                      <span
-                        class="text-[9px] uppercase font-bold text-gray-400"
+                      <span class="text-[9px] uppercase font-bold text-gray-400"
                         >First Letter of</span
                       >
                       <span
                         class="text-[#03335C] font-black text-sm uppercase tracking-tight"
-                        >Last Name</span
+                        >Surname</span
                       >
                     </div>
                   </div>
@@ -403,8 +405,7 @@ const selectYear = (y) => {
                   >
                     <CalendarDaysIcon class="w-5 h-5 text-[#03335C]" />
                     <div class="flex flex-col leading-tight">
-                      <span
-                        class="text-[9px] uppercase font-bold text-gray-400"
+                      <span class="text-[9px] uppercase font-bold text-gray-400"
                         >First Letter of</span
                       >
                       <span
@@ -452,16 +453,22 @@ const selectYear = (y) => {
                 <div class="flex-1 relative">
                   <button
                     @click="toggleDropdown('resident')"
-                    :disabled="!lastNameLetter || !firstNameLetter || isFetching"
+                    :disabled="
+                      !lastNameLetter || !firstNameLetter || isFetching
+                    "
                     class="w-full h-11 border border-gray-300 rounded-xl px-4 flex items-center justify-between text-[#03335C] font-bold bg-white text-base hover:border-[#03335C] transition-colors disabled:opacity-50 disabled:bg-gray-50"
                   >
-                    <span v-if="isFetching" class="text-gray-400 text-sm italic">Loading...</span>
+                    <span v-if="isFetching" class="text-gray-400 text-sm italic"
+                      >Loading...</span
+                    >
                     <span
                       v-else-if="selectedResident"
                       class="truncate text-[#03335C]"
                       >{{ selectedResident.last_name }},
                       {{ selectedResident.first_name }}
-                      <span v-if="selectedResident.middle_name">{{ selectedResident.middle_name }}</span>
+                      <span v-if="selectedResident.middle_name">{{
+                        selectedResident.middle_name
+                      }}</span>
                     </span>
                     <span v-else class="text-gray-400 truncate opacity-60">{{
                       !lastNameLetter || !firstNameLetter
@@ -553,9 +560,7 @@ const selectYear = (y) => {
               <p class="text-gray-500 italic text-sm mb-6">
                 Take a clear photo for your new RFID Card.
               </p>
-              <div
-                class="bg-[#EAF6FB] rounded-2xl p-6 border border-[#BDE0EF]"
-              >
+              <div class="bg-[#EAF6FB] rounded-2xl p-6 border border-[#BDE0EF]">
                 <p
                   class="text-[#03335C] text-xs uppercase font-bold tracking-wider opacity-60 mb-1"
                 >

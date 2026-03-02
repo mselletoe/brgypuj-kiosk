@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import RequestCard from '@/views/requests/document-requests/DocumentRequestCard.vue'
 import ConfirmModal from '@/components/shared/ConfirmationModal.vue'
 import SMSModal from '@/components/shared/SendSMSModal.vue'
+import { useRealtimeSync } from "@/composables/useRealtimeSync"
 import {
   getDocumentRequests,
   deleteRequest,
@@ -82,6 +83,26 @@ const fetchRejectedRequests = async () => {
     isLoading.value = false
   }
 }
+
+useRealtimeSync({
+  request_updated: (data) => {
+    if (data.status === 'rejected') {
+      // Newly rejected — re-fetch to get full data
+      fetchRejectedRequests()
+    } else {
+      // Undone back to pending — remove from this tab
+      rejectedRequests.value = rejectedRequests.value.filter(r => r.id !== data.id)
+    }
+  },
+  request_deleted: (data) => {
+    rejectedRequests.value = rejectedRequests.value.filter(r => r.id !== data.id)
+  },
+  requests_bulk_deleted: (data) => {
+    const deletedIds = new Set(data.ids)
+    rejectedRequests.value = rejectedRequests.value.filter(r => !deletedIds.has(r.id))
+  }
+  // Note: no request_payment_updated here — rejected requests don't have payment actions
+})
 
 const openConfirmModal = (title, action) => {
   confirmTitle.value = title

@@ -2,7 +2,11 @@
 import { ref, computed, watch } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
-import { searchResidents, getReportCardInfo, reportLostCard } from "@/api/idService";
+import {
+  searchResidents,
+  getReportCardInfo,
+  reportLostCard,
+} from "@/api/idService";
 import ArrowBackButton from "@/components/shared/ArrowBackButton.vue";
 import Button from "@/components/shared/Button.vue";
 import Modal from "@/components/shared/Modal.vue";
@@ -35,7 +39,7 @@ const showConfirmModal = ref(false);
 // Selection state
 const lastNameLetter = ref("");
 const firstNameLetter = ref("");
-const selectedResident = ref(null);   // full info from getReportCardInfo
+const selectedResident = ref(null); // full info from getReportCardInfo
 const residentList = ref([]);
 const isFetching = ref(false);
 const isCheckingCard = ref(false);
@@ -67,9 +71,12 @@ watch([lastNameLetter, firstNameLetter], async ([last, first]) => {
 });
 
 const toggleDropdown = (menu) => {
-  showLastNameDropdown.value = menu === "lastName" ? !showLastNameDropdown.value : false;
-  showFirstNameDropdown.value = menu === "firstName" ? !showFirstNameDropdown.value : false;
-  showResidentDropdown.value = menu === "resident" ? !showResidentDropdown.value : false;
+  showLastNameDropdown.value =
+    menu === "lastName" ? !showLastNameDropdown.value : false;
+  showFirstNameDropdown.value =
+    menu === "firstName" ? !showFirstNameDropdown.value : false;
+  showResidentDropdown.value =
+    menu === "resident" ? !showResidentDropdown.value : false;
 };
 
 const selectLastNameLetter = (letter) => {
@@ -167,13 +174,17 @@ const handleFinalDeactivation = async () => {
       rfid_uid: authStore.rfidUid || null,
     });
     // If logged-in user just reported their own card, log them out
-    if (authStore.isRFID && authStore.residentId === selectedResident.value.resident_id) {
+    if (
+      authStore.isRFID &&
+      authStore.residentId === selectedResident.value.resident_id
+    ) {
       authStore.logout();
     }
     showSuccessModal.value = true;
   } catch (err) {
     const status = err?.response?.status;
-    const detail = err?.response?.data?.detail || "Something went wrong. Please try again.";
+    const detail =
+      err?.response?.data?.detail || "Something went wrong. Please try again.";
     if (status === 401) {
       triggerError("Incorrect PIN. Please try again.");
     } else {
@@ -229,11 +240,18 @@ const handleModalDone = () => router.push("/id-services");
               <div class="flex gap-10 w-full">
                 <!-- Last Name Letter -->
                 <div class="flex flex-1 items-center gap-3">
-                  <div class="flex items-center gap-2 flex-shrink-0 min-w-[140px]">
+                  <div
+                    class="flex items-center gap-2 flex-shrink-0 min-w-[140px]"
+                  >
                     <CalendarDaysIcon class="w-5 h-5 text-[#03335C]" />
                     <div class="flex flex-col leading-tight">
-                      <span class="text-[9px] uppercase font-bold text-gray-400">First Letter of</span>
-                      <span class="text-[#03335C] font-black text-sm uppercase tracking-tight">Last Name</span>
+                      <span class="text-[9px] uppercase font-bold text-gray-400"
+                        >First Letter of</span
+                      >
+                      <span
+                        class="text-[#03335C] font-black text-sm uppercase tracking-tight"
+                        >Surname</span
+                      >
                     </div>
                   </div>
                   <div class="flex-1 relative">
@@ -262,11 +280,18 @@ const handleModalDone = () => router.push("/id-services");
 
                 <!-- First Name Letter -->
                 <div class="flex flex-1 items-center gap-3">
-                  <div class="flex items-center gap-2 flex-shrink-0 min-w-[140px]">
+                  <div
+                    class="flex items-center gap-2 flex-shrink-0 min-w-[140px]"
+                  >
                     <CalendarDaysIcon class="w-5 h-5 text-[#03335C]" />
                     <div class="flex flex-col leading-tight">
-                      <span class="text-[9px] uppercase font-bold text-gray-400">First Letter of</span>
-                      <span class="text-[#03335C] font-black text-sm uppercase tracking-tight">First Name</span>
+                      <span class="text-[9px] uppercase font-bold text-gray-400"
+                        >First Letter of</span
+                      >
+                      <span
+                        class="text-[#03335C] font-black text-sm uppercase tracking-tight"
+                        >First Name</span
+                      >
                     </div>
                   </div>
                   <div class="flex-1 relative">
@@ -296,22 +321,42 @@ const handleModalDone = () => router.push("/id-services");
 
               <!-- Resident Dropdown -->
               <div class="flex items-center gap-3 w-full">
-                <div class="flex items-center gap-2 flex-shrink-0 min-w-[140px]">
+                <div
+                  class="flex items-center gap-2 flex-shrink-0 min-w-[140px]"
+                >
                   <UserIcon class="w-5 h-5 text-[#03335C]" />
-                  <span class="text-[#03335C] font-bold text-[11px] uppercase tracking-tight">Resident Name</span>
+                  <span
+                    class="text-[#03335C] font-bold text-[11px] uppercase tracking-tight"
+                    >Resident Name</span
+                  >
                 </div>
                 <div class="flex-1 relative">
                   <button
                     @click="toggleDropdown('resident')"
-                    :disabled="!lastNameLetter || !firstNameLetter || isFetching || isCheckingCard"
+                    :disabled="
+                      !lastNameLetter ||
+                      !firstNameLetter ||
+                      isFetching ||
+                      isCheckingCard
+                    "
                     class="w-full h-11 border border-gray-300 rounded-xl px-4 flex items-center justify-between text-[#03335C] font-bold bg-white text-base hover:border-[#03335C] transition-colors disabled:opacity-50 disabled:bg-gray-50"
                   >
-                    <span v-if="isFetching || isCheckingCard" class="text-gray-400 text-sm italic">Loading...</span>
-                    <span v-else-if="selectedResident" class="truncate text-[#03335C]">
-                      {{ selectedResident.last_name }}, {{ selectedResident.first_name }}
+                    <span
+                      v-if="isFetching || isCheckingCard"
+                      class="text-gray-400 text-sm italic"
+                      >Loading...</span
+                    >
+                    <span
+                      v-else-if="selectedResident"
+                      class="truncate text-[#03335C]"
+                    >
+                      {{ selectedResident.last_name }},
+                      {{ selectedResident.first_name }}
                     </span>
                     <span v-else class="text-gray-400 truncate opacity-60">{{
-                      !lastNameLetter || !firstNameLetter ? "Select initials first..." : "Select Resident..."
+                      !lastNameLetter || !firstNameLetter
+                        ? "Select initials first..."
+                        : "Select Resident..."
                     }}</span>
                     <ChevronDownIcon class="w-5 h-5 text-[#03335C]" />
                   </button>
@@ -352,14 +397,19 @@ const handleModalDone = () => router.push("/id-services");
             >
               <div class="flex-1">
                 <ExclamationTriangleIcon class="w-12 h-12 text-red-600 mb-4" />
-                <h2 class="text-3xl font-bold text-[#03335C] mb-2">Critical Action</h2>
+                <h2 class="text-3xl font-bold text-[#03335C] mb-2">
+                  Critical Action
+                </h2>
                 <p class="text-gray-600 text-base leading-snug mb-4">
                   Reporting the card for
                   <span class="font-bold text-[#03335C]">
-                    {{ selectedResident?.first_name }} {{ selectedResident?.last_name }}
+                    {{ selectedResident?.first_name }}
+                    {{ selectedResident?.last_name }}
                   </span>
                   will
-                  <span class="font-bold text-red-600 uppercase">permanently disable</span>
+                  <span class="font-bold text-red-600 uppercase"
+                    >permanently disable</span
+                  >
                   its RFID functions.
                 </p>
                 <p class="text-gray-500 text-sm leading-snug">
@@ -441,7 +491,8 @@ const handleModalDone = () => router.push("/id-services");
         size="md"
         @click="handleReset"
         :disabled="!lastNameLetter && !firstNameLetter && !selectedResident"
-      >Reset Selection</Button>
+        >Reset Selection</Button
+      >
       <Button
         :variant="selectedResident ? 'secondary' : 'disabled'"
         size="md"
@@ -551,16 +602,35 @@ const handleModalDone = () => router.push("/id-services");
   animation: fadeIn 0.4s ease-out forwards;
 }
 @keyframes fadeIn {
-  from { opacity: 0; transform: scale(0.98); }
-  to { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 .animate-shake {
   animation: shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
 }
 @keyframes shake {
-  10%, 90% { transform: translate3d(-1px, 0, 0); }
-  20%, 80% { transform: translate3d(2px, 0, 0); }
-  30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
-  40%, 60% { transform: translate3d(4px, 0, 0); }
+  10%,
+  90% {
+    transform: translate3d(-1px, 0, 0);
+  }
+  20%,
+  80% {
+    transform: translate3d(2px, 0, 0);
+  }
+  30%,
+  50%,
+  70% {
+    transform: translate3d(-4px, 0, 0);
+  }
+  40%,
+  60% {
+    transform: translate3d(4px, 0, 0);
+  }
 }
 </style>

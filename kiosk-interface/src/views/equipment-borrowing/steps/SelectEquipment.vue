@@ -160,7 +160,7 @@ onMounted(() => {
     </div>
 
     <!-- Equipment Grid -->
-    <div class="flex-1 overflow-y-auto custom-scrollbar">
+    <div class="flex-1 overflow-y-auto">
       <div class="grid grid-cols-4 gap-5">
         <div 
           v-for="equipment in allEquipment" 

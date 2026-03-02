@@ -112,7 +112,7 @@ const cancelExit = () => {
       </div>
     </div>
 
-    <div class="flex-1 overflow-y-auto custom-scrollbar">
+    <div class="flex-1 overflow-y-auto">
       <div class="grid grid-cols-5 gap-8 items-stretch">
         <div class="col-span-2">
           <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 h-full min-h-[320px]">

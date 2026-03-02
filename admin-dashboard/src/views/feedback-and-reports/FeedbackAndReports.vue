@@ -7,7 +7,6 @@ import { TrashIcon, ArrowUturnLeftIcon } from '@heroicons/vue/24/outline'
 import PageTitle from '@/components/shared/PageTitle.vue'
 import FeedbackTab from '@/views/feedback-and-reports/subtabs/FeedbackTab.vue'
 import ReportsTab from '@/views/feedback-and-reports/subtabs/ReportsTab.vue'
-import LostReports from '@/views/feedback-and-reports/subtabs/LostReports.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -18,8 +17,7 @@ const activeTabRef = ref(null)
 /* ---------- TABS ---------- */
 const tabMap = {
   feedbacks: FeedbackTab,
-  reports: ReportsTab,
-  lostreports: LostReports
+  reports: ReportsTab
 }
 
 const activeTab = computed({
@@ -93,6 +91,7 @@ const triggerUndo = () => {
 
         <!-- Undo (reactivate RFID cards) -->
         <button
+        v-if="activeTab === 'reports'"
           @click="triggerUndo"
           :disabled="selectionState === 'none'"
           :class="[

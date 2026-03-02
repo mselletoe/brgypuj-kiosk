@@ -51,7 +51,7 @@ const viewAllSettings = () => {
       </button>
     </div>
 
-    <div class="flex-1 overflow-y-auto custom-scrollbar px-4 min-h-0">
+    <div class="flex-1 overflow-y-auto px-4 min-h-0">
       <div class="ml-2 border-l-2 border-gray-50 space-y-4 pb-4">
         <div
           v-if="displayedLogs.length === 0"
@@ -98,16 +98,3 @@ const viewAllSettings = () => {
     </div>
   </div>
 </template>
-
-<style scoped>
-.custom-scrollbar::-webkit-scrollbar {
-  width: 4px;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #f1f1f1;
-  border-radius: 10px;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #e2e8f0;
-}
-</style>
