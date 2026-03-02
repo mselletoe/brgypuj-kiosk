@@ -57,7 +57,7 @@ const updateDateTime = () => {
   });
 };
 
-/** @type {ReturnType<typeof setInterval> | null}
+/** @type {ReturnType<typeof setInterval> | null} Reference to the clock sync timer */
 let interval;
 
 // --- Lifecycle Hooks ---
