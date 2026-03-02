@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import RequestCard from '@/views/requests/document-requests/DocumentRequestCard.vue'
 import ConfirmModal from '@/components/shared/ConfirmationModal.vue'
+import { useRealtimeSync } from "@/composables/useRealtimeSync"
 import {
   getDocumentRequests,
   deleteRequest,
@@ -77,6 +78,29 @@ const fetchReleasedRequests = async () => {
     isLoading.value = false
   }
 }
+
+useRealtimeSync({
+  request_updated: (data) => {
+    if (data.status === 'released') {
+      // Newly released — re-fetch to get full data
+      fetchReleasedRequests()
+    } else {
+      // Undone back to approved — remove from this tab
+      releasedRequests.value = releasedRequests.value.filter(r => r.id !== data.id)
+    }
+  },
+  request_payment_updated: (data) => {
+    const request = releasedRequests.value.find(r => r.id === data.id)
+    if (request) request.isPaid = data.payment_status === 'paid'
+  },
+  request_deleted: (data) => {
+    releasedRequests.value = releasedRequests.value.filter(r => r.id !== data.id)
+  },
+  requests_bulk_deleted: (data) => {
+    const deletedIds = new Set(data.ids)
+    releasedRequests.value = releasedRequests.value.filter(r => !deletedIds.has(r.id))
+  }
+})
 
 const openConfirmModal = (title, action) => {
   confirmTitle.value = title
