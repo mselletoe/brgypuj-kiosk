@@ -63,21 +63,52 @@ const role = computed(() => adminAuth.admin?.role || "Administrator");
 
     <div class="flex items-center gap-1.5">
       <!-- 🔍 Global Search -->
-      <GlobalSearch />
+      <div class="relative group inline-block">
+        <GlobalSearch />
 
-      <button
-        @click="router.push('/help-and-support')"
-        class="w-11 h-11 flex items-center justify-center text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all"
-      >
-        <QuestionMarkCircleIcon class="h-6 w-6" />
-      </button>
+        <div
+          class="absolute -bottom-6 left-1/2 -translate-x-1/2
+                opacity-0 invisible
+                group-hover:opacity-100 group-hover:visible
+                transition-all duration-300 ease-in-out
+                bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded
+                whitespace-nowrap shadow-md z-50"
+        >
+          Search
+        </div>
+      </div>
+      
+      <div class="relative group inline-block">
+        <button
+          @click="router.push('/help-and-support')"
+          class="w-11 h-11 flex items-center justify-center text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all"
+        >
+          <QuestionMarkCircleIcon class="h-6 w-6" />
+        </button>
+        <div class="absolute -bottom-6 left-1/2 -translate-x-1/2
+                      opacity-0 invisible group-hover:opacity-100 group-hover:visible
+                      transition-all duration-300 ease-in-out
+                      bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded
+                      whitespace-nowrap shadow-md z-50">
+            Help and Support
+        </div>
+      </div>
 
-      <button
-        @click="router.push('/sms-announcements')"
-        class="w-11 h-11 flex items-center justify-center text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all"
-      >
-        <ChatBubbleLeftRightIcon class="h-6 w-6" />
-      </button>
+      <div class="relative group inline-block">
+        <button
+          @click="router.push('/sms-announcements')"
+          class="w-11 h-11 flex items-center justify-center text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all"
+        >
+          <ChatBubbleLeftRightIcon class="h-6 w-6" />
+        </button>
+        <div class="absolute -bottom-6 left-1/2 -translate-x-1/2
+                      opacity-0 invisible group-hover:opacity-100 group-hover:visible
+                      transition-all duration-300 ease-in-out
+                      bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded
+                      whitespace-nowrap shadow-md z-50">
+            SMS Announcements
+        </div>
+      </div>
 
       <div class="relative">
         <div
@@ -85,18 +116,28 @@ const role = computed(() => adminAuth.admin?.role || "Administrator");
           @click="showNotifications = false"
           class="fixed inset-0 z-40"
         ></div>
-        <button
-          @click="showNotifications = !showNotifications"
-          class="w-11 h-11 flex items-center justify-center text-gray-500 rounded-full hover:text-blue-600 hover:bg-blue-50 transition-all relative"
-        >
-          <BellIcon class="h-6 w-6" />
-          <span
-            v-if="unreadCount > 0"
-            class="absolute top-1.5 right-1.5 bg-red-500 text-white text-[9px] font-bold rounded-full border-2 border-[#F4F7FB] min-w-[18px] h-[18px] flex items-center justify-center"
+
+        <div class="relative group inline-block">
+          <button
+            @click="showNotifications = !showNotifications"
+            class="w-11 h-11 flex items-center justify-center text-gray-500 rounded-full hover:text-blue-600 hover:bg-blue-50 transition-all relative"
           >
-            {{ unreadCount }}
-          </span>
-        </button>
+            <BellIcon class="h-6 w-6" />
+            <span
+              v-if="unreadCount > 0"
+              class="absolute top-1.5 right-1.5 bg-red-500 text-white text-[9px] font-bold rounded-full border-2 border-[#F4F7FB] min-w-[18px] h-[18px] flex items-center justify-center"
+            >
+              {{ unreadCount }}
+            </span>
+          </button>
+          <div class="absolute -bottom-6 left-1/2 -translate-x-1/2
+                      opacity-0 invisible group-hover:opacity-100 group-hover:visible
+                      transition-all duration-300 ease-in-out
+                      bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded
+                      whitespace-nowrap shadow-md z-50">
+            Notifications
+          </div>
+        </div>
 
         <div
           v-if="showNotifications"
@@ -139,12 +180,25 @@ const role = computed(() => adminAuth.admin?.role || "Administrator");
         </div>
       </div>
 
-      <button
-        @click="router.push('/system-settings')"
-        class="w-11 h-11 flex items-center justify-center text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all"
-      >
-        <Cog6ToothIcon class="h-6 w-6" />
-      </button>
+      <div class="relative group inline-block">
+        <button
+          @click="router.push('/system-settings')"
+          class="w-11 h-11 flex items-center justify-center text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all"
+        >
+          <Cog6ToothIcon class="h-6 w-6" />
+        </button>
+
+        <div
+          class="absolute -bottom-6 left-1/2 -translate-x-1/2
+                opacity-0 invisible
+                group-hover:opacity-100 group-hover:visible
+                transition-all duration-300 ease-in-out
+                bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded
+                whitespace-nowrap shadow-md z-50"
+        >
+          System Settings
+        </div>
+      </div>
 
       <div class="w-px h-8 bg-gray-200 mx-2"></div>
 

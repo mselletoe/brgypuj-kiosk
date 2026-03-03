@@ -119,6 +119,7 @@ onUnmounted(() => clearInterval(timeInterval.value));
           >
             Review Docs
           </button>
+          
           <button
             v-if="stats.pendingEquip > 0"
             @click="router.push('/equipment-requests')"
