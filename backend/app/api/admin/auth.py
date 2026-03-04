@@ -37,6 +37,7 @@ from app.services.auth_service import (
     get_admin_photo,
 )
 from app.core.security import create_access_token
+from app.models.admin import Admin
 
 router = APIRouter(prefix="/auth")
 
@@ -171,3 +172,14 @@ def get_my_photo(
     """
     photo_bytes = get_admin_photo(db, admin_id=current_admin.id)
     return Response(content=photo_bytes, media_type="image/jpeg")
+
+
+@router.delete("/me/photo", status_code=204)
+def delete_my_photo(
+    db: Session = Depends(get_db),
+    current_admin=Depends(get_current_admin),
+):
+    admin = db.query(Admin).filter(Admin.id == current_admin.id).first()
+    if admin:
+        admin.photo = None
+        db.commit()
