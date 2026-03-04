@@ -244,12 +244,6 @@ onMounted(() => {
             <ShieldCheckIcon v-if="isAdminMode" class="w-16 h-16 mx-auto mb-4 text-[#013C6D] opacity-80" />
             <h2 class="text-4xl font-bold mb-2 leading-tight">{{ title }}</h2>
             <p class="text-lg text-gray-500 italic">{{ subtitle }}</p>
-
-            <!-- Card UID badge — admin mode only -->
-            <div v-if="isAdminMode" class="mt-5 bg-blue-50 border border-blue-200 rounded-lg px-5 py-3 text-sm text-[#013C6D] inline-block">
-              <span class="font-semibold">Card UID:</span>
-              <span class="ml-2 font-mono">{{ rfidRegStore.pendingRfidUid }}</span>
-            </div>
           </div>
         </div>
 

@@ -7,14 +7,17 @@
  */
 
 import { ref, computed, onMounted, onUnmounted } from "vue";
-import { useRouter } from "vue-router";
+import { useRouter, useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
+import { useRfidRegistrationStore } from "@/stores/registration";
 import '../assets/images/Pob1Logo.svg';
 import '../assets/vectors/Logout.svg';
 
 // --- Component State & Composables ---
 const router = useRouter();
+const route = useRoute();
 const authStore = useAuthStore();
+const rfidRegStore = useRfidRegistrationStore();
 
 /** @type {import('vue').Ref<string>} Reactive string for formatted 12-hour time */
 const currentTime = ref("");
@@ -24,6 +27,9 @@ const currentDate = ref("");
 
 // --- Computed Properties (Auth State) ---
 
+/** True when the admin is in the RFID registration flow (/register route) */
+const isAdminRegistration = computed(() => route.path === '/register')
+
 /** @returns {boolean} True if the current session is in Guest mode */
 const isGuest = computed(() => authStore.isGuest);
 
@@ -31,7 +37,7 @@ const isGuest = computed(() => authStore.isGuest);
 const displayName = computed(() => authStore.userName);
 
 /** @returns {string} Contextual string describing the current auth method for UI feedback */
-const userDetail = computed(() => 
+const userDetail = computed(() =>
   authStore.isRFID ? "Authenticated via RFID" : "Logged in as Guest User"
 );
 
@@ -45,7 +51,7 @@ const updateDateTime = () => {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
-    hour12: true, 
+    hour12: true,
   })
   .toUpperCase();
 
@@ -64,12 +70,10 @@ let interval;
 
 onMounted(() => {
   updateDateTime();
-  // Start 1-second interval for the real-time clock
   interval = setInterval(updateDateTime, 1000);
 });
 
 onUnmounted(() => {
-  // Clear clock interval to prevent background memory leaks
   if (interval) clearInterval(interval);
 });
 
@@ -78,7 +82,7 @@ onUnmounted(() => {
  * Clears global auth state (Pinia + LocalStorage) and redirects to the idle screen.
  */
 const logout = () => {
-  authStore.logout(); //
+  authStore.logout();
   router.push('/idle');
 };
 </script>
@@ -99,15 +103,27 @@ const logout = () => {
     </div>
 
     <div class="flex items-center space-x-4">
-      <div 
-        v-if="isGuest"
+
+      <!-- Admin Registration Badge -->
+      <div
+        v-if="isAdminRegistration"
+        class="flex flex-col items-center justify-center rounded-lg border-2 border-blue-500 bg-blue-50 px-4 py-1 min-w-[160px] leading-tight"
+      >
+        <span class="text-[13px] font-black text-blue-700">Admin</span>
+        <span class="text-[9px] italic font-medium text-blue-700">RFID Registration Mode</span>
+      </div>
+
+      <!-- Guest Badge -->
+      <div
+        v-else-if="isGuest"
         class="flex flex-col items-center justify-center rounded-lg border-2 border-[#E8C462] bg-[#FFF9E5] px-4 py-1 min-w-[160px] leading-tight"
       >
         <span class="text-[13px] font-black text-[#7A5C00]">{{ displayName }}</span>
         <span class="text-[9px] italic font-medium text-[#7A5C00]">{{ userDetail }}</span>
       </div>
 
-      <div 
+      <!-- RFID Resident Badge -->
+      <div
         v-else
         class="flex flex-col items-center justify-center rounded-lg border-2 border-[#003A6B] bg-[#D1E5F1] px-4 py-1 min-w-[160px] leading-tight"
       >
@@ -115,7 +131,7 @@ const logout = () => {
         <span class="text-[9px] italic font-medium text-[#003A6B]">{{ userDetail }}</span>
       </div>
 
-      <button @click="logout" class="px-4 py-2 bg-[#FF2B3A] border-2 border-[#FF2B3A] 
+      <button @click="logout" class="px-4 py-2 bg-[#FF2B3A] border-2 border-[#FF2B3A]
         hover:bg-[#CD000E] text-white font-light rounded-md
         transition-colors duration-300 ease-in-out
         flex items-center space-x-2 text-[12px]">
@@ -132,6 +148,6 @@ header {
   position: fixed;
   top: 0;
   left: 0;
-  z-index: 50; 
+  z-index: 50;
 }
 </style>

@@ -2,22 +2,13 @@
 /**
  * @file Register.vue
  * @description Links a newly scanned RFID card to an approved ID Application resident.
- *
- * Flow:
- *   1. On mount, fetch all approved ID Applications awaiting RFID linking.
- *   2. Admin selects a transaction card (left panel).
- *   3. Right panel shows the resident's Name, Birthdate, and Address.
- *   4. Admin clicks Submit → linkRfidToResident() → success toast → clear state.
- *
- * The pending RFID UID comes from rfidRegStore.pendingRfidUid (set in ScanRFID.vue).
- * Only reachable after passing the admin passcode gate in AuthPIN.vue.
  */
 
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { CheckCircleIcon, XCircleIcon } from '@heroicons/vue/24/outline'
 import ArrowBackButton from '@/components/shared/ArrowBackButton.vue'
 import Button from '@/components/shared/Button.vue'
+import Modal from '@/components/shared/Modal.vue'
 import { useRfidRegistrationStore } from '@/stores/registration'
 import { getApprovedApplications, linkRfidToResident } from '@/api/registrationService'
 
@@ -30,11 +21,8 @@ const selectedApp = ref(null)
 const isLoading = ref(true)
 const isSubmitting = ref(false)
 const errorMessage = ref('')
-
-// Toast
-const showToast = ref(false)
-const toastMessage = ref('')
-const toastSuccess = ref(false)
+const showSuccessModal = ref(false)
+const showErrorModal = ref(false)
 
 // ---- Computed ----
 const pendingUid = computed(() => rfidRegStore.pendingRfidUid)
@@ -45,7 +33,6 @@ const canSubmit = computed(() =>
 
 // ---- Helpers ----
 
-/** Format "YYYY-MM-DD" → "Month DD, YYYY" */
 const formatBirthdate = (dateStr) => {
   if (!dateStr) return '—'
   const d = new Date(dateStr + 'T00:00:00')
@@ -57,13 +44,6 @@ const fullName = (app) => {
   return [app.first_name, app.middle_name, app.last_name, app.suffix]
     .filter(Boolean)
     .join(' ')
-}
-
-const triggerToast = (message, success = false) => {
-  toastMessage.value = message
-  toastSuccess.value = success
-  showToast.value = true
-  setTimeout(() => { showToast.value = false }, 2000)
 }
 
 // ---- Handlers ----
@@ -90,20 +70,23 @@ const handleSubmit = async () => {
       resident_id: selectedApp.value.resident_id,
       document_request_id: selectedApp.value.document_request_id,
     })
-
-    triggerToast(`RFID linked to ${fullName(selectedApp.value)} successfully!`, true)
-
-    setTimeout(() => {
-      rfidRegStore.clearAll()
-      router.replace('/login')
-    }, 2000)
-
+    showSuccessModal.value = true
   } catch (err) {
-    const detail = err?.response?.data?.detail || 'Failed to link RFID. Please try again.'
-    triggerToast(detail, false)
+    errorMessage.value = err?.response?.data?.detail || 'Failed to link RFID. Please try again.'
+    showErrorModal.value = true
   } finally {
     isSubmitting.value = false
   }
+}
+
+const handleSuccessClose = () => {
+  rfidRegStore.clearAll()
+  router.replace('/login')
+}
+
+const handleErrorClose = () => {
+  showErrorModal.value = false
+  errorMessage.value = ''
 }
 
 const handleCancel = () => {
@@ -113,7 +96,6 @@ const handleCancel = () => {
 
 // ---- Lifecycle ----
 onMounted(() => {
-  // Guard: no pending UID means admin landed here directly — send back
   if (!rfidRegStore.pendingRfidUid) {
     router.replace('/login-rfid')
     return
@@ -137,8 +119,6 @@ onMounted(() => {
             Link a new RFID card to an approved ID application.
           </p>
         </div>
-
-        <!-- Scanned UID badge -->
         <div class="text-right">
           <p class="text-[#03335C] font-bold text-[45px]">{{ pendingUid || '—' }}</p>
         </div>
@@ -163,7 +143,7 @@ onMounted(() => {
         </div>
 
         <!-- Error -->
-        <div v-else-if="errorMessage" class="flex-1 flex items-center justify-center text-red-500 text-sm">
+        <div v-else-if="errorMessage && !showErrorModal" class="flex-1 flex items-center justify-center text-red-500 text-sm">
           {{ errorMessage }}
         </div>
 
@@ -204,29 +184,24 @@ onMounted(() => {
 
         <div v-else class="flex-1 flex flex-col gap-3 text-sm">
           <div class="bg-white rounded-xl p-4 border border-[#B0D7F8] space-y-3">
-
             <div>
               <p class="text-xs text-gray-400 uppercase tracking-wide font-medium">Full Name</p>
               <p class="font-bold text-base text-[#013C6D]">{{ fullName(selectedApp) }}</p>
             </div>
-
             <div class="border-t border-gray-100 pt-2">
               <p class="text-xs text-gray-400 uppercase tracking-wide font-medium">Birthdate</p>
               <p class="font-semibold text-[#013C6D]">{{ formatBirthdate(selectedApp.birthdate) }}</p>
             </div>
-
             <div class="border-t border-gray-100 pt-2">
               <p class="text-xs text-gray-400 uppercase tracking-wide font-medium">Address</p>
               <p class="font-semibold text-[#013C6D]">{{ selectedApp.address || '—' }}</p>
             </div>
-
             <div class="border-t border-gray-100 pt-2">
               <p class="text-xs text-gray-400 uppercase tracking-wide font-medium">Transaction No.</p>
               <p class="font-bold text-[#013C6D]">{{ selectedApp.transaction_no }}</p>
             </div>
           </div>
 
-          <!-- RFID being assigned -->
           <div class="bg-blue-100 rounded-xl p-3 border border-blue-300 text-center">
             <p class="text-xs text-gray-500 font-medium">RFID Card to Link</p>
             <p class="font-bold font-mono text-[#013C6D] text-base mt-0.5">{{ pendingUid }}</p>
@@ -236,11 +211,10 @@ onMounted(() => {
     </div>
 
     <!-- Footer actions -->
-    <div class="flex gap-6 mt-6 justify-between items-center flex-shrink-0 relative">
+    <div class="flex gap-6 mt-6 justify-between items-center flex-shrink-0">
       <Button variant="outline" size="md" @click="handleCancel">
         Cancel
       </Button>
-
       <Button
         variant="secondary"
         size="md"
@@ -249,32 +223,54 @@ onMounted(() => {
       >
         {{ isSubmitting ? 'Linking...' : 'Link RFID Card' }}
       </Button>
-
-      <!-- Toast -->
-      <Transition name="toast">
-        <div
-          v-if="showToast"
-          class="absolute left-1/2 -translate-x-1/2 bottom-16 z-50 flex items-center gap-3 px-6 py-4 rounded-lg shadow-2xl border bg-white"
-          :class="toastSuccess ? 'border-green-500' : 'border-red-500'"
-        >
-          <CheckCircleIcon v-if="toastSuccess" class="w-7 h-7 text-green-500" />
-          <XCircleIcon v-else class="w-7 h-7 text-red-500" />
-          <span class="text-gray-800 font-semibold text-base">{{ toastMessage }}</span>
-        </div>
-      </Transition>
     </div>
+
+    <!-- Success Modal -->
+    <transition name="fade-blur">
+      <div
+        v-if="showSuccessModal"
+        class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50"
+      >
+        <Modal
+          title="RFID Registered!"
+          :message="`The RFID card has been successfully linked to ${fullName(selectedApp)}. They can now use this card to log in to the kiosk.`"
+          :reference-id="pendingUid"
+          :show-reference-id="true"
+          primary-button-text="Done"
+          :show-primary-button="true"
+          :show-secondary-button="false"
+          @primary-click="handleSuccessClose"
+        />
+      </div>
+    </transition>
+
+    <!-- Error Modal -->
+    <transition name="fade-blur">
+      <div
+        v-if="showErrorModal"
+        class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50"
+      >
+        <Modal
+          title="Registration Failed"
+          :message="errorMessage"
+          primary-button-text="OK"
+          :show-primary-button="true"
+          :show-secondary-button="false"
+          @primary-click="handleErrorClose"
+        />
+      </div>
+    </transition>
 
   </div>
 </template>
 
 <style scoped>
-.toast-enter-active,
-.toast-leave-active {
-  transition: opacity 0.3s, transform 0.3s;
+.fade-blur-enter-active,
+.fade-blur-leave-active {
+  transition: opacity 0.5s ease-in-out;
 }
-.toast-enter-from,
-.toast-leave-to {
+.fade-blur-enter-from,
+.fade-blur-leave-to {
   opacity: 0;
-  transform: translateX(-50%) translateY(8px);
 }
 </style>
