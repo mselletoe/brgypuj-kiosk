@@ -1,6 +1,6 @@
 <script setup>
 /**
- * @file DocumentService.vue
+ * @file DocumentServices.vue
  * @description Kiosk Document Services Selection View.
  * This component serves as the primary gateway for residents to browse 
  * available barangay documents. It fetches dynamic document types from 
@@ -87,10 +87,17 @@ useRealtimeSync({
       </div>
     </div>
 
-    <div v-if="loading" class="text-center text-gray-500 py-10">Loading services...</div>
+    <div v-if="loading" class="flex flex-col justify-center items-center py-20 flex-1">
+      <div class="loader-dots mb-4">
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+      </div>
+      <p class="text-[#03335C] text-lg font-semibold">Loading services...</p>
+    </div>
+
     <div v-if="error" class="text-center text-red-500 py-10">{{ error }}</div>
 
-    <!-- Document type Option box -->
     <div class="flex-1 overflow-y-auto">
       <div v-if="isParent() && !loading && !error" class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
         <router-link
@@ -118,3 +125,41 @@ useRealtimeSync({
     <router-view v-if="!isParent()" />
   </div>
 </template>
+
+<style scoped>
+/* Loader Dots CSS */
+.loader-dots {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  width: 60px; 
+  height: 15px; 
+}
+
+.dot {
+  width: 12px; 
+  height: 12px;
+  background-color: #03335C; 
+  border-radius: 50%;
+  animation: pulse 1.4s infinite ease-in-out both;
+}
+
+.dot:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.dot:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+@keyframes pulse {
+  0%, 80%, 100% { 
+    transform: scale(0); 
+    opacity: 0.3; 
+  }
+  40% { 
+    transform: scale(1); 
+    opacity: 1;
+  }
+}
+</style>
