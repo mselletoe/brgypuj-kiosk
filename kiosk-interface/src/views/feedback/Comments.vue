@@ -1,11 +1,12 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import commentSvg from '@/assets/vectors/Comment.svg?url' 
 import ArrowBackButton from '@/components/shared/ArrowBackButton.vue'
 import Button from '@/components/shared/Button.vue'
 import yellowStarSvg from '@/assets/vectors/YellowStar.svg?url'
 import Modal from '@/components/shared/Modal.vue'
+import Keyboard from '@/components/shared/Keyboard.vue'
 import { submitFeedback } from '@/api/feedbackService'
 import { useAuthStore } from '@/stores/auth'
 
@@ -19,6 +20,7 @@ const additionalComments = ref('')
 const isSubmitting = ref(false)
 
 const isModalVisible = ref(false)
+const showKeyboard = ref(false)
 
 const closeModal = () => {
   isModalVisible.value = false
@@ -39,11 +41,11 @@ onMounted(() => {
 
 const ratingTextColor = computed(() => {
     switch (starCount.value) {
-        case 1: return '#CF1331'
-        case 2: return '#D36F28'
-        case 3: return '#FFCE0A'
-        case 4: return '#97B13B'
-        case 5: return '#21C05C'
+        case 1: return '#E74C3C'
+        case 2: return '#F16C14'
+        case 3: return '#E69500'
+        case 4: return '#13B3A1'
+        case 5: return '#2C67E7'
         default: return '#003a6b'
     }
 })
@@ -73,6 +75,7 @@ const handleSubmit = async () => {
 
     await submitFeedback(payload)
     
+    showKeyboard.value = false // Hide keyboard if it's open
     isModalVisible.value = true
   } catch (error) {
     console.error('Failed to submit feedback:', error)
@@ -81,11 +84,37 @@ const handleSubmit = async () => {
     isSubmitting.value = false
   }
 }
+
+// --- Keyboard Logic ---
+const focusInput = () => {
+  showKeyboard.value = true
+  nextTick(() => {
+    const el = document.getElementById('comments-textarea')
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  })
+}
+
+const handleKeyboardKeyPress = (char) => {
+  additionalComments.value += char
+}
+
+const handleKeyboardDelete = () => {
+  additionalComments.value = additionalComments.value.slice(0, -1)
+}
+
+const handleKeyboardEnter = () => {
+  showKeyboard.value = false
+}
+
+const handleKeyboardHide = () => {
+  showKeyboard.value = false
+}
 </script>
 
 <template>
-  <div class="flex flex-col w-full h-full">
-    <!-- Header -->
+  <div class="flex flex-col w-full h-full" :class="{ 'content-with-keyboard': showKeyboard }">
     <div class="flex items-center mb-6 gap-7 flex-shrink-0">
       <ArrowBackButton @click="goBackToRating"/>
       <div>
@@ -94,9 +123,7 @@ const handleSubmit = async () => {
       </div>
     </div>
 
-    <!-- Main -->
-    <div class="flex-1">
-      <!-- Rating display -->
+    <div class="flex-1 overflow-y-auto">
       <div class="flex flex-wrap items-center justify-center w-full mb-[23px] text-xl">
         <h2 class="font-bold mr-[5px] whitespace-nowrap">
           Your Rating:
@@ -118,7 +145,6 @@ const handleSubmit = async () => {
         </h2>
       </div>
 
-      <!-- Additional comments title -->
       <div class="flex items-center w-full mb-2">
         <img
           :src="commentSvg"
@@ -130,9 +156,10 @@ const handleSubmit = async () => {
         </h3>
       </div>
 
-      <!-- Textarea -->
       <textarea
+        id="comments-textarea"
         v-model="additionalComments"
+        @focus="focusInput"
         class="w-full h-[200px] p-[15px]
               bg-white text-[13px] text-[#003a6b]
               border-2 border-[#003a6b] rounded-[10px]
@@ -143,7 +170,6 @@ const handleSubmit = async () => {
       ></textarea>
     </div>
 
-    <!-- Buttons -->
     <div class="flex gap-6 mt-6 justify-between items-center bottom-0 flex-shrink-0">
       <Button
         variant="outline"
@@ -161,20 +187,68 @@ const handleSubmit = async () => {
       </Button>
     </div>
 
-    <!-- Modals -->
-    <div
-      v-if="isModalVisible"
-      class="fixed inset-0 z-[1000]
-            flex items-center justify-center
-            bg-black/40"
-    >
-      <Modal
-        title="Feedback Submitted!"
-        message="Thank you for taking the time to share your thoughts with us."
-        :showSecondaryButton="false"
-        primaryButtonText="Done"
-        @primary-click="closeModal"
+    <Transition name="slide-up">
+      <Keyboard
+        v-if="showKeyboard"
+        @key-press="handleKeyboardKeyPress"
+        @delete="handleKeyboardDelete"
+        @enter="handleKeyboardEnter"
+        @hide-keyboard="handleKeyboardHide"
+        active-input-type="text"
+        class="fixed bottom-0 w-full z-40"
       />
-    </div>
+    </Transition>
+
+    <Transition name="fade-blur">
+      <div
+        v-if="isModalVisible"
+        class="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 p-8 modal-backdrop"
+      >
+        <Modal
+          title="Feedback Submitted!"
+          message="Thank you for taking the time to share your thoughts with us."
+          :showSecondaryButton="false"
+          primaryButtonText="Done"
+          @primary-click="closeModal"
+        />
+      </div>
+    </Transition>
   </div>
 </template>
+
+<style scoped>
+.content-with-keyboard {
+  padding-bottom: 210px;
+  transition: padding-bottom 0.3s ease-out;
+}
+
+.slide-up-enter-active,
+.slide-up-leave-active {
+  transition: transform 0.3s ease-out;
+}
+
+.slide-up-enter-from,
+.slide-up-leave-to {
+  transform: translateY(100%);
+}
+
+.modal-backdrop {
+  backdrop-filter: blur(8px);
+}
+.fade-blur-enter-active,
+.fade-blur-leave-active {
+  transition:
+    opacity 0.5s ease,
+    backdrop-filter 0.5s ease;
+}
+.fade-blur-enter-from,
+.fade-blur-leave-to {
+  opacity: 0;
+  backdrop-filter: blur(0px);
+}
+.fade-blur-enter-to,
+.fade-blur-leave-from {
+  opacity: 1;
+  backdrop-filter: blur(8px);
+}
+</style>

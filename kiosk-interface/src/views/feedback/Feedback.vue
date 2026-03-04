@@ -9,12 +9,13 @@ import GeneralExperienceIcon from '@/assets/vectors/GeneralExperience.svg'
 
 const router = useRouter()
 
+// Added the specific background colors from KioskHome to each category
 const categories = [
-  { name: 'Service Quality', label: 'Service<br>Quality', icon: ServiceQualityIcon },
-  { name: 'Interface Design', label: 'Interface<br>Design', icon: InterfaceDesignIcon },
-  { name: 'System Speed', label: 'System<br>Speed', icon: SystemSpeedIcon },
-  { name: 'Accessibility', label: 'Accessibility', icon: AccessibilityIcon },
-  { name: 'General Experience', label: 'General<br>Experience', icon: GeneralExperienceIcon },
+  { name: 'Service Quality', label: 'Service<br>Quality', icon: ServiceQualityIcon, color: 'bg-[#E74C3C]' },
+  { name: 'Interface Design', label: 'Interface<br>Design', icon: InterfaceDesignIcon, color: 'bg-[#F16C14]' },
+  { name: 'System Speed', label: 'System<br>Speed', icon: SystemSpeedIcon, color: 'bg-[#E69500]' },
+  { name: 'Accessibility', label: 'Accessibility', icon: AccessibilityIcon, color: 'bg-[#13B3A1]' },
+  { name: 'General Experience', label: 'General<br>Experience', icon: GeneralExperienceIcon, color: 'bg-[#2C67E7]' },
 ]
 
 const goToRating = (category) => {
@@ -27,34 +28,42 @@ const goBack = () => {
 </script>
 
 <template>
-  <div class="flex flex-col w-full h-full">
-    <!-- Header -->
-    <div class="flex items-center mb-6 gap-7 flex-shrink-0">
+  <div class="flex flex-col items-center w-full h-full">
+    <div class="flex items-center w-full mb-6 gap-7 flex-shrink-0">
       <ArrowBackButton @click="goBack"/>
-      <div>
+      <div class="flex flex-col text-left">
         <h1 class="text-[45px] text-[#03335C] font-bold tracking-tight -mt-2">Your Feedback Matters</h1>
         <p class="text-[#03335C] -mt-2">Select the area you'd like to share your thoughts on</p>
       </div>
     </div>
 
-    <!-- Q1 -->
-    <div class="text-center mt-6 mb-9">
+    <div class="text-center mt-2 mb-6 w-full">
       <h2 class="text-[42px] text-[#03335C] font-bold leading-none">
         What would you like to rate?
       </h2>
     </div>
 
-    <!-- Feedback Categories -->
-    <div class="flex justify-center gap-5">
-      <div 
-        v-for="item in categories" 
-        :key="item.name"
-        @click="goToRating(item.name)"
-        class="flex flex-col items-center justify-center flex-1 aspect-[4/5] rounded-[25px] cursor-pointer transition-all active:scale-95 shadow-[4px_4px_8px_rgba(0,0,0,0.25),inset_2px_2px_4px_rgba(255,255,255,0.6),inset_-2px_-2px_6px_rgba(0,0,0,0.15)]"
-        style="background: linear-gradient(to bottom, #2B6194, #1E466B);"
-      >
-        <img :src="item.icon" :alt="item.name" class="w-1/2 mb-6 brightness-0 invert" />
-        <p class="text-white text-[18px] font-bold text-center leading-tight px-4" v-html="item.label"></p>
+    <div class="flex flex-col items-center w-full flex-1">
+      <div class="mt-[22px] flex w-full flex-wrap justify-between gap-3">
+        <div 
+          v-for="item in categories" 
+          :key="item.name"
+          @click="goToRating(item.name)"
+          :class="[
+            'flex h-[220px] min-w-[160px] flex-1 cursor-pointer flex-col items-center justify-center rounded-[15px] p-[10px] text-center shadow-[4px_4px_8px_rgba(0,0,0,0.25),inset_2px_2px_4px_rgba(255,255,255,0.6),inset_-2px_-2px_6px_rgba(0,0,0,0.15)] transition-all duration-150 active:scale-[0.97]',
+            item.color
+          ]"
+        >
+          <img 
+            :src="item.icon" 
+            :alt="item.name" 
+            class="mb-[5px] h-[105px] w-[105px] brightness-0 invert" 
+          />
+          <p 
+            class="m-0 flex h-[40px] items-center justify-center text-[17px] font-bold leading-[20px] text-white" 
+            v-html="item.label"
+          ></p>
+        </div>
       </div>
     </div>
   </div>

@@ -1,12 +1,10 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
-import { SpeakerWaveIcon, SpeakerXMarkIcon } from '@heroicons/vue/24/solid'
 import logoPath from '@/assets/images/Pob1Logo.svg'
 import ArrowBackButton from '@/components/shared/ArrowBackButton.vue'
 import { getActiveAnnouncements } from '@/api/announcementService'
 
-const isMuted = ref(false)
 const router = useRouter()
 
 const announcements = ref([])
@@ -15,7 +13,6 @@ const error = ref(null)
 
 const currentLang = ref('FIL')
 
-const toggleMute = () => (isMuted.value = !isMuted.value)
 const toggleLang = () =>
   (currentLang.value = currentLang.value === 'FIL' ? 'ENG' : 'FIL')
 const goBack = () => router.push('/home')
@@ -128,7 +125,6 @@ const setSlide = (index) => {
 <template>
   <div class="announcement-page w-full min-h-screen px-10 py-6 flex flex-col">
 
-    <!-- HEADER -->
     <header class="flex items-center justify-between mb-6">
       <div class="flex items-center gap-4 text-[#013C6D]">
         <img :src="logoPath" class="w-[70px] h-[70px]" />
@@ -139,23 +135,11 @@ const setSlide = (index) => {
       </div>
 
       <div class="flex items-center gap-5">
-        <button
-          @click="toggleMute"
-          class="bg-[#49759B] text-white rounded-full p-2.5 shadow-lg"
-        >
-          <component
-            :is="isMuted ? SpeakerXMarkIcon : SpeakerWaveIcon"
-            class="h-7 w-7"
-          />
-        </button>
-
-        <!-- TOGGLE: sliding pill -->
         <div
           @click="toggleLang"
           class="w-36 h-12 bg-[#49759B] rounded-2xl flex cursor-pointer p-1"
           style="position: relative;"
         >
-          <!-- Sliding white pill -->
           <div
             class="rounded-xl bg-white"
             style="
@@ -170,7 +154,6 @@ const setSlide = (index) => {
             }"
           ></div>
 
-          <!-- Labels -->
           <div
             class="flex-1 flex items-center justify-center font-bold rounded-xl"
             style="position: relative; z-index: 1; transition: color 0.3s ease;"
@@ -189,10 +172,8 @@ const setSlide = (index) => {
       </div>
     </header>
 
-    <!-- MAIN -->
     <main class="flex flex-col flex-1">
 
-      <!-- BACK BUTTON + TITLE -->
       <div class="flex items-center justify-between mb-6">
         <ArrowBackButton @click="goBack" />
 
@@ -209,18 +190,20 @@ const setSlide = (index) => {
         </div>
       </div>
 
-      <!-- LOADING STATE -->
       <div
         v-if="loading"
         class="flex-1 flex items-center justify-center"
       >
-        <div class="text-center">
-          <div class="inline-block h-14 w-14 animate-spin rounded-full border-4 border-solid border-[#03335C] border-r-transparent"></div>
-          <p class="text-[#03335C] text-lg mt-4 font-semibold">Loading announcements...</p>
+        <div class="text-center flex flex-col items-center">
+          <div class="loader-dots mb-4">
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+          </div>
+          <p class="text-[#03335C] text-lg font-semibold">Loading announcements...</p>
         </div>
       </div>
 
-      <!-- ERROR STATE -->
       <div
         v-else-if="error"
         class="flex-1 flex items-center justify-center"
@@ -235,7 +218,6 @@ const setSlide = (index) => {
         </div>
       </div>
 
-      <!-- NO ANNOUNCEMENTS -->
       <div
         v-else-if="announcements.length === 0"
         class="flex-1 flex items-center justify-center"
@@ -246,11 +228,9 @@ const setSlide = (index) => {
         </div>
       </div>
 
-      <!-- CAROUSEL -->
       <template v-else>
         <div class="flex flex-1 items-center justify-center gap-4">
 
-          <!-- LEFT ARROW -->
           <button
             v-if="announcements.length > 1"
             @click.stop.prevent="prevSlide"
@@ -261,7 +241,6 @@ const setSlide = (index) => {
             </svg>
           </button>
 
-          <!-- VIEWPORT -->
           <div
             class="flex-1 overflow-hidden"
             style="
@@ -293,7 +272,6 @@ const setSlide = (index) => {
                     position: 'relative'
                   }"
                 >
-                  <!-- Dark overlay + content -->
                   <div
                     class="h-full w-full flex flex-col items-center justify-center text-center px-10"
                     style="background: rgba(3, 51, 92, 0.75);"
@@ -312,7 +290,6 @@ const setSlide = (index) => {
             </div>
           </div>
 
-          <!-- RIGHT ARROW -->
           <button
             v-if="announcements.length > 1"
             @click.stop.prevent="nextSlide"
@@ -325,7 +302,6 @@ const setSlide = (index) => {
 
         </div>
 
-        <!-- DOTS -->
         <div class="flex justify-center gap-2 mt-6">
           <button
             v-for="(item, index) in announcements"
@@ -346,5 +322,41 @@ const setSlide = (index) => {
 <style scoped>
 .announcement-page {
   background: radial-gradient(circle at top left, #3291E3 0%, #ffffff 44%);
+}
+
+/* Loader Dots CSS */
+.loader-dots {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  width: 60px; 
+  height: 15px; 
+}
+
+.dot {
+  width: 12px; 
+  height: 12px;
+  background-color: #03335C; 
+  border-radius: 50%;
+  animation: pulse 1.4s infinite ease-in-out both;
+}
+
+.dot:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.dot:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+@keyframes pulse {
+  0%, 80%, 100% { 
+    transform: scale(0); 
+    opacity: 0.3; 
+  }
+  40% { 
+    transform: scale(1); 
+    opacity: 1;
+  }
 }
 </style>

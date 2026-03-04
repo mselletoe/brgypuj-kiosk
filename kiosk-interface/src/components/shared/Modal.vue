@@ -29,8 +29,7 @@ const handleSecondaryClick = () => {
 <template>
   <div class="flex flex-col items-center justify-center h-full">
     <div
-      class="bg-white shadow-lg rounded-2xl p-10 text-center w-[75%] min-w-[620px] max-w-[720px]
-              border-[#C1C1C1] border-[2px]"
+      class="bg-white shadow-lg rounded-2xl p-10 text-center w-[75%] min-w-[620px] max-w-[720px]"
     >
       <div class="flex justify-center mb-6">
         <div class="w-[80px] h-[80px] rounded-full bg-[#E4F5FC] flex items-center justify-center">

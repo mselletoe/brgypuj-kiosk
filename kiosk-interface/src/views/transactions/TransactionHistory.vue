@@ -18,11 +18,11 @@ const error = ref(null)
  * Maps the backend response shape to the props TransactionHistoryCard expects.
  *
  * Backend sends:
- *   { id, transaction_type, transaction_name, transaction_no,
- *     rfid_uid, status, created_at }
+ * { id, transaction_type, transaction_name, transaction_no,
+ * rfid_uid, status, created_at }
  *
  * Card expects:
- *   { id, type, title, reference, rfidNo, createdAt, status }
+ * { id, type, title, reference, rfidNo, createdAt, status }
  */
 function mapTransaction(entry) {
   return {
@@ -77,25 +77,25 @@ onMounted(fetchHistory)
       </div>
     </div>
 
-    <!-- WHITE CONTAINER -->
     <div class="flex flex-col w-full bg-white p-8 shadow-lg rounded-2xl border border-gray-200 overflow-y-auto mb-3">
 
-      <!-- Loading state -->
-      <div v-if="isLoading" class="flex justify-center items-center py-16">
-        <p class="text-[#03335C] text-base font-medium">Loading transactions…</p>
+      <div v-if="isLoading" class="flex flex-col justify-center items-center py-20">
+        <div class="loader-dots mb-4">
+          <div class="dot"></div>
+          <div class="dot"></div>
+          <div class="dot"></div>
+        </div>
+        <p class="text-[#03335C] text-lg font-semibold">Loading transactions...</p>
       </div>
 
-      <!-- Error state -->
       <div v-else-if="error" class="flex justify-center items-center py-16">
         <p class="text-red-500 text-base font-medium">{{ error }}</p>
       </div>
 
-      <!-- Empty state -->
       <div v-else-if="transactions.length === 0" class="flex justify-center items-center py-16">
         <p class="text-gray-400 text-base font-medium">No transactions found.</p>
       </div>
 
-      <!-- Transaction list -->
       <div v-else class="flex flex-col gap-4 w-full">
         <TransactionCard
           v-for="item in transactions"
@@ -112,3 +112,41 @@ onMounted(fetchHistory)
     </div>
   </div>
 </template>
+
+<style scoped>
+/* Loader Dots CSS */
+.loader-dots {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  width: 60px; 
+  height: 15px; 
+}
+
+.dot {
+  width: 12px; 
+  height: 12px;
+  background-color: #03335C; 
+  border-radius: 50%;
+  animation: pulse 1.4s infinite ease-in-out both;
+}
+
+.dot:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.dot:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+@keyframes pulse {
+  0%, 80%, 100% { 
+    transform: scale(0); 
+    opacity: 0.3; 
+  }
+  40% { 
+    transform: scale(1); 
+    opacity: 1;
+  }
+}
+</style>
