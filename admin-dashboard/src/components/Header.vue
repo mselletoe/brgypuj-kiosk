@@ -1,5 +1,5 @@
 <script setup>
-import { ref, h, computed } from "vue";
+import { ref, h, computed, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { NDropdown } from "naive-ui";
 import {
@@ -12,23 +12,63 @@ import {
 } from "@heroicons/vue/24/solid";
 import { useAdminAuthStore } from "@/stores/auth";
 import GlobalSearch from "@/components/global-search/index.vue";
+import { getAdminProfile, getAdminPhotoUrl } from "@/api/adminService";
 
-const router = useRouter();
+const router    = useRouter();
 const adminAuth = useAdminAuthStore();
 
-// State Management
+// ----------------------------------------------------------------
+// Admin profile
+// ----------------------------------------------------------------
+const adminName     = ref('')
+const adminPosition = ref('')
+const photoUrl      = ref(null)
+let   photoBlobUrl  = null
+
+onMounted(async () => {
+  try {
+    const data = await getAdminProfile()
+
+    const { first_name, middle_name, last_name, suffix } = data.resident
+    adminName.value     = [first_name, middle_name, last_name, suffix].filter(Boolean).join(' ')
+    adminPosition.value = data.position || data.system_role || 'Administrator'
+
+    if (data.has_photo) {
+      photoBlobUrl   = await getAdminPhotoUrl()
+      photoUrl.value = photoBlobUrl
+    }
+  } catch {
+    // fallback to store values if profile fetch fails
+    adminName.value     = adminAuth.admin?.username || 'Admin'
+    adminPosition.value = 'Administrator'
+  }
+})
+
+onUnmounted(() => {
+  if (photoBlobUrl) URL.revokeObjectURL(photoBlobUrl)
+})
+
+// First initial for the fallback avatar
+const initial = computed(() => adminName.value?.charAt(0)?.toUpperCase() || '?')
+
+// ----------------------------------------------------------------
+// Notifications
+// ----------------------------------------------------------------
 const showNotifications = ref(false);
 
-// Notifications Mock
 const recentNotifications = ref([
   { id: 1, title: "New Document Request", time: "5 minutes ago", unread: true },
-  { id: 2, title: "Payment Completed", time: "1 hour ago", unread: true },
-  { id: 3, title: "Equipment Overdue", time: "2 hours ago", unread: true },
+  { id: 2, title: "Payment Completed",    time: "1 hour ago",    unread: true },
+  { id: 3, title: "Equipment Overdue",    time: "2 hours ago",   unread: true },
 ]);
 
 const unreadCount = computed(
   () => recentNotifications.value.filter((n) => n.unread).length,
 );
+
+// ----------------------------------------------------------------
+// Dropdown
+// ----------------------------------------------------------------
 const renderIcon = (icon) => () => h(icon, { class: "h-5 w-5" });
 
 const dropdownOptions = [
@@ -52,9 +92,6 @@ const handleSelect = (key) => {
     router.replace("/auth");
   }
 };
-
-const username = computed(() => adminAuth.admin?.username || "Admin");
-const role = computed(() => adminAuth.admin?.role || "Administrator");
 </script>
 
 <template>
@@ -62,22 +99,21 @@ const role = computed(() => adminAuth.admin?.role || "Administrator");
     <div class="flex-1"></div>
 
     <div class="flex items-center gap-1.5">
-      <!-- 🔍 Global Search -->
+      <!-- Global Search -->
       <div class="relative group inline-block">
         <GlobalSearch />
-
         <div
           class="absolute -bottom-6 left-1/2 -translate-x-1/2
-                opacity-0 invisible
-                group-hover:opacity-100 group-hover:visible
-                transition-all duration-300 ease-in-out
-                bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded
-                whitespace-nowrap shadow-md z-50"
+                 opacity-0 invisible group-hover:opacity-100 group-hover:visible
+                 transition-all duration-300 ease-in-out
+                 bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded
+                 whitespace-nowrap shadow-md z-50"
         >
           Search
         </div>
       </div>
-      
+
+      <!-- Help -->
       <div class="relative group inline-block">
         <button
           @click="router.push('/help-and-support')"
@@ -86,14 +122,15 @@ const role = computed(() => adminAuth.admin?.role || "Administrator");
           <QuestionMarkCircleIcon class="h-6 w-6" />
         </button>
         <div class="absolute -bottom-6 left-1/2 -translate-x-1/2
-                      opacity-0 invisible group-hover:opacity-100 group-hover:visible
-                      transition-all duration-300 ease-in-out
-                      bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded
-                      whitespace-nowrap shadow-md z-50">
-            Help and Support
+                    opacity-0 invisible group-hover:opacity-100 group-hover:visible
+                    transition-all duration-300 ease-in-out
+                    bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded
+                    whitespace-nowrap shadow-md z-50">
+          Help and Support
         </div>
       </div>
 
+      <!-- SMS Announcements -->
       <div class="relative group inline-block">
         <button
           @click="router.push('/sms-announcements')"
@@ -102,14 +139,15 @@ const role = computed(() => adminAuth.admin?.role || "Administrator");
           <ChatBubbleLeftRightIcon class="h-6 w-6" />
         </button>
         <div class="absolute -bottom-6 left-1/2 -translate-x-1/2
-                      opacity-0 invisible group-hover:opacity-100 group-hover:visible
-                      transition-all duration-300 ease-in-out
-                      bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded
-                      whitespace-nowrap shadow-md z-50">
-            SMS Announcements
+                    opacity-0 invisible group-hover:opacity-100 group-hover:visible
+                    transition-all duration-300 ease-in-out
+                    bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded
+                    whitespace-nowrap shadow-md z-50">
+          SMS Announcements
         </div>
       </div>
 
+      <!-- Notifications -->
       <div class="relative">
         <div
           v-if="showNotifications"
@@ -143,13 +181,9 @@ const role = computed(() => adminAuth.admin?.role || "Administrator");
           v-if="showNotifications"
           class="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-50"
         >
-          <div
-            class="px-5 py-4 border-b border-gray-50 font-bold text-gray-800 flex justify-between items-center"
-          >
+          <div class="px-5 py-4 border-b border-gray-50 font-bold text-gray-800 flex justify-between items-center">
             <span>Notifications</span>
-            <span
-              class="text-xs font-semibold text-blue-600 cursor-pointer hover:underline"
-            >
+            <span class="text-xs font-semibold text-blue-600 cursor-pointer hover:underline">
               Mark all read
             </span>
           </div>
@@ -160,15 +194,10 @@ const role = computed(() => adminAuth.admin?.role || "Administrator");
               class="px-5 py-3.5 border-b border-gray-50 hover:bg-gray-50 cursor-pointer flex justify-between items-center transition-colors"
             >
               <div class="flex flex-col pr-4">
-                <span class="text-sm leading-tight font-bold text-gray-900">{{
-                  notif.title
-                }}</span>
+                <span class="text-sm leading-tight font-bold text-gray-900">{{ notif.title }}</span>
                 <span class="text-xs text-gray-400 mt-1">{{ notif.time }}</span>
               </div>
-              <div
-                v-if="notif.unread"
-                class="w-2.5 h-2.5 rounded-full bg-blue-600"
-              ></div>
+              <div v-if="notif.unread" class="w-2.5 h-2.5 rounded-full bg-blue-600"></div>
             </div>
           </div>
           <div
@@ -180,6 +209,7 @@ const role = computed(() => adminAuth.admin?.role || "Administrator");
         </div>
       </div>
 
+      <!-- System Settings -->
       <div class="relative group inline-block">
         <button
           @click="router.push('/system-settings')"
@@ -187,14 +217,12 @@ const role = computed(() => adminAuth.admin?.role || "Administrator");
         >
           <Cog6ToothIcon class="h-6 w-6" />
         </button>
-
         <div
           class="absolute -bottom-6 left-1/2 -translate-x-1/2
-                opacity-0 invisible
-                group-hover:opacity-100 group-hover:visible
-                transition-all duration-300 ease-in-out
-                bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded
-                whitespace-nowrap shadow-md z-50"
+                 opacity-0 invisible group-hover:opacity-100 group-hover:visible
+                 transition-all duration-300 ease-in-out
+                 bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded
+                 whitespace-nowrap shadow-md z-50"
         >
           System Settings
         </div>
@@ -202,6 +230,7 @@ const role = computed(() => adminAuth.admin?.role || "Administrator");
 
       <div class="w-px h-8 bg-gray-200 mx-2"></div>
 
+      <!-- Admin Avatar + Dropdown -->
       <n-dropdown
         trigger="click"
         :options="dropdownOptions"
@@ -211,23 +240,28 @@ const role = computed(() => adminAuth.admin?.role || "Administrator");
         <button
           class="pl-2 pr-4 py-1.5 rounded-xl hover:bg-white border border-transparent hover:border-gray-200 hover:shadow-sm transition-all flex gap-3 items-center group"
         >
+          <!-- Photo or initial fallback -->
           <div
-            class="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center overflow-hidden border border-blue-200 group-hover:border-blue-300 transition-colors"
+            class="w-9 h-9 rounded-full flex items-center justify-center overflow-hidden border border-blue-200 group-hover:border-blue-300 transition-colors"
+            :class="photoUrl ? '' : 'bg-indigo-100'"
           >
             <img
-              src="https://api.dicebear.com/7.x/adventurer/svg?seed=Jett"
-              alt="Avatar"
+              v-if="photoUrl"
+              :src="photoUrl"
+              alt="Admin Avatar"
               class="w-full h-full object-cover"
             />
-          </div>
-          <div class="flex flex-col text-left">
-            <span class="text-sm font-bold text-gray-800 leading-none">{{
-              username
-            }}</span>
             <span
-              class="text-[11px] font-semibold text-gray-500 mt-0.5 leading-none"
-              >{{ role }}</span
+              v-else
+              class="text-indigo-600 font-bold text-sm"
             >
+              {{ initial }}
+            </span>
+          </div>
+
+          <div class="flex flex-col text-left">
+            <span class="text-sm font-bold text-gray-800 leading-none">{{ adminName }}</span>
+            <span class="text-[11px] font-semibold text-gray-500 mt-0.5 leading-none">{{ adminPosition }}</span>
           </div>
         </button>
       </n-dropdown>
