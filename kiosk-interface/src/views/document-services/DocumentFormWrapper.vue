@@ -290,7 +290,7 @@ onMounted(async () => {
                 <div class="dot"></div>
                 <div class="dot"></div>
               </div>
-              <p class="text-[#03335C] font-semibold">Loading details...</p>
+              <p class="text-gray-600 font-semibold">Loading details...</p>
             </div>
 
             <DocumentForm
@@ -467,6 +467,7 @@ onMounted(async () => {
         <Modal
           title="Application Submitted!"
           :message="`Pay the fee at the counter and be informed of further details. Please take note of the Request ID number below for reference.`"
+          type="success"
           :referenceId="transactionNo"
           :showReferenceId="true"
           primaryButtonText="Done"
@@ -486,6 +487,7 @@ onMounted(async () => {
         <Modal
           title="Request Cannot Be Processed"
           :message="errorMessage"
+          type="error"
           primaryButtonText="OK"
           :showPrimaryButton="true"
           :showSecondaryButton="false"
