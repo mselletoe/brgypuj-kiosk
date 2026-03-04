@@ -70,6 +70,25 @@ export const applyForID = async (payload) => {
 // =========================================================
 
 /**
+ * Step 1 verification — confirm the resident's current PIN before allowing
+ * them to set a new one.  Read-only: does NOT change anything.
+ *
+ * @param {Object} payload
+ * @param {number} payload.resident_id
+ * @param {string} payload.pin - The current PIN to verify
+ * @returns {Promise<{ verified: boolean }>}
+ */
+export const verifyPin = async (payload) => {
+  try {
+    const response = await api.post('/kiosk/id-services/verify-pin', payload)
+    return response.data
+  } catch (err) {
+    console.error('Failed to verify PIN:', err)
+    throw err
+  }
+}
+
+/**
  * Change the resident's 4-digit security PIN.
  * Only available to residents logged in via RFID.
  *

@@ -280,6 +280,38 @@ def change_pin(db: Session, resident_id: int, current_pin: str, new_pin: str) ->
 
 
 # =========================================================
+# 4b. VERIFY PIN  (step 1 of Change Passcode — no mutation)
+# =========================================================
+
+def verify_pin(db: Session, resident_id: int, pin: str) -> dict:
+    """
+    Checks that the supplied PIN matches the resident's stored bcrypt hash
+    WITHOUT changing anything.  Used by the Change Passcode flow to gate
+    step 1 before the user is allowed to set a new PIN.
+
+    Raises:
+        404  — resident not found
+        400  — no PIN configured yet
+        401  — PIN mismatch
+    """
+    resident = _get_resident_or_404(db, resident_id)
+
+    if resident.rfid_pin in (None, RFID_PIN_DEFAULT):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No PIN configured yet. Please set your PIN first."
+        )
+
+    if not pwd_context.verify(pin, resident.rfid_pin):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Current PIN is incorrect."
+        )
+
+    return {"verified": True}
+
+
+# =========================================================
 # 5. REPORT LOST CARD
 # =========================================================
 

@@ -27,6 +27,8 @@ from app.schemas.id import (
     IDApplicationResponse,
     ChangePinRequest,
     ChangePinResponse,
+    VerifyPinRequest,
+    VerifyPinResponse,
     ReportLostCardVerifyResponse,
     ReportLostCardRequest,
     ReportLostCardResponse,
@@ -36,6 +38,7 @@ from app.services.id_service import (
     verify_resident_birthdate,
     apply_for_id,
     change_pin,
+    verify_pin,
     get_rfid_report_card_info,
     report_lost_card,
 )
@@ -111,6 +114,20 @@ def apply(payload: IDApplicationRequest, db: Session = Depends(get_db)):
 # =========================================================
 # CHANGE PASSCODE / PIN  (authenticated sessions only)
 # =========================================================
+
+@router.post(
+    "/verify-pin",
+    response_model=VerifyPinResponse,
+    summary="Verify current PIN without changing it",
+    description=(
+        "Step 1 of the Change Passcode flow. "
+        "Checks that the supplied PIN matches the resident's stored hash without mutating anything. "
+        "Returns verified=true on success, or 401 if the PIN is incorrect."
+    ),
+)
+def check_pin(payload: VerifyPinRequest, db: Session = Depends(get_db)):
+    return verify_pin(db, payload.resident_id, payload.pin)
+
 
 @router.post(
     "/change-pin",

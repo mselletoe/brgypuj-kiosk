@@ -179,3 +179,10 @@ class RFIDReportAdminOut(BaseModel):
     rfid_uid: Optional[str]     # The UID that was reported lost; "Guest Mode" if no session
     status: str
     reported_at: datetime
+
+class VerifyPinRequest(BaseModel):
+    resident_id: int
+    pin: str
+
+class VerifyPinResponse(BaseModel):
+    verified: bool

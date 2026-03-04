@@ -2,7 +2,7 @@
 import { ref, computed, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
-import { changePin } from "@/api/idService";
+import { changePin, verifyPin } from "@/api/idService";
 import ArrowBackButton from "@/components/shared/ArrowBackButton.vue";
 import Button from "@/components/shared/Button.vue";
 import Modal from "@/components/shared/Modal.vue";
@@ -71,13 +71,34 @@ const goBack = () => {
   }
 };
 
-const handleNext = () => {
+const handleNext = async () => {
   if (pinBuffer.value.length !== pinLength) return;
 
   if (step.value === 1) {
-    currentPin.value = pinBuffer.value;
-    step.value = 2;
-    pinBuffer.value = "";
+    isSubmitting.value = true;
+    try {
+      await verifyPin({
+        resident_id: authStore.residentId,
+        pin: pinBuffer.value,
+      });
+      // Verified — advance to step 2
+      currentPin.value = pinBuffer.value;
+      step.value = 2;
+      pinBuffer.value = "";
+      verificationError.value = "";
+    } catch (err) {
+      const status = err?.response?.status;
+      const detail = err?.response?.data?.detail || "Something went wrong. Please try again.";
+      isShaking.value = true;
+      verificationError.value =
+        status === 401 ? "Incorrect passcode. Please try again." : detail;
+      setTimeout(() => {
+        isShaking.value = false;
+        pinBuffer.value = "";
+      }, 500);
+    } finally {
+      isSubmitting.value = false;
+    }
   } else if (step.value === 2) {
     newPin.value = pinBuffer.value;
     step.value = 3;
