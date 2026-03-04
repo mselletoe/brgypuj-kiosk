@@ -29,8 +29,8 @@ onMounted(async () => {
   try {
     const data = await getAdminProfile()
 
-    const { first_name, middle_name, last_name, suffix } = data.resident
-    adminName.value     = [first_name, middle_name, last_name, suffix].filter(Boolean).join(' ')
+    const { first_name } = data.resident
+    adminName.value     = [first_name].filter(Boolean).join(' ')
     adminPosition.value = data.position || data.system_role || 'Administrator'
 
     if (data.has_photo) {
