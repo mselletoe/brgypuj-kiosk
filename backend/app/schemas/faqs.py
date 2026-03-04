@@ -20,13 +20,15 @@ class FAQAdminOut(BaseModel):
     answer: str
     created_at: datetime
 
-    class Config:
-        orm_mode = True
+    model_config = {
+        "from_attributes": True
+    }
 
 # Kiosk output schema (similar to AdminOut but only needed fields)
 class FAQKioskOut(BaseModel):
     question: str
     answer: str
 
-    class Config:
-        orm_mode = True
+    model_config = {
+        "from_attributes": True
+    }

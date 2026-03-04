@@ -1,9 +1,10 @@
 <script setup>
 /**
  * @file ScanRFID.vue
- * @description Handles the hardware interface for RFID scanning.
- * Captures keyboard-emulated input from hardware scanners, validates the UID 
- * against the backend, and manages the routing flow based on the resident's security status (PIN).
+ * @description Handles hardware RFID scanning with two distinct flows:
+ *
+ * EXISTING CARD  → normal resident auth → /auth-pin (PIN verify / setup)
+ * NEW CARD       → admin passcode gate  → /auth-pin (admin mode) → /register
  */
 
 import { ref, onMounted, onUnmounted, nextTick } from 'vue'
@@ -11,25 +12,19 @@ import { useRouter } from 'vue-router'
 import { ArrowLeftIcon, SignalIcon } from '@heroicons/vue/24/solid'
 import Button from '@/components/shared/Button.vue'
 import { useAuthStore } from '@/stores/auth'
-import api from '@/api/http'
+import { useRfidRegistrationStore } from '@/stores/registration'
+import { loginByRfid } from '@/api/authService'
+import { checkRfidStatus } from '@/api/registrationService'
 
-// --- Component State & Composables ---
 const router = useRouter()
 const authStore = useAuthStore()
+const rfidRegStore = useRfidRegistrationStore()
 
-/** @type {import('vue').Ref<string>} Reactive binding for the hidden input field */
 const scannedUID = ref('')
-
-/** @type {import('vue').Ref<boolean>} UI state toggle for processing feedback */
 const isProcessing = ref(false)
-
-/** @type {import('vue').Ref<HTMLInputElement|null>} Template ref for the auto-focus input */
 const hiddenInput = ref(null)
 
-/** @type {string} Buffer to accumulate individual keystrokes from the scanner */
 let inputBuffer = ''
-
-/** @type {ReturnType<typeof setTimeout> | null} Timer to clear the buffer on slow/manual input */
 let timeout = null
 
 // ============================================================
@@ -38,12 +33,8 @@ let timeout = null
 const isDevMode = import.meta.env.VITE_ENABLE_DEV_LOGIN === 'true'
 const manualUID = ref('')
 
-// --- Logic & Handlers ---
+// --- Helpers ---
 
-/**
- * Resets the scanner state, buffer, and input field.
- * Prepared for subsequent scans or error recovery.
- */
 const resetScanner = () => {
   isProcessing.value = false
   inputBuffer = ''
@@ -53,65 +44,61 @@ const resetScanner = () => {
 }
 
 /**
- * Communicates with the backend to authenticate the scanned RFID UID.
- * @param {string} uid - The unique identifier captured from the RFID card.
- * @returns {Promise<void>}
- * @flow 
- * 1. Request resident data from backend using only the RFID UID.
- * 2. Always route to the PIN screen — AuthPIN.vue handles both:
- *    - 'has_pin: false' → PIN setup flow (first-time / default '0000')
- *    - 'has_pin: true'  → PIN verification flow (returning resident)
+ * Main handler called after a full UID is captured from the scanner.
+ *
+ * Step 1: Check if the UID is new or already registered.
+ * Step 2a (known card):  proceed to normal resident PIN auth.
+ * Step 2b (new card):    store the UID, activate admin mode, go to /auth-pin.
  */
 const authenticateRFID = async (uid) => {
   try {
     isProcessing.value = true
 
-    const res = await api.post('kiosk/auth/rfid', { rfid_uid: uid })
-    const data = res.data
+    // Step 1 — is this card new?
+    const { is_new } = await checkRfidStatus(uid)
 
-    // Always store temporary data and route to PIN screen.
-    // PIN is mandatory — there is no bypass to home from here.
+    if (is_new) {
+      // Step 2b — new card: set store state FIRST, then navigate
+      rfidRegStore.setPendingRfidUid(uid)  // sets pendingRfidUid + isAdminMode = true
+      await nextTick()                     // wait for Pinia state to flush before route change
+      router.push('/auth-pin')
+      return
+    }
+
+    // Step 2a — known card: normal resident auth
+    const data = await loginByRfid(uid)
+
     authStore.setTemporaryRFIDData({
       resident: {
         id: data.resident_id,
         first_name: data.first_name,
         middle_name: data.middle_name,
         last_name: data.last_name,
-        address: data.address
+        address: data.address,
       },
-      uid: uid,
-      has_pin: data.has_pin  // Passed to AuthPIN to determine setup vs verify mode
+      uid,
+      has_pin: data.has_pin,
     })
 
     router.push('/auth-pin')
 
   } catch (err) {
-    // Standard error handling for inactive/unrecognized tags
     alert('Invalid or inactive RFID card.')
     resetScanner()
   }
 }
 
-/**
- * Global Keyboard Event Listener.
- * Intercepts keyboard-emulated input from hardware scanners.
- * @param {KeyboardEvent} event - The raw keyboard event.
- */
 const handleRFIDInput = async (event) => {
   if (isProcessing.value) return
 
-  // Scanners typically append an 'Enter' key at the end of a UID string
   if (event.key === 'Enter') {
     const uid = inputBuffer.trim()
     if (uid) await authenticateRFID(uid)
     inputBuffer = ''
-  } 
-  // Accept alphanumeric characters only to prevent buffer pollution
-  else if (/^[0-9A-Za-z]$/.test(event.key)) {
+  } else if (/^[0-9A-Za-z]$/.test(event.key)) {
     inputBuffer += event.key
   }
-  // Clear buffer if scanning takes longer than 200ms 
-  // (Prevents manual typing and ensures input comes from a fast hardware scanner)
+
   clearTimeout(timeout)
   timeout = setTimeout(() => { inputBuffer = '' }, 200)
 }
@@ -124,24 +111,16 @@ const handleManualLogin = async () => {
   await authenticateRFID(manualUID.value.trim())
 }
 
-/**
- * Returns user to the primary login selection screen.
- */
-const goBack = () => {
-  router.replace('/login')
-}
+const goBack = () => router.replace('/login')
 
-// --- Lifecycle Hooks ---
-
+// --- Lifecycle ---
 onMounted(async () => {
-  // Ensure the hidden input is focused immediately for hardware capture
   await nextTick()
   hiddenInput.value?.focus()
   window.addEventListener('keydown', handleRFIDInput)
 })
 
 onUnmounted(() => {
-  // Cleanup listeners and timers to prevent memory leaks and unexpected behavior
   window.removeEventListener('keydown', handleRFIDInput)
   clearTimeout(timeout)
 })
@@ -171,9 +150,7 @@ onUnmounted(() => {
 
       <!-- ===== DEV MODE ===== -->
       <div v-if="isDevMode && !isProcessing" class="mt-6 w-80">
-        <p class="text-sm text-gray-400 text-center mb-2">
-          Dev Mode: Manual RFID Entry
-        </p>
+        <p class="text-sm text-gray-400 text-center mb-2">Dev Mode: Manual RFID Entry</p>
         <input
           v-model="manualUID"
           type="text"
@@ -187,7 +164,7 @@ onUnmounted(() => {
           Login
         </button>
       </div>
-      <!-- ===================== -->
+      <!-- ==================== -->
 
       <input
         ref="hiddenInput"
@@ -196,7 +173,7 @@ onUnmounted(() => {
         class="absolute opacity-0 pointer-events-none"
       />
 
-      <Button 
+      <Button
         @click="goBack"
         class="absolute bottom-8 left-8 w-auto px-3 text-[14px] rounded-[40px] h-[40px]"
         variant="outline"
@@ -206,6 +183,7 @@ onUnmounted(() => {
           Go Back
         </span>
       </Button>
+
     </div>
   </div>
 </template>

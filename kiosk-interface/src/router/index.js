@@ -80,7 +80,14 @@ const routes = [
       { path: "feedback", name: "Feedback", component: Feedback },
       { path: "rating", name: "Rating", component: Rating },
       { path: "comments", name: "Comments", component: Comments },
-      { path: "register", name: "Register", component: Register },
+      {
+        // Register is inside UserLayout so it gets the same shell,
+        // but meta.guestAllowed = true bypasses the requiresAuth guard.
+        path: "register",
+        name: "Register",
+        component: Register,
+        meta: { guestAllowed: true },
+      },
       {
         path: "component-showcase",
         name: "DevShowcase",
@@ -106,7 +113,10 @@ router.beforeEach((to, from, next) => {
   const authStore = useAuthStore();
   if (!authStore.isAuthenticated) authStore.restore();
 
-  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+  // guestAllowed routes (e.g. /register) use UserLayout but skip auth check
+  if (to.meta.guestAllowed) {
+    next();
+  } else if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     next("/login");
   } else if (
     (to.path === "/login" || to.path === "/login-rfid") &&
