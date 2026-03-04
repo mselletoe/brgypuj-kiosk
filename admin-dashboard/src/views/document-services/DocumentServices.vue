@@ -23,6 +23,7 @@ const message = useMessage()
 // State Management
 // ======================================
 const services = ref([])
+const isLoading = ref(true)
 const editingId = ref(null)
 const showAddForm = ref(false)
 const searchQuery = ref('')
@@ -43,6 +44,7 @@ const newService = ref({
 // Fetch Services
 // ======================================
 async function fetchServices() {
+  isLoading.value = true
   try {
     const { data } = await getDocumentTypes()
     services.value = data.map(d => ({
@@ -58,6 +60,8 @@ async function fetchServices() {
   } catch (error) {
     console.error(error)
     message.error('Failed to fetch document types.')
+  } finally {
+    isLoading.value = false
   }
 }
 
@@ -481,7 +485,7 @@ useRealtimeSync({
 </script>
 
 <template>
-  <div class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden">
+  <div class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden animate-fade-in">
     <div class="flex mb-6 items-center justify-between">
       <div>
         <PageTitle title="Document Services Management" />
@@ -556,83 +560,89 @@ useRealtimeSync({
       </div>
     </div>
 
-    <div
-      v-if="showAddForm"
-      class="bg-[#F0F5FF] p-6 mb-3 rounded-lg border border-[#0957FF] relative"
-    >
-      <button
-        @click="showAddForm = false"
-        class="absolute top-4 right-4 p-1 hover:bg-gray-200 rounded"
+    <div v-if="isLoading" class="flex-1 flex flex-col items-center justify-center gap-4">
+      <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+      <p class="text-gray-500 font-medium">Loading document services...</p>
+    </div>
+
+    <template v-else>
+      <div
+        v-if="showAddForm"
+        class="bg-[#F0F5FF] p-6 mb-3 rounded-lg border border-[#0957FF] relative"
       >
-        <XMarkIcon class="w-5 h-5 text-gray-600" />
-      </button>
-
-      <div class="grid grid-cols-2 gap-4">
-        <div>
-          <label class="block text-sm text-gray-600 mb-1">Document Name</label>
-          <n-input
-            v-model:value="newService.request_type_name"
-            placeholder="Enter name"
-          />
-        </div>
-        
-        <div>
-          <label class="block text-sm text-gray-600 mb-1">Description</label>
-          <n-input
-            v-model:value="newService.description"
-            placeholder="Enter description"
-          />
-        </div>
-
-        <div>
-          <label class="block text-sm text-gray-600 mb-1">Price (₱)</label>
-          <n-input 
-            v-model:value="newService.price" 
-            type="number" 
-            placeholder="0.00"
-            min="0"
-            step="0.01"
-          />
-        </div>
-
-        <div class="flex items-end">
-          <NCheckbox v-model:checked="newService.available">
-            Available for Residents
-          </NCheckbox>
-        </div>
-      </div>
-
-      <div class="flex justify-end gap-3 mt-6">
-        <n-button @click="showAddForm = false">Cancel</n-button>
-        <n-button 
-          type="primary" 
-          @click="addService"
+        <button
+          @click="showAddForm = false"
+          class="absolute top-4 right-4 p-1 hover:bg-gray-200 rounded"
         >
-          Add Document Type
-        </n-button>
+          <XMarkIcon class="w-5 h-5 text-gray-600" />
+        </button>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm text-gray-600 mb-1">Document Name</label>
+            <n-input
+              v-model:value="newService.request_type_name"
+              placeholder="Enter name"
+            />
+          </div>
+          
+          <div>
+            <label class="block text-sm text-gray-600 mb-1">Description</label>
+            <n-input
+              v-model:value="newService.description"
+              placeholder="Enter description"
+            />
+          </div>
+
+          <div>
+            <label class="block text-sm text-gray-600 mb-1">Price (₱)</label>
+            <n-input 
+              v-model:value="newService.price" 
+              type="number" 
+              placeholder="0.00"
+              min="0"
+              step="0.01"
+            />
+          </div>
+
+          <div class="flex items-end">
+            <NCheckbox v-model:checked="newService.available">
+              Available for Residents
+            </NCheckbox>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-3 mt-6">
+          <n-button @click="showAddForm = false">Cancel</n-button>
+          <n-button 
+            type="primary" 
+            @click="addService"
+          >
+            Add Document Type
+          </n-button>
+        </div>
       </div>
-    </div>
 
-    <div class="overflow-y-auto bg-white rounded-lg border border-gray-200">
-      <n-data-table :columns="columns" :data="filteredServices" :bordered="false" />
-    </div>
+      <div class="overflow-y-auto bg-white rounded-lg border border-gray-200 flex-1">
+        <n-data-table :columns="columns" :data="filteredServices" :bordered="false" />
+      </div>
 
-    <FieldEditor
-      :show="showFieldModal"
-      :fields-data="editingFields?.fields"
-      @close="showFieldModal = false"
-      @saved="saveFields"
-      :service-id="editingFields?.serviceId"
-    />
+      <FieldEditor
+        :show="showFieldModal"
+        :fields-data="editingFields?.fields"
+        @close="showFieldModal = false"
+        @saved="saveFields"
+        :service-id="editingFields?.serviceId"
+      />
 
-    <!-- Requirements Editor -->
-    <RequirementsEditor
-      :show="showReqModal"
-      :requirements-data="editingReqService?.requirements"
-      :service-id="editingReqService?.id"
-      @close="showReqModal = false"
-      @saved="saveRequirements"
-    />
+      <RequirementsEditor
+        :show="showReqModal"
+        :requirements-data="editingReqService?.requirements"
+        :service-id="editingReqService?.id"
+        @close="showReqModal = false"
+        @saved="saveRequirements"
+      />
+    </template>
   </div>
 
   <ConfirmModal
@@ -648,3 +658,19 @@ useRealtimeSync({
     @cancel="cancelDelete"
   />
 </template>
+
+<style scoped>
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+</style>

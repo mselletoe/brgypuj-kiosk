@@ -22,6 +22,7 @@ const message = useMessage();
 // State Management
 // ======================================
 const faqs = ref([]);
+const isLoading = ref(true);
 const editingId = ref(null);
 const showAddForm = ref(false);
 const searchQuery = ref("");
@@ -39,11 +40,14 @@ const newFaq = ref({
 // Fetch FAQs from backend
 // ======================================
 const loadFAQs = async () => {
+  isLoading.value = true;
   try {
     faqs.value = await faqService.getAllFAQs();
   } catch (err) {
     console.error("Failed to load FAQs:", err);
     message.error("Failed to load FAQs.");
+  } finally {
+    isLoading.value = false;
   }
 };
 
@@ -200,7 +204,7 @@ const columns = computed(() => [
           value: row.question,
           onUpdateValue(v) {
             row.question = v;
-          },
+          }
         });
       }
       return h("span", { class: "font-semibold text-gray-800" }, row.question);
@@ -217,7 +221,7 @@ const columns = computed(() => [
           autosize: { minRows: 2, maxRows: 5 },
           onUpdateValue(v) {
             row.answer = v;
-          },
+          }
         });
       }
       return h("span", { class: "text-gray-600" }, row.answer);
@@ -245,7 +249,7 @@ const columns = computed(() => [
 </script>
 
 <template>
-  <div class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden">
+  <div class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden animate-fade-in">
     <div class="flex mb-6 items-center justify-between">
       <div>
         <PageTitle title="FAQs Management" />
@@ -289,33 +293,56 @@ const columns = computed(() => [
       </div>
     </div>
 
-    <div v-if="showAddForm" class="bg-[#F0F5FF] p-6 mb-3 rounded-lg border border-[#0957FF] relative shrink-0">
-      <button @click="showAddForm = false" class="absolute top-4 right-4 p-1 hover:bg-gray-200 rounded transition">
-        <XMarkIcon class="w-5 h-5 text-gray-600" />
-      </button>
+    <div v-if="isLoading" class="flex-1 flex flex-col items-center justify-center gap-4">
+      <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+      <p class="text-gray-500 font-medium">Loading FAQs...</p>
+    </div>
 
-      <div class="flex flex-col gap-4 max-w-4xl">
-        <div>
-          <label class="block text-sm text-gray-600 mb-1">Question</label>
-          <n-input v-model:value="newFaq.question" placeholder="e.g. What are the office hours?" />
+    <template v-else>
+      <div v-if="showAddForm" class="bg-[#F0F5FF] p-6 mb-3 rounded-lg border border-[#0957FF] relative shrink-0">
+        <button @click="showAddForm = false" class="absolute top-4 right-4 p-1 hover:bg-gray-200 rounded transition">
+          <XMarkIcon class="w-5 h-5 text-gray-600" />
+        </button>
+
+        <div class="flex flex-col gap-4 max-w-4xl">
+          <div>
+            <label class="block text-sm text-gray-600 mb-1">Question</label>
+            <n-input v-model:value="newFaq.question" placeholder="e.g. What are the office hours?" />
+          </div>
+
+          <div>
+            <label class="block text-sm text-gray-600 mb-1">Answer</label>
+            <n-input v-model:value="newFaq.answer" type="textarea" placeholder="Provide a detailed answer here..." :autosize="{ minRows: 3, maxRows: 6 }" />
+          </div>
         </div>
 
-        <div>
-          <label class="block text-sm text-gray-600 mb-1">Answer</label>
-          <n-input v-model:value="newFaq.answer" type="textarea" placeholder="Provide a detailed answer here..." :autosize="{ minRows: 3, maxRows: 6 }" />
+        <div class="flex justify-end gap-3 mt-4">
+          <n-button @click="showAddForm = false">Cancel</n-button>
+          <n-button type="primary" @click="addFaq"> Save FAQ </n-button>
         </div>
       </div>
 
-      <div class="flex justify-end gap-3 mt-4">
-        <n-button @click="showAddForm = false">Cancel</n-button>
-        <n-button type="primary" @click="addFaq"> Save FAQ </n-button>
+      <div class="overflow-y-auto bg-white rounded-lg border border-gray-200 flex-1">
+        <n-data-table :columns="columns" :data="filteredFaqs" :bordered="false" />
       </div>
-    </div>
-
-    <div class="overflow-y-auto bg-white rounded-lg border border-gray-200 flex-1">
-      <n-data-table :columns="columns" :data="filteredFaqs" :bordered="false" />
-    </div>
+    </template>
 
     <ConfirmModal :show="showDeleteModal" :title="isBulkDelete ? `Delete ${selectedIds.length} FAQ(s)?` : 'Delete this FAQ?'" confirm-text="Delete" cancel-text="Cancel" @confirm="confirmDelete" @cancel="cancelDelete" />
   </div>
 </template>
+
+<style scoped>
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+</style>

@@ -216,7 +216,7 @@ onMounted(fetchActualInventory)
 </script>
 
 <template>
-  <div class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden">
+  <div class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden animate-fade-in">
     <div class="flex mb-6 items-center justify-between">
       <div>
         <PageTitle title="Equipment Inventory Management" />
@@ -226,7 +226,6 @@ onMounted(fetchActualInventory)
       </div>
 
       <div class="flex items-center gap-3">
-        <!-- Search -->
         <input
           v-model="searchQuery"
           type="text"
@@ -234,7 +233,6 @@ onMounted(fetchActualInventory)
           class="border border-gray-200 text-gray-700 rounded-md py-2 px-3 w-[250px] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-gray-400"
         />
 
-        <!-- Bulk Delete -->
         <button
           @click="requestBulkDelete"
           :disabled="selectionState === 'none'"
@@ -248,7 +246,6 @@ onMounted(fetchActualInventory)
           <TrashIcon class="w-5 h-5 text-red-500" />
         </button>
 
-        <!-- Select All / Partial -->
         <div
           class="flex items-center border rounded-lg overflow-hidden transition-colors"
           :class="selectionState !== 'none' ? 'border-blue-600' : 'border-gray-400'"
@@ -277,7 +274,6 @@ onMounted(fetchActualInventory)
           </button>
         </div>
 
-        <!-- Add -->
         <button
           @click="startCreate"
           class="px-4 py-2 bg-blue-600 text-white rounded-md font-medium text-sm hover:bg-blue-700 transition flex items-center gap-2"
@@ -297,14 +293,15 @@ onMounted(fetchActualInventory)
       </div>
     </div>
 
-    <div class="flex-1 overflow-y-auto pr-2">
-      <div v-if="isLoading" class="flex justify-center py-20">
-        <div class="animate-spin h-10 w-10 border-b-2 border-blue-600 rounded-full"></div>
+    <div class="flex-1 overflow-y-auto pr-2 flex flex-col">
+      <div v-if="isLoading" class="flex-1 flex flex-col items-center justify-center gap-4">
+        <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+        <p class="text-gray-500 font-medium">Loading equipment inventory...</p>
       </div>
 
       <div
         v-else-if="localInventory.length"
-        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-6"
       >
         <EquipmentInventoryCard
           v-for="item in localInventory"
@@ -343,3 +340,19 @@ onMounted(fetchActualInventory)
     @cancel="cancelDelete"
   />
 </template>
+
+<style scoped>
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+</style>

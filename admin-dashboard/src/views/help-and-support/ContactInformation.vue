@@ -50,7 +50,7 @@ const handleSave = async () => {
 
 <template>
   <div
-    class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden"
+    class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden animate-fade-in"
   >
     <div class="flex mb-6 items-center justify-between shrink-0">
       <div>
@@ -210,3 +210,19 @@ const handleSave = async () => {
     </div>
   </div>
 </template>
+
+<style scoped>
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+</style>

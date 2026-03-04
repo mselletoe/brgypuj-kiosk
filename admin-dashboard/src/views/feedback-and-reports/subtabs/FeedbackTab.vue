@@ -66,7 +66,7 @@ const fetchFeedbacks = async () => {
     }))
   } catch (error) {
     console.error(error)
-    errorMessage.value = 'Failed to load feedbacks.'
+    errorMessage.value = 'Failed to load feedbacks and reports.'
   } finally {
     isLoading.value = false
   }
@@ -158,42 +158,45 @@ onMounted(fetchFeedbacks)
 </script>
 
 <template>
-  <div class="space-y-4">
-    <div v-if="isLoading" class="text-center p-10 text-gray-500">
-      Loading feedbacks...
+  <div class="space-y-4 animate-fade-in">
+    <div v-if="isLoading" class="flex flex-col items-center justify-center w-full h-[65vh] gap-4 pt-24">
+      <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+      <p class="text-gray-500 font-medium">Loading feedbacks and reports...</p>
     </div>
 
-    <div v-else-if="errorMessage" class="text-center p-10 text-red-500">
-      {{ errorMessage }}
-    </div>
+    <template v-else>
+      <div v-if="errorMessage" class="text-center p-10 text-red-500">
+        {{ errorMessage }}
+      </div>
 
-    <div 
-      v-else-if="filteredFeedbacks.length === 0" 
-      class="text-center p-10 text-gray-500"
-    >
-      <h3 class="text-lg font-medium text-gray-700">No Feedbacks Found</h3>
-      <p class="text-gray-500">
-        <span v-if="searchQuery">No feedbacks match your search.</span>
-        <span v-else>There are currently no feedbacks as of the moment.</span>
-      </p>
-    </div>
+      <div 
+        v-else-if="filteredFeedbacks.length === 0" 
+        class="text-center p-10 text-gray-500"
+      >
+        <h3 class="text-lg font-medium text-gray-700">No Feedbacks Found</h3>
+        <p class="text-gray-500">
+          <span v-if="searchQuery">No feedbacks match your search.</span>
+          <span v-else>There are currently no feedbacks as of the moment.</span>
+        </p>
+      </div>
 
-    <FeedbackReportCard
-      v-for="feedback in filteredFeedbacks"
-      :key="feedback.id"
-      :id="feedback.id"
-      :type="feedback.type"
-      :title="feedback.title"
-      :requester="feedback.requester"
-      :rfid-no="feedback.rfidNo"
-      :created-on="feedback.createdOn"
-      :rating="feedback.rating"
-      :rating-label="feedback.ratingLabel"
-      :comment="feedback.comment"
-      :is-selected="selectedFeedbacks.has(feedback.id)"
-      @delete="handleDelete(feedback.id)"
-      @update:selected="val => handleSelectionUpdate(feedback.id, val)"
-    />
+      <FeedbackReportCard
+        v-for="feedback in filteredFeedbacks"
+        :key="feedback.id"
+        :id="feedback.id"
+        :type="feedback.type"
+        :title="feedback.title"
+        :requester="feedback.requester"
+        :rfid-no="feedback.rfidNo"
+        :created-on="feedback.createdOn"
+        :rating="feedback.rating"
+        :rating-label="feedback.ratingLabel"
+        :comment="feedback.comment"
+        :is-selected="selectedFeedbacks.has(feedback.id)"
+        @delete="handleDelete(feedback.id)"
+        @update:selected="val => handleSelectionUpdate(feedback.id, val)"
+      />
+    </template>
   </div>
 
   <ConfirmModal
@@ -205,3 +208,19 @@ onMounted(fetchFeedbacks)
     @cancel="handleCancel"
   />
 </template>
+
+<style scoped>
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+</style>

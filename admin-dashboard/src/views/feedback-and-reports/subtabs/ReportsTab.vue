@@ -179,38 +179,41 @@ onMounted(fetchReports)
 </script>
 
 <template>
-  <div class="space-y-4">
-    <div v-if="isLoading" class="text-center p-10 text-gray-500">
-      <p>Loading reports...</p>
+  <div class="space-y-4 animate-fade-in">
+    <div v-if="isLoading" class="flex flex-col items-center justify-center w-full h-[65vh] gap-4 pt-24">
+      <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+      <p class="text-gray-500 font-medium">Loading reports...</p>
     </div>
 
-    <div v-else-if="errorMessage" class="text-center p-10 text-red-500">
-      <p>{{ errorMessage }}</p>
-    </div>
+    <template v-else>
+      <div v-if="errorMessage" class="text-center p-10 text-red-500">
+        <p>{{ errorMessage }}</p>
+      </div>
 
-    <div v-else-if="filteredReports.length === 0" class="text-center p-10 text-gray-500">
-      <h3 class="text-lg font-medium text-gray-700">No Reports Found</h3>
-      <p class="text-gray-500">
-        <span v-if="searchQuery">No reports match your search.</span>
-        <span v-else>There are currently no lost card reports.</span>
-      </p>
-    </div>
+      <div v-else-if="filteredReports.length === 0" class="text-center p-10 text-gray-500">
+        <h3 class="text-lg font-medium text-gray-700">No Reports Found</h3>
+        <p class="text-gray-500">
+          <span v-if="searchQuery">No reports match your search.</span>
+          <span v-else>There are currently no lost card reports.</span>
+        </p>
+      </div>
 
-    <FeedbackReportCard
-      v-for="report in filteredReports"
-      :key="report.id"
-      type="report"
-      :id="String(report.id)"
-      title="Lost Card Report"
-      :requester="report.requester"
-      :rfid-no="report.rfidNo"
-      :created-on="report.createdOn"
-      :is-selected="selectedReports.has(report.id)"
-      :is-resolved="report.isResolved"
-      @undo="handleUndo(report.id)"
-      @delete="handleDelete(report.id)"
-      @update:selected="(val) => handleSelectionUpdate(report.id, val)"
-    />
+      <FeedbackReportCard
+        v-for="report in filteredReports"
+        :key="report.id"
+        :id="String(report.id)"
+        type="report"
+        title="Lost Card Report"
+        :requester="report.requester"
+        :rfid-no="report.rfidNo"
+        :created-on="report.createdOn"
+        :is-selected="selectedReports.has(report.id)"
+        :is-resolved="report.isResolved"
+        @undo="handleUndo(report.id)"
+        @delete="handleDelete(report.id)"
+        @update:selected="(val) => handleSelectionUpdate(report.id, val)"
+      />
+    </template>
   </div>
 
   <ConfirmModal
@@ -222,3 +225,19 @@ onMounted(fetchReports)
     @cancel="handleCancel"
   />
 </template>
+
+<style scoped>
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+</style>

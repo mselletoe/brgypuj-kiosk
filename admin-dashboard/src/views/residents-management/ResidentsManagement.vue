@@ -246,17 +246,14 @@ const columns = computed(() => [
 </script>
 
 <template>
-  <div class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden">
-    <!-- Header -->
+  <div class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden animate-fade-in">
     <div class="flex mb-6 items-center justify-between">
       <div>
         <PageTitle title="Residents Information Management" />
         <p class="text-sm text-gray-500 mt-1">Manage Residents Information</p>
       </div>
 
-      <!-- Action Buttons -->
       <div class="flex items-center gap-3">
-        <!-- Search -->
         <input
           v-model="searchQuery"
           type="text"
@@ -264,7 +261,6 @@ const columns = computed(() => [
           class="border border-gray-200 text-gray-700 rounded-md py-2 px-3 w-[250px] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-gray-400"
         />
 
-        <!-- Filter Button -->
         <button
           @click="showFilterModal = true"
           class="p-2 border border-gray-400 rounded-lg hover:bg-gray-50 transition-colors"
@@ -272,7 +268,6 @@ const columns = computed(() => [
           <FunnelIcon class="w-5 h-5 text-gray-700" />
         </button>
 
-        <!-- Bulk Delete Button -->
         <div class="flex items-center gap-1.5">
           <button
             @click="requestBulkDelete"
@@ -294,7 +289,6 @@ const columns = computed(() => [
           </span>
         </div>
 
-        <!-- Select All Toggle -->
         <div
           class="flex items-center border rounded-lg overflow-hidden transition-colors"
           :class="selectionState !== 'none' ? 'border-blue-600' : 'border-gray-400'"
@@ -317,7 +311,6 @@ const columns = computed(() => [
           </button>
         </div>
 
-        <!-- Register Button -->
         <button
           @click="openAddModal"
           class="px-4 py-2 bg-blue-600 text-white rounded-md font-medium text-sm hover:bg-blue-700 transition flex items-center gap-2"
@@ -341,17 +334,19 @@ const columns = computed(() => [
       </div>
     </div>
 
-    <!-- Data Table -->
-    <div class="overflow-y-auto bg-white rounded-lg border border-gray-200">
+    <div v-if="loading" class="flex-1 flex flex-col items-center justify-center gap-4">
+      <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+      <p class="text-gray-500 font-medium">Loading residents...</p>
+    </div>
+    
+    <div v-else class="flex-1 overflow-y-auto bg-white rounded-lg border border-gray-200">
       <n-data-table 
         :columns="columns" 
         :data="filteredResidents" 
-        :loading="loading"
         :bordered="false"
       />
     </div>
 
-    <!-- Modals -->
     <ResidentModal
       :show="showResidentModal"
       :mode="modalMode"
@@ -380,3 +375,19 @@ const columns = computed(() => [
     />
   </div>
 </template>
+
+<style scoped>
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+</style>
