@@ -208,19 +208,46 @@ const cancelExit = () => {
         </Button>
     </div>
 
-    <!-- Exit Confirmation Modal -->
-    <div v-if="showExitModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-8">
-      <Modal
-        title="Exit Equipment Request?"
-        message="You have unsaved changes. Are you sure you want to exit? All your progress will be lost."
-        primaryButtonText="Exit"
-        secondaryButtonText="Stay"
-        :showPrimaryButton="true"
-        :showSecondaryButton="true"
-        :showReferenceId="false"
-        @primary-click="confirmExit"
-        @secondary-click="cancelExit"
-      />
-    </div>
+    <Transition name="fade-blur">
+      <div v-if="showExitModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-8 modal-backdrop">
+        <Modal
+          title="Exit Equipment Request?"
+          message="You have unsaved changes. Are you sure you want to exit? All your progress will be lost."
+          primaryButtonText="Exit"
+          secondaryButtonText="Stay"
+          :showPrimaryButton="true"
+          :showSecondaryButton="true"
+          :showReferenceId="false"
+          @primary-click="confirmExit"
+          @secondary-click="cancelExit"
+        />
+      </div>
+    </Transition>
   </div>
 </template>
+
+<style scoped>
+.modal-backdrop {
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+.fade-blur-enter-active,
+.fade-blur-leave-active {
+  transition:
+    opacity 0.5s ease,
+    -webkit-backdrop-filter 0.5s ease,
+    backdrop-filter 0.5s ease;
+}
+.fade-blur-enter-from,
+.fade-blur-leave-to {
+  opacity: 0;
+  -webkit-backdrop-filter: blur(0px);
+  backdrop-filter: blur(0px);
+}
+.fade-blur-enter-to,
+.fade-blur-leave-from {
+  opacity: 1;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+</style>

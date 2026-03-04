@@ -25,7 +25,6 @@ const showModal = ref(false);
 const showExitModal = ref(false);
 const isSubmitting = ref(false);
 const transactionNo = ref('');
-const isFadingOut = ref(false);
 
 const formatCurrency = (value) => {
   if (!value) return '₱0';
@@ -112,7 +111,7 @@ const cancelExit = () => {
 </script>
 
 <template>
-  <div class="flex flex-col w-full h-full" :class="{ 'content-with-keyboard': showKeyboard }">
+  <div class="flex flex-col w-full h-full">
     <div class="flex items-center mb-6 gap-7 flex-shrink-0">
       <ArrowBackButton @click="handleBackClick" />
       <div>
@@ -242,22 +241,26 @@ const cancelExit = () => {
 
 <style scoped>
 .modal-backdrop {
+  -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
 }
 .fade-blur-enter-active,
 .fade-blur-leave-active {
   transition:
     opacity 0.5s ease,
+    -webkit-backdrop-filter 0.5s ease,
     backdrop-filter 0.5s ease;
 }
 .fade-blur-enter-from,
 .fade-blur-leave-to {
   opacity: 0;
+  -webkit-backdrop-filter: blur(0px);
   backdrop-filter: blur(0px);
 }
 .fade-blur-enter-to,
 .fade-blur-leave-from {
   opacity: 1;
+  -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
 }
 </style>
