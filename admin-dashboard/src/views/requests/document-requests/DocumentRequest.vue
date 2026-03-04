@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router';
-import { NTabs, NTabPane, NPopover, NDatePicker, NInput, NSelect, NButton } from 'naive-ui';
+import { NTabs, NTabPane, NPopover, NDatePicker, NSelect, NButton } from 'naive-ui';
 import {
   FunnelIcon, 
   ArrowUturnLeftIcon, 
@@ -115,7 +115,7 @@ const hasActiveFilters = computed(() => {
 </script>
 
 <template>
-  <div class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden">
+  <div class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden animate-fade-in">
     <div class="flex justify-between items-center mb-4">
       <div>
         <PageTitle title="Document Requests" />
@@ -157,7 +157,6 @@ const hasActiveFilters = computed(() => {
             </div>
             
             <div class="overflow-y-auto px-6 py-4 space-y-4 flex-1">
-              <!-- Requested Date -->
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Requested Date</label>
                 <n-date-picker
@@ -170,7 +169,6 @@ const hasActiveFilters = computed(() => {
                 />
               </div>
 
-              <!-- Document Type -->
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Document Type</label>
                 <n-select
@@ -180,7 +178,6 @@ const hasActiveFilters = computed(() => {
                 />
               </div>
 
-              <!-- Payment Status -->
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Payment Status</label>
                 <n-select
@@ -192,7 +189,6 @@ const hasActiveFilters = computed(() => {
 
             </div>
 
-            <!-- Action Buttons -->
             <div class="flex justify-end space-x-2 p-4 border-t border-gray-200">
               <n-button
                 @click="handleFilterClear"
@@ -260,7 +256,7 @@ const hasActiveFilters = computed(() => {
       </n-tabs>
     </div>
 
-    <div class="overflow-y-auto h-[calc(100vh-260px)] pr-2 pt-2">
+    <div class="overflow-y-auto h-[calc(100vh-260px)] pr-2 pt-2 relative">
       <keep-alive>
         <component 
           :is="currentTabComponent" 
@@ -273,3 +269,19 @@ const hasActiveFilters = computed(() => {
     </div>
   </div>
 </template>
+
+<style scoped>
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+</style>

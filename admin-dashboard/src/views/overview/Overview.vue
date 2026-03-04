@@ -95,7 +95,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="flex flex-col w-full gap-8 animate-fade-in">
+  <div class="flex flex-col w-full h-full gap-8 animate-fade-in">
     <template v-if="!isLoading">
       <OverviewHeader :stats="stats" />
 
@@ -103,9 +103,7 @@ onMounted(() => {
         <div class="flex-1 flex flex-col gap-6 w-full">
           <KpiCards :stats="stats" />
 
-          <div
-            class="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-[350px]"
-          >
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-[350px]">
             <VolumeChart :docsList="rawDocsList" :equipsList="rawEquipsList" />
             <BreakdownChart
               :docsList="rawDocsList"
@@ -120,11 +118,12 @@ onMounted(() => {
 
     <div
       v-else
-      class="flex-1 flex flex-col items-center justify-center min-h-[400px]"
+      class="flex flex-col items-center justify-center w-full h-[70vh] gap-4"
     >
       <div
         class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"
       ></div>
+      <p class="text-gray-500 font-medium">Loading dashboard overview...</p>
     </div>
   </div>
 </template>

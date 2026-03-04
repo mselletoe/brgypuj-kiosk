@@ -101,7 +101,8 @@ const hasActiveFilters = computed(() => {
 </script>
 
 <template>
-  <div class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden">
+  <div class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden animate-fade-in">
+    
     <div class="flex justify-between items-center mb-4">
       <div>
         <PageTitle title="Equipment Requests" />
@@ -143,7 +144,6 @@ const hasActiveFilters = computed(() => {
             </div>
             
             <div class="overflow-y-auto px-6 py-4 space-y-4 flex-1">
-              <!-- Requested Date -->
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Requested Date</label>
                 <n-date-picker
@@ -156,7 +156,6 @@ const hasActiveFilters = computed(() => {
                 />
               </div>
 
-              <!-- Borrowing Period -->
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Requested Date Range</label>
                 <div class="flex flex-col gap-2">
@@ -179,7 +178,6 @@ const hasActiveFilters = computed(() => {
                 </div>
               </div>
 
-              <!-- Payment Status -->
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Payment Status</label>
                 <n-select
@@ -191,7 +189,6 @@ const hasActiveFilters = computed(() => {
 
             </div>
 
-            <!-- Action Buttons -->
             <div class="flex justify-end space-x-2 p-4 border-t border-gray-200">
               <n-button
                 @click="handleFilterClear"
@@ -234,7 +231,7 @@ const hasActiveFilters = computed(() => {
             class="p-2 hover:bg-gray-50 flex items-center"
           >
             <div class="w-5 h-5 border rounded flex items-center justify-center" 
-                 :class="selectionState !== 'none' ? 'bg-blue-600 border-blue-600' : 'border-gray-400'">
+                :class="selectionState !== 'none' ? 'bg-blue-600 border-blue-600' : 'border-gray-400'">
               <div v-if="selectionState === 'partial'" class="w-2 h-0.5 bg-white"></div>
               <svg v-if="selectionState === 'all'" class="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7" />
@@ -271,5 +268,22 @@ const hasActiveFilters = computed(() => {
         />
       </keep-alive>
     </div>
+
   </div>
 </template>
+
+<style scoped>
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+</style>

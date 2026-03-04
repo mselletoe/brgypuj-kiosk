@@ -313,18 +313,14 @@ const filteredRequests = computed(() => {
 </script>
 
 <template>
-  <div class="space-y-4">
-    <div 
-      v-if="isLoading" 
-      class="text-center p-10 text-gray-500"
-    >
-      <p>Loading returned equipment requests...</p>
+  <div class="space-y-4 h-full">
+
+    <div v-if="isLoading" class="flex flex-col items-center justify-center w-full h-full min-h-[300px] gap-4">
+      <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+      <p class="text-gray-500 font-medium">Loading returned equipment requests...</p>
     </div>
 
-    <div 
-      v-else-if="errorMessage" 
-      class="text-center p-10 text-red-500"
-    >
+    <div v-else-if="errorMessage" class="text-center p-10 text-red-500">
       <p>{{ errorMessage }}</p>
     </div>
 
@@ -339,28 +335,30 @@ const filteredRequests = computed(() => {
       </p>
     </div>
 
-    <EquipmentRequestCard
-      v-for="request in filteredRequests"
-      :key="request.id"
-      :id="request.id"
-      :transaction-no="request.transaction_no"
-      :status="request.status"
-      :request-type="request.requestType"
-      :requester="request.requester"
-      :rfid-no="request.rfidNo"
-      :requested-on="request.requestedOn"
-      :borrowing-period="request.borrowingPeriod"
-      :amount="request.amount"
-      :is-paid="request.isPaid"
-      :is-refunded="request.isRefunded"
-      :is-selected="selectedRequests.has(request.id)"
-      :contact-person="request.contactPerson"
-      :contact-number="request.contactNumber"
-      :purpose="request.purpose"
-      @button-click="handleButtonClick"
-      @update:is-paid="(value) => handlePaymentUpdate(request.id, value)"
-      @update:selected="(value) => handleSelectionUpdate(request.id, value)"
-    />
+    <template v-else>
+      <EquipmentRequestCard
+        v-for="request in filteredRequests"
+        :key="request.id"
+        :id="request.id"
+        :transaction-no="request.transaction_no"
+        :status="request.status"
+        :request-type="request.requestType"
+        :requester="request.requester"
+        :rfid-no="request.rfidNo"
+        :requested-on="request.requestedOn"
+        :borrowing-period="request.borrowingPeriod"
+        :amount="request.amount"
+        :is-paid="request.isPaid"
+        :is-refunded="request.isRefunded"
+        :is-selected="selectedRequests.has(request.id)"
+        :contact-person="request.contactPerson"
+        :contact-number="request.contactNumber"
+        :purpose="request.purpose"
+        @button-click="handleButtonClick"
+        @update:is-paid="(value) => handlePaymentUpdate(request.id, value)"
+        @update:selected="(value) => handleSelectionUpdate(request.id, value)"
+      />
+    </template>
   </div>
 
   <ConfirmModal
