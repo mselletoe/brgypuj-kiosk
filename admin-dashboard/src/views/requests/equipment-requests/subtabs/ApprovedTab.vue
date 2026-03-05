@@ -4,7 +4,6 @@ import EquipmentRequestCard from "@/views/requests/equipment-requests/EquipmentR
 import ConfirmModal from "@/components/shared/ConfirmationModal.vue";
 import SMSModal from "@/components/shared/SendSMSModal.vue";
 import { createAuditLog } from "@/api/auditService";
-import { useRealtimeSync } from "@/composables/useRealtimeSync";
 import {
   getEquipmentRequests,
   markAsPickedUp,
@@ -50,6 +49,7 @@ const fetchApprovedRequests = async () => {
     const response = await getEquipmentRequests();
 
     const allRequests = response.data.map((req) => {
+      // Format equipment items list
       const equipmentList = req.items
         .map((item) => `${item.quantity}x ${item.item_name}`)
         .join(", ");
@@ -96,6 +96,7 @@ const fetchApprovedRequests = async () => {
       };
     });
 
+    // Filter only approved requests
     approvedRequests.value = allRequests.filter(
       (req) => req.status === "approved",
     );
@@ -107,34 +108,6 @@ const fetchApprovedRequests = async () => {
     isLoading.value = false;
   }
 };
-
-useRealtimeSync({
-  // Request approved from pending → re-fetch to get full data
-  equipment_request_updated: (data) => {
-    if (data.status === "approved") {
-      fetchApprovedRequests()
-    } else if (data.status === "picked-up" || data.status === "rejected" || data.status === "pending") {
-      // Left this tab (picked-up, or undone back to pending/rejected)
-      approvedRequests.value = approvedRequests.value.filter(r => r.id !== data.id)
-    }
-  },
-
-  // Bulk undo — some approved requests may have moved back to pending
-  equipment_requests_bulk_undone: () => {
-    fetchApprovedRequests()
-  },
-
-  // Single delete
-  equipment_request_deleted: (data) => {
-    approvedRequests.value = approvedRequests.value.filter(r => r.id !== data.id)
-  },
-
-  // Bulk delete
-  equipment_requests_bulk_deleted: (data) => {
-    const deletedIds = new Set(data.ids)
-    approvedRequests.value = approvedRequests.value.filter(r => !deletedIds.has(r.id))
-  },
-})
 
 const openConfirmModal = (title, action) => {
   confirmTitle.value = title;
@@ -265,16 +238,26 @@ Thank you!`;
 const handleSendSMS = async (smsData) => {
   try {
     console.log("Sending SMS:", smsData);
+
+    // TODO: Implement actual SMS sending API call
+    // Example:
+    // await sendSMS({
+    //   phone: smsData.phone,
+    //   message: smsData.message,
+    //   recipientName: smsData.recipientName
+    // })
+
+    // For now, just log the data
     console.log("SMS would be sent to:", smsData.phone);
     console.log("Message:", smsData.message);
   } catch (error) {
     console.error("Error sending SMS:", error);
-    throw error;
+    throw error; // Re-throw to let the modal handle the error display
   }
 };
 
 const handleRelease = async (id) => {
-  const request = approvedRequests.value.find((r) => r.id === id);
+  const request = approvedRequests.value.find((r) => r.id === id); // Get data for log
   try {
     await markAsPickedUp(id);
     if (request) {
@@ -349,6 +332,7 @@ const filteredRequests = computed(() => {
 
   if (props.filters?.requestedDate) {
     const selectedDate = new Date(props.filters.requestedDate).toDateString();
+
     result = result.filter(
       (req) => new Date(req.raw.requested_at).toDateString() === selectedDate,
     );
@@ -356,11 +340,13 @@ const filteredRequests = computed(() => {
 
   if (props.filters?.borrowingPeriodStart) {
     const start = new Date(props.filters.borrowingPeriodStart);
+
     result = result.filter((req) => new Date(req.raw.borrow_date) >= start);
   }
 
   if (props.filters?.borrowingPeriodEnd) {
     const end = new Date(props.filters.borrowingPeriodEnd);
+
     result = result.filter((req) => new Date(req.raw.return_date) <= end);
   }
 

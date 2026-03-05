@@ -2,7 +2,6 @@
 import { ref, computed, onMounted } from 'vue'
 import EquipmentRequestCard from '@/views/requests/equipment-requests/EquipmentRequestCard.vue'
 import ConfirmModal from '@/components/shared/ConfirmationModal.vue'
-import { useRealtimeSync } from '@/composables/useRealtimeSync'
 import {
   getEquipmentRequests,
   undoRequest,
@@ -46,6 +45,7 @@ const fetchReturnedRequests = async () => {
     const response = await getEquipmentRequests()
 
     const allRequests = response.data.map(req => {
+      // Format equipment items list
       const equipmentList = req.items
         .map(item => `${item.quantity}x ${item.item_name}`)
         .join(', ')
@@ -88,6 +88,7 @@ const fetchReturnedRequests = async () => {
       }
     })
 
+    // Filter only returned requests
     returnedRequests.value = allRequests.filter(req => req.status === 'returned')
   } catch (error) {
     console.error('Error fetching equipment requests:', error)
@@ -96,50 +97,6 @@ const fetchReturnedRequests = async () => {
     isLoading.value = false
   }
 }
-
-useRealtimeSync({
-  // Request marked returned from picked-up → re-fetch to get full data
-  equipment_request_updated: (data) => {
-    if (data.status === 'returned') {
-      fetchReturnedRequests()
-    } else if (data.status === 'picked-up') {
-      // Undone back to picked-up
-      returnedRequests.value = returnedRequests.value.filter(r => r.id !== data.id)
-    }
-  },
-
-  // Bulk undo — some returned requests may have moved back to picked-up
-  equipment_requests_bulk_undone: () => {
-    fetchReturnedRequests()
-  },
-
-  // Payment toggled — update in place
-  equipment_request_payment_updated: (data) => {
-    const request = returnedRequests.value.find(r => r.id === data.id)
-    if (request) {
-      request.isPaid = data.payment_status === 'paid'
-    }
-  },
-
-  // Refund toggled — update in place
-  equipment_request_refund_toggled: (data) => {
-    const request = returnedRequests.value.find(r => r.id === data.id)
-    if (request) {
-      request.isRefunded = !request.isRefunded
-    }
-  },
-
-  // Single delete
-  equipment_request_deleted: (data) => {
-    returnedRequests.value = returnedRequests.value.filter(r => r.id !== data.id)
-  },
-
-  // Bulk delete
-  equipment_requests_bulk_deleted: (data) => {
-    const deletedIds = new Set(data.ids)
-    returnedRequests.value = returnedRequests.value.filter(r => !deletedIds.has(r.id))
-  }
-})
 
 const openConfirmModal = (title, action) => {
   confirmTitle.value = title
@@ -321,6 +278,7 @@ const filteredRequests = computed(() => {
 
   if (props.filters?.requestedDate) {
     const selectedDate = new Date(props.filters.requestedDate).toDateString()
+
     result = result.filter(req =>
       new Date(req.raw.requested_at).toDateString() === selectedDate
     )
@@ -328,17 +286,25 @@ const filteredRequests = computed(() => {
 
   if (props.filters?.borrowingPeriodStart) {
     const start = new Date(props.filters.borrowingPeriodStart)
-    result = result.filter(req => new Date(req.raw.borrow_date) >= start)
+
+    result = result.filter(req =>
+      new Date(req.raw.borrow_date) >= start
+    )
   }
 
   if (props.filters?.borrowingPeriodEnd) {
     const end = new Date(props.filters.borrowingPeriodEnd)
-    result = result.filter(req => new Date(req.raw.return_date) <= end)
+
+    result = result.filter(req =>
+      new Date(req.raw.return_date) <= end
+    )
   }
 
   if (props.filters?.paymentStatus) {
     result = result.filter(req =>
-      props.filters.paymentStatus === 'paid' ? req.isPaid : !req.isPaid
+      props.filters.paymentStatus === 'paid'
+        ? req.isPaid
+        : !req.isPaid
     )
   }
 
@@ -348,22 +314,22 @@ const filteredRequests = computed(() => {
 
 <template>
   <div class="space-y-4">
-    <div
-      v-if="isLoading"
+    <div 
+      v-if="isLoading" 
       class="text-center p-10 text-gray-500"
     >
       <p>Loading returned equipment requests...</p>
     </div>
 
-    <div
-      v-else-if="errorMessage"
+    <div 
+      v-else-if="errorMessage" 
       class="text-center p-10 text-red-500"
     >
       <p>{{ errorMessage }}</p>
     </div>
 
-    <div
-      v-else-if="filteredRequests.length === 0"
+    <div 
+      v-else-if="filteredRequests.length === 0" 
       class="text-center p-10 text-gray-500"
     >
       <h3 class="text-lg font-medium text-gray-700">No Returned Equipment Requests</h3>

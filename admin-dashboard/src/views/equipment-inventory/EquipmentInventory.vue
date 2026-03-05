@@ -5,13 +5,12 @@ import EquipmentInventoryCard from './EquipmentInventoryCard.vue';
 import { useMessage, NInput } from 'naive-ui';
 import PageTitle from '@/components/shared/PageTitle.vue'
 import ConfirmModal from '@/components/shared/ConfirmationModal.vue'
-import { useRealtimeSync } from '@/composables/useRealtimeSync'
-import {
-  getEquipmentInventory,
-  createEquipmentItem,
-  updateEquipmentItem,
+import { 
+  getEquipmentInventory, 
+  createEquipmentItem, 
+  updateEquipmentItem, 
   deleteEquipmentItem,
-  bulkDeleteEquipmentItems
+  bulkDeleteEquipmentItems 
 } from '@/api/equipmentService';
 
 const message = useMessage();
@@ -32,13 +31,13 @@ async function fetchActualInventory() {
   try {
     const response = await getEquipmentInventory();
     const inventoryData = response.data;
-
+    
     localInventory.value = inventoryData.map(item => ({
       id: item.id,
-      item_name: item.name,
-      total_owned: item.total_quantity,
+      item_name: item.name,            
+      total_owned: item.total_quantity, 
       available: item.available_quantity,
-      rental_rate: item.rate_per_day,
+      rental_rate: item.rate_per_day,          
       editing: false,
       isNew: false,
     }));
@@ -49,33 +48,6 @@ async function fetchActualInventory() {
     isLoading.value = false;
   }
 }
-
-useRealtimeSync({
-  // Another admin added an item → re-fetch to show it
-  equipment_created: () => {
-    fetchActualInventory()
-  },
-
-  // Another admin updated an item → re-fetch to reflect changes
-  equipment_updated: () => {
-    fetchActualInventory()
-  },
-
-  // Another admin deleted a single item → remove it locally
-  equipment_deleted: (data) => {
-    localInventory.value = localInventory.value.filter(i => i.id !== data.id)
-    selectedIds.value = selectedIds.value.filter(id => id !== data.id)
-    emit('inventory-updated')
-  },
-
-  // Another admin bulk-deleted items → remove them locally
-  equipment_bulk_deleted: (data) => {
-    const deletedIds = new Set(data.ids)
-    localInventory.value = localInventory.value.filter(i => !deletedIds.has(i.id))
-    selectedIds.value = selectedIds.value.filter(id => !deletedIds.has(id))
-    emit('inventory-updated')
-  }
-})
 
 // --- CRUD Actions ---
 function startCreate() {
@@ -117,7 +89,7 @@ async function handleSave(formData) {
     message.warning('Rental rate cannot be negative.');
     return;
   }
-
+  
   try {
     const apiPayload = {
       name: formData.item_name.trim(),
@@ -133,12 +105,12 @@ async function handleSave(formData) {
       await updateEquipmentItem(formData.id, apiPayload);
       message.success(`Changes for "${formData.item_name}" saved!`);
     }
-
+    
     await fetchActualInventory();
-    emit('inventory-updated');
+    emit('inventory-updated'); 
   } catch (error) {
     console.error('Failed to save:', error);
-
+    
     if (error.response?.data?.detail) {
       message.error(error.response.data.detail);
     } else {

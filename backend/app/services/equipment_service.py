@@ -200,7 +200,10 @@ def create_equipment_request(
     db.commit()
     db.refresh(request)
     
-    return request
+    return EquipmentRequestKioskResponse(
+        transaction_no=request.transaction_no,
+        total_cost=request.total_cost
+    )
 
 
 def get_kiosk_request_history(db: Session, resident_id: int):
