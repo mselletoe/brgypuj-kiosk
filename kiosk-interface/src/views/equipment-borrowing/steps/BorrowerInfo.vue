@@ -105,11 +105,15 @@ const selectPurpose = (option) => {
 
 const handleKeyboardKeyPress = (char) => {
   if (activeInput.value) {
-    if (['contactPerson', 'contactNumber', 'notes'].includes(activeInput.value)) {
-      localInfo.value[activeInput.value] += char;
+    if (activeInput.value === 'contactNumber') {
+      if (localInfo.value.contactNumber.length < 11) {
+        localInfo.value.contactNumber += char
+      }
+    } else if (['contactPerson', 'notes'].includes(activeInput.value)) {
+      localInfo.value[activeInput.value] += char
     }
   }
-};
+}
 
 const handleKeyboardDelete = () => {
   if (activeInput.value) {
@@ -205,6 +209,7 @@ const inputClass = "w-full h-[48px] px-4 py-3 border border-gray-300 rounded-xl 
               type="tel"
               placeholder="Phone Number"
               :class="inputClass"
+              maxlength="11"
               @focus="focusInput('contact-number', 'contactNumber')"
               :readonly="useAutofill"
             />
