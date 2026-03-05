@@ -240,7 +240,6 @@ const handleRemovePhoto = () => message.error("Photo has been removed.");
                   Details
                 </th>
               </tr>
-              :
             </thead>
             <tbody>
               <tr

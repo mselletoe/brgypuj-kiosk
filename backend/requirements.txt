@@ -1,7 +1,6 @@
 # FastAPI Core
 fastapi
 uvicorn[standard]
-sse-starlette
 
 # Database
 sqlalchemy>=2.0

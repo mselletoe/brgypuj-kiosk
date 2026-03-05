@@ -504,8 +504,8 @@ def create_document_request(db: Session, payload: DocumentRequestCreate) -> Docu
 
     # 3. Validate resident based on document type
     if payload.resident_id is not None:
-        # If resident_id is provided, validate it exists
         resident = _validate_resident(db, payload.resident_id)
+        _check_existing_pending_request(db, payload.resident_id)
     elif not is_rfid_request:
         # If resident_id is None and it's NOT an RFID request, reject
         raise HTTPException(

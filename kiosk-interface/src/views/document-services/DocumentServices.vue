@@ -11,7 +11,6 @@ import { useRoute, useRouter } from 'vue-router'
 import { ref, onMounted } from 'vue'
 import ArrowBackButton from '@/components/shared/ArrowBackButton.vue'
 import { getDocumentTypes } from '@/api/documentService'
-import { useRealtimeSync } from '@/composables/useRealtimeSync'
 
 const route = useRoute()
 const router = useRouter()
@@ -56,20 +55,6 @@ const fetchDocuments = async () => {
 
 // Initialize data on component mount
 onMounted(fetchDocuments)
-
-useRealtimeSync({
-  doctype_created: () => {
-    fetchDocuments()
-  },
-  doctype_updated: () => {
-    fetchDocuments()
-  },
-  doctype_deleted: (data) => {
-    documents.value = documents.value.filter(
-      doc => doc.id !== data.id
-    )
-  }
-})
 </script>
 
 <template>
@@ -91,7 +76,7 @@ useRealtimeSync({
     <div v-if="error" class="text-center text-red-500 py-10">{{ error }}</div>
 
     <!-- Document type Option box -->
-    <div class="flex-1 overflow-y-auto">
+    <div class="flex-1 overflow-y-auto custom-scrollbar">
       <div v-if="isParent() && !loading && !error" class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
         <router-link
           v-for="doc in documents"

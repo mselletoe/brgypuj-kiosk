@@ -303,7 +303,6 @@ const handleChangePassword = async () => {
             <label class="text-[12px] font-bold text-gray-800">Username</label>
             <n-input
               v-model:value="profileData.username"
-              disabled
               placeholder="Username"
             />
           </div>

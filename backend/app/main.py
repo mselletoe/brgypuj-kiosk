@@ -2,8 +2,6 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.admin.routes import router as admin_router
 from app.api.kiosk.routes import router as kiosk_router
-from app.api.admin.sse import router as admin_sse_router  # ← ADD
-from app.api.kiosk.sse import router as kiosk_sse_router  # ← ADD
 
 app = FastAPI(title="Barangay Kiosk Backend")
 
@@ -25,8 +23,6 @@ app.add_middleware(
 
 app.include_router(admin_router, prefix="/admin", tags=["Admin"])
 app.include_router(kiosk_router, prefix="/kiosk", tags=["Kiosk"])
-app.include_router(admin_sse_router, prefix="/admin", tags=["Admin SSE"])
-app.include_router(kiosk_sse_router, prefix="/kiosk", tags=["Kiosk SSE"]) 
 
 @app.get("/")
 def root():
