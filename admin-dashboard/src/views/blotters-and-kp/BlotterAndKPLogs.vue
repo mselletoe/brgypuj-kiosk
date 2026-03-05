@@ -8,6 +8,7 @@ import {
   NModal,
   NSelect,
   NDatePicker,
+  NPopover,
   useMessage
 } from 'naive-ui'
 import { FunnelIcon, TrashIcon, CheckIcon, XMarkIcon } from '@heroicons/vue/24/outline'
@@ -33,6 +34,7 @@ const searchQuery = ref('')
 const selectedIds = ref([])
 const showDeleteModal = ref(false)
 const showBlotterModal = ref(false)
+const showFilterPopover = ref(false)
 const currentBlotter = ref(null)
 const modalMode = ref('add')
 const saving = ref(false)
@@ -40,6 +42,22 @@ const formData = ref({})
 
 // Residents for the selector dropdowns
 const residents = ref([])
+
+// ======================================
+// Filter State
+// ======================================
+const filterState = ref({
+  incidentType: null,
+  incidentDateRange: null   // [startTs, endTs] from date-range picker
+})
+
+const hasActiveFilters = computed(() =>
+  !!(filterState.value.incidentType || filterState.value.incidentDateRange)
+)
+
+function handleFilterClear() {
+  filterState.value = { incidentType: null, incidentDateRange: null }
+}
 
 // ======================================
 // Data Loading
@@ -83,7 +101,6 @@ const residentOptions = computed(() =>
 
 function handleComplainantSelect(residentId) {
   if (!residentId) {
-    // Cleared — reset complainant fields
     formData.value.complainant_id = null
     formData.value.complainant_name = ''
     formData.value.complainant_age = null
@@ -129,16 +146,12 @@ function normalizeRecord(record) {
 
 function toApiPayload(form) {
   const payload = { ...form }
-
   if (form.date) {
     payload.incident_date = new Date(form.date).toISOString().split('T')[0]
   } else {
     payload.incident_date = null
   }
-
   payload.incident_time = form.time || null
-
-  // Remove frontend-only fields
   const remove = [
     'date', 'time', 'id', 'blotter_no', 'created_at',
     'complainant_resident_name', 'complainant_resident_first_name',
@@ -149,21 +162,34 @@ function toApiPayload(form) {
     'respondent_resident_phone',
   ]
   remove.forEach(k => delete payload[k])
-
   return payload
 }
 
 // ======================================
-// Selection Logic
+// Selection + Filtering Logic
 // ======================================
 const filteredBlotters = computed(() => {
-  if (!searchQuery.value) return blotters.value
-  const query = searchQuery.value.toLowerCase()
-  return blotters.value.filter(b =>
-    b.blotter_no.toLowerCase().includes(query) ||
-    b.complainant_name.toLowerCase().includes(query) ||
-    (b.incident_type && b.incident_type.toLowerCase().includes(query))
-  )
+  let list = blotters.value
+
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase()
+    list = list.filter(b =>
+      b.blotter_no.toLowerCase().includes(query) ||
+      b.complainant_name.toLowerCase().includes(query) ||
+      (b.incident_type && b.incident_type.toLowerCase().includes(query))
+    )
+  }
+
+  if (filterState.value.incidentType) {
+    list = list.filter(b => b.incident_type === filterState.value.incidentType)
+  }
+
+  if (filterState.value.incidentDateRange) {
+    const [start, end] = filterState.value.incidentDateRange
+    list = list.filter(b => b.date && b.date >= start && b.date <= end + 86399999)
+  }
+
+  return list
 })
 
 const totalCount = computed(() => filteredBlotters.value.length)
@@ -277,11 +303,7 @@ const columns = computed(() => [
       return h('span', { class: 'font-bold text-blue-700' }, row.blotter_no)
     }
   },
-  {
-    title: 'Complainant',
-    key: 'complainant_name',
-    minWidth: 160
-  },
+  { title: 'Complainant', key: 'complainant_name', minWidth: 160 },
   {
     title: 'Respondent',
     key: 'respondent_name',
@@ -307,7 +329,9 @@ const columns = computed(() => [
     render(row) {
       return h('div', { class: 'flex gap-2 items-center' }, [
         h(NButton, { type: 'info', size: 'small', onClick: () => openViewModal(row) }, { default: () => 'View' }),
-        h('button', { onClick: () => handleDeleteSingle(row.id), class: 'p-1.5 text-red-500 hover:bg-red-50 rounded transition' }, [h(TrashIcon, { class: 'w-5 h-5' })])
+        h('button', { onClick: () => handleDeleteSingle(row.id), class: 'p-1.5 text-red-500 hover:bg-red-50 rounded transition' },
+          [h(TrashIcon, { class: 'w-5 h-5' })]
+        )
       ])
     }
   }
@@ -333,6 +357,12 @@ const incidentTypeOptions = [
   { label: 'Slander/Libel (Paninirang-puri)', value: 'Slander' },
   { label: 'Other', value: 'Other' }
 ]
+
+// Reuse same list for filter but add "All Types" at top
+const incidentTypeFilterOptions = computed(() => [
+  { label: 'All Incident Types', value: null },
+  ...incidentTypeOptions
+])
 
 function emptyForm() {
   return {
@@ -367,11 +397,9 @@ async function handleSave() {
     message.error('Complainant name is required')
     return
   }
-
   saving.value = true
   try {
     const payload = toApiPayload(formData.value)
-
     if (modalMode.value === 'add') {
       const created = await createBlotter(payload)
       blotters.value.unshift(normalizeRecord(created))
@@ -382,7 +410,6 @@ async function handleSave() {
       if (idx !== -1) blotters.value[idx] = normalizeRecord(updated)
       message.success('Blotter record updated successfully')
     }
-
     showBlotterModal.value = false
   } catch {
     message.error(modalMode.value === 'add' ? 'Failed to add blotter record' : 'Failed to update blotter record')
@@ -413,79 +440,105 @@ const modalTitle = computed(() => {
           class="border border-gray-200 text-gray-700 rounded-md py-2 px-3 w-[250px] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-gray-400"
         />
 
-        <div class="relative group inline-block">
-          <button class="p-2 border border-gray-400 rounded-lg hover:bg-gray-50 transition-colors">
-            <FunnelIcon class="w-5 h-5 text-gray-700" />
-          </button>
-          <div class="absolute -bottom-8 left-1/2 -translate-x-1/2
-                                opacity-0 invisible group-hover:opacity-100 group-hover:visible
-                                transition-all duration-300 ease-in-out
-                                bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded
-                                whitespace-nowrap shadow-md z-50">
+        <!-- Filter Popover -->
+        <NPopover
+          v-model:show="showFilterPopover"
+          trigger="click"
+          placement="bottom-end"
+          :show-arrow="false"
+          style="padding: 0;"
+        >
+          <template #trigger>
+            <button
+              :class="[
+                'flex items-center px-4 py-2 border rounded-lg text-sm font-medium transition-colors',
+                hasActiveFilters
+                  ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'
+                  : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+              ]"
+            >
+              <FunnelIcon class="w-5 h-5 mr-2" :class="hasActiveFilters ? 'text-white' : 'text-gray-500'" />
               Filter
-          </div>
-        </div>
+            </button>
+          </template>
 
+          <div class="w-[270px] bg-white rounded-lg overflow-hidden flex flex-col">
+            <div class="p-4 border-b border-gray-200">
+              <h3 class="text-[16px] font-semibold text-gray-800">Filter Blotter Records</h3>
+            </div>
+
+            <div class="px-6 py-4 space-y-4 flex-1">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Incident Type</label>
+                <NSelect
+                  v-model:value="filterState.incidentType"
+                  :options="incidentTypeFilterOptions"
+                  placeholder="All Incident Types"
+                />
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Incident Date Range</label>
+                <NDatePicker
+                  v-model:value="filterState.incidentDateRange"
+                  type="daterange"
+                  clearable
+                  class="w-full"
+                  format="dd/MM/yyyy"
+                  :placeholder="['Start date', 'End date']"
+                />
+              </div>
+            </div>
+
+            <div class="flex justify-end space-x-2 p-4 border-t border-gray-200">
+              <NButton @click="handleFilterClear" secondary>Clear</NButton>
+            </div>
+          </div>
+        </NPopover>
+
+        <!-- Delete -->
         <div class="relative group inline-block">
           <button
             @click="requestBulkDelete"
             :disabled="selectionState === 'none'"
             class="p-2 border border-red-400 rounded-lg transition-colors"
-            :class="
-              selectionState === 'none'
-                ? 'opacity-50 cursor-not-allowed'
-                : 'hover:bg-red-50'
-            "
+            :class="selectionState === 'none' ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-50'"
           >
             <TrashIcon class="w-5 h-5 text-red-500" />
           </button>
           <div class="absolute -bottom-8 left-1/2 -translate-x-1/2
-                                opacity-0 invisible group-hover:opacity-100 group-hover:visible
-                                transition-all duration-300 ease-in-out
-                                bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded
-                                whitespace-nowrap shadow-md z-50">
-              Delete
+                      opacity-0 invisible group-hover:opacity-100 group-hover:visible
+                      transition-all duration-300 ease-in-out
+                      bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded
+                      whitespace-nowrap shadow-md z-50">
+            Delete
           </div>
         </div>
 
+        <!-- Select All -->
         <div class="relative group inline-block">
           <div
             class="flex items-center border rounded-lg overflow-hidden transition-colors"
             :class="selectionState !== 'none' ? 'border-blue-600' : 'border-gray-400'"
           >
-            <button
-              @click="handleMainSelectToggle"
-              class="p-2 hover:bg-gray-50 flex items-center"
-            >
+            <button @click="handleMainSelectToggle" class="p-2 hover:bg-gray-50 flex items-center">
               <div
                 class="w-5 h-5 border rounded flex items-center justify-center transition-colors"
-                :class="
-                  selectionState !== 'none'
-                    ? 'bg-blue-600 border-blue-600'
-                    : 'border-gray-400'
-                "
+                :class="selectionState !== 'none' ? 'bg-blue-600 border-blue-600' : 'border-gray-400'"
               >
-                <div
-                  v-if="selectionState === 'partial'"
-                  class="w-2 h-0.5 bg-white"
-                ></div>
-                <CheckIcon
-                  v-if="selectionState === 'all'"
-                  class="w-3 h-3 text-white"
-                />
+                <div v-if="selectionState === 'partial'" class="w-2 h-0.5 bg-white"></div>
+                <CheckIcon v-if="selectionState === 'all'" class="w-3 h-3 text-white" />
               </div>
             </button>
-            <div
-          class="absolute -bottom-8 left-1/2 -translate-x-1/2
-                 opacity-0 invisible group-hover:opacity-100 group-hover:visible
-                 transition-all duration-300 ease-in-out
-                 bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded
-                 whitespace-nowrap shadow-md z-50"
-        >
-          Select All
+          </div>
+          <div class="absolute -bottom-8 left-1/2 -translate-x-1/2
+                      opacity-0 invisible group-hover:opacity-100 group-hover:visible
+                      transition-all duration-300 ease-in-out
+                      bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded
+                      whitespace-nowrap shadow-md z-50">
+            Select All
           </div>
         </div>
-      </div>
 
         <button
           @click="openAddModal"
@@ -508,6 +561,7 @@ const modalTitle = computed(() => {
       <n-data-table :columns="columns" :data="filteredBlotters" :bordered="false" />
     </div>
 
+    <!-- Blotter Modal -->
     <NModal :show="showBlotterModal" @update:show="handleModalClose" :mask-closable="false">
       <div class="w-[820px] max-h-[90vh] overflow-hidden bg-white rounded-xl shadow-lg flex flex-col" role="dialog" aria-modal="true">
 
@@ -523,10 +577,7 @@ const modalTitle = computed(() => {
           <div class="grid grid-cols-3 gap-4">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1.5">Blotter No.</label>
-              <n-input
-                :value="modalMode === 'view' ? formData.blotter_no : 'Auto-generated'"
-                :disabled="true"
-              />
+              <n-input :value="modalMode === 'view' ? formData.blotter_no : 'Auto-generated'" :disabled="true" />
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1.5">Date</label>
@@ -545,96 +596,50 @@ const modalTitle = computed(() => {
 
           <div class="border-t pt-4">
             <p class="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">Complainant (Nagreklamo)</p>
-
             <div class="mb-3">
               <label class="block text-sm font-medium text-gray-700 mb-1.5">
                 Registered Resident
                 <span class="text-gray-400 font-normal">(optional — select to auto-fill)</span>
               </label>
-              <NSelect
-                v-model:value="formData.complainant_id"
-                :options="residentOptions"
-                filterable
-                clearable
-                placeholder="Search resident by name..."
-                @update:value="handleComplainantSelect"
-              />
+              <NSelect v-model:value="formData.complainant_id" :options="residentOptions" filterable clearable placeholder="Search resident by name..." @update:value="handleComplainantSelect" />
             </div>
-
             <div class="grid grid-cols-3 gap-4">
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1.5">
-                  Full Name <span class="text-red-500">*</span>
-                </label>
-                <n-input
-                  v-model:value="formData.complainant_name"
-                  placeholder="Full Name"
-                  :disabled="!!formData.complainant_id"
-                />
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Full Name <span class="text-red-500">*</span></label>
+                <n-input v-model:value="formData.complainant_name" placeholder="Full Name" :disabled="!!formData.complainant_id" />
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Age</label>
-                <n-input
-                  v-model:value="formData.complainant_age"
-                  placeholder="Age"
-                  type="number"
-                  :disabled="!!formData.complainant_id"
-                />
+                <n-input v-model:value="formData.complainant_age" placeholder="Age" type="number" :disabled="!!formData.complainant_id" />
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Address</label>
-                <n-input
-                  v-model:value="formData.complainant_address"
-                  placeholder="Address"
-                  :disabled="!!formData.complainant_id"
-                />
+                <n-input v-model:value="formData.complainant_address" placeholder="Address" :disabled="!!formData.complainant_id" />
               </div>
             </div>
           </div>
 
           <div class="border-t pt-4">
             <p class="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">Respondent (Inireklamo)</p>
-
             <div class="mb-3">
               <label class="block text-sm font-medium text-gray-700 mb-1.5">
                 Registered Resident
                 <span class="text-gray-400 font-normal">(optional — select to auto-fill)</span>
               </label>
-              <NSelect
-                v-model:value="formData.respondent_id"
-                :options="residentOptions"
-                filterable
-                clearable
-                placeholder="Search resident by name..."
-                @update:value="handleRespondentSelect"
-              />
+              <NSelect v-model:value="formData.respondent_id" :options="residentOptions" filterable clearable placeholder="Search resident by name..." @update:value="handleRespondentSelect" />
             </div>
-
             <div class="grid grid-cols-3 gap-4">
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Full Name</label>
-                <n-input
-                  v-model:value="formData.respondent_name"
-                  placeholder="Full Name"
-                  :disabled="!!formData.respondent_id"
-                />
+                <n-input v-model:value="formData.respondent_name" placeholder="Full Name" :disabled="!!formData.respondent_id" />
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Age</label>
-                <n-input
-                  v-model:value="formData.respondent_age"
-                  placeholder="Age"
-                  type="number"
-                  :disabled="!!formData.respondent_id"
-                />
+                <n-input v-model:value="formData.respondent_age" placeholder="Age" type="number" :disabled="!!formData.respondent_id" />
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Address</label>
-                <n-input
-                  v-model:value="formData.respondent_address"
-                  placeholder="Address"
-                  :disabled="!!formData.respondent_id"
-                />
+                <n-input v-model:value="formData.respondent_address" placeholder="Address" :disabled="!!formData.respondent_id" />
               </div>
             </div>
           </div>
