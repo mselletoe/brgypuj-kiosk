@@ -56,8 +56,20 @@ function searchRecent(term) {
   nextTick(() => inputRef.value?.focus());
 }
 
-onMounted(() => window.addEventListener("keydown", onKeydown));
-onUnmounted(() => window.removeEventListener("keydown", onKeydown));
+// Single place for keyboard handling
+function handleKeydown(e) {
+  if (e.key === "Escape" && props.modelValue) {
+    handleClose();
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+    e.preventDefault();
+    if (props.modelValue) handleClose();
+    else emit("update:modelValue", true);
+  }
+}
+
+onMounted(() => window.addEventListener("keydown", handleKeydown));
+onUnmounted(() => window.removeEventListener("keydown", handleKeydown));
 </script>
 
 <template>
@@ -136,7 +148,6 @@ onUnmounted(() => window.removeEventListener("keydown", onKeydown));
 
           <!-- Body -->
           <div class="max-h-[55vh] overflow-y-auto">
-            <!-- No query: show recents -->
             <template v-if="!query">
               <div v-if="recentSearches.length" class="p-4">
                 <div class="flex justify-between items-center mb-2 px-1">
@@ -168,7 +179,6 @@ onUnmounted(() => window.removeEventListener("keydown", onKeydown));
               </div>
             </template>
 
-            <!-- Loading -->
             <div
               v-else-if="isLoading"
               class="py-16 text-center text-sm text-gray-400"
@@ -176,7 +186,6 @@ onUnmounted(() => window.removeEventListener("keydown", onKeydown));
               Searching…
             </div>
 
-            <!-- No results -->
             <div v-else-if="!hasResults" class="py-16 text-center">
               <p class="text-sm font-semibold text-gray-500">
                 No results for "<span class="text-gray-800">{{ query }}</span
@@ -187,7 +196,6 @@ onUnmounted(() => window.removeEventListener("keydown", onKeydown));
               </p>
             </div>
 
-            <!-- Grouped results -->
             <div v-else>
               <div
                 v-for="group in results"
@@ -230,9 +238,6 @@ onUnmounted(() => window.removeEventListener("keydown", onKeydown));
           <div
             class="px-5 py-2.5 border-t border-gray-50 flex items-center gap-4 bg-gray-50/50"
           >
-            <span class="text-[11px] text-gray-400"
-              ><kbd class="font-semibold">↵</kbd> open</span
-            >
             <span class="text-[11px] text-gray-400"
               ><kbd class="font-semibold">Esc</kbd> close</span
             >

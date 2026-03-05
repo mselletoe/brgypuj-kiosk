@@ -1,19 +1,9 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref } from "vue";
 import { MagnifyingGlassIcon } from "@heroicons/vue/24/solid";
 import GlobalSearchModal from "./GlobalSearchModal.vue";
 
 const isOpen = ref(false);
-
-function onKeydown(e) {
-  if ((e.ctrlKey || e.metaKey) && e.key === "k") {
-    e.preventDefault();
-    isOpen.value = !isOpen.value;
-  }
-}
-
-onMounted(() => window.addEventListener("keydown", onKeydown));
-onUnmounted(() => window.removeEventListener("keydown", onKeydown));
 </script>
 
 <template>
