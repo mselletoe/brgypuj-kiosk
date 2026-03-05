@@ -265,6 +265,7 @@ const handleNewRequest = () => {
         <Modal
           title="Exit Equipment Request?"
           message="You have unsaved changes. Are you sure you want to exit? All your progress will be lost."
+          type="warning"
           primaryButtonText="Exit"
           secondaryButtonText="Stay"
           :showPrimaryButton="true"
