@@ -264,23 +264,19 @@ const handleChangePassword = async () => {
       </n-tabs>
     </div>
 
-    <!-- Loading spinner while profile fetches -->
-    <div v-if="loadingProfile" class="flex justify-center items-center h-48">
-      <n-spin size="large" />
+    <div v-if="loadingProfile" class="flex-1 flex flex-col items-center justify-center gap-4">
+      <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+      <p class="text-gray-500 font-medium">Loading account settings...</p>
     </div>
 
     <div v-else class="overflow-y-auto h-[calc(100vh-200px)] pt-6 pr-2">
 
-      <!-- ============================================================ -->
-      <!-- PROFILE TAB                                                   -->
-      <!-- ============================================================ -->
       <div
         v-if="activeTab === 'Profile'"
         class="flex flex-col lg:flex-row gap-12 lg:justify-between items-start"
       >
         <div class="flex-1 w-full max-w-2xl flex flex-col gap-6">
 
-          <!-- Full Name — read-only, sourced from resident record -->
           <div class="flex flex-col gap-2">
             <label class="text-[12px] font-bold text-gray-800">Name</label>
             <n-input :value="fullName" disabled placeholder="Full Name" />
@@ -289,7 +285,6 @@ const handleChangePassword = async () => {
             </p>
           </div>
 
-          <!-- Position -->
           <div class="flex flex-col gap-2">
             <label class="text-[12px] font-bold text-gray-800">Position</label>
             <n-input
@@ -298,7 +293,6 @@ const handleChangePassword = async () => {
             />
           </div>
 
-          <!-- Username -->
           <div class="flex flex-col gap-2">
             <label class="text-[12px] font-bold text-gray-800">Username</label>
             <n-input
@@ -319,7 +313,6 @@ const handleChangePassword = async () => {
           </div>
         </div>
 
-        <!-- Profile Photo -->
         <div class="flex flex-col items-center lg:items-end w-full lg:w-auto lg:mr-12 mt-8 lg:mt-0">
           <div class="flex flex-col w-[320px]">
             <span class="font-['Inter'] font-semibold text-[16px] text-[#373737] mb-6">
@@ -372,9 +365,6 @@ const handleChangePassword = async () => {
         </div>
       </div>
 
-      <!-- ============================================================ -->
-      <!-- SECURITY TAB                                                  -->
-      <!-- ============================================================ -->
       <div
         v-if="activeTab === 'Security'"
         class="flex flex-col lg:flex-row gap-12 lg:justify-between items-start"
@@ -411,7 +401,6 @@ const handleChangePassword = async () => {
             />
           </div>
 
-          <!-- Password strength indicator -->
           <div v-if="securityData.newPassword" class="flex flex-col gap-2 pt-1">
             <div class="flex items-center gap-1 text-[12px] font-bold">
               <span class="text-gray-800">Password Strength:</span>
@@ -442,7 +431,6 @@ const handleChangePassword = async () => {
           </div>
         </div>
 
-        <!-- Delete Account card -->
         <div
           class="w-full lg:w-[400px] border-2 border-[#B1202A] bg-[#fff5f5]
                  rounded-lg p-6 flex flex-col lg:mr-16"
