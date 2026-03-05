@@ -267,14 +267,20 @@ const columns = computed(() => [
           class="border border-gray-200 text-gray-700 rounded-md py-2 px-3 w-[250px] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-gray-400"
         />
 
-        <button
-          @click="showFilterModal = true"
-          class="p-2 border border-gray-400 rounded-lg hover:bg-gray-50 transition-colors"
-        >
-          <FunnelIcon class="w-5 h-5 text-gray-700" />
-        </button>
+        <div class="relative group inline-block">
+          <button class="p-2 border border-gray-400 rounded-lg hover:bg-gray-50 transition-colors">
+            <FunnelIcon class="w-5 h-5 text-gray-700" />
+          </button>
+          <div class="absolute -bottom-8 left-1/2 -translate-x-1/2
+                                opacity-0 invisible group-hover:opacity-100 group-hover:visible
+                                transition-all duration-300 ease-in-out
+                                bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded
+                                whitespace-nowrap shadow-md z-50">
+              Filter
+          </div>
+        </div>
 
-        <div class="flex items-center gap-1.5">
+        <div class="relative group inline-block">
           <button
             @click="requestBulkDelete"
             :disabled="selectionState === 'none'"
@@ -287,29 +293,53 @@ const columns = computed(() => [
           >
             <TrashIcon class="w-5 h-5 text-red-500" />
           </button>
+          <div class="absolute -bottom-8 left-1/2 -translate-x-1/2
+                                opacity-0 invisible group-hover:opacity-100 group-hover:visible
+                                transition-all duration-300 ease-in-out
+                                bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded
+                                whitespace-nowrap shadow-md z-50">
+              Delete
+          </div>
         </div>
 
-        <div
-          class="flex items-center border rounded-lg overflow-hidden transition-colors"
-          :class="selectionState !== 'none' ? 'border-blue-600' : 'border-gray-400'"
-        >
-          <button
-            @click="handleMainSelectToggle"
-            class="p-2 hover:bg-gray-50 flex items-center"
+        <div class="relative group inline-block">
+          <div
+            class="flex items-center border rounded-lg overflow-hidden transition-colors"
+            :class="selectionState !== 'none' ? 'border-blue-600' : 'border-gray-400'"
           >
-            <div
-              class="w-5 h-5 border rounded flex items-center justify-center transition-colors"
-              :class="
-                selectionState !== 'none'
-                  ? 'bg-blue-600 border-blue-600'
-                  : 'border-gray-400'
-              "
+            <button
+              @click="handleMainSelectToggle"
+              class="p-2 hover:bg-gray-50 flex items-center"
             >
-              <div v-if="selectionState === 'partial'" class="w-2 h-0.5 bg-white"></div>
-              <CheckIcon v-if="selectionState === 'all'" class="w-3 h-3 text-white" />
-            </div>
-          </button>
+              <div
+                class="w-5 h-5 border rounded flex items-center justify-center transition-colors"
+                :class="
+                  selectionState !== 'none'
+                    ? 'bg-blue-600 border-blue-600'
+                    : 'border-gray-400'
+                "
+              >
+                <div
+                  v-if="selectionState === 'partial'"
+                  class="w-2 h-0.5 bg-white"
+                ></div>
+                <CheckIcon
+                  v-if="selectionState === 'all'"
+                  class="w-3 h-3 text-white"
+                />
+              </div>
+            </button>
+            <div
+          class="absolute -bottom-8 left-1/2 -translate-x-1/2
+                 opacity-0 invisible group-hover:opacity-100 group-hover:visible
+                 transition-all duration-300 ease-in-out
+                 bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded
+                 whitespace-nowrap shadow-md z-50"
+        >
+          Select All
+          </div>
         </div>
+      </div>
 
         <button
           @click="openAddModal"
