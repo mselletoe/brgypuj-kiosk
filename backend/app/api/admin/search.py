@@ -7,7 +7,7 @@ from app.models.document import DocumentRequest
 from app.models.equipment import EquipmentInventory, EquipmentRequest
 from app.models.blotter import BlotterRecord
 
-router = APIRouter(prefix="/search", tags=["Search"])
+router = APIRouter(prefix="/search")
 
 
 @router.get("")

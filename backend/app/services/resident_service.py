@@ -117,11 +117,22 @@ def get_all_residents_list(db: Session) -> List[Dict]:
             None
         )
         
-        # Get active RFID
+        # Get most recent RFID (active or inactive)
         active_rfid = next(
             (rfid for rfid in resident.rfids if rfid.is_active),
             None
         )
+        any_rfid = active_rfid or (
+            max(resident.rfids, key=lambda r: r.created_at) if resident.rfids else None
+        )
+        
+        # rfid_no: show the UID if active, "Inactive" if RFID exists but disabled, None if none
+        if active_rfid:
+            rfid_display = active_rfid.rfid_uid
+        elif any_rfid:
+            rfid_display = "Inactive"
+        else:
+            rfid_display = None
         
         result.append({
             "id": resident.id,
@@ -132,7 +143,7 @@ def get_all_residents_list(db: Session) -> List[Dict]:
                 resident.suffix
             ),
             "phone_number": resident.phone_number,
-            "rfid_no": active_rfid.rfid_uid if active_rfid else None,
+            "rfid_no": rfid_display,
             "current_address": build_full_address(current_address) if current_address else None
         })
     
@@ -196,11 +207,13 @@ def get_resident_detail(db: Session, resident_id: int) -> Optional[Dict]:
         None
     )
     
-    # Get active RFID
-    active_rfid = next(
-        (rfid for rfid in resident.rfids if rfid.is_active),
-        None
-    )
+    # Get the most recent RFID (active or inactive) — always return it so the
+    # frontend can display the number and toggle its status without losing it.
+    rfid_card = None
+    if resident.rfids:
+        # Prefer the active one; if none is active, use the most recently created
+        active = next((r for r in resident.rfids if r.is_active), None)
+        rfid_card = active or max(resident.rfids, key=lambda r: r.created_at)
     
     # Calculate computed fields
     age = calculate_age(resident.birthdate)
@@ -250,13 +263,13 @@ def get_resident_detail(db: Session, resident_id: int) -> Optional[Dict]:
             "is_current": current_address.is_current
         } if current_address else None,
         
-        # RFID Info
+        # RFID Info — always returned so the number is visible even when inactive
         "active_rfid": {
-            "id": active_rfid.id,
-            "rfid_uid": active_rfid.rfid_uid,
-            "is_active": active_rfid.is_active,
-            "created_at": active_rfid.created_at.isoformat()
-        } if active_rfid else None,
+            "id": rfid_card.id,
+            "rfid_uid": rfid_card.rfid_uid,
+            "is_active": rfid_card.is_active,
+            "created_at": rfid_card.created_at.isoformat()
+        } if rfid_card else None,
         
         # Timestamps
         "registered_at": resident.registered_at.isoformat()

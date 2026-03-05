@@ -448,10 +448,9 @@ async function handleSave() {
         })
       }
       
-      // Update RFID if changed
+      // Update RFID status if there's an RFID on record
       if (formData.value.rfid_uid) {
         await updateResidentRFID(props.residentId, {
-          rfid_uid: formData.value.rfid_uid,
           is_active: formData.value.is_active
         })
       }
@@ -527,28 +526,38 @@ function handleClose() {
             </div>
           </div>
           <!-- Stats -->
-          <div class="flex gap-8 justify-between">
+          <div class="flex gap-6 justify-between">
             <div class="flex flex-col">
               <span class="text-xs text-gray-500 font-medium uppercase tracking-wide">Age</span>
               <span class="text-2xl font-bold text-gray-800">{{ residentDetails.age }}</span>
               <span class="text-xs text-gray-500">years old</span>
             </div>
-            <div class="w-px bg-gray-300 self-stretch"></div>
+            <div class="w-[1.1px] bg-gray-300 self-stretch"></div>
             <div class="flex flex-col">
               <span class="text-xs text-gray-500 font-medium uppercase tracking-wide">Residency</span>
-              <span class="text-lg font-bold text-gray-800 leading-tight">{{ residencyLabel }}</span>
+              <span class="text-2xl font-bold text-gray-800">{{ residencyLabel }}</span>
               <span class="text-xs text-gray-500">since {{ residentDetails.residency_start_date }}</span>
             </div>
-            <!-- <div class="w-px bg-gray-300 self-stretch"></div> -->
-            <!-- <div class="flex flex-col">
-              <span class="text-xs text-gray-500 font-medium uppercase tracking-wide">Address</span>
-              <span class="text-lg font-semibold text-gray-800 capitalize">{{ residentDetails.address }}</span>
-            </div> -->
-            <!-- <div class="w-px bg-gray-300 self-stretch"></div>
+            <div class="w-[1.1px] bg-gray-300 self-stretch"></div>
             <div class="flex flex-col">
-              <span class="text-xs text-gray-500 font-medium uppercase tracking-wide">Birthdate</span>
-              <span class="text-sm font-semibold text-gray-800">{{ residentDetails.birthdate }}</span>
-            </div> -->
+              <span class="text-xs text-gray-500 font-medium uppercase tracking-wide">Brgy. I.D No.</span>
+              <span class="text-2xl font-bold text-gray-800">{{ residentDetails.brgy_id_number || '—' }}</span>
+            </div>
+            <div class="w-[1.1px] bg-gray-300 self-stretch"></div>
+            <div class="flex flex-col gap-1">
+              <span class="text-xs text-gray-500 font-medium uppercase tracking-wide">RFID No.</span>
+              <span class="text-xl font-bold text-blue-700">{{ formData.rfid_uid || '—' }}</span>
+              <div class="flex items-center gap-2">
+                <NSwitch
+                  v-model:value="formData.is_active"
+                  :disabled="!formData.rfid_uid"
+                  size="small"
+                />
+                <span class="text-xs" :class="formData.rfid_uid ? 'text-gray-700' : 'text-gray-400'">
+                  {{ !formData.rfid_uid ? 'No RFID' : formData.is_active ? 'Active' : 'Inactive' }}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
         <!-- ADD/EDIT MODE - Form -->
@@ -653,39 +662,6 @@ function handleClose() {
               </div>
             </div>          
           </div>
-
-          <!-- RFID Information -->
-          <div class="flex flex-col gap-2">
-            <span class="text-xs text-gray-500 font-medium uppercase tracking-wide">Brgy. Identification Details</span>
-
-            <div class="grid grid-cols-2 gap-4">
-              <!-- Hardcoded: Brgy. I.D Number -->
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1.5">
-                  Brgy. I.D Number <span v-if="mode === 'add'" class="text-red-500">*</span>
-                </label>
-                <NInput placeholder="Brgy. I.D Number" />
-              </div>
-              <!-- --------------------------- -->
-              <div></div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1.5">
-                  RFID No. <span v-if="mode === 'add'" class="text-red-500">*</span>
-                </label>
-                <NInput v-model:value="formData.rfid_uid" placeholder="RFID Number" />
-              </div>
-              <div>
-                <label class="block text-sm text-gray-700 mb-1.5">RFID Status</label>
-                <div class="flex items-center gap-2 mt-2">
-                  <NSwitch v-model:value="formData.is_active" />
-                  <span class="text-sm text-gray-700">
-                    {{ formData.is_active ? 'Active' : 'Inactive' }}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
 
           <hr class="bg-slate-300 my-5" />
 
