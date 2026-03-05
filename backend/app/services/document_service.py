@@ -237,14 +237,17 @@ def _validate_dynamic_fields(required_fields: list, submitted_data: dict):
                 )
 
 
-def _check_existing_pending_request(db: Session, resident_id: int):
+def _check_existing_pending_request(db: Session, resident_id: int, doctype_id: int):
     """
-    Enforces the single-pending-request policy to prevent system flooding.
+    Prevents duplicate pending requests for the same document type.
+    Scoped to (resident_id + doctype_id) so a resident can request
+    different document types concurrently.
     """
     exists = (
         db.query(DocumentRequest)
         .filter(
             DocumentRequest.resident_id == resident_id,
+            DocumentRequest.doctype_id == doctype_id,
             DocumentRequest.status == "Pending"
         )
         .first()
@@ -253,7 +256,8 @@ def _check_existing_pending_request(db: Session, resident_id: int):
     if exists:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="You already have a pending document request"
+            detail="You already have a pending request for this document type. "
+                   "Please wait for it to be processed before submitting a new one."
         )
 
 
@@ -505,7 +509,9 @@ def create_document_request(db: Session, payload: DocumentRequestCreate) -> Docu
     # 3. Validate resident based on document type
     if payload.resident_id is not None:
         resident = _validate_resident(db, payload.resident_id)
-        _check_existing_pending_request(db, payload.resident_id)
+        # FIX: Pass doctype_id so the check is scoped to this document type only,
+        # allowing the resident to have pending requests for other document types.
+        _check_existing_pending_request(db, payload.resident_id, payload.doctype_id)
     elif not is_rfid_request:
         # If resident_id is None and it's NOT an RFID request, reject
         raise HTTPException(
