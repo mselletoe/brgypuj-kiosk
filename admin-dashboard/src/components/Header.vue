@@ -4,7 +4,7 @@ import { useRouter } from "vue-router";
 import { NDropdown } from "naive-ui";
 import {
   UserCircleIcon,
-  QuestionMarkCircleIcon,
+  BookOpenIcon,
   BellIcon,
   ArrowLeftOnRectangleIcon,
   ChatBubbleLeftRightIcon,
@@ -119,7 +119,7 @@ const handleSelect = (key) => {
           @click="router.push('/help-and-support')"
           class="w-11 h-11 flex items-center justify-center text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all"
         >
-          <QuestionMarkCircleIcon class="h-6 w-6" />
+          <BookOpenIcon class="h-6 w-6" />
         </button>
         <div class="absolute -bottom-6 left-1/2 -translate-x-1/2
                     opacity-0 invisible group-hover:opacity-100 group-hover:visible

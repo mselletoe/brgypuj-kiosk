@@ -2,7 +2,7 @@
 import { ref, watch } from 'vue'
 import { NModal, NButton, NInput, NSelect, NCheckbox, useMessage } from 'naive-ui'
 import { v4 as uuidv4 } from 'uuid'
-import { TrashIcon } from '@heroicons/vue/24/outline'
+import { TrashIcon, XMarkIcon } from '@heroicons/vue/24/outline'
 
 // Component props
 const props = defineProps({
@@ -18,15 +18,6 @@ const props = defineProps({
 const emit = defineEmits(['close', 'saved'])
 
 const message = useMessage()
-const localShow = ref(props.show)
-
-// Sync local show state with prop
-watch(() => props.show, val => {
-  localShow.value = val
-})
-watch(localShow, val => {
-  emit('update:show', val)
-})
 
 // Local fields array for editing
 const localFields = ref([])
@@ -44,8 +35,8 @@ function formatName(value) {
   return value
     .trim()
     .toLowerCase()
-    .replace(/\s+/g, '_')    // spaces → underscores
-    .replace(/[^\w_]/g, '')  // remove symbols
+    .replace(/\s+/g, '_')
+    .replace(/[^\w_]/g, '')
 }
 
 // Add a new field to the list
@@ -69,12 +60,10 @@ function removeField(index) {
 // Save the configured fields
 function save() {
   for (const field of localFields.value) {
-    // Auto-generate a safe name from label if name is empty
     if (!field.name.trim() && field.label.trim()) {
       field.name = formatName(field.label)
     }
 
-    // Ensure final name is properly formatted
     field.name = formatName(field.name)
 
     if (!field.name) {
@@ -83,9 +72,9 @@ function save() {
 
     if (!field.label.trim()) {
       field.label = field.name
-        .replace(/_/g, ' ')              // replace underscores with spaces
-        .toLowerCase()                   // make everything lowercase
-        .replace(/^\w/, c => c.toUpperCase()); // capitalize the first letter only
+        .replace(/_/g, ' ')
+        .toLowerCase()
+        .replace(/^\w/, c => c.toUpperCase())
     }
 
     if (field.type === 'select' && (!field.options || field.options.length === 0)) {
@@ -95,129 +84,136 @@ function save() {
 
   emit('saved', JSON.parse(JSON.stringify(localFields.value)), props.serviceId)
 }
+
+function handleClose() {
+  emit('close')
+}
 </script>
 
 <template>
-  <NModal
-    v-model:show="localShow"
-    title="Configure Fields"
-    :mask-closable="false"
-    preset="card"
-    style="width: 90%; max-width: 800px; max-height: 80vh; overflow-y: auto;"
-    @close="emit('close')"
-  >
-    <div style="min-height: 200px;">
-      <!-- Empty state when no fields exist -->
-      <div 
-        v-if="localFields.length === 0" 
-        style="text-align: center; padding: 3rem 1rem; color: #999;"
-      >
-        <p style="margin-bottom: 1rem; font-size: 15px;">No fields configured yet.</p>
-        <NButton type="primary" @click="addField">Add Your First Field</NButton>
+  <NModal :show="show" @update:show="handleClose" :mask-closable="false">
+    <div class="w-[800px] max-h-[80vh] overflow-hidden bg-white rounded-xl shadow-lg flex flex-col">
+
+      <!-- Header -->
+      <div class="flex items-center justify-between px-6 py-4 border-b bg-gray-50">
+        <div>
+          <h2 class="text-base font-semibold text-gray-800">Configure Fields</h2>
+          <p class="text-xs text-gray-500 mt-0.5">
+            Define the input fields residents will fill out when requesting this document.
+          </p>
+        </div>
+        <button @click="handleClose" class="p-1 rounded hover:bg-gray-200 transition">
+          <XMarkIcon class="w-5 h-5 text-gray-500" />
+        </button>
       </div>
 
-      <!-- List of configured fields -->
-      <div v-else style="display: flex; flex-direction: column; gap: 1rem;">
+      <!-- Body -->
+      <div class="px-6 py-4 overflow-y-auto flex-1">
+
+        <!-- Empty state when no fields exist -->
         <div
-          v-for="(field, index) in localFields"
-          :key="field.id"
-          style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 1rem; padding: 1.25rem; background: #fafafa; border: 1px solid #e5e5e5; border-radius: 8px; align-items: start;"
+          v-if="localFields.length === 0"
+          class="flex flex-col items-center justify-center py-12 text-gray-400 gap-3"
         >
-          <!-- Label -->
-          <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-            <label style="font-size: 13px; color: #666; font-weight: 500;">Field Label</label>
-            <NInput
-              v-model:value="field.label"
-              placeholder="e.g., Field Label"
-              size="medium"
-              @input="field.name = formatName(field.name)"
-            />
-          </div>
+          <p class="text-sm">No fields configured yet.</p>
+          <NButton type="primary" @click="addField">Add Your First Field</NButton>
+        </div>
 
-          <!-- Template placeholder (Label) -->
-          <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-            <label style="font-size: 13px; color: #666; font-weight: 500;">Template placeholder</label>
-            <NInput
-              v-model:value="field.name"
-              placeholder="e.g., field_name"
-              size="medium"
-            />
-          </div>
-
-          <!-- Type -->
-          <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-            <label style="font-size: 13px; color: #666; font-weight: 500;">Type</label>
-            <NSelect
-              v-model:value="field.type"
-              :options="[
-                { label: 'Text', value: 'text' },
-                { label: 'Number', value: 'number' },
-                { label: 'Email', value: 'email' },
-                { label: 'Telephone', value: 'tel' },
-                { label: 'Textarea', value: 'textarea' },
-                { label: 'Date', value: 'date' },
-                { label: 'Select Dropdown', value: 'select' }
-              ]"
-              size="medium"
-            />
-          </div>
-
-          <!-- Remove button -->
-          <button 
-            style="margin-top: 1.75rem; background: transparent; border: 1px solid red; border-radius: 6px; padding: 0.5rem; cursor: pointer; color: red; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"
-            @click="removeField(index)"
-            @mouseenter="e => e.target.style.background = '#ffebee'"
-            @mouseleave="e => e.target.style.background = 'transparent'"
-            type="button"
+        <!-- List of configured fields -->
+        <div v-else class="flex flex-col gap-4">
+          <div
+            v-for="(field, index) in localFields"
+            :key="field.id"
+            class="grid gap-4 p-5 bg-gray-50 border border-gray-200 rounded-lg items-start"
+            style="grid-template-columns: 1fr 1fr 1fr auto;"
           >
-            <TrashIcon style="width: 20px; height: 20px;" />
-          </button>
-
-          <!-- Required checkbox and options on second row -->
-          <div style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.5rem;">
-            <NCheckbox v-model:checked="field.required" size="medium">
-              Required field
-            </NCheckbox>
-
-            <!-- Options input for select type fields -->
-            <div v-if="field.type === 'select'" style="display: flex; flex-direction: column; gap: 0.5rem;">
+            <!-- Label -->
+            <div class="flex flex-col gap-1.5">
+              <label class="text-xs font-medium text-gray-500">Field Label</label>
               <NInput
-                v-model:value="field.optionsText"
-                placeholder="Options (comma separated): Option 1, Option 2, Option 3"
-                @input="field.options = field.optionsText.split(',').map(o => o.trim()).filter(o => o)"
+                v-model:value="field.label"
+                placeholder="e.g., Field Label"
+                size="medium"
+                @input="field.name = formatName(field.name)"
+              />
+            </div>
+
+            <!-- Template placeholder -->
+            <div class="flex flex-col gap-1.5">
+              <label class="text-xs font-medium text-gray-500">Template Placeholder</label>
+              <NInput
+                v-model:value="field.name"
+                placeholder="e.g., field_name"
                 size="medium"
               />
-              <p 
-                v-if="field.options && field.options.length > 0" 
-                style="font-size: 12px; color: #999; margin: 0;"
-              >
-                {{ field.options.length }} option(s): {{ field.options.join(', ') }}
-              </p>
+            </div>
+
+            <!-- Type -->
+            <div class="flex flex-col gap-1.5">
+              <label class="text-xs font-medium text-gray-500">Type</label>
+              <NSelect
+                v-model:value="field.type"
+                :options="[
+                  { label: 'Text', value: 'text' },
+                  { label: 'Number', value: 'number' },
+                  { label: 'Email', value: 'email' },
+                  { label: 'Telephone', value: 'tel' },
+                  { label: 'Textarea', value: 'textarea' },
+                  { label: 'Date', value: 'date' },
+                  { label: 'Select Dropdown', value: 'select' }
+                ]"
+                size="medium"
+              />
+            </div>
+
+            <!-- Remove button -->
+            <button
+              class="mt-6 p-2 border border-red-400 rounded-lg text-red-500 hover:bg-red-50 transition flex items-center justify-center"
+              @click="removeField(index)"
+              type="button"
+            >
+              <TrashIcon class="w-5 h-5" />
+            </button>
+
+            <!-- Required checkbox + options on second row -->
+            <div class="col-span-full flex flex-col gap-3">
+              <NCheckbox v-model:checked="field.required" size="medium">
+                Required field
+              </NCheckbox>
+
+              <div v-if="field.type === 'select'" class="flex flex-col gap-1.5">
+                <NInput
+                  v-model:value="field.optionsText"
+                  placeholder="Options (comma separated): Option 1, Option 2, Option 3"
+                  @input="field.options = field.optionsText.split(',').map(o => o.trim()).filter(o => o)"
+                  size="medium"
+                />
+                <p v-if="field.options && field.options.length > 0" class="text-xs text-gray-400">
+                  {{ field.options.length }} option(s): {{ field.options.join(', ') }}
+                </p>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Modal footer with action buttons -->
-    <template #footer>
-      <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-        <NButton 
-          type="default"
-          @click="addField"
-          size="medium"
-        >
-          Add field
+      <!-- Footer -->
+      <div class="flex items-center justify-between px-6 py-4 border-t">
+        <NButton @click="addField" size="medium">
+          Add Field
         </NButton>
-        <NButton 
-          type="primary" 
-          @click="save"
-          :disabled="localFields.length === 0"
-          size="medium"
-        >
-          Save
-        </NButton>
+        <div class="flex gap-3">
+          <NButton @click="handleClose">Cancel</NButton>
+          <NButton
+            type="primary"
+            @click="save"
+            :disabled="localFields.length === 0"
+          >
+            Save Fields
+          </NButton>
+        </div>
       </div>
-    </template>
+
+    </div>
   </NModal>
 </template>

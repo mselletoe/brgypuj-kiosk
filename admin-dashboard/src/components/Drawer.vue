@@ -13,6 +13,8 @@ import {
   QuestionMarkCircleIcon,
   UserGroupIcon,
   UserCircleIcon,
+  ClipboardDocumentListIcon,
+  PhoneIcon,
 } from "@heroicons/vue/24/solid";
 
 const props = defineProps({
@@ -67,7 +69,7 @@ const menuGroups = [
       },
       {
         label: "Blotter and KP Logs",
-        icon: UserCircleIcon,
+        icon: ClipboardDocumentListIcon,
         to: "/blotter-kp-logs",
       },
       {
@@ -87,7 +89,7 @@ const menuGroups = [
       },
       {
         label: "Contact Information",
-        icon: UserCircleIcon,
+        icon: PhoneIcon,
         to: "/contact-information",
       },
     ],
