@@ -773,7 +773,7 @@ const selectYear = (y) => {
       >
         <Modal
           title="Application Received!"
-          message="Your application and photo have been logged. Please proceed to Window 2 and present your Reference ID to claim your card."
+          message="Please present your Reference ID at the cashier to settle your payment."
           :reference-id="referenceId"
           :show-reference-id="true"
           :show-primary-button="true"
