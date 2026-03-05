@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, h, computed, watch } from 'vue'
-import { NDataTable, NInput, NButton, NCheckbox, useMessage } from 'naive-ui'
+import { NDataTable, NInput, NButton, NCheckbox, useMessage, NEmpty } from 'naive-ui'
 import { PencilSquareIcon, TrashIcon, XMarkIcon, CheckIcon } from '@heroicons/vue/24/outline'
 import PageTitle from '@/components/shared/PageTitle.vue'
 import FieldEditor from './FieldEditor.vue'
@@ -608,8 +608,18 @@ onMounted(fetchServices)
         </div>
       </div>
 
-      <div class="overflow-y-auto bg-white rounded-lg border border-gray-200 flex-1">
+      <div v-if="services.length > 0 || showAddForm" class="overflow-y-auto bg-white rounded-lg border border-gray-200 flex-1">
         <n-data-table :columns="columns" :data="filteredServices" :bordered="false" />
+      </div>
+
+      <div v-else class="h-full flex flex-col items-center justify-center flex-1">
+        <NEmpty description="No document services yet">
+          <template #extra>
+            <NButton type="primary" @click="showAddForm = true">
+              Add Document Type
+            </NButton>
+          </template>
+        </NEmpty>
       </div>
 
       <FieldEditor

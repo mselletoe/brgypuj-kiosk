@@ -5,7 +5,7 @@
  * Fully connected to backend: Create, Edit, Delete, Bulk Delete.
  */
 import { ref, computed, watch, h, onMounted } from "vue"
-import { NDataTable, NInput, NButton, NCheckbox, useMessage } from "naive-ui"
+import { NDataTable, NInput, NButton, NCheckbox, useMessage, NEmpty } from "naive-ui"
 import {
   PencilSquareIcon,
   TrashIcon,
@@ -249,7 +249,7 @@ const columns = computed(() => [
 </script>
 
 <template>
-  <div class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden animate-fade-in">
+  <div class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden">
     <div class="flex mb-6 items-center justify-between">
       <div>
         <PageTitle title="FAQs Management" />
@@ -322,8 +322,18 @@ const columns = computed(() => [
         </div>
       </div>
 
-      <div class="overflow-y-auto bg-white rounded-lg border border-gray-200 flex-1">
+      <div v-if="faqs.length > 0 || showAddForm" class="overflow-y-auto bg-white rounded-lg border border-gray-200 flex-1">
         <n-data-table :columns="columns" :data="filteredFaqs" :bordered="false" />
+      </div>
+
+      <div v-else class="h-full flex flex-col items-center justify-center flex-1">
+        <NEmpty description="No FAQs created yet">
+          <template #extra>
+            <NButton type="primary" @click="showAddForm = true">
+              Add FAQ
+            </NButton>
+          </template>
+        </NEmpty>
       </div>
     </template>
 
