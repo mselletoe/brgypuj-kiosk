@@ -2,8 +2,7 @@
 import { ref, computed, onMounted } from "vue";
 import RequestCard from "@/views/requests/document-requests/DocumentRequestCard.vue";
 import ConfirmModal from "@/components/shared/ConfirmationModal.vue";
-import { useRealtimeSync } from "@/composables/useRealtimeSync";
-import { createAuditLog } from "@/api/auditService";
+import { createAuditLog } from "@/api/auditService"; // [cite: 24, 25]
 import {
   getDocumentRequests,
   approveRequest,
@@ -89,42 +88,6 @@ const fetchPendingRequests = async () => {
     isLoading.value = false;
   }
 };
-
-useRealtimeSync({
-  // New request submitted from kiosk → add it to pending list
-  request_created: () => {
-    fetchPendingRequests()  // re-fetch to get full request data
-  },
-
-  // Request status changed (approve/reject/undo) → remove from pending if no longer pending
-  request_updated: (data) => {
-    if (data.status !== 'pending') {
-      pendingRequests.value = pendingRequests.value.filter(r => r.id !== data.id)
-    } else {
-      // Was undone back to pending — re-fetch to get full data
-      fetchPendingRequests()
-    }
-  },
-
-  // Payment toggled
-  request_payment_updated: (data) => {
-    const request = pendingRequests.value.find(r => r.id === data.id)
-    if (request) {
-      request.isPaid = data.payment_status === 'paid'
-    }
-  },
-
-  // Single delete
-  request_deleted: (data) => {
-    pendingRequests.value = pendingRequests.value.filter(r => r.id !== data.id)
-  },
-
-  // Bulk delete
-  requests_bulk_deleted: (data) => {
-    const deletedIds = new Set(data.ids)
-    pendingRequests.value = pendingRequests.value.filter(r => !deletedIds.has(r.id))
-  }
-})
 
 const openConfirmModal = (title, action) => {
   confirmTitle.value = title;
