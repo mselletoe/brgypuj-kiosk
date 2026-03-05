@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import EquipmentRequestCard from '@/views/requests/equipment-requests/EquipmentRequestCard.vue'
 import ConfirmModal from '@/components/shared/ConfirmationModal.vue'
 import SMSModal from '@/components/shared/SendSMSModal.vue'
+import { useRealtimeSync } from '@/composables/useRealtimeSync'
 import {
   getEquipmentRequests,
   markAsReturned,
@@ -48,7 +49,6 @@ const fetchPickedUpRequests = async () => {
     const response = await getEquipmentRequests()
 
     const allRequests = response.data.map(req => {
-      // Format equipment items list
       const equipmentList = req.items
         .map(item => `${item.quantity}x ${item.item_name}`)
         .join(', ')
@@ -92,7 +92,6 @@ const fetchPickedUpRequests = async () => {
       }
     })
 
-    // Filter only picked-up requests
     pickedUpRequests.value = allRequests.filter(req => req.status === 'pickedup')
   } catch (error) {
     console.error('Error fetching equipment requests:', error)
@@ -101,6 +100,34 @@ const fetchPickedUpRequests = async () => {
     isLoading.value = false
   }
 }
+
+useRealtimeSync({
+  // Request marked picked-up from approved → re-fetch to get full data
+  equipment_request_updated: (data) => {
+    if (data.status === 'picked-up') {
+      fetchPickedUpRequests()
+    } else if (data.status === 'returned' || data.status === 'approved') {
+      // Left this tab (returned, or undone back to approved)
+      pickedUpRequests.value = pickedUpRequests.value.filter(r => r.id !== data.id)
+    }
+  },
+
+  // Bulk undo — some picked-up requests may have moved back to approved
+  equipment_requests_bulk_undone: () => {
+    fetchPickedUpRequests()
+  },
+
+  // Single delete
+  equipment_request_deleted: (data) => {
+    pickedUpRequests.value = pickedUpRequests.value.filter(r => r.id !== data.id)
+  },
+
+  // Bulk delete
+  equipment_requests_bulk_deleted: (data) => {
+    const deletedIds = new Set(data.ids)
+    pickedUpRequests.value = pickedUpRequests.value.filter(r => !deletedIds.has(r.id))
+  }
+})
 
 const openConfirmModal = (title, action) => {
   confirmTitle.value = title
@@ -227,22 +254,11 @@ Thank you!`
 const handleSendSMS = async (smsData) => {
   try {
     console.log('Sending SMS:', smsData)
-    
-    // TODO: Implement actual SMS sending API call
-    // Example:
-    // await sendSMS({
-    //   phone: smsData.phone,
-    //   message: smsData.message,
-    //   recipientName: smsData.recipientName
-    // })
-    
-    // For now, just log the data
     console.log('SMS would be sent to:', smsData.phone)
     console.log('Message:', smsData.message)
-    
   } catch (error) {
     console.error('Error sending SMS:', error)
-    throw error // Re-throw to let the modal handle the error display
+    throw error
   }
 }
 
@@ -307,7 +323,6 @@ const filteredRequests = computed(() => {
 
   if (props.filters?.requestedDate) {
     const selectedDate = new Date(props.filters.requestedDate).toDateString()
-
     result = result.filter(req =>
       new Date(req.raw.requested_at).toDateString() === selectedDate
     )
@@ -315,25 +330,17 @@ const filteredRequests = computed(() => {
 
   if (props.filters?.borrowingPeriodStart) {
     const start = new Date(props.filters.borrowingPeriodStart)
-
-    result = result.filter(req =>
-      new Date(req.raw.borrow_date) >= start
-    )
+    result = result.filter(req => new Date(req.raw.borrow_date) >= start)
   }
 
   if (props.filters?.borrowingPeriodEnd) {
     const end = new Date(props.filters.borrowingPeriodEnd)
-
-    result = result.filter(req =>
-      new Date(req.raw.return_date) <= end
-    )
+    result = result.filter(req => new Date(req.raw.return_date) <= end)
   }
 
   if (props.filters?.paymentStatus) {
     result = result.filter(req =>
-      props.filters.paymentStatus === 'paid'
-        ? req.isPaid
-        : !req.isPaid
+      props.filters.paymentStatus === 'paid' ? req.isPaid : !req.isPaid
     )
   }
 
@@ -343,22 +350,22 @@ const filteredRequests = computed(() => {
 
 <template>
   <div class="space-y-4">
-    <div 
-      v-if="isLoading" 
+    <div
+      v-if="isLoading"
       class="text-center p-10 text-gray-500"
     >
       <p>Loading picked up equipment requests...</p>
     </div>
 
-    <div 
-      v-else-if="errorMessage" 
+    <div
+      v-else-if="errorMessage"
       class="text-center p-10 text-red-500"
     >
       <p>{{ errorMessage }}</p>
     </div>
 
-    <div 
-      v-else-if="filteredRequests.length === 0" 
+    <div
+      v-else-if="filteredRequests.length === 0"
       class="text-center p-10 text-gray-500"
     >
       <h3 class="text-lg font-medium text-gray-700">No Picked Up Equipment Requests</h3>

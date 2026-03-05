@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import EquipmentRequestCard from '@/views/requests/equipment-requests/EquipmentRequestCard.vue'
 import ConfirmModal from '@/components/shared/ConfirmationModal.vue'
+import { useRealtimeSync } from '@/composables/useRealtimeSync'
 import {
   getEquipmentRequests,
   approveRequest,
@@ -39,15 +40,15 @@ const confirmAction = ref(null)
 const fetchPendingRequests = async () => {
   isLoading.value = true
   errorMessage.value = null
-  
+
   try {
     const response = await getEquipmentRequests()
-    
+
     const allRequests = response.data.map(req => {
       const equipmentList = req.items
         .map(item => `${item.quantity}x ${item.item_name}`)
         .join(', ')
-      
+
       return {
         id: req.id,
         transaction_no: req.transaction_no,
@@ -59,32 +60,32 @@ const fetchPendingRequests = async () => {
           lastName: req.resident_last_name || ''
         },
         rfidNo: req.resident_rfid,
-      requestedOn: new Date(req.requested_at).toLocaleDateString('en-US', {
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric'
-      }),
-      borrowingPeriod: {
-        from: new Date(req.borrow_date).toLocaleDateString('en-US', {
-          month: '2-digit',
-          day: '2-digit',
-          year: '2-digit'
+        requestedOn: new Date(req.requested_at).toLocaleDateString('en-US', {
+          month: 'long',
+          day: 'numeric',
+          year: 'numeric'
         }),
-        to: new Date(req.return_date).toLocaleDateString('en-US', {
-          month: '2-digit',
-          day: '2-digit',
-          year: '2-digit'
-        })
-      },
-      amount: req.payment_status !== 'free' ? String(req.total_cost ?? '0.00') : null,
-      isPaid: req.payment_status === 'paid',
-      contactPerson: req.contact_person,
-      contactNumber: req.contact_number,
-      purpose: req.purpose,
-      raw: req
-    }})
-    
-    // Filter only pending requests
+        borrowingPeriod: {
+          from: new Date(req.borrow_date).toLocaleDateString('en-US', {
+            month: '2-digit',
+            day: '2-digit',
+            year: '2-digit'
+          }),
+          to: new Date(req.return_date).toLocaleDateString('en-US', {
+            month: '2-digit',
+            day: '2-digit',
+            year: '2-digit'
+          })
+        },
+        amount: req.payment_status !== 'free' ? String(req.total_cost ?? '0.00') : null,
+        isPaid: req.payment_status === 'paid',
+        contactPerson: req.contact_person,
+        contactNumber: req.contact_number,
+        purpose: req.purpose,
+        raw: req
+      }
+    })
+
     pendingRequests.value = allRequests.filter(req => req.status === 'pending')
   } catch (error) {
     console.error('Error fetching equipment requests:', error)
@@ -93,6 +94,42 @@ const fetchPendingRequests = async () => {
     isLoading.value = false
   }
 }
+
+useRealtimeSync({
+  // New request submitted from kiosk → re-fetch to get full data
+  equipment_request_created: () => {
+    fetchPendingRequests()
+  },
+
+  // Status changed → remove from pending if no longer pending, re-fetch if undone back
+  equipment_request_updated: (data) => {
+    if (data.status !== 'pending') {
+      pendingRequests.value = pendingRequests.value.filter(r => r.id !== data.id)
+    } else {
+      // Undone back to pending — re-fetch to get full data
+      fetchPendingRequests()
+    }
+  },
+
+  // Payment toggled — update in place
+  equipment_request_payment_updated: (data) => {
+    const request = pendingRequests.value.find(r => r.id === data.id)
+    if (request) {
+      request.isPaid = data.payment_status === 'paid'
+    }
+  },
+
+  // Single delete
+  equipment_request_deleted: (data) => {
+    pendingRequests.value = pendingRequests.value.filter(r => r.id !== data.id)
+  },
+
+  // Bulk delete
+  equipment_requests_bulk_deleted: (data) => {
+    const deletedIds = new Set(data.ids)
+    pendingRequests.value = pendingRequests.value.filter(r => !deletedIds.has(r.id))
+  }
+})
 
 const openConfirmModal = (title, action) => {
   confirmTitle.value = title
@@ -250,7 +287,6 @@ const filteredRequests = computed(() => {
 
   if (props.filters?.requestedDate) {
     const selectedDate = new Date(props.filters.requestedDate).toDateString()
-
     result = result.filter(req =>
       new Date(req.raw.requested_at).toDateString() === selectedDate
     )
@@ -258,7 +294,6 @@ const filteredRequests = computed(() => {
 
   if (props.filters?.borrowingPeriodStart) {
     const start = new Date(props.filters.borrowingPeriodStart)
-
     result = result.filter(req =>
       new Date(req.raw.borrow_date) >= start
     )
@@ -266,7 +301,6 @@ const filteredRequests = computed(() => {
 
   if (props.filters?.borrowingPeriodEnd) {
     const end = new Date(props.filters.borrowingPeriodEnd)
-
     result = result.filter(req =>
       new Date(req.raw.return_date) <= end
     )
@@ -286,22 +320,22 @@ const filteredRequests = computed(() => {
 
 <template>
   <div class="space-y-4">
-    <div 
-      v-if="isLoading" 
+    <div
+      v-if="isLoading"
       class="text-center p-10 text-gray-500"
     >
       <p>Loading pending equipment requests...</p>
     </div>
 
-    <div 
-      v-else-if="errorMessage" 
+    <div
+      v-else-if="errorMessage"
       class="text-center p-10 text-red-500"
     >
       <p>{{ errorMessage }}</p>
     </div>
 
-    <div 
-      v-else-if="filteredRequests.length === 0" 
+    <div
+      v-else-if="filteredRequests.length === 0"
       class="text-center p-10 text-gray-500"
     >
       <h3 class="text-lg font-medium text-gray-700">No Pending Equipment Requests</h3>

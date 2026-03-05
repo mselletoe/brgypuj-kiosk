@@ -1,6 +1,8 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { useRouter } from "vue-router";
+import { useAdminAuthStore } from "@/stores/auth";
+import { getAdminProfile } from "@/api/adminService";
 
 const props = defineProps({
   stats: {
@@ -10,6 +12,9 @@ const props = defineProps({
 });
 
 const router = useRouter();
+const adminAuth = useAdminAuthStore();
+
+const adminFirstName = ref('Admin');
 
 const timeInterval = ref(null);
 const currentDate = ref("");
@@ -48,9 +53,16 @@ watch(
   { immediate: true },
 );
 
-onMounted(() => {
+onMounted(async () => {
   updateClock();
   timeInterval.value = setInterval(updateClock, 60000);
+
+  try {
+    const data = await getAdminProfile();
+    adminFirstName.value = data.resident?.first_name || adminAuth.admin?.username || 'Admin';
+  } catch {
+    adminFirstName.value = adminAuth.admin?.username || 'Admin';
+  }
 });
 
 onUnmounted(() => clearInterval(timeInterval.value));
@@ -62,7 +74,7 @@ onUnmounted(() => clearInterval(timeInterval.value));
       <h1
         class="text-[32px] font-bold text-gray-800 tracking-tight leading-tight"
       >
-        {{ greeting }}, <span class="text-blue-600">Admin</span>
+        {{ greeting }}, <span class="text-blue-600">{{ adminFirstName }}</span>
       </h1>
       <p
         class="text-[14px] font-semibold text-gray-400 tracking-wide uppercase"
