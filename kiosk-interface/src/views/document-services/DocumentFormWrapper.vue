@@ -186,6 +186,16 @@ const handleDone = () => {
 }
 
 /**
+ * Dismisses the error modal and keeps the resident on the current form
+ * so they can correct their submission or try again without losing context.
+ * 
+ * FIX: Previously called handleDone() which silently redirected to /home.
+ */
+const handleErrorDismiss = () => {
+  showErrorModal.value = false
+}
+
+/**
  * Submits the finalized form data to the backend.
  * Captures the transaction number for the user's reference upon success.
  * 
@@ -231,14 +241,14 @@ const handleSubmit = async (data) => {
 
   } catch (err) {
     console.error('Document submission error:', err)
-    
+
     // Set isSubmitting to false before showing error
     isSubmitting.value = false
-    
+
     // Show user-friendly error message
     errorMessage.value =
-    err?.response?.data?.detail ||
-    'Failed to submit document request. Please try again.'
+      err?.response?.data?.detail ||
+      'Failed to submit document request. Please try again.'
 
     showErrorModal.value = true
   }
@@ -468,6 +478,11 @@ onMounted(async () => {
       </div>
     </transition>
 
+    <!-- Error Modal -->
+    <!-- FIX: @primary-click now calls handleErrorDismiss instead of handleDone.
+         This keeps the resident on the form so they can read the error and
+         retry or navigate away intentionally, rather than being silently
+         redirected to /home on any submission failure. -->
     <transition name="fade-blur">
       <div
         v-if="showErrorModal"
@@ -480,7 +495,7 @@ onMounted(async () => {
           :showPrimaryButton="true"
           :showSecondaryButton="false"
           :showNewRequest="false"
-          @primary-click="handleDone"
+          @primary-click="handleErrorDismiss"
         />
       </div>
     </transition>
