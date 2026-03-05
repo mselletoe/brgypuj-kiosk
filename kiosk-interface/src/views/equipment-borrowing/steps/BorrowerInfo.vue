@@ -277,6 +277,7 @@ const inputClass = "w-full h-[48px] px-4 py-3 border border-gray-300 rounded-xl 
       <Modal
         title="Exit Equipment Request?"
         message="You have unsaved changes. Are you sure you want to exit? All your progress will be lost."
+        type="warning"
         primaryButtonText="Exit"
         secondaryButtonText="Stay"
         :showPrimaryButton="true"
