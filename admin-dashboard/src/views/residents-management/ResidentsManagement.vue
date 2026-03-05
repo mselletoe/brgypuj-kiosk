@@ -281,12 +281,6 @@ const columns = computed(() => [
           >
             <TrashIcon class="w-5 h-5 text-red-500" />
           </button>
-          <span
-            v-if="selectedCount > 0"
-            class="text-xs font-medium text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full"
-          >
-            {{ selectedCount }} selected
-          </span>
         </div>
 
         <div
@@ -374,4 +368,4 @@ const columns = computed(() => [
       @cancel="showSingleDeleteModal = false; pendingDeleteId = null"
     />
   </div>
-</template>
+</template>git
