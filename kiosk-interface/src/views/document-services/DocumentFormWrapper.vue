@@ -11,7 +11,6 @@ import DocumentForm from './DocumentForm.vue'
 import ArrowBackButton from '@/components/shared/ArrowBackButton.vue' 
 import Modal from '@/components/shared/Modal.vue'
 import Button from '@/components/shared/Button.vue'
-import Loading from '@/components/shared/Loading.vue'
 import { useAuthStore } from '@/stores/auth'
 import { getDocumentTypes, createDocumentRequest, checkEligibility } from '@/api/documentService'
 import { getResidentAutofillData } from '@/api/residentService'
@@ -59,6 +58,19 @@ const docTypeSlug = computed(() =>
  * Retrieves the specific configuration for the currently selected document.
  */
 const config = computed(() => documents.value[docTypeSlug.value])
+
+/**
+ * Dynamically formats the title. Uses the loaded config title if available, 
+ * otherwise elegantly formats the URL slug (e.g. "barangay-permit" -> "Barangay Permit").
+ */
+const displayTitle = computed(() => {
+  if (config.value?.title) return config.value.title
+  if (!docTypeSlug.value) return ''
+  return docTypeSlug.value
+    .split('-')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+})
 
 /**
  * Checks if the current session belongs to a resident identified via RFID.
@@ -198,8 +210,7 @@ const handleErrorDismiss = () => {
 /**
  * Submits the finalized form data to the backend.
  * Captures the transaction number for the user's reference upon success.
- * 
- * FIXED: Properly handles async PDF generation without race conditions
+ * * FIXED: Properly handles async PDF generation without race conditions
  */
 const handleSubmit = async (data) => {
   if (isSubmitting.value) return
@@ -264,12 +275,11 @@ onMounted(async () => {
 <template>
   <div class="flex flex-col w-full h-full">
 
-    <!-- Header -->
     <div class="flex items-center mb-6 gap-7 flex-shrink-0">
       <ArrowBackButton @click="goBack" />
       <div>
         <h1 class="text-[45px] text-[#03335C] font-bold tracking-tight -mt-2">
-          {{ config?.title || docTypeSlug?.charAt(0).toUpperCase() + docTypeSlug?.slice(1) }}
+          {{ displayTitle }}
         </h1>
         <p class="text-[#03335C] -mt-2">
           Kindly fill up the details needed for the said document
@@ -277,23 +287,25 @@ onMounted(async () => {
       </div>
     </div>
 
-    <!-- SCROLLABLE CONTENT AREA -->
     <div class="flex-1 overflow-y-auto">
 
       <div class="grid grid-cols-5 gap-8 items-stretch mb-4">
 
-        <!-- LEFT PANEL -->
         <div class="col-span-3">
           <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-8 min-h-[280px]">
 
-            <div v-if="isLoadingResidentData" class="text-center py-8">
-              <Loading color="#03335C" size="12px" spacing="50px" />
-              <p class="text-gray-600 mt-4">Loading your information...</p>
+            <div v-if="loadingDocuments || isLoadingResidentData" class="flex flex-col justify-center items-center py-8">
+              <div class="loader-dots mb-4">
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+              </div>
+              <p class="text-gray-600 font-semibold">Loading details...</p>
             </div>
 
             <DocumentForm
               ref="documentFormRef"
-              v-else-if="config?.available"
+              v-else-if="config"
               :config="config"
               :initial-data="formData"
               :resident-data="residentData"
@@ -312,7 +324,6 @@ onMounted(async () => {
           </div>
         </div>
 
-        <!-- RIGHT PANEL (EMPTY) -->
         <div class="col-span-2">
           <div class="bg-[#EBF5FF] rounded-2xl shadow-lg border border-[#B0D7F8] p-6 min-h-[280px]">
 
@@ -323,18 +334,23 @@ onMounted(async () => {
               Review the following requirements below. For further details, please refer to the information desk at the counter.
             </p>
 
-            <!-- No requirements -->
+            <div v-if="loadingDocuments" class="flex justify-center py-10">
+               <div class="loader-dots">
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+              </div>
+            </div>
+
             <div
-              v-if="!config?.requirements?.length"
+              v-else-if="!config?.requirements?.length"
               class="flex flex-col items-center justify-center py-10 text-center"
             >
               <p class="text-sm text-[#5A8DB8]">No requirements needed for this document.</p>
             </div>
 
-            <!-- Requirements list -->
             <div v-else class="space-y-3">
 
-              <!-- Blocking failure warning (authenticated users only) -->
               <div
                 v-if="hasBlockingFailure"
                 class="bg-red-50 border border-red-200 rounded-xl p-3 flex items-start gap-2"
@@ -347,7 +363,6 @@ onMounted(async () => {
                 </p>
               </div>
 
-              <!-- Each requirement row -->
               <div
                 v-for="(req, index) in mergedRequirements"
                 :key="index"
@@ -358,23 +373,18 @@ onMounted(async () => {
                   'border-[#B0D7F8]': req.passed === null
                 }"
               >
-                <!-- Status icon -->
                 <div class="flex-shrink-0 mt-0.5">
-                  <!-- Failed -->
                   <svg v-if="req.passed === false" class="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
                   </svg>
-                  <!-- Passed -->
                   <svg v-else-if="req.passed === true" class="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
                   </svg>
-                  <!-- Neutral / document type -->
                   <svg v-else class="w-5 h-5 text-[#5A8DB8]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                 </div>
 
-                <!-- Text -->
                 <div class="flex-1 min-w-0">
                   <p
                     class="text-sm font-semibold leading-tight"
@@ -387,7 +397,6 @@ onMounted(async () => {
                     {{ req.label }}
                   </p>
 
-                  <!-- Type badge -->
                   <span
                     class="inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded-full mt-1"
                     :class="req.type === 'system_check' ? 'bg-blue-100 text-blue-600' : 'bg-amber-100 text-amber-600'"
@@ -395,7 +404,6 @@ onMounted(async () => {
                     {{ req.type === 'system_check' ? 'System Check' : 'Document' }}
                   </span>
 
-                  <!-- Message (only shown when eligibility data is available) -->
                   <p
                     v-if="req.message"
                     class="text-xs mt-1"
@@ -418,21 +426,21 @@ onMounted(async () => {
 
     </div>
 
-    <!-- FIXED BUTTONS (IDENTICAL STRUCTURE TO BORROWING PAGE) -->
     <div class="flex gap-6 mt-6 justify-between items-center flex-shrink-0">
 
       <Button
         @click="goBack"
         variant="outline"
         size="md"
+        :disabled="loadingDocuments || isLoadingResidentData || isSubmitting"
       >
         Cancel
       </Button>
 
       <Button
         @click="submitFromWrapper"
-        :disabled="isSubmitting"
-        :variant="isSubmitting ? 'disabled' : 'secondary'"
+        :disabled="loadingDocuments || isLoadingResidentData || isSubmitting || !config"
+        :variant="(loadingDocuments || isLoadingResidentData || isSubmitting || !config) ? 'disabled' : 'secondary'"
         size="md"
       >
         {{ isSubmitting ? 'Submitting...' : 'Submit Request' }}
@@ -440,15 +448,18 @@ onMounted(async () => {
 
     </div>
 
-    <!-- Loading Overlay -->
     <transition name="fade-blur">
       <div
         v-if="isSubmitting"
         class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
       >
         <div class="bg-white rounded-2xl p-10 shadow-2xl flex flex-col items-center gap-2 min-w-[400px]">
-          <Loading color="#03335C" size="14px" spacing="70px" />
-          <p class="text-[#03335C] text-lg font-semibold mt-6">
+          <div class="loader-dots mb-4">
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+          </div>
+          <p class="text-[#03335C] text-lg font-semibold mt-2">
             Submitting your request...
           </p>
           <p class="text-gray-500 text-sm">
@@ -458,7 +469,6 @@ onMounted(async () => {
       </div>
     </transition>
 
-    <!-- Success Modal -->
     <transition name="fade-blur">
       <div
         v-if="showSuccessModal"
@@ -467,6 +477,7 @@ onMounted(async () => {
         <Modal
           title="Application Submitted!"
           :message="`Pay the fee at the counter and be informed of further details. Please take note of the Request ID number below for reference.`"
+          type="success"
           :referenceId="transactionNo"
           :showReferenceId="true"
           primaryButtonText="Done"
@@ -491,6 +502,7 @@ onMounted(async () => {
         <Modal
           title="Request Cannot Be Processed"
           :message="errorMessage"
+          type="error"
           primaryButtonText="OK"
           :showPrimaryButton="true"
           :showSecondaryButton="false"
@@ -502,7 +514,6 @@ onMounted(async () => {
   </div>
 </template>
 
-
 <style scoped>
 .fade-blur-enter-active,
 .fade-blur-leave-active {
@@ -511,5 +522,41 @@ onMounted(async () => {
 .fade-blur-enter-from,
 .fade-blur-leave-to {
   opacity: 0;
+}
+
+/* Loader Dots CSS */
+.loader-dots {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  width: 60px; 
+  height: 15px; 
+}
+
+.dot {
+  width: 12px; 
+  height: 12px;
+  background-color: #03335C; 
+  border-radius: 50%;
+  animation: pulse 1.4s infinite ease-in-out both;
+}
+
+.dot:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.dot:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+@keyframes pulse {
+  0%, 80%, 100% { 
+    transform: scale(0); 
+    opacity: 0.3; 
+  }
+  40% { 
+    transform: scale(1); 
+    opacity: 1;
+  }
 }
 </style>

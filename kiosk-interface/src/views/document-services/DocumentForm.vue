@@ -212,16 +212,6 @@ defineExpose({
 <template>
   <div class="space-y-5">
 
-    <!-- Autofill Notice -->
-    <!-- <div v-if="isRfidUser && residentData" class="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-start gap-3">
-      <LockClosedIcon class="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-      <div>
-        <p class="text-sm text-blue-800 font-semibold">Your information has been pre-filled</p>
-        <p class="text-xs text-blue-600 mt-1">Fields with a lock icon are pulled from your resident profile and cannot be edited here.</p>
-      </div>
-    </div> -->
-
-    <!-- Form Fields Grid -->
     <div class="grid grid-cols-1 md:grid-cols gap-5">
       <div v-for="field in config.fields" :key="field.id || field.name" class="flex flex-col">
         <label class="flex items-center gap-2 mb-2 font-bold text-[#003A6B]">
@@ -234,7 +224,6 @@ defineExpose({
           />
         </label>
 
-        <!-- Text / Email / Number / Tel -->
         <input
           v-if="['text','email','tel','number'].includes(field.type)"
           v-model="formData[field.name]"
@@ -249,7 +238,6 @@ defineExpose({
           ]"
         />
 
-        <!-- Date picker -->
         <VueDatePicker
           v-else-if="field.type === 'date'"
           v-model="formData[field.name]"
@@ -271,7 +259,6 @@ defineExpose({
           </template>
         </VueDatePicker>
 
-        <!-- Textarea -->
         <textarea
           v-else-if="field.type === 'textarea'"
           v-model="formData[field.name]"
@@ -285,7 +272,6 @@ defineExpose({
           ]"
         ></textarea>
 
-        <!-- Select -->
         <div
           v-else-if="field.type === 'select'"
           class="relative"
@@ -322,7 +308,6 @@ defineExpose({
           </div>
         </div>
 
-        <!-- Error message -->
         <p v-if="errors[field.name]" class="text-red-500 text-xs mt-1 italic">
           {{ errors[field.name] }}
         </p>

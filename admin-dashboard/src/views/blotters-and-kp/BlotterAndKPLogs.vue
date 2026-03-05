@@ -398,8 +398,7 @@ const modalTitle = computed(() => {
 </script>
 
 <template>
-  <div class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden">
-    <!-- Header -->
+  <div class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden animate-fade-in">
     <div class="flex mb-6 items-center justify-between">
       <div>
         <PageTitle title="Blotter and KP Logs" />
@@ -454,18 +453,18 @@ const modalTitle = computed(() => {
       </div>
     </div>
 
-    <!-- Data Table -->
-    <div class="overflow-y-auto bg-white rounded-lg border border-gray-200">
-      <n-data-table :columns="columns" :data="filteredBlotters" :loading="loading" :bordered="false" />
+    <div v-if="loading" class="flex-1 flex flex-col items-center justify-center gap-4">
+      <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+      <p class="text-gray-500 font-medium">Loading blotter records...</p>
     </div>
 
-    <!-- ================================ -->
-    <!-- Blotter Modal -->
-    <!-- ================================ -->
+    <div v-else class="flex-1 overflow-y-auto bg-white rounded-lg border border-gray-200">
+      <n-data-table :columns="columns" :data="filteredBlotters" :bordered="false" />
+    </div>
+
     <NModal :show="showBlotterModal" @update:show="handleModalClose" :mask-closable="false">
       <div class="w-[820px] max-h-[90vh] overflow-hidden bg-white rounded-xl shadow-lg flex flex-col" role="dialog" aria-modal="true">
 
-        <!-- Modal Header -->
         <div class="flex items-center justify-between px-6 py-4 border-b bg-gray-50">
           <h2 class="text-lg font-semibold text-gray-800">{{ modalTitle }}</h2>
           <button @click="handleModalClose" class="p-1 rounded hover:bg-gray-200 transition">
@@ -473,10 +472,8 @@ const modalTitle = computed(() => {
           </button>
         </div>
 
-        <!-- Modal Body -->
         <div class="px-6 py-5 overflow-y-auto space-y-5">
 
-          <!-- Blotter Header Info -->
           <div class="grid grid-cols-3 gap-4">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1.5">Blotter No.</label>
@@ -500,13 +497,9 @@ const modalTitle = computed(() => {
             <n-input v-model:value="formData.incident_place" placeholder="Location of the incident" />
           </div>
 
-          <!-- ======================== -->
-          <!-- Complainant Section -->
-          <!-- ======================== -->
           <div class="border-t pt-4">
             <p class="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">Complainant (Nagreklamo)</p>
 
-            <!-- Resident Selector -->
             <div class="mb-3">
               <label class="block text-sm font-medium text-gray-700 mb-1.5">
                 Registered Resident
@@ -522,7 +515,6 @@ const modalTitle = computed(() => {
               />
             </div>
 
-            <!-- Manual Fields (auto-filled if resident selected, editable otherwise) -->
             <div class="grid grid-cols-3 gap-4">
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">
@@ -554,13 +546,9 @@ const modalTitle = computed(() => {
             </div>
           </div>
 
-          <!-- ======================== -->
-          <!-- Respondent Section -->
-          <!-- ======================== -->
           <div class="border-t pt-4">
             <p class="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">Respondent (Inireklamo)</p>
 
-            <!-- Resident Selector -->
             <div class="mb-3">
               <label class="block text-sm font-medium text-gray-700 mb-1.5">
                 Registered Resident
@@ -576,7 +564,6 @@ const modalTitle = computed(() => {
               />
             </div>
 
-            <!-- Manual Fields -->
             <div class="grid grid-cols-3 gap-4">
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Full Name</label>
@@ -606,7 +593,6 @@ const modalTitle = computed(() => {
             </div>
           </div>
 
-          <!-- Incident Details -->
           <div class="border-t pt-4">
             <p class="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">Incident Details</p>
             <div class="mb-4">
@@ -619,7 +605,6 @@ const modalTitle = computed(() => {
             </div>
           </div>
 
-          <!-- Record Information -->
           <div class="border-t pt-4">
             <p class="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">Record Information</p>
             <div class="grid grid-cols-2 gap-4">
@@ -636,7 +621,6 @@ const modalTitle = computed(() => {
 
         </div>
 
-        <!-- Modal Footer -->
         <div class="flex justify-end gap-3 px-6 py-4 border-t">
           <NButton @click="handleModalClose" :disabled="saving">Cancel</NButton>
           <NButton type="primary" @click="handleSave" :loading="saving" :disabled="saving">Save</NButton>
@@ -644,7 +628,6 @@ const modalTitle = computed(() => {
       </div>
     </NModal>
 
-    <!-- Confirm Delete Modal -->
     <ConfirmModal
       :show="showDeleteModal"
       :title="`Delete ${selectedIds.length} record(s)?`"
@@ -655,3 +638,19 @@ const modalTitle = computed(() => {
     />
   </div>
 </template>
+
+<style scoped>
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+</style>

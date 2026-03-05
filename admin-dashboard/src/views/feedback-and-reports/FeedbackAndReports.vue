@@ -69,8 +69,7 @@ const triggerUndo = () => {
 </script>
 
 <template>
-  <div class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden">
-    <!-- Header -->
+  <div class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden animate-fade-in">
     <div class="flex justify-between items-center mb-4">
       <div>
         <PageTitle title="Feedbacks and Reports" />
@@ -79,9 +78,7 @@ const triggerUndo = () => {
         </p>
       </div>
 
-      <!-- Actions -->
       <div class="flex items-center gap-3">
-        <!-- Search -->
         <input
           v-model="searchQuery"
           type="text"
@@ -89,7 +86,6 @@ const triggerUndo = () => {
           class="border border-gray-200 text-gray-700 rounded-md py-2 px-3 w-[250px] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-gray-400"
         />
 
-        <!-- Undo (reactivate RFID cards) -->
         <button
         v-if="activeTab === 'reports'"
           @click="triggerUndo"
@@ -104,7 +100,6 @@ const triggerUndo = () => {
           <ArrowUturnLeftIcon class="w-5 h-5 text-orange-500" />
         </button>
 
-        <!-- Delete -->
         <button
           @click="triggerDelete"
           :disabled="selectionState === 'none'"
@@ -118,7 +113,6 @@ const triggerUndo = () => {
           <TrashIcon class="w-5 h-5 text-red-500" />
         </button>
 
-        <!-- Select All -->
         <div
           class="flex items-center border rounded-lg overflow-hidden"
           :class="
@@ -163,7 +157,6 @@ const triggerUndo = () => {
       </div>
     </div>
 
-    <!-- Tabs -->
     <div class="flex justify-between items-center border-b border-gray-200">
       <n-tabs v-model:value="activeTab" type="line" animated class="flex-grow">
         <n-tab-pane name="feedbacks" tab="Feedbacks" />
@@ -171,7 +164,6 @@ const triggerUndo = () => {
       </n-tabs>
     </div>
 
-    <!-- Content -->
     <div class="overflow-y-auto h-[calc(100vh-260px)] pr-2 pt-2">
       <keep-alive>
         <component
@@ -184,3 +176,19 @@ const triggerUndo = () => {
     </div>
   </div>
 </template>
+
+<style scoped>
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+</style>

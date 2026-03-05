@@ -25,7 +25,6 @@ const showModal = ref(false);
 const showExitModal = ref(false);
 const isSubmitting = ref(false);
 const transactionNo = ref('');
-const isFadingOut = ref(false);
 
 const formatCurrency = (value) => {
   if (!value) return '₱0';
@@ -112,8 +111,7 @@ const cancelExit = () => {
 </script>
 
 <template>
-  <div class="flex flex-col w-full h-full" :class="{ 'content-with-keyboard': showKeyboard }">
-    <!-- Header -->
+  <div class="flex flex-col w-full h-full">
     <div class="flex items-center mb-6 gap-7 flex-shrink-0">
       <ArrowBackButton @click="handleBackClick" />
       <div>
@@ -122,10 +120,8 @@ const cancelExit = () => {
       </div>
     </div>
 
-    <!-- Main -->
     <div class="flex-1 overflow-y-auto">
       <div class="flex gap-3 mb-4">
-        <!-- Left -->
         <div class="w-1/2 bg-white rounded-2xl shadow-lg border border-gray-200 p-5">
           <h3 class="text-2xl font-bold text-[#013C6D] flex items-center gap-2">
             <MagnifyingGlassIcon class="w-8 h-8" />
@@ -159,7 +155,6 @@ const cancelExit = () => {
           </div>
         </div>
 
-        <!-- Right -->
         <div class="w-1/2 flex flex-col gap-3">
           <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-5">
             <h3 class="text-2xl font-bold text-[#013C6D]">Contact Information</h3>
@@ -191,7 +186,6 @@ const cancelExit = () => {
       </div>
     </div>
 
-    <!-- Buttons -->
     <div class="flex gap-6 mt-6 justify-between items-center bottom-0 flex-shrink-0">
       <Button
         @click="handlePageBack"
@@ -211,34 +205,62 @@ const cancelExit = () => {
       </Button>
     </div>
 
-    <!-- Success Modal -->
-    <div v-if="showModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-8">
-      <Modal
-        title="Request Submitted!"
-        :message="`Pay the fee at the counter and you will be contacted for pickup details. Please take note of the Request ID number below for reference.`"
-        :referenceId="transactionNo"
-        :showReferenceId="true"
-        primaryButtonText="Done"
-        :showPrimaryButton="true"
-        :showSecondaryButton="false"
-        :showNewRequest="false"
-        @primary-click="handleDone"
-      />
-    </div>
+    <Transition name="fade-blur">
+      <div v-if="showModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-8 modal-backdrop">
+        <Modal
+          title="Request Submitted!"
+          :message="`Pay the fee at the counter and you will be contacted for pickup details. Please take note of the Request ID number below for reference.`"
+          :referenceId="transactionNo"
+          :showReferenceId="true"
+          primaryButtonText="Done"
+          :showPrimaryButton="true"
+          :showSecondaryButton="false"
+          :showNewRequest="false"
+          @primary-click="handleDone"
+        />
+      </div>
+    </Transition>
 
-    <!-- Exit Confirmation Modal -->
-    <div v-if="showExitModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-8">
-      <Modal
-        title="Exit Equipment Request?"
-        message="You have unsaved changes. Are you sure you want to exit? All your progress will be lost."
-        primaryButtonText="Exit"
-        secondaryButtonText="Stay"
-        :showPrimaryButton="true"
-        :showSecondaryButton="true"
-        :showReferenceId="false"
-        @primary-click="confirmExit"
-        @secondary-click="cancelExit"
-      />
-    </div>
+    <Transition name="fade-blur">
+      <div v-if="showExitModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-8 modal-backdrop">
+        <Modal
+          title="Exit Equipment Request?"
+          message="You have unsaved changes. Are you sure you want to exit? All your progress will be lost."
+          primaryButtonText="Exit"
+          secondaryButtonText="Stay"
+          :showPrimaryButton="true"
+          :showSecondaryButton="true"
+          :showReferenceId="false"
+          @primary-click="confirmExit"
+          @secondary-click="cancelExit"
+        />
+      </div>
+    </Transition>
   </div>
 </template>
+
+<style scoped>
+.modal-backdrop {
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+.fade-blur-enter-active,
+.fade-blur-leave-active {
+  transition:
+    opacity 0.5s ease,
+    -webkit-backdrop-filter 0.5s ease,
+    backdrop-filter 0.5s ease;
+}
+.fade-blur-enter-from,
+.fade-blur-leave-to {
+  opacity: 0;
+  -webkit-backdrop-filter: blur(0px);
+  backdrop-filter: blur(0px);
+}
+.fade-blur-enter-to,
+.fade-blur-leave-from {
+  opacity: 1;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+</style>

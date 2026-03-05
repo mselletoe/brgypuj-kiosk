@@ -1,12 +1,9 @@
 <script setup>
 import { ref } from 'vue'
-import { SpeakerWaveIcon, SpeakerXMarkIcon } from '@heroicons/vue/24/solid'
 
 const emit = defineEmits(['see-announcements'])
-const isMuted = ref(false)
 const currentLang = ref('FIL')
 
-const toggleMute = () => (isMuted.value = !isMuted.value)
 const toggleLang = () => (currentLang.value = currentLang.value === 'FIL' ? 'ENG' : 'FIL')
 </script>
 
@@ -14,20 +11,11 @@ const toggleLang = () => (currentLang.value = currentLang.value === 'FIL' ? 'ENG
   <div class="display-page flex items-center justify-center text-center relative select-none text-[#0c2d57]">
     
     <div class="absolute top-8 right-10 flex items-center gap-4 z-20">
-      <button 
-        @click.stop="toggleMute" 
-        class="bg-[#49759B] text-white rounded-full p-2.5 shadow-lg active:scale-95 transition-all"
-      >
-        <component :is="isMuted ? SpeakerXMarkIcon : SpeakerWaveIcon" class="h-7 w-7" />
-      </button>
-
-      <!-- Language toggle — same implementation as AnnouncementPage -->
       <div
         @click.stop="toggleLang"
         class="w-36 h-12 bg-[#49759B] rounded-2xl flex cursor-pointer p-1"
         style="position: relative;"
       >
-        <!-- Sliding white pill -->
         <div
           class="rounded-xl bg-white"
           style="
@@ -42,7 +30,6 @@ const toggleLang = () => (currentLang.value = currentLang.value === 'FIL' ? 'ENG
           }"
         ></div>
 
-        <!-- Labels -->
         <div
           class="flex-1 flex items-center justify-center font-bold rounded-xl"
           style="position: relative; z-index: 1; transition: color 0.3s ease;"

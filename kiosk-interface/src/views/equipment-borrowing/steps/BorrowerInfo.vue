@@ -151,7 +151,6 @@ const inputClass = "w-full h-[48px] px-4 py-3 border border-gray-300 rounded-xl 
 
 <template>
   <div class="flex flex-col w-full h-full" :class="{ 'content-with-keyboard': showKeyboard }">
-    <!-- Header -->
     <div class="flex items-center mb-6 gap-7 flex-shrink-0">
       <ArrowBackButton @click="handleBackClick" />
       <div>
@@ -160,16 +159,13 @@ const inputClass = "w-full h-[48px] px-4 py-3 border border-gray-300 rounded-xl 
       </div>
     </div>
 
-    <!-- Main -->
     <div class="flex-1 overflow-y-auto">
       <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-5">
-        <!-- Box Title -->
         <h3 class="text-2xl font-bold text-[#013C6D] flex items-center gap-2">
           <DocumentTextIcon class="w-8 h-8" />
           Borrowing Information
         </h3>
 
-        <!-- Checkbox -->
         <div class="mt-4 flex items-center gap-3">
           <input
             type="checkbox"
@@ -183,9 +179,7 @@ const inputClass = "w-full h-[48px] px-4 py-3 border border-gray-300 rounded-xl 
           </label>
         </div>
 
-        <!-- Form -->
         <div class="mt-4 grid grid-cols-2 gap-x-6 gap-y-4">
-          <!-- Contact Person -->
           <div>
             <label for="contact-person" class="block text-base font-bold text-[#003A6B] mb-2">
               Contact Person <span class="text-red-600">*</span>
@@ -201,7 +195,6 @@ const inputClass = "w-full h-[48px] px-4 py-3 border border-gray-300 rounded-xl 
             />
           </div>
 
-          <!-- Contact Number -->
           <div>
             <label for="contact-number" class="block text-base font-bold text-[#003A6B] mb-2">
               Contact Number <span class="text-red-600">*</span>
@@ -217,7 +210,6 @@ const inputClass = "w-full h-[48px] px-4 py-3 border border-gray-300 rounded-xl 
             />
           </div>
 
-          <!-- Purpose -->
           <div>
             <label class="block text-base font-bold text-[#003A6B] mb-2">
               Purpose of Borrowing <span class="text-red-600">*</span>
@@ -253,7 +245,6 @@ const inputClass = "w-full h-[48px] px-4 py-3 border border-gray-300 rounded-xl 
       </div>
     </div>
 
-    <!-- Buttons -->
     <div class="flex gap-6 mt-6 justify-between items-center bottom-0 flex-shrink-0">
       <Button @click="handleBack" variant="outline" size="md">
         Back to Dates
@@ -269,7 +260,6 @@ const inputClass = "w-full h-[48px] px-4 py-3 border border-gray-300 rounded-xl 
     </div>
   </div>
 
-  <!-- Keyboard -->
   <Transition name="slide-up">
     <Keyboard
       v-if="showKeyboard"
@@ -282,20 +272,21 @@ const inputClass = "w-full h-[48px] px-4 py-3 border border-gray-300 rounded-xl 
     />
   </Transition>
 
-  <!-- Exit Confirmation Modal -->
-  <div v-if="showExitModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-8">
-    <Modal
-      title="Exit Equipment Request?"
-      message="You have unsaved changes. Are you sure you want to exit? All your progress will be lost."
-      primaryButtonText="Exit"
-      secondaryButtonText="Stay"
-      :showPrimaryButton="true"
-      :showSecondaryButton="true"
-      :showReferenceId="false"
-      @primary-click="confirmExit"
-      @secondary-click="cancelExit"
-    />
-  </div>
+  <Transition name="fade-blur">
+    <div v-if="showExitModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-8 modal-backdrop">
+      <Modal
+        title="Exit Equipment Request?"
+        message="You have unsaved changes. Are you sure you want to exit? All your progress will be lost."
+        primaryButtonText="Exit"
+        secondaryButtonText="Stay"
+        :showPrimaryButton="true"
+        :showSecondaryButton="true"
+        :showReferenceId="false"
+        @primary-click="confirmExit"
+        @secondary-click="cancelExit"
+      />
+    </div>
+  </Transition>
 </template>
 
 <style scoped>
@@ -310,5 +301,29 @@ const inputClass = "w-full h-[48px] px-4 py-3 border border-gray-300 rounded-xl 
 .slide-up-enter-from,
 .slide-up-leave-to {
   transform: translateY(100%);
+}
+
+.modal-backdrop {
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+.fade-blur-enter-active,
+.fade-blur-leave-active {
+  transition:
+    opacity 0.5s ease,
+    -webkit-backdrop-filter 0.5s ease,
+    backdrop-filter 0.5s ease;
+}
+.fade-blur-enter-from,
+.fade-blur-leave-to {
+  opacity: 0;
+  -webkit-backdrop-filter: blur(0px);
+  backdrop-filter: blur(0px);
+}
+.fade-blur-enter-to,
+.fade-blur-leave-from {
+  opacity: 1;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
 }
 </style>

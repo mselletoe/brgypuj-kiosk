@@ -313,12 +313,11 @@ const filteredRequests = computed(() => {
 </script>
 
 <template>
-  <div class="space-y-4">
-    <div 
-      v-if="isLoading" 
-      class="text-center p-10 text-gray-500"
-    >
-      <p>Loading rejected requests...</p>
+  <div class="space-y-4 h-full">
+    
+    <div v-if="isLoading" class="flex flex-col items-center justify-center w-full h-full min-h-[300px] gap-4">
+      <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+      <p class="text-gray-500 font-medium">Loading rejected requests...</p>
     </div>
 
     <div 
@@ -339,24 +338,26 @@ const filteredRequests = computed(() => {
       </p>
     </div>
 
-    <RequestCard
-      v-for="request in filteredRequests"
-      :key="request.id"
-      :id="request.id"
-      :transaction-no="request.transaction_no"
-      :type="request.type"
-      :status="request.status"
-      :request-type="request.requestType"
-      :requester="request.requester"
-      :request-for="request.requestFor"
-      :rfid-no="request.rfidNo"
-      :requested-on="request.requestedOn"
-      :amount="request.amount"
-      :is-paid="request.isPaid"
-      :is-selected="selectedRequests.has(request.id)"
-      @button-click="handleButtonClick"
-      @update:selected="(value) => handleSelectionUpdate(request.id, value)"
-    />
+    <template v-else>
+      <RequestCard
+        v-for="request in filteredRequests"
+        :key="request.id"
+        :id="request.id"
+        :transaction-no="request.transaction_no"
+        :type="request.type"
+        :status="request.status"
+        :request-type="request.requestType"
+        :requester="request.requester"
+        :request-for="request.requestFor"
+        :rfid-no="request.rfidNo"
+        :requested-on="request.requestedOn"
+        :amount="request.amount"
+        :is-paid="request.isPaid"
+        :is-selected="selectedRequests.has(request.id)"
+        @button-click="handleButtonClick"
+        @update:selected="(value) => handleSelectionUpdate(request.id, value)"
+      />
+    </template>
   </div>
 
   <ConfirmModal
