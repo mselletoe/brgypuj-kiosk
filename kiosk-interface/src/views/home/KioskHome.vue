@@ -60,9 +60,8 @@ function goTo(path) {
           Barangay Services
         </h1>
         <p class="m-0 text-[16px] font-normal leading-tight">
-          Select a service below to get started.<br />
-          Do not forget to log out after your transactions for security
-          purposes.
+          Fast and accessible services for Poblacion I residents.<br />
+          Select a service below to get started.
         </p>
       </div>
       <div class="logo-section">
