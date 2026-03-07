@@ -1,123 +1,110 @@
 <script setup>
 /**
- * @file General.vue
+ * @file GeneralSettings.vue
  * @description Barangay Information — name, subtitle, and logo management.
  */
 import { ref } from "vue";
-import { NButton, NAvatar, useMessage } from "naive-ui";
+import { NButton, NInput, NAvatar, NSpin, useMessage } from "naive-ui";
 
 const message = useMessage();
 
 const brgyName     = ref("Brgy. Poblacion Uno");
 const brgySubtitle = ref("Municipality of San Jose, Bulacan");
-const isEditing    = ref(false);
-
-// Temp values while editing
-const editName     = ref("");
-const editSubtitle = ref("");
-
-const startEdit = () => {
-  editName.value     = brgyName.value;
-  editSubtitle.value = brgySubtitle.value;
-  isEditing.value    = true;
-};
-
-const cancelEdit = () => { isEditing.value = false; };
+const uploadingLogo = ref(false);
+const logoUrl       = ref(null);
 
 const saveInfo = () => {
-  if (!editName.value.trim()) {
+  if (!brgyName.value.trim()) {
     message.warning("Barangay name cannot be empty.");
     return;
   }
-  brgyName.value     = editName.value.trim();
-  brgySubtitle.value = editSubtitle.value.trim();
-  isEditing.value    = false;
   message.success("Barangay information updated.");
 };
 
-const handleUploadPhoto = () => message.success("Ready to upload a new logo.");
-const handleRemovePhoto = () => message.warning("Logo has been removed.");
+const handleUploadLogo = () => message.success("Ready to upload a new logo.");
+const handleRemoveLogo = () => {
+  logoUrl.value = null;
+  message.warning("Logo has been removed.");
+};
 </script>
 
 <template>
-  <div class="flex flex-row justify-between w-full gap-16">
+  <div class="flex gap-8 items-start max-w-5xl">
 
-    <!-- Left: Info Form -->
-    <div class="flex flex-col w-1/2 gap-6">
-      <div class="flex items-center justify-between">
-        <span class="font-semibold text-[16px] text-[#373737]">Barangay Information</span>
-        <n-button v-if="!isEditing" size="small" ghost color="#0957FF" @click="startEdit">
-          Edit
-        </n-button>
+    <!-- ── Left: Logo card (mirrors AccountSettings profile card) ─────────── -->
+    <div class="w-64 flex-shrink-0 flex flex-col items-center gap-4
+                border border-gray-200 rounded-xl p-6 bg-gray-50">
+
+      <n-spin :show="uploadingLogo">
+        <n-avatar
+          round
+          :size="96"
+          :src="logoUrl || undefined"
+          style="background: linear-gradient(135deg, #0066d4, #011784); color: white; font-size: 32px; font-weight: 700;"
+          class="ring-4 ring-white shadow-md"
+        >
+          <span v-if="!logoUrl">PU</span>
+        </n-avatar>
+      </n-spin>
+
+      <div class="text-center">
+        <p class="text-[15px] font-semibold text-gray-800 leading-tight">{{ brgyName }}</p>
+        <p class="text-[12px] text-gray-400 mt-0.5">{{ brgySubtitle }}</p>
       </div>
 
-      <!-- Brgy Name -->
-      <div class="flex flex-col gap-2">
-        <label class="font-medium text-[13px] text-[#757575]">Brgy. Name</label>
-        <input
-          v-if="isEditing"
-          v-model="editName"
-          class="border border-blue-400 font-medium text-[15px] text-gray-800 rounded-md px-3 py-2 outline-none focus:ring-2 focus:ring-blue-200 w-full transition"
-          placeholder="Enter barangay name"
-        />
-        <input
-          v-else
-          :value="brgyName"
-          disabled
-          class="bg-[#F8F8F8] border border-[#D9D9D9] font-medium text-[15px] text-gray-800 rounded-md px-3 py-2 outline-none cursor-default pointer-events-none w-full"
-        />
+      <div class="w-full border-t border-gray-200 pt-4 flex flex-col gap-2">
+        <button
+          @click="handleUploadLogo"
+          :disabled="uploadingLogo"
+          class="w-full text-[13px] font-medium text-[#0957FF] border border-[#0957FF]
+                 rounded-md py-1.5 hover:bg-blue-50 transition-colors disabled:opacity-50"
+        >
+          {{ logoUrl ? 'Change Logo' : 'Upload Logo' }}
+        </button>
+        <button
+          v-if="logoUrl"
+          @click="handleRemoveLogo"
+          :disabled="uploadingLogo"
+          class="w-full text-[13px] font-medium text-red-500 border border-red-300
+                 rounded-md py-1.5 hover:bg-red-50 transition-colors disabled:opacity-50"
+        >
+          Remove Logo
+        </button>
       </div>
 
-      <!-- Subtitle -->
-      <div class="flex flex-col gap-2">
-        <label class="font-medium text-[13px] text-[#757575]">Subtitle / Municipality</label>
-        <input
-          v-if="isEditing"
-          v-model="editSubtitle"
-          class="border border-blue-400 font-medium text-[15px] text-gray-800 rounded-md px-3 py-2 outline-none focus:ring-2 focus:ring-blue-200 w-full transition"
-          placeholder="e.g. Municipality of San Jose, Bulacan"
-        />
-        <input
-          v-else
-          :value="brgySubtitle"
-          disabled
-          class="bg-[#F8F8F8] border border-[#D9D9D9] font-medium text-[15px] text-gray-800 rounded-md px-3 py-2 outline-none cursor-default pointer-events-none w-full"
-        />
-      </div>
-
-      <!-- Save / Cancel -->
-      <div v-if="isEditing" class="flex gap-3 mt-2">
-        <n-button type="primary" @click="saveInfo">Save Changes</n-button>
-        <n-button @click="cancelEdit">Cancel</n-button>
-      </div>
-
-      <!-- Info note -->
-      <p class="text-[12px] text-gray-400 mt-2 leading-relaxed">
-        These details appear on printed documents, the kiosk welcome screen, and all official barangay forms.
-      </p>
+      <p class="text-[11px] text-gray-400 text-center">JPG, PNG · Max 2 MB</p>
     </div>
 
-    <!-- Right: Logo -->
-    <div class="flex flex-col gap-6 items-end mr-12">
-      <div class="flex flex-col w-[320px]">
-        <span class="font-semibold text-[16px] text-[#373737] mb-6">Barangay Logo</span>
-        <div class="flex flex-col items-center justify-center w-[320px] h-[320px] p-8 border border-gray-200 rounded-md bg-white">
-          <n-avatar
-            round
-            :size="150"
-            style="background: linear-gradient(135deg, #0066d4, #011784); color: white; font-size: 48px; font-weight: bold;"
-            class="mb-6 ring-4 ring-blue-50 shadow-sm"
-          >
-            PU
-          </n-avatar>
-          <span class="font-medium text-[13px] text-[#757575] mb-1">JPG, PNG. Max 2MB</span>
-          <div class="flex flex-row gap-4 mt-1">
-            <n-button ghost color="#0957FF" @click="handleUploadPhoto">Upload Photo</n-button>
-            <n-button ghost color="#FF2B3A" @click="handleRemovePhoto">Remove Photo</n-button>
+    <!-- ── Right: Form (mirrors AccountSettings form sections) ───────────── -->
+    <div class="flex-1 flex flex-col gap-8">
+
+      <!-- Section: Barangay Information -->
+      <div class="border-b border-gray-100">
+        <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">
+          Barangay Information
+        </h3>
+
+        <div class="flex flex-col gap-5 max-w-lg">
+          <div class="flex flex-col gap-1.5">
+            <label class="text-[13px] font-semibold text-gray-700">Brgy. Name</label>
+            <n-input v-model:value="brgyName" placeholder="Enter barangay name" />
+          </div>
+
+          <div class="flex flex-col gap-1.5">
+            <label class="text-[13px] font-semibold text-gray-700">Subtitle / Municipality</label>
+            <n-input v-model:value="brgySubtitle" placeholder="e.g. Municipality of San Jose, Bulacan" />
+            <p class="text-[11px] text-gray-400">
+              These details appear on printed documents, the kiosk welcome screen, and all official barangay forms.
+            </p>
           </div>
         </div>
       </div>
-    </div>
 
+      <!-- Save -->
+      <div>
+        <n-button type="primary" @click="saveInfo">Save Changes</n-button>
+      </div>
+
+    </div>
   </div>
 </template>

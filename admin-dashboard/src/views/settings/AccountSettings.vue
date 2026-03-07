@@ -2,7 +2,6 @@
 /**
  * @file AccountSettings.vue
  * @description Admin account settings page — Profile and Security tabs wired to the backend.
- * Preferences tab is intentionally skipped for now.
  */
 
 import { ref, computed, onMounted, onUnmounted } from 'vue'
@@ -28,9 +27,7 @@ import {
 
 const message = useMessage()
 
-// ----------------------------------------------------------------
-// Confirm Modal
-// ----------------------------------------------------------------
+// ── Confirm Modal ─────────────────────────────────────────────────────────────
 const showConfirmModal = ref(false)
 const confirmTitle     = ref('Are you sure?')
 const confirmAction    = ref(null)
@@ -40,60 +37,45 @@ const openConfirm = (title, action) => {
   confirmAction.value    = action
   showConfirmModal.value = true
 }
-
 const handleConfirm = async () => {
   if (confirmAction.value) await confirmAction.value()
   showConfirmModal.value = false
   confirmAction.value    = null
 }
-
 const handleCancel = () => {
   showConfirmModal.value = false
   confirmAction.value    = null
 }
 
-// ----------------------------------------------------------------
-// UI State
-// ----------------------------------------------------------------
-const activeTab     = ref('Profile')
-const loadingProfile  = ref(false)
-const savingProfile   = ref(false)
-const savingPassword  = ref(false)
-const uploadingPhoto  = ref(false)
+// ── UI State ──────────────────────────────────────────────────────────────────
+const activeTab      = ref('Profile')
+const loadingProfile = ref(false)
+const savingProfile  = ref(false)
+const savingPassword = ref(false)
+const uploadingPhoto = ref(false)
 
-// ----------------------------------------------------------------
-// Profile Tab
-// ----------------------------------------------------------------
-const fullName   = ref('')          // read-only — comes from resident record
-const profileData = ref({
-  username: '',
-  position: '',
-})
-const photoUrl   = ref(null)        // blob URL or null
-let   photoBlobUrl = null           // kept so we can revoke it on unmount
+// ── Profile ───────────────────────────────────────────────────────────────────
+const fullName    = ref('')
+const profileData = ref({ username: '', position: '' })
+const photoUrl    = ref(null)
+let   photoBlobUrl = null
 
-// ----------------------------------------------------------------
-// Security Tab
-// ----------------------------------------------------------------
+// ── Security ──────────────────────────────────────────────────────────────────
 const securityData = ref({
   currentPassword: '',
-  newPassword: '',
+  newPassword:     '',
   confirmPassword: '',
 })
 
-// ----------------------------------------------------------------
-// Password strength
-// ----------------------------------------------------------------
+// ── Password strength ─────────────────────────────────────────────────────────
 const passwordStrength = computed(() => {
   const pw = securityData.value.newPassword
   if (!pw) return { label: '', color: '', width: '0%' }
-
   let score = 0
   if (pw.length >= 8)           score++
   if (/[A-Z]/.test(pw))         score++
   if (/[0-9]/.test(pw))         score++
   if (/[^A-Za-z0-9]/.test(pw))  score++
-
   const levels = [
     { label: 'Weak',   color: '#ef4444', width: '25%'  },
     { label: 'Fair',   color: '#f97316', width: '50%'  },
@@ -103,24 +85,17 @@ const passwordStrength = computed(() => {
   return levels[score - 1] ?? levels[0]
 })
 
-// ----------------------------------------------------------------
-// Load profile on mount
-// ----------------------------------------------------------------
+// ── Lifecycle ─────────────────────────────────────────────────────────────────
 onMounted(async () => {
   loadingProfile.value = true
   try {
     const data = await getAdminProfile()
-
     const { last_name, first_name, middle_name, suffix } = data.resident
-    fullName.value = [first_name, middle_name, last_name, suffix]
-      .filter(Boolean)
-      .join(' ')
-
+    fullName.value = [first_name, middle_name, last_name, suffix].filter(Boolean).join(' ')
     profileData.value.username = data.username
     profileData.value.position = data.position ?? ''
-
     if (data.has_photo) {
-      photoBlobUrl = await getAdminPhotoUrl()
+      photoBlobUrl   = await getAdminPhotoUrl()
       photoUrl.value = photoBlobUrl
     }
   } catch {
@@ -130,72 +105,46 @@ onMounted(async () => {
   }
 })
 
-// Revoke the blob URL when the component is destroyed to avoid memory leaks
 onUnmounted(() => {
   if (photoBlobUrl) URL.revokeObjectURL(photoBlobUrl)
 })
 
-// ----------------------------------------------------------------
-// Save profile (username + position)
-// ----------------------------------------------------------------
+// ── Handlers ──────────────────────────────────────────────────────────────────
 const handleSaveProfile = async () => {
   savingProfile.value = true
   try {
-    await updateAdminProfile({
-      username: profileData.value.username,
-      position: profileData.value.position,
-    })
+    await updateAdminProfile({ username: profileData.value.username, position: profileData.value.position })
     message.success('Profile updated successfully.')
   } catch (err) {
-    const detail = err.response?.data?.detail || 'Failed to update profile.'
-    message.error(detail)
+    message.error(err.response?.data?.detail || 'Failed to update profile.')
   } finally {
     savingProfile.value = false
   }
 }
 
-// ----------------------------------------------------------------
-// Photo upload
-// ----------------------------------------------------------------
 const handleUploadPhoto = () => {
   const input = document.createElement('input')
   input.type   = 'file'
   input.accept = 'image/jpeg,image/png,image/webp'
-
   input.onchange = async (e) => {
     const file = e.target.files[0]
     if (!file) return
-
-    if (file.size > 2 * 1024 * 1024) {
-      message.warning('Photo must be under 2 MB.')
-      return
-    }
-
+    if (file.size > 2 * 1024 * 1024) { message.warning('Photo must be under 2 MB.'); return }
     uploadingPhoto.value = true
     try {
       await uploadAdminPhoto(file)
-
-      // Revoke old blob URL before replacing
       if (photoBlobUrl) URL.revokeObjectURL(photoBlobUrl)
-      photoBlobUrl  = URL.createObjectURL(file)
+      photoBlobUrl   = URL.createObjectURL(file)
       photoUrl.value = photoBlobUrl
-
       message.success('Photo updated.')
-    } catch {
-      message.error('Failed to upload photo.')
-    } finally {
-      uploadingPhoto.value = false
-    }
+    } catch { message.error('Failed to upload photo.') }
+    finally { uploadingPhoto.value = false }
   }
-
   input.click()
 }
 
-// ----------------------------------------------------------------
-// Photo removal
-// ----------------------------------------------------------------
 const handleRemovePhoto = () => {
-  openConfirm('Are you sure you want to remove your profile photo?', async () => {
+  openConfirm('Remove your profile photo?', async () => {
     uploadingPhoto.value = true
     try {
       await removeAdminPhoto()
@@ -203,53 +152,40 @@ const handleRemovePhoto = () => {
       photoBlobUrl   = null
       photoUrl.value = null
       message.success('Photo removed.')
-    } catch {
-      message.error('Failed to remove photo.')
-    } finally {
-      uploadingPhoto.value = false
-    }
+    } catch { message.error('Failed to remove photo.') }
+    finally { uploadingPhoto.value = false }
   })
 }
 
-// ----------------------------------------------------------------
-// Change password
-// ----------------------------------------------------------------
 const handleChangePassword = async () => {
   const { currentPassword, newPassword, confirmPassword } = securityData.value
-
-  if (!currentPassword || !newPassword || !confirmPassword) {
-    message.warning('Please fill in all password fields.')
-    return
-  }
-  if (newPassword !== confirmPassword) {
-    message.error('New passwords do not match.')
-    return
-  }
-  if (newPassword.length < 8) {
-    message.error('New password must be at least 8 characters.')
-    return
-  }
-
+  if (!currentPassword || !newPassword || !confirmPassword) { message.warning('Please fill in all password fields.'); return }
+  if (newPassword !== confirmPassword) { message.error('New passwords do not match.'); return }
+  if (newPassword.length < 8) { message.error('Password must be at least 8 characters.'); return }
   savingPassword.value = true
   try {
-    await changeAdminPassword({
-      current_password: currentPassword,
-      new_password:     newPassword,
-    })
+    await changeAdminPassword({ current_password: currentPassword, new_password: newPassword })
     message.success('Password updated successfully.')
     securityData.value = { currentPassword: '', newPassword: '', confirmPassword: '' }
   } catch (err) {
-    const detail = err.response?.data?.detail || 'Failed to update password.'
-    message.error(detail)
+    message.error(err.response?.data?.detail || 'Failed to update password.')
   } finally {
     savingPassword.value = false
   }
 }
+
+// Initials fallback
+const initials = computed(() => {
+  const parts = fullName.value.trim().split(' ').filter(Boolean)
+  if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+  return fullName.value.charAt(0).toUpperCase() || '?'
+})
 </script>
 
 <template>
   <div class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden">
 
+    <!-- ── Page Header ────────────────────────────────────────────────────── -->
     <div class="flex justify-between items-center mb-4">
       <div>
         <PageTitle title="Account Settings" />
@@ -257,6 +193,7 @@ const handleChangePassword = async () => {
       </div>
     </div>
 
+    <!-- ── Tabs bar ───────────────────────────────────────────────────────── -->
     <div class="flex justify-between items-center border-b border-gray-200">
       <n-tabs v-model:value="activeTab" type="line" animated class="flex-grow">
         <n-tab-pane name="Profile"  tab="Profile"  />
@@ -264,197 +201,206 @@ const handleChangePassword = async () => {
       </n-tabs>
     </div>
 
+    <!-- ── Loading ────────────────────────────────────────────────────────── -->
     <div v-if="loadingProfile" class="flex-1 flex flex-col items-center justify-center gap-4">
-      <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+      <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
       <p class="text-gray-500 font-medium">Loading account settings...</p>
     </div>
 
+    <!-- ── Content ────────────────────────────────────────────────────────── -->
     <div v-else class="overflow-y-auto h-[calc(100vh-200px)] pt-6 pr-2">
 
-      <div
-        v-if="activeTab === 'Profile'"
-        class="flex flex-col lg:flex-row gap-12 lg:justify-between items-start"
-      >
-        <div class="flex-1 w-full max-w-2xl flex flex-col gap-6">
+      <!-- ════════════════ PROFILE TAB ════════════════ -->
+      <div v-if="activeTab === 'Profile'" class="flex gap-8 items-start">
 
-          <div class="flex flex-col gap-2">
-            <label class="text-[12px] font-bold text-gray-800">Name</label>
-            <n-input :value="fullName" disabled placeholder="Full Name" />
-            <p class="text-[11px] text-gray-400">
-              Name is linked to your resident record and cannot be changed here.
-            </p>
-          </div>
-
-          <div class="flex flex-col gap-2">
-            <label class="text-[12px] font-bold text-gray-800">Position</label>
-            <n-input
-              v-model:value="profileData.position"
-              placeholder="e.g. Barangay Secretary"
-            />
-          </div>
-
-          <div class="flex flex-col gap-2">
-            <label class="text-[12px] font-bold text-gray-800">Username</label>
-            <n-input
-              v-model:value="profileData.username"
-              placeholder="Username"
-            />
-          </div>
-
-          <div class="pt-4">
-            <n-button
-              type="info"
-              class="px-6"
-              :loading="savingProfile"
-              @click="handleSaveProfile"
+        <!-- Left: Profile card -->
+        <div class="w-64 flex-shrink-0 flex flex-col items-center gap-4
+                    border border-gray-200 rounded-xl p-6 bg-gray-50">
+          <n-spin :show="uploadingPhoto">
+            <n-avatar
+              round
+              :size="96"
+              :src="photoUrl || undefined"
+              :style="{ background: 'linear-gradient(135deg,#0066d4,#011784)', color: 'white', fontSize: '32px', fontWeight: '700' }"
+              class="ring-4 ring-white shadow-md"
             >
+              <span v-if="!photoUrl">{{ initials }}</span>
+            </n-avatar>
+          </n-spin>
+
+          <div class="text-center">
+            <p class="text-[15px] font-semibold text-gray-800 leading-tight">{{ fullName || '—' }}</p>
+            <p class="text-[12px] text-gray-400 mt-0.5">{{ profileData.position || 'No position set' }}</p>
+          </div>
+
+          <div class="w-full border-t border-gray-200 pt-4 flex flex-col gap-2">
+            <button
+              @click="handleUploadPhoto"
+              :disabled="uploadingPhoto"
+              class="w-full text-[13px] font-medium text-[#0957FF] border border-[#0957FF]
+                     rounded-md py-1.5 hover:bg-blue-50 transition-colors disabled:opacity-50"
+            >
+              {{ photoUrl ? 'Change Photo' : 'Upload Photo' }}
+            </button>
+            <button
+              v-if="photoUrl"
+              @click="handleRemovePhoto"
+              :disabled="uploadingPhoto"
+              class="w-full text-[13px] font-medium text-red-500 border border-red-300
+                     rounded-md py-1.5 hover:bg-red-50 transition-colors disabled:opacity-50"
+            >
+              Remove Photo
+            </button>
+          </div>
+
+          <p class="text-[11px] text-gray-400 text-center">JPG, PNG, WebP · Max 2 MB</p>
+        </div>
+
+        <!-- Right: Form -->
+        <div class="flex-1 flex flex-col gap-8 ">
+
+          <!-- Section: Personal Info -->
+          <div class="border-b border-gray-100 max-w-lg">
+            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Personal Information</h3>
+            <div class="flex flex-col gap-6 mb-3">
+              <div class="flex flex-col gap-1.5">
+                <label class="text-[13px] font-semibold text-gray-700">Full Name</label>
+                <n-input :value="fullName" disabled placeholder="Full Name" />
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <label class="text-[13px] font-semibold text-gray-700">Position</label>
+                <n-input v-model:value="profileData.position" placeholder="e.g. Barangay Secretary" />
+              </div>
+            </div>
+            <p class="text-[11px] text-gray-400">Linked to your resident record — contact the super admin to update.</p>
+          </div>
+
+          <!-- Section: Account -->
+          <div class="border-b border-gray-100">
+            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Account</h3>
+            <div class="flex flex-col gap-5 max-w-lg">
+              <div class="flex flex-col gap-1.5">
+                <label class="text-[13px] font-semibold text-gray-700">Username</label>
+                <n-input v-model:value="profileData.username" placeholder="Username" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Save -->
+          <div>
+            <n-button type="primary" :loading="savingProfile" @click="handleSaveProfile">
               Save Changes
             </n-button>
           </div>
+
+        </div>
+      </div>
+
+      <!-- ════════════════ SECURITY TAB ════════════════ -->
+      <div v-if="activeTab === 'Security'" class="flex gap-8 items-start max-w-5xl">
+
+        <!-- Left: Password form -->
+        <div class="flex-1 flex flex-col gap-0">
+
+          <div class="pb-6 border-b border-gray-100">
+            <h3 class="text-[13px] font-bold text-gray-400 uppercase tracking-widest mb-5">Change Password</h3>
+            <div class="flex flex-col gap-5 max-w-lg">
+
+              <div class="flex flex-col gap-1.5">
+                <label class="text-[13px] font-semibold text-gray-700">Current Password</label>
+                <n-input
+                  v-model:value="securityData.currentPassword"
+                  type="password"
+                  show-password-on="click"
+                  placeholder="Enter current password"
+                />
+              </div>
+
+              <div class="flex flex-col gap-1.5">
+                <label class="text-[13px] font-semibold text-gray-700">New Password</label>
+                <n-input
+                  v-model:value="securityData.newPassword"
+                  type="password"
+                  show-password-on="click"
+                  placeholder="Enter new password"
+                />
+              </div>
+
+              <div class="flex flex-col gap-1.5">
+                <label class="text-[13px] font-semibold text-gray-700">Confirm New Password</label>
+                <n-input
+                  v-model:value="securityData.confirmPassword"
+                  type="password"
+                  show-password-on="click"
+                  placeholder="Confirm new password"
+                />
+              </div>
+
+              <!-- Strength meter -->
+              <div v-if="securityData.newPassword" class="flex flex-col gap-2">
+                <div class="flex items-center justify-between text-[12px]">
+                  <span class="font-semibold text-gray-600">Password strength</span>
+                  <span class="font-bold" :style="{ color: passwordStrength.color }">
+                    {{ passwordStrength.label }}
+                  </span>
+                </div>
+                <div class="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
+                  <div
+                    class="h-1.5 rounded-full transition-all duration-500"
+                    :style="{ width: passwordStrength.width, backgroundColor: passwordStrength.color }"
+                  />
+                </div>
+                <p class="text-[11px] text-gray-400">
+                  Use at least 8 characters with uppercase, numbers, and symbols.
+                </p>
+              </div>
+
+            </div>
+          </div>
+
+          <div class="pt-6">
+            <n-button type="primary" :loading="savingPassword" @click="handleChangePassword">
+              Update Password
+            </n-button>
+          </div>
+
         </div>
 
-        <div class="flex flex-col items-center lg:items-end w-full lg:w-auto lg:mr-12 mt-8 lg:mt-0">
-          <div class="flex flex-col w-[320px]">
-            <span class="font-['Inter'] font-semibold text-[16px] text-[#373737] mb-6">
-              Profile Photo
-            </span>
+        <!-- Right: Danger zone card -->
+        <div class="w-80 flex-shrink-0">
+          <div class="border border-red-200 bg-red-50 rounded-xl p-6 flex flex-col gap-4">
+            <div class="flex items-center gap-2">
+              <div class="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                <svg class="w-4 h-4 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                </svg>
+              </div>
+              <h3 class="text-[15px] font-bold text-red-700">Danger Zone</h3>
+            </div>
 
-            <div
-              class="flex flex-col items-center justify-center w-[320px] h-[320px] p-8
-                     border border-gray-200 rounded-md bg-white"
-            >
-              <n-spin :show="uploadingPhoto">
-                <n-avatar
-                  round
-                  :size="150"
-                  :src="photoUrl || undefined"
-                  :style="{ backgroundColor: '#e0e7ff', color: '#4f46e5', fontSize: '48px' }"
-                  class="mb-6 ring-4 ring-blue-50 shadow-sm"
-                >
-                  <span v-if="!photoUrl">{{ fullName?.charAt(0)?.toUpperCase() || '?' }}</span>
-                </n-avatar>
-              </n-spin>
-
-              <span class="font-['Inter'] font-medium text-[13px] text-[#757575] mb-1">
-                JPG, PNG, WebP. Max 2MB
-              </span>
-
-              <div class="flex flex-row gap-4 mt-1">
+            <div class="border-t border-red-200 pt-4 flex flex-col gap-3">
+              <div>
+                <p class="text-[13px] font-semibold text-red-800">Delete Account</p>
+                <p class="text-[12px] text-red-600 mt-1 leading-relaxed">
+                  Permanently delete your admin account and all associated data. This cannot be undone.
+                </p>
+              </div>
+              <div class="flex justify-end">
                 <n-button
-                  ghost
-                  color="#0957FF"
-                  class="font-['Inter'] font-medium text-[15px] rounded-md"
-                  :disabled="uploadingPhoto"
-                  @click="handleUploadPhoto"
+                  size="small"
+                  color="#dc2626"
+                  text-color="#ffffff"
+                  @click="openConfirm('Are you sure you want to delete your account? This cannot be undone.', () => {})"
                 >
-                  Upload Photo
-                </n-button>
-
-                <n-button
-                  ghost
-                  color="#FF2B3A"
-                  class="font-['Inter'] font-medium text-[15px] rounded-md"
-                  :disabled="!photoUrl || uploadingPhoto"
-                  @click="handleRemovePhoto"
-                >
-                  Remove Photo
+                  Delete Account
                 </n-button>
               </div>
             </div>
           </div>
         </div>
+
       </div>
-
-      <div
-        v-if="activeTab === 'Security'"
-        class="flex flex-col lg:flex-row gap-12 lg:justify-between items-start"
-      >
-        <div class="flex-1 w-full max-w-2xl flex flex-col gap-6">
-
-          <div class="flex flex-col gap-2">
-            <label class="text-[12px] font-bold text-gray-800">Current Password</label>
-            <n-input
-              v-model:value="securityData.currentPassword"
-              type="password"
-              show-password-on="click"
-              placeholder="Enter current password"
-            />
-          </div>
-
-          <div class="flex flex-col gap-2">
-            <label class="text-[12px] font-bold text-gray-800">New Password</label>
-            <n-input
-              v-model:value="securityData.newPassword"
-              type="password"
-              show-password-on="click"
-              placeholder="Enter new password"
-            />
-          </div>
-
-          <div class="flex flex-col gap-2">
-            <label class="text-[12px] font-bold text-gray-800">Confirm New Password</label>
-            <n-input
-              v-model:value="securityData.confirmPassword"
-              type="password"
-              show-password-on="click"
-              placeholder="Confirm new password"
-            />
-          </div>
-
-          <div v-if="securityData.newPassword" class="flex flex-col gap-2 pt-1">
-            <div class="flex items-center gap-1 text-[12px] font-bold">
-              <span class="text-gray-800">Password Strength:</span>
-              <span :style="{ color: passwordStrength.color }">
-                {{ passwordStrength.label }}
-              </span>
-            </div>
-            <div class="w-full bg-gray-200 h-1 rounded-full">
-              <div
-                class="h-1 rounded-full transition-all duration-300"
-                :style="{ width: passwordStrength.width, backgroundColor: passwordStrength.color }"
-              />
-            </div>
-            <p class="text-[11px] text-gray-400 mt-1">
-              Use at least 8 characters with uppercase, lowercase, numbers, and symbols.
-            </p>
-          </div>
-
-          <div class="pt-4">
-            <n-button
-              type="info"
-              class="px-6"
-              :loading="savingPassword"
-              @click="handleChangePassword"
-            >
-              Update Password
-            </n-button>
-          </div>
-        </div>
-
-        <div
-          class="w-full lg:w-[400px] border-2 border-[#B1202A] bg-[#fff5f5]
-                 rounded-lg p-6 flex flex-col lg:mr-16"
-        >
-          <h3 class="font-['Inter'] font-bold text-[16px] text-[#B1202A] mb-2">
-            Delete Account
-          </h3>
-          <p class="font-['Inter'] font-normal text-[14px] text-[#000000] mb-6 leading-relaxed">
-            Permanently delete your admin account and all associated data.
-            This action cannot be undone.
-          </p>
-          <div class="flex justify-end mt-auto">
-            <n-button
-              color="#FF0000"
-              text-color="#FFFFFF"
-              class="font-bold font-['Inter']"
-              @click="openConfirm('Are you sure you want to delete your account? This cannot be undone.', () => {})"
-            >
-              Delete Account
-            </n-button>
-          </div>
-        </div>
-      </div>
-
     </div>
   </div>
 
