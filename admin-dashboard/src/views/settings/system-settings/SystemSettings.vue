@@ -9,6 +9,7 @@ import { ref, onMounted, computed, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { NTabs, NTabPane, useMessage } from "naive-ui";
 import PageTitle from "@/components/shared/PageTitle.vue";
+import { useAdminAuthStore } from "@/stores/auth";
 
 // Tab components
 import General from "@/views/settings/system-settings/General.vue";
@@ -25,6 +26,7 @@ import { getSystemLogs, getSystemLogSummary } from "@/api/systemLogsService";
 const router = useRouter();
 const route  = useRoute();
 const message = useMessage();
+const auth = useAdminAuthStore();
 
 const activeTab  = ref("general");
 const searchQuery = ref("");
@@ -146,7 +148,7 @@ onMounted(() => {
     () => route.query.tab,
     (newTab) => {
       if (newTab === "audit")        activeTab.value = "audit";
-      if (newTab === "system-logs") {
+      if (newTab === "system-logs" && auth.isSuperAdmin) {
         activeTab.value = "system-logs";
         loadSystemLogs();
       }
@@ -155,7 +157,7 @@ onMounted(() => {
   );
 
   watch(activeTab, (val) => {
-    if (val === "system-logs" && systemLogs.value.length === 0) loadSystemLogs();
+    if (val === "system-logs" && auth.isSuperAdmin && systemLogs.value.length === 0) loadSystemLogs();
   });
 });
 </script>
@@ -188,24 +190,27 @@ onMounted(() => {
     <!-- Tabs -->
     <div class="flex justify-between items-center border-b border-gray-200">
       <n-tabs v-model:value="activeTab" type="line" animated class="flex-grow">
-        <n-tab-pane name="general" tab="General" />
-        <n-tab-pane name="admin" tab="Admin Accounts" />
-        <n-tab-pane name="security" tab="Security" />
-        <n-tab-pane name="backup" tab="Backup Data" />
+        <n-tab-pane name="general"     tab="General" />
+        <n-tab-pane name="security"    tab="Security" />
+        <n-tab-pane name="backup"      tab="Backup Data" />
         <n-tab-pane name="preferences" tab="Preferences" />
-        <n-tab-pane name="audit" tab="Audit Log" />
-        <n-tab-pane name="system-logs" tab="System Logs" />
+        <n-tab-pane name="audit"       tab="Audit Log" />
+        <!-- Superadmin-only tabs -->
+        <n-tab-pane v-if="auth.isSuperAdmin" name="admin"       tab="Admin Accounts" />
+        <n-tab-pane v-if="auth.isSuperAdmin" name="system-logs" tab="System Logs" />
       </n-tabs>
     </div>
 
     <!-- Tab Content -->
     <div class="overflow-y-auto h-[calc(100vh-260px)] pr-2 pt-6">
 
-      <General v-if="activeTab === 'general'" />
-      <AdminAccounts v-if="activeTab === 'admin'" />
-      <Security v-if="activeTab === 'security'" />
-      <Backup v-if="activeTab === 'backup'" />
-      <SystemPreferences v-if="activeTab === 'preferences'" />
+      <General            v-if="activeTab === 'general'" />
+      <Security           v-if="activeTab === 'security'" />
+      <Backup             v-if="activeTab === 'backup'" />
+      <SystemPreferences  v-if="activeTab === 'preferences'" />
+
+      <!-- Superadmin-only tab content -->
+      <AdminAccounts v-if="activeTab === 'admin' && auth.isSuperAdmin" />
 
       <!-- Audit Log (kept inline — uses shared state from parent) -->
       <div v-if="activeTab === 'audit'" class="flex flex-col w-full">
@@ -253,8 +258,8 @@ onMounted(() => {
         </div>
       </div>
 
-      <!-- System Logs (kept inline — uses shared state from parent) -->
-      <div v-if="activeTab === 'system-logs'" class="flex flex-col w-full gap-5">
+      <!-- System Logs — superadmin only (kept inline — uses shared state from parent) -->
+      <div v-if="activeTab === 'system-logs' && auth.isSuperAdmin" class="flex flex-col w-full gap-5">
         <!-- Summary Cards -->
         <div class="grid grid-cols-4 gap-3">
           <div v-for="level in ['info','warning','error','critical']" :key="level"

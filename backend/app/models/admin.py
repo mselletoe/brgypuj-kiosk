@@ -14,6 +14,7 @@ class Admin(Base):
     system_role = Column(String(50), nullable=False, server_default="admin")   # "admin" | "superadmin" — controls permissions
     photo = Column(LargeBinary, nullable=True)
     is_active = Column(Boolean, nullable=False, server_default="true")
+    token_version = Column(Integer, nullable=False, server_default="0")
     created_at = Column(TIMESTAMP, nullable=False, server_default=func.current_timestamp())
 
     resident = relationship("Resident", back_populates="admin_accounts")

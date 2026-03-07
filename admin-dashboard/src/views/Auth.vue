@@ -25,7 +25,7 @@ const adminAuth = useAdminAuthStore()
 
 /**
  * Orchestrates the administrative login process.
- * Validates local input, performs remote authentication, 
+ * Validates local input, performs remote authentication,
  * and handles UI feedback for success or failure states.
  */
 const handleLogin = async () => {
@@ -41,9 +41,8 @@ const handleLogin = async () => {
     // 2. Request JWT from Backend Service
     const data = await loginAdmin(username.value, password.value)
 
-    // 3. Initialize Session: Store token and basic user metadata
-    // This triggers the persist() logic to save the token to LocalStorage
-    adminAuth.setAuth(data.access_token, { username: username.value })
+    // 3. Initialize Session: fetch full profile (including system_role) and store it
+    await adminAuth.initSession(data.access_token)
 
     message.success('Login successful')
 

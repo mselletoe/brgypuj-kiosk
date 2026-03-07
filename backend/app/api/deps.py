@@ -52,3 +52,15 @@ def get_current_admin(
         )
 
     return admin
+
+
+def require_superadmin(
+    current_admin: Admin = Depends(get_current_admin),
+) -> Admin:
+    """Blocks access with 403 if the caller is not a superadmin."""
+    if current_admin.system_role != "superadmin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Superadmin access required",
+        )
+    return current_admin

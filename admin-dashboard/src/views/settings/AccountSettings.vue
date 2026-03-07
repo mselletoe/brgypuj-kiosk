@@ -24,8 +24,10 @@ import {
   getAdminPhotoUrl,
   removeAdminPhoto,
 } from '@/api/adminService'
+import { useAdminAuthStore } from '@/stores/auth'
 
 const message = useMessage()
+const auth = useAdminAuthStore()
 
 // ── Confirm Modal ─────────────────────────────────────────────────────────────
 const showConfirmModal = ref(false)
@@ -233,6 +235,24 @@ const initials = computed(() => {
             <p class="text-[12px] text-gray-400 mt-0.5">{{ profileData.position || 'No position set' }}</p>
           </div>
 
+          <!-- Role tag -->
+          <div
+            class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold tracking-wide"
+            :class="auth.isSuperAdmin
+              ? 'bg-indigo-100 text-indigo-700 border border-indigo-200'
+              : 'bg-gray-100 text-gray-600 border border-gray-200'"
+          >
+            <!-- Crown icon for superadmin -->
+            <svg v-if="auth.isSuperAdmin" class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M2 19h20v2H2v-2zm2-8l4 4 4-6 4 6 4-4v6H4v-6z"/>
+            </svg>
+            <!-- Shield icon for admin -->
+            <svg v-else class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/>
+            </svg>
+            {{ auth.isSuperAdmin ? 'Super Admin' : 'Admin' }}
+          </div>
+
           <div class="w-full border-t border-gray-200 pt-4 flex flex-col gap-2">
             <button
               @click="handleUploadPhoto"
@@ -282,6 +302,21 @@ const initials = computed(() => {
               <div class="flex flex-col gap-1.5">
                 <label class="text-[13px] font-semibold text-gray-700">Username</label>
                 <n-input v-model:value="profileData.username" placeholder="Username" />
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <label class="text-[13px] font-semibold text-gray-700">Role</label>
+                <div class="flex items-center gap-2 h-[34px] px-3 rounded-md border border-gray-200 bg-gray-50 w-full max-w-lg">
+                  <svg v-if="auth.isSuperAdmin" class="w-3.5 h-3.5 text-indigo-600 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M2 19h20v2H2v-2zm2-8l4 4 4-6 4 6 4-4v6H4v-6z"/>
+                  </svg>
+                  <svg v-else class="w-3.5 h-3.5 text-gray-500 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/>
+                  </svg>
+                  <span class="text-[13px]" :class="auth.isSuperAdmin ? 'text-indigo-700 font-semibold' : 'text-gray-600'">
+                    {{ auth.isSuperAdmin ? 'Super Admin' : 'Admin' }}
+                  </span>
+                </div>
+                <p class="text-[11px] text-gray-400">Your system role controls what features you can access.</p>
               </div>
             </div>
           </div>
