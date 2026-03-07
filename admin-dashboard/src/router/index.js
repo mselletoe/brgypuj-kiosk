@@ -11,7 +11,7 @@ import Residents from "@/views/Residents.vue";
 import Auth from "@/views/Auth.vue";
 import CreateAccount from "@/views/CreateAccount.vue";
 import EquipmentInventory from "@/views/equipment-inventory/EquipmentInventory.vue";
-import SystemSettings from "@/views/settings/SystemSettings.vue";
+import SystemSettings from "@/views/settings/system-settings/SystemSettings.vue";
 import EquipmentRequests from "@/views/requests/equipment-requests/EquipmentRequest.vue";
 import FeedbackAndReports from "@/views/feedback-and-reports/FeedbackAndReports.vue";
 import ComponentShowcase from "@/components/ComponentShowcase.vue";

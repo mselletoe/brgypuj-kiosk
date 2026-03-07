@@ -1,140 +1,291 @@
 <script setup>
-import { ref, computed } from 'vue';
-import PageTitle from '@/components/shared/PageTitle.vue';
+import { ref, computed, watch, h } from 'vue'
+import { NDataTable, NCheckbox, NPopover, NSelect, NButton, useMessage } from 'naive-ui'
+import {
+  TrashIcon,
+  CheckIcon,
+  EnvelopeOpenIcon,
+  FunnelIcon,
+} from '@heroicons/vue/24/outline'
+import PageTitle from '@/components/shared/PageTitle.vue'
 
-const searchQuery = ref('');
-const statusFilter = ref('All Status');
-const typeFilter = ref('All Types');
+const message = useMessage()
 
-// Mock data
+const searchQuery       = ref('')
+const showFilterPopover = ref(false)
+const selectedIds       = ref([])
+
+// ── Filter state ──────────────────────────────────────────────────────────────
+const filterState = ref({
+  status: null,
+  type:   null,
+})
+
+const statusOptions = [
+  { label: 'All Status', value: null },
+  { label: 'Unread',     value: 'unread' },
+  { label: 'Read',       value: 'read' },
+]
+
+const typeOptions = [
+  { label: 'All Types', value: null },
+  { label: 'Document',  value: 'Document' },
+  { label: 'Payment',   value: 'Payment' },
+  { label: 'Equipment', value: 'Equipment' },
+  { label: 'Feedback',  value: 'Feedback' },
+]
+
+const hasActiveFilters = computed(() =>
+  !!(filterState.value.status || filterState.value.type)
+)
+
+const handleFilterClear = () => {
+  filterState.value = { status: null, type: null }
+}
+
+// ── Data ──────────────────────────────────────────────────────────────────────
 const notifications = ref([
-  { id: 1, type: 'Document', msg: 'New Document Request', date: 'Jan 30, 2026', time: '10:55 AM', unread: true, selected: false },
-  { id: 2, type: 'Document', msg: 'New Document Request', date: 'Jan 30, 2026', time: '10:55 AM', unread: true, selected: false },
-  { id: 3, type: 'Document', msg: 'New Document Request', date: 'Jan 30, 2026', time: '10:55 AM', unread: true, selected: false },
-  { id: 4, type: 'Payment', msg: 'Payment Completed', date: 'Jan 30, 2026', time: '10:55 AM', unread: false, selected: false },
-  { id: 5, type: 'Equipment', msg: 'Equipment Overdue', date: 'Jan 30, 2026', time: '10:55 AM', unread: true, selected: false },
-  { id: 6, type: 'Feedback', msg: 'New Feedback Received', date: 'Jan 30, 2026', time: '10:55 AM', unread: false, selected: false },
-  { id: 7, type: 'Payment', msg: 'Payment Received', date: 'Jan 30, 2026', time: '10:55 AM', unread: true, selected: false },
-  { id: 8, type: 'Feedback', msg: 'New Feedback Received', date: 'Jan 30, 2026', time: '10:55 AM', unread: false, selected: false }
-]);
+  { id: 1, type: 'Document',  msg: 'New Document Request submitted by Juan dela Cruz', date: 'Jan 30, 2026', time: '10:55 AM', unread: true },
+  { id: 2, type: 'Document',  msg: 'New Document Request submitted by Maria Santos',   date: 'Jan 30, 2026', time: '10:42 AM', unread: true },
+  { id: 3, type: 'Document',  msg: 'New Document Request submitted by Pedro Reyes',    date: 'Jan 30, 2026', time: '09:30 AM', unread: true },
+  { id: 4, type: 'Payment',   msg: 'Payment of ₱150.00 completed for Clearance',       date: 'Jan 30, 2026', time: '09:10 AM', unread: false },
+  { id: 5, type: 'Equipment', msg: 'Equipment "Sound System" is now overdue',           date: 'Jan 29, 2026', time: '04:00 PM', unread: true },
+  { id: 6, type: 'Feedback',  msg: 'New feedback received from a resident',             date: 'Jan 29, 2026', time: '02:15 PM', unread: false },
+  { id: 7, type: 'Payment',   msg: 'Payment of ₱75.00 received for Indigency',         date: 'Jan 29, 2026', time: '11:00 AM', unread: true },
+  { id: 8, type: 'Feedback',  msg: 'New feedback received — rated 4/5 stars',          date: 'Jan 28, 2026', time: '03:45 PM', unread: false },
+])
 
+// ── Filtering ─────────────────────────────────────────────────────────────────
 const filteredNotifications = computed(() => {
-  return notifications.value.filter(n => {
-    const searchLower = searchQuery.value.toLowerCase();
-    const matchesSearch = searchLower === '' || 
-                          n.msg.toLowerCase().includes(searchLower) || 
-                          n.type.toLowerCase().includes(searchLower);
-    
-    const matchesStatus = statusFilter.value === 'All Status' ||
-                          (statusFilter.value === 'Unread' && n.unread) ||
-                          (statusFilter.value === 'Read' && !n.unread);
-                          
-    const matchesType = typeFilter.value === 'All Types' || n.type === typeFilter.value;
+  const q = searchQuery.value.toLowerCase()
+  return notifications.value.filter((n) => {
+    const matchSearch = !q || n.msg.toLowerCase().includes(q) || n.type.toLowerCase().includes(q)
+    const matchStatus =
+      !filterState.value.status ||
+      (filterState.value.status === 'unread' && n.unread) ||
+      (filterState.value.status === 'read'   && !n.unread)
+    const matchType = !filterState.value.type || n.type === filterState.value.type
+    return matchSearch && matchStatus && matchType
+  })
+})
 
-    return matchesSearch && matchesStatus && matchesType;
-  });
-});
+// ── Selection ─────────────────────────────────────────────────────────────────
+const totalCount    = computed(() => filteredNotifications.value.length)
+const selectedCount = computed(() => selectedIds.value.length)
 
-const isAllSelected = computed({
-  get() {
-    return filteredNotifications.value.length > 0 && filteredNotifications.value.every(n => n.selected);
-  },
-  set(value) {
-    filteredNotifications.value.forEach(n => {
-      n.selected = value;
-    });
+const selectionState = computed(() => {
+  if (totalCount.value === 0 || selectedCount.value === 0) return 'none'
+  if (selectedCount.value < totalCount.value) return 'partial'
+  return 'all'
+})
+
+function handleMainSelectToggle() {
+  if (selectionState.value === 'all' || selectionState.value === 'partial') {
+    selectedIds.value = []
+  } else {
+    selectedIds.value = filteredNotifications.value.map((n) => n.id)
   }
-});
+}
 
-const toolbarToggleSelectAll = () => {
-  isAllSelected.value = !isAllSelected.value;
-};
+watch(searchQuery, () => { selectedIds.value = [] })
 
-const markAllAsRead = () => {
-  notifications.value.forEach(n => {
-    n.unread = false;
-    n.selected = false;
-  });
-};
+// ── Actions ───────────────────────────────────────────────────────────────────
+function markSelectedAsRead() {
+  if (!selectedIds.value.length) return
+  notifications.value.forEach((n) => {
+    if (selectedIds.value.includes(n.id)) n.unread = false
+  })
+  message.success(`${selectedIds.value.length} notification(s) marked as read.`)
+  selectedIds.value = []
+}
 
-const markSelectedAsRead = () => {
-  filteredNotifications.value.forEach(n => {
-    if (n.selected) {
-      n.unread = false;
-      n.selected = false;
-    }
-  });
-};
+function deleteSelected() {
+  if (!selectedIds.value.length) return
+  const count = selectedIds.value.length
+  notifications.value = notifications.value.filter((n) => !selectedIds.value.includes(n.id))
+  selectedIds.value = []
+  message.success(`${count} notification(s) deleted.`)
+}
 
-const deleteSelected = () => {
-  notifications.value = notifications.value.filter(n => !n.selected);
-};
+function markRowAsRead(row) {
+  row.unread = false
+}
+
+// ── Type meta ─────────────────────────────────────────────────────────────────
+const typeMeta = {
+  Document:  { dot: 'bg-[#D946EF]', badge: 'bg-purple-50 text-purple-700 border-purple-200' },
+  Payment:   { dot: 'bg-[#10B981]', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  Equipment: { dot: 'bg-[#F59E0B]', badge: 'bg-amber-50 text-amber-700 border-amber-200' },
+  Feedback:  { dot: 'bg-[#3B82F6]', badge: 'bg-blue-50 text-blue-700 border-blue-200' },
+}
+
+// ── NDataTable columns ────────────────────────────────────────────────────────
+const columns = computed(() => [
+  {
+    key: 'select',
+    width: 48,
+    title: '',
+    render(row) {
+      return h(NCheckbox, {
+        checked: selectedIds.value.includes(row.id),
+        onUpdateChecked(checked) {
+          if (checked) {
+            if (!selectedIds.value.includes(row.id)) selectedIds.value.push(row.id)
+          } else {
+            selectedIds.value = selectedIds.value.filter((id) => id !== row.id)
+          }
+        },
+      })
+    },
+  },
+  {
+    key: 'type',
+    title: 'Type',
+    width: 140,
+    render(row) {
+      const meta = typeMeta[row.type] || { dot: 'bg-gray-400', badge: 'bg-gray-100 text-gray-600 border-gray-200' }
+      return h(
+        'span',
+        { class: `inline-flex items-center gap-1.5 text-[12px] font-semibold px-2.5 py-1 rounded-full border ${meta.badge}` },
+        [
+          h('span', { class: `w-1.5 h-1.5 rounded-full flex-shrink-0 ${meta.dot}` }),
+          row.type,
+        ]
+      )
+    },
+  },
+  {
+    key: 'msg',
+    title: 'Notification',
+    render(row) {
+      return h('div', { class: 'flex items-center gap-2' }, [
+        row.unread ? h('span', { class: 'w-1.5 h-1.5 rounded-full bg-[#0d6efd] flex-shrink-0' }) : null,
+        h('span', { class: `text-md ${row.unread ? 'font-semibold text-gray-900' : 'font-normal text-gray-600'}` }, row.msg),
+      ].filter(Boolean))
+    },
+  },
+  {
+    key: 'datetime',
+    title: 'Date & Time',
+    width: 180,
+    render(row) {
+      return h('div', { class: 'flex flex-col' }, [
+        h('span', { class: 'text-s text-gray-700 font-medium' }, row.date),
+        h('span', { class: 'text-xs text-gray-400 mt-0.5' }, row.time),
+      ])
+    },
+  },
+  {
+    key: 'action',
+    title: '',
+    width: 48,
+    render(row) {
+      return row.unread
+        ? h('button', {
+            title: 'Mark as read',
+            onClick: () => markRowAsRead(row),
+            class: 'p-1.5 rounded-md text-[#0d6efd] hover:bg-blue-100 transition-colors',
+          }, [h(EnvelopeOpenIcon, { class: 'w-4 h-4' })])
+        : null
+    },
+  },
+])
 </script>
 
 <template>
   <div class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden">
-    
-    <div class="flex flex-col xl:flex-row xl:items-center justify-between mb-4 gap-4">
-      
+
+    <!-- ── Header ──────────────────────────────────────────────────────────── -->
+    <div class="flex justify-between items-center mb-4">
       <div>
         <PageTitle title="Notifications" />
         <p class="text-sm text-gray-500 mt-1">Manage all system notifications</p>
       </div>
-      
-      <div class="flex flex-wrap items-center gap-3">
-        
-        <div class="relative">
-          <input 
-            type="text" 
-            v-model="searchQuery"
-            placeholder="Search Notifications..." 
-            class="border border-[gray-200] text-gray-700 rounded-md py-2 px-3 text-[13px] w-56 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-gray-400" 
-          />
-        </div>
 
-        <!-- STATUS + TYPE SELECTS (unchanged) -->
-        <select v-model="statusFilter"
-          class="border border-gray-200 text-gray-600 rounded-md py-2 pl-3 pr-8 text-[13px] focus:outline-none focus:border-blue-500 bg-white cursor-pointer appearance-none">
-          <option>All Status</option>
-          <option>Unread</option>
-          <option>Read</option>
-        </select>
+      <div class="flex items-center gap-3">
 
-        <select v-model="typeFilter"
-          class="border border-gray-200 text-gray-600 rounded-md py-2 pl-3 pr-8 text-[13px] focus:outline-none focus:border-blue-500 bg-white cursor-pointer appearance-none">
-          <option>All Types</option>
-          <option>Document</option>
-          <option>Payment</option>
-          <option>Equipment</option>
-          <option>Feedback</option>
-        </select>
+        <!-- Search -->
+        <input
+          v-model="searchQuery"
+          type="text"
+          placeholder="Search"
+          class="border border-gray-200 text-gray-700 rounded-md py-2 px-3 w-[250px]
+                 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500
+                 transition-all placeholder:text-gray-400"
+        />
 
-        <!-- TOGGLE SELECT ALL -->
-        <div class="relative group">
-          <button @click="toolbarToggleSelectAll"
-            class="p-2 border border-[gray-200] rounded-md text-gray-500 hover:bg-gray-50 transition-colors">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+        <!-- Filter popover -->
+        <n-popover
+          v-model:show="showFilterPopover"
+          trigger="click"
+          placement="bottom-end"
+          :show-arrow="false"
+          style="padding: 0;"
+        >
+          <template #trigger>
+            <button
+              :class="[
+                'flex items-center px-4 py-2 border rounded-lg text-sm font-medium transition-colors',
+                hasActiveFilters
+                  ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'
+                  : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+              ]"
+            >
+              <FunnelIcon class="w-5 h-5 mr-2" :class="hasActiveFilters ? 'text-white' : 'text-gray-500'" />
+              Filter
+            </button>
+          </template>
+
+          <div class="w-[240px] bg-white rounded-lg overflow-hidden flex flex-col">
+            <div class="p-4 border-b border-gray-200">
+              <h3 class="text-[16px] font-semibold text-gray-800">Filter Notifications</h3>
+            </div>
+            <div class="px-4 py-4 space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                <n-select v-model:value="filterState.status" :options="statusOptions" placeholder="All Status" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Type</label>
+                <n-select v-model:value="filterState.type" :options="typeOptions" placeholder="All Types" />
+              </div>
+            </div>
+            <div class="flex justify-end p-4 border-t border-gray-200">
+              <n-button secondary @click="handleFilterClear">Clear</n-button>
+            </div>
+          </div>
+        </n-popover>
+
+        <!-- Mark Selected as Read -->
+        <div class="relative group inline-block">
+          <button
+            @click="markSelectedAsRead"
+            :disabled="selectionState === 'none'"
+            class="p-2 border border-blue-400 rounded-lg transition-colors"
+            :class="selectionState === 'none' ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-50'"
+          >
+            <EnvelopeOpenIcon class="w-5 h-5 text-[#0d6efd]" />
           </button>
-          <div class="absolute -bottom-9 left-1/2 -translate-x-1/2 
+          <div class="absolute -bottom-8 left-1/2 -translate-x-1/2
                       opacity-0 invisible group-hover:opacity-100 group-hover:visible
                       transition-all duration-300 ease-in-out
-                     bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded 
+                      bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded
                       whitespace-nowrap shadow-md z-50">
-            Toggle Select All
+            Mark Selected as Read
           </div>
         </div>
 
-        <!-- DELETE -->
-        <div class="relative group">
-          <button @click="deleteSelected"
-            class="p-2 border border-gray-200 rounded-md text-red-500 hover:bg-red-50 transition-colors">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
+        <!-- Delete Selected -->
+        <div class="relative group inline-block">
+          <button
+            @click="deleteSelected"
+            :disabled="selectionState === 'none'"
+            class="p-2 border border-red-400 rounded-lg transition-colors"
+            :class="selectionState === 'none' ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-50'"
+          >
+            <TrashIcon class="w-5 h-5 text-red-500" />
           </button>
-          <div class="absolute -bottom-9 left-1/2 -translate-x-1/2
+          <div class="absolute -bottom-8 left-1/2 -translate-x-1/2
                       opacity-0 invisible group-hover:opacity-100 group-hover:visible
                       transition-all duration-300 ease-in-out
                       bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded
@@ -143,74 +294,68 @@ const deleteSelected = () => {
           </div>
         </div>
 
-        <!-- MARK SELECTED -->
-        <div class="relative group">
-          <button @click="markSelectedAsRead"
-            class="p-2 border border-gray-200 rounded-md text-[#0d6efd] hover:bg-blue-50 transition-colors">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-            </svg>
-          </button>
-          <div class="absolute -bottom-9 left-1/2 -translate-x-1/2 
+        <!-- Select All -->
+        <div class="relative group inline-block">
+          <div
+            class="flex items-center border rounded-lg overflow-hidden transition-colors"
+            :class="selectionState !== 'none' ? 'border-blue-600' : 'border-gray-400'"
+          >
+            <button @click="handleMainSelectToggle" class="p-2 hover:bg-gray-50 flex items-center">
+              <div
+                class="w-5 h-5 border rounded flex items-center justify-center transition-colors"
+                :class="selectionState !== 'none' ? 'bg-blue-600 border-blue-600' : 'border-gray-400'"
+              >
+                <div v-if="selectionState === 'partial'" class="w-2 h-0.5 bg-white" />
+                <svg v-if="selectionState === 'all'" class="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+            </button>
+          </div>
+          <div class="absolute -bottom-8 left-1/2 -translate-x-1/2
                       opacity-0 invisible group-hover:opacity-100 group-hover:visible
                       transition-all duration-300 ease-in-out
-                       bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded 
+                      bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded
                       whitespace-nowrap shadow-md z-50">
-            Mark Selected as Read
+            Select All
           </div>
         </div>
-
-        <!-- MARK ALL (unchanged) -->
-        <button @click="markAllAsRead"
-          class="bg-[#0d6efd] text-white px-5 py-2 rounded-md text-[13px] font-medium hover:bg-blue-700 transition-colors ml-2">
-          Mark All as Read
-        </button>
 
       </div>
     </div>
 
-    <!-- TABLE (unchanged) -->
-    <div class="w-full">
-      <table class="w-full text-left border-collapse">
-        <thead>
-          <tr class="border-b border-gray-200">
-            <th class="py-4 px-6 w-12 text-center">
-              <input type="checkbox" v-model="isAllSelected"
-                class="w-4 h-4 rounded text-[#0d6efd] focus:ring-[#0d6efd] border-gray-300 cursor-pointer" />
-            </th>
-            <th class="py-4 px-6 text-[11px] font-bold text-gray-800 uppercase tracking-wider w-[20%]">Type</th>
-            <th class="py-4 px-6 text-[11px] font-bold text-gray-800 uppercase tracking-wider w-[45%]">Notification</th>
-            <th class="py-4 px-6 text-[11px] font-bold text-gray-800 uppercase tracking-wider">Date & Time</th>
-            <th class="py-4 px-6 w-12"></th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-if="filteredNotifications.length === 0">
-            <td colspan="5" class="py-12 text-center text-gray-500 text-[13px]">
-              No notifications match your current filters.
-            </td>
-          </tr>
-          <tr v-for="n in filteredNotifications"
-              :key="n.id"
-              @click="n.unread = false"
-              class="border-b border-gray-100 last:border-none transition-colors cursor-pointer"
-              :class="n.unread ? 'bg-[#f0f7ff] hover:bg-blue-50' : 'hover:bg-gray-50'">
-            <td class="py-4 px-6 text-center" @click.stop>
-              <input type="checkbox" v-model="n.selected"
-                class="w-4 h-4 rounded text-[#0d6efd] focus:ring-[#0d6efd] border-gray-300 cursor-pointer" />
-            </td>
-            <td class="py-4 px-6 text-[13px] text-gray-600">{{ n.type }}</td>
-            <td class="py-4 px-6 text-[13px] font-medium text-gray-800">{{ n.msg }}</td>
-            <td class="py-4 px-6 text-[13px] text-gray-600 flex items-center">
-              <span class="w-[100px] inline-block">{{ n.date }}</span> 
-              <span>{{ n.time }}</span>
-            </td>
-            <td class="py-4 px-6 text-center">
-              <div v-if="n.unread" class="w-1.5 h-1.5 bg-[#0d6efd] rounded-full mx-auto"></div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+    <!-- ── Stats strip ─────────────────────────────────────────────────────── -->
+    <div class="flex items-center gap-4 mb-4 justify-end">
+      <span class="text-[12px] text-gray-400">
+        {{ filteredNotifications.length }} notification{{ filteredNotifications.length !== 1 ? 's' : '' }}
+        <template v-if="selectedCount > 0">
+          · <span class="text-blue-600 font-medium">{{ selectedCount }} selected</span>
+        </template>
+      </span>
+      <span
+        v-if="filteredNotifications.filter(n => n.unread).length > 0"
+        class="inline-flex items-center gap-1.5 text-[12px] font-medium text-[#0d6efd]
+               bg-blue-50 border border-blue-100 px-2.5 py-0.5 rounded-full"
+      >
+        <span class="w-1.5 h-1.5 rounded-full bg-[#0d6efd]" />
+        {{ filteredNotifications.filter(n => n.unread).length }} unread
+      </span>
+    </div>
+
+    <!-- ── Table ───────────────────────────────────────────────────────────── -->
+    <div class="overflow-y-auto bg-white rounded-lg border border-gray-200 flex-1">
+      <n-data-table
+        :columns="columns"
+        :data="filteredNotifications"
+        :bordered="false"
+        :row-props="(row) => ({
+          class: row.unread ? 'bg-[#f0f7ff] hover:bg-blue-50 cursor-pointer' : 'hover:bg-gray-50 cursor-pointer',
+          onClick: () => markRowAsRead(row),
+        })"
+      />
+      <div v-if="filteredNotifications.length === 0" class="py-16 text-center text-gray-400 text-[13px]">
+        No notifications match your current filters.
+      </div>
     </div>
 
   </div>
