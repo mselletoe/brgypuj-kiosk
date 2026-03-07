@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, h, watch, onMounted } from 'vue'
-import { NDataTable, NInput, NButton, NCheckbox, NPopover, NSelect, useMessage } from 'naive-ui'
+import { NDataTable, NInput, NButton, NCheckbox, NPopover, NSelect, useMessage, NEmpty } from 'naive-ui'
 import { FunnelIcon, TrashIcon, CheckIcon } from '@heroicons/vue/24/outline'
 import PageTitle from '@/components/shared/PageTitle.vue'
 import ResidentModal from './ResidentModal.vue'
@@ -287,7 +287,7 @@ const columns = computed(() => [
 </script>
 
 <template>
-  <div class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden animate-fade-in">
+  <div class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden">
     <div class="flex mb-6 items-center justify-between">
       <div>
         <PageTitle title="Residents Information Management" />
@@ -424,10 +424,26 @@ const columns = computed(() => [
       <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
       <p class="text-gray-500 font-medium">Loading residents...</p>
     </div>
+    
+    <template v-else>
+      <div v-if="residents.length > 0" class="flex-1 overflow-y-auto bg-white rounded-lg border border-gray-200">
+        <n-data-table 
+          :columns="columns" 
+          :data="filteredResidents" 
+          :bordered="false"
+        />
+      </div>
 
-    <div v-else class="flex-1 overflow-y-auto bg-white rounded-lg border border-gray-200">
-      <n-data-table :columns="columns" :data="filteredResidents" :bordered="false" />
-    </div>
+      <div v-else class="h-full flex flex-col items-center justify-center flex-1">
+        <NEmpty description="No residents registered yet">
+          <template #extra>
+            <NButton type="primary" @click="openAddModal">
+              Register Resident
+            </NButton>
+          </template>
+        </NEmpty>
+      </div>
+    </template>
 
     <ResidentModal
       :show="showResidentModal"

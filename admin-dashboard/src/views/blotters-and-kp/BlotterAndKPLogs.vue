@@ -8,8 +8,9 @@ import {
   NModal,
   NSelect,
   NDatePicker,
-  NPopover,
-  useMessage
+  useMessage,
+  NEmpty,
+  NPopover
 } from 'naive-ui'
 import { FunnelIcon, TrashIcon, CheckIcon, XMarkIcon } from '@heroicons/vue/24/outline'
 import PageTitle from '@/components/shared/PageTitle.vue'
@@ -425,7 +426,7 @@ const modalTitle = computed(() => {
 </script>
 
 <template>
-  <div class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden animate-fade-in">
+  <div class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden">
     <div class="flex mb-6 items-center justify-between">
       <div>
         <PageTitle title="Blotter and KP Logs" />
@@ -557,11 +558,22 @@ const modalTitle = computed(() => {
       <p class="text-gray-500 font-medium">Loading blotter records...</p>
     </div>
 
-    <div v-else class="flex-1 overflow-y-auto bg-white rounded-lg border border-gray-200">
-      <n-data-table :columns="columns" :data="filteredBlotters" :bordered="false" />
-    </div>
+    <template v-else>
+      <div v-if="blotters.length > 0" class="flex-1 overflow-y-auto bg-white rounded-lg border border-gray-200">
+        <n-data-table :columns="columns" :data="filteredBlotters" :bordered="false" />
+      </div>
 
-    <!-- Blotter Modal -->
+      <div v-else class="h-full flex flex-col items-center justify-center flex-1">
+        <NEmpty description="No blotter records yet">
+          <template #extra>
+            <NButton type="primary" @click="openAddModal">
+              Add Record
+            </NButton>
+          </template>
+        </NEmpty>
+      </div>
+    </template>
+
     <NModal :show="showBlotterModal" @update:show="handleModalClose" :mask-closable="false">
       <div class="w-[820px] max-h-[90vh] overflow-hidden bg-white rounded-xl shadow-lg flex flex-col" role="dialog" aria-modal="true">
 

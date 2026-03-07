@@ -2,7 +2,7 @@
 import { ref, onMounted, computed, watch } from 'vue';
 import { TrashIcon, CheckIcon } from '@heroicons/vue/24/outline'
 import EquipmentInventoryCard from './EquipmentInventoryCard.vue';
-import { useMessage, NInput } from 'naive-ui';
+import { useMessage, NInput, NEmpty, NButton } from 'naive-ui';
 import PageTitle from '@/components/shared/PageTitle.vue'
 import ConfirmModal from '@/components/shared/ConfirmationModal.vue'
 import { 
@@ -216,7 +216,7 @@ onMounted(fetchActualInventory)
 </script>
 
 <template>
-  <div class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden animate-fade-in">
+  <div class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden">
     <div class="flex mb-6 items-center justify-between">
       <div>
         <PageTitle title="Equipment Inventory Management" />
@@ -340,9 +340,15 @@ onMounted(fetchActualInventory)
 
       <div
         v-if="!isLoading && !localInventory.length"
-        class="text-center py-20 border-2 border-dashed rounded-xl"
+        class="h-full flex flex-col items-center justify-center flex-1"
       >
-        <p class="text-gray-400">Your inventory is currently empty.</p>
+        <NEmpty description="Your inventory is currently empty">
+          <template #extra>
+            <NButton type="primary" @click="startCreate">
+              Add Equipment
+            </NButton>
+          </template>
+        </NEmpty>
       </div>
     </div>
   </div>
