@@ -52,6 +52,24 @@ const submitFromWrapper = () => {
 };
 
 /**
+ * Normalizes a min_residency requirement label from its params.
+ * Guards against legacy data that stored months as a decimal year (e.g. years: 0.6).
+ */
+function formatResidencyLabel(params) {
+  const raw = params?.years ?? 0;
+  // Legacy guard: if years is a float (e.g. 0.6), convert total to whole months
+  const totalMonths = Number.isInteger(raw)
+    ? raw * 12 + (params?.months ?? 0)
+    : Math.round(raw * 12);
+  const years = Math.floor(totalMonths / 12);
+  const months = totalMonths % 12;
+  const parts = [];
+  if (years > 0) parts.push(`${years} year${years !== 1 ? "s" : ""}`);
+  if (months > 0) parts.push(`${months} month${months !== 1 ? "s" : ""}`);
+  return `Minimum ${parts.join(" and ") || "0 months"} of residency`;
+}
+
+/**
  * Normalizes the URL parameter into a slug format for configuration lookup.
  */
 const docTypeSlug = computed(() =>
@@ -161,11 +179,20 @@ const fetchEligibility = async () => {
  * Merges static requirements with live eligibility check results.
  * Document-type requirements show as informational.
  * System checks show their pass/fail status if available.
+ *
+ * For min_residency, both the label and message are recomputed from params
+ * to guard against legacy data that stored months as a decimal year (e.g. 0.6 years).
  */
 const mergedRequirements = computed(() => {
   const reqs = config.value?.requirements || [];
+
   if (!eligibilityResult.value) {
-    return reqs.map((r) => ({ ...r, passed: null, message: null }));
+    return reqs.map((r) => ({
+      ...r,
+      label: r.id === "min_residency" ? formatResidencyLabel(r.params) : r.label,
+      passed: null,
+      message: null,
+    }));
   }
 
   const checksMap = {};
@@ -175,10 +202,21 @@ const mergedRequirements = computed(() => {
 
   return reqs.map((r) => {
     const live = checksMap[r.id];
+    const fixedLabel =
+      r.id === "min_residency" ? formatResidencyLabel(r.params) : r.label;
+
+    // For min_residency, override the backend message with the clean label
+    // so legacy float values (e.g. "0.6 years") never reach the UI.
+    const fixedMessage =
+      r.id === "min_residency" && live?.message
+        ? `${fixedLabel} required. ${live.passed ? "Passed." : "Requirement not met."}`
+        : (live?.message ?? null);
+
     return {
       ...r,
+      label: fixedLabel,
       passed: live?.passed ?? null,
-      message: live?.message ?? null,
+      message: fixedMessage,
     };
   });
 });
@@ -221,7 +259,7 @@ const handleErrorDismiss = () => {
 /**
  * Submits the finalized form data to the backend.
  * Captures the transaction number for the user's reference upon success.
- * * FIXED: Properly handles async PDF generation without race conditions
+ * FIXED: Properly handles async PDF generation without race conditions.
  */
 const handleSubmit = async (data) => {
   if (isSubmitting.value) return;

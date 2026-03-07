@@ -279,12 +279,12 @@ def _generate_transaction_no(db: Session) -> str:
 
 def _check_clean_blotter(db: Session, resident_id: int) -> bool:
     """
-    Returns True if the resident has NO blotter records
-    (neither as complainant nor respondent).
+    Returns True if the resident has NO blotter records as a respondent.
+    Complainants (the reporting/victim party) are NOT penalized —
+    only respondents (the accused) are considered to have a non-clean record.
     """
     record = db.query(BlotterRecord).filter(
-        (BlotterRecord.complainant_id == resident_id) |
-        (BlotterRecord.respondent_id == resident_id)
+        BlotterRecord.respondent_id == resident_id
     ).first()
     return record is None
 
@@ -401,10 +401,10 @@ def check_resident_eligibility(
         elif req_type == "system_check":
 
             if req_id == "clean_blotter":
-                # Check if resident appears in any blotter record
+                # Only check if resident appears as a RESPONDENT (the accused).
+                # Complainants (the reporting/victim party) are NOT penalized.
                 blotter_records = db.query(BlotterRecord).filter(
-                    (BlotterRecord.complainant_id == resident_id) |
-                    (BlotterRecord.respondent_id == resident_id)
+                    BlotterRecord.respondent_id == resident_id
                 ).all()
 
                 if blotter_records:
@@ -416,7 +416,7 @@ def check_resident_eligibility(
                         "type": "system_check",
                         "passed": False,
                         "message": (
-                            f"Resident has {len(blotter_records)} blotter record(s): "
+                            f"Resident is a respondent in {len(blotter_records)} blotter record(s): "
                             f"{record_nos}. Clean blotter record is required."
                         )
                     })
@@ -427,7 +427,7 @@ def check_resident_eligibility(
                         "label": req_label,
                         "type": "system_check",
                         "passed": True,
-                        "message": "No blotter records found."
+                        "message": "No blotter records found as respondent."
                     })
 
             elif req_id == "min_residency":

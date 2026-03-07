@@ -152,6 +152,26 @@ def get_blotter_records_by_resident(db: Session, resident_id: int) -> list[Blott
     )
 
 
+def has_blotter_record_as_respondent(db: Session, resident_id: int) -> bool:
+    """
+    Document Services: Returns True if the resident appears as a respondent
+    in any blotter record, meaning they do NOT have a clean record.
+
+    Complainants (the reporting/victim party) are NOT affected — only
+    respondents (the accused) are considered to have a non-clean record.
+
+    Usage in document_service.py:
+        from app.services.blotter_service import has_blotter_record_as_respondent
+
+        is_clean = not has_blotter_record_as_respondent(db, resident_id)
+    """
+    return (
+        db.query(BlotterRecord)
+        .filter(BlotterRecord.respondent_id == resident_id)
+        .first()
+    ) is not None
+
+
 def create_blotter_record(db: Session, payload: BlotterRecordCreate) -> BlotterRecord:
     """
     Admin: Creates a new blotter record with an auto-generated blotter number.
