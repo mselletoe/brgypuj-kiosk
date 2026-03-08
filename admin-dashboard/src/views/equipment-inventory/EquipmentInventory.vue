@@ -1,29 +1,31 @@
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue';
-import { TrashIcon, CheckIcon } from '@heroicons/vue/24/outline'
-import EquipmentInventoryCard from './EquipmentInventoryCard.vue';
-import { useMessage, NInput, NEmpty, NButton } from 'naive-ui';
-import PageTitle from '@/components/shared/PageTitle.vue'
-import ConfirmModal from '@/components/shared/ConfirmationModal.vue'
-import { 
-  getEquipmentInventory, 
-  createEquipmentItem, 
-  updateEquipmentItem, 
+import { ref, onMounted, computed, watch } from "vue";
+import { TrashIcon, CheckIcon } from "@heroicons/vue/24/outline";
+import EquipmentInventoryCard from "./EquipmentInventoryCard.vue";
+import { useMessage, NInput, NEmpty, NButton } from "naive-ui";
+import PageTitle from "@/components/shared/PageTitle.vue";
+import ConfirmModal from "@/components/shared/ConfirmationModal.vue";
+import {
+  getEquipmentInventory,
+  createEquipmentItem,
+  updateEquipmentItem,
   deleteEquipmentItem,
-  bulkDeleteEquipmentItems 
-} from '@/api/equipmentService';
+  bulkDeleteEquipmentItems,
+} from "@/api/equipmentService";
+import { useSearchSync } from "@/composables/useSearchSync";
 
 const message = useMessage();
-const emit = defineEmits(['inventory-updated']);
+const emit = defineEmits(["inventory-updated"]);
 
 // --- State Management ---
 const localInventory = ref([]);
 const selectedIds = ref([]);
 const isLoading = ref(false);
-const showDeleteModal = ref(false)
-const deleteTargetId = ref(null)
-const isBulkDelete = ref(false)
-const searchQuery = ref('')
+const showDeleteModal = ref(false);
+const deleteTargetId = ref(null);
+const isBulkDelete = ref(false);
+const searchQuery = ref("");
+useSearchSync(searchQuery);
 
 // --- Data Fetching & Mapping ---
 async function fetchActualInventory() {
@@ -31,19 +33,19 @@ async function fetchActualInventory() {
   try {
     const response = await getEquipmentInventory();
     const inventoryData = response.data;
-    
-    localInventory.value = inventoryData.map(item => ({
+
+    localInventory.value = inventoryData.map((item) => ({
       id: item.id,
-      item_name: item.name,            
-      total_owned: item.total_quantity, 
+      item_name: item.name,
+      total_owned: item.total_quantity,
       available: item.available_quantity,
-      rental_rate: item.rate_per_day,          
+      rental_rate: item.rate_per_day,
       editing: false,
       isNew: false,
     }));
   } catch (error) {
-    console.error('Failed to load inventory:', error);
-    message.error('Could not load equipment inventory.');
+    console.error("Failed to load inventory:", error);
+    message.error("Could not load equipment inventory.");
   } finally {
     isLoading.value = false;
   }
@@ -51,51 +53,51 @@ async function fetchActualInventory() {
 
 // --- CRUD Actions ---
 function startCreate() {
-  if (localInventory.value.some(item => item.isNew)) return;
+  if (localInventory.value.some((item) => item.isNew)) return;
 
   localInventory.value.unshift({
     id: Date.now(),
-    item_name: '',
+    item_name: "",
     total_owned: 0,
     available: 0,
     rental_rate: 0,
     editing: true,
-    isNew: true
+    isNew: true,
   });
 }
 
 async function handleSave(formData) {
-  if (!formData.item_name || formData.item_name.trim() === '') {
-    message.warning('Item name is required.');
+  if (!formData.item_name || formData.item_name.trim() === "") {
+    message.warning("Item name is required.");
     return;
   }
 
   if (formData.total_owned < 0) {
-    message.warning('Total owned cannot be negative.');
+    message.warning("Total owned cannot be negative.");
     return;
   }
 
   if (formData.available < 0) {
-    message.warning('Available quantity cannot be negative.');
+    message.warning("Available quantity cannot be negative.");
     return;
   }
 
   if (formData.available > formData.total_owned) {
-    message.warning('Available quantity cannot be greater than total owned.');
+    message.warning("Available quantity cannot be greater than total owned.");
     return;
   }
 
   if (formData.rental_rate < 0) {
-    message.warning('Rental rate cannot be negative.');
+    message.warning("Rental rate cannot be negative.");
     return;
   }
-  
+
   try {
     const apiPayload = {
       name: formData.item_name.trim(),
       total_quantity: formData.total_owned,
       available_quantity: formData.available,
-      rate_per_day: formData.rental_rate
+      rate_per_day: formData.rental_rate,
     };
 
     if (formData.isNew) {
@@ -105,16 +107,16 @@ async function handleSave(formData) {
       await updateEquipmentItem(formData.id, apiPayload);
       message.success(`Changes for "${formData.item_name}" saved!`);
     }
-    
+
     await fetchActualInventory();
-    emit('inventory-updated'); 
+    emit("inventory-updated");
   } catch (error) {
-    console.error('Failed to save:', error);
-    
+    console.error("Failed to save:", error);
+
     if (error.response?.data?.detail) {
       message.error(error.response.data.detail);
     } else {
-      message.error('Failed to save changes.');
+      message.error("Failed to save changes.");
     }
   }
 }
@@ -134,89 +136,91 @@ function handleCancel(item) {
 
 function toggleSelect(id) {
   if (selectedIds.value.includes(id)) {
-    selectedIds.value = selectedIds.value.filter(i => i !== id);
+    selectedIds.value = selectedIds.value.filter((i) => i !== id);
   } else {
     selectedIds.value.push(id);
   }
 }
 
 const filteredInventory = computed(() => {
-  if (!searchQuery.value) return localInventory.value
-  return localInventory.value.filter(item =>
-    item.item_name.toLowerCase().includes(searchQuery.value.toLowerCase())
-  )
-})
+  if (!searchQuery.value) return localInventory.value;
+  return localInventory.value.filter((item) =>
+    item.item_name.toLowerCase().includes(searchQuery.value.toLowerCase()),
+  );
+});
 
-const totalCount = computed(() => filteredInventory.value.length)
-const selectedCount = computed(() => selectedIds.value.length)
+const totalCount = computed(() => filteredInventory.value.length);
+const selectedCount = computed(() => selectedIds.value.length);
 
 const selectionState = computed(() => {
-  if (totalCount.value === 0 || selectedCount.value === 0) return 'none'
-  if (selectedCount.value < totalCount.value) return 'partial'
-  return 'all'
-})
+  if (totalCount.value === 0 || selectedCount.value === 0) return "none";
+  if (selectedCount.value < totalCount.value) return "partial";
+  return "all";
+});
 
 function handleMainSelectToggle() {
-  if (selectionState.value === 'all' || selectionState.value === 'partial') {
-    selectedIds.value = []
+  if (selectionState.value === "all" || selectionState.value === "partial") {
+    selectedIds.value = [];
   } else {
-    selectedIds.value = filteredInventory.value.map(i => i.id)
+    selectedIds.value = filteredInventory.value.map((i) => i.id);
   }
 }
 
 watch(searchQuery, () => {
-  selectedIds.value = []
-})
+  selectedIds.value = [];
+});
 
 function requestDelete(id) {
-  deleteTargetId.value = id
-  isBulkDelete.value = false
-  showDeleteModal.value = true
+  deleteTargetId.value = id;
+  isBulkDelete.value = false;
+  showDeleteModal.value = true;
 }
 
 function requestBulkDelete() {
-  if (!selectedIds.value.length) return
-  isBulkDelete.value = true
-  showDeleteModal.value = true
+  if (!selectedIds.value.length) return;
+  isBulkDelete.value = true;
+  showDeleteModal.value = true;
 }
 
 async function confirmDelete() {
   try {
     if (isBulkDelete.value) {
-      await bulkDeleteEquipmentItems(selectedIds.value)
+      await bulkDeleteEquipmentItems(selectedIds.value);
       localInventory.value = localInventory.value.filter(
-        i => !selectedIds.value.includes(i.id)
-      )
-      selectedIds.value = []
-      message.success('Selected items deleted.')
+        (i) => !selectedIds.value.includes(i.id),
+      );
+      selectedIds.value = [];
+      message.success("Selected items deleted.");
     } else {
-      await deleteEquipmentItem(deleteTargetId.value)
+      await deleteEquipmentItem(deleteTargetId.value);
       localInventory.value = localInventory.value.filter(
-        i => i.id !== deleteTargetId.value
-      )
-      message.success('Item deleted.')
+        (i) => i.id !== deleteTargetId.value,
+      );
+      message.success("Item deleted.");
     }
 
-    emit('inventory-updated')
+    emit("inventory-updated");
   } catch (err) {
-    console.error(err)
-    message.error(err.response?.data?.detail || 'Delete failed.')
+    console.error(err);
+    message.error(err.response?.data?.detail || "Delete failed.");
   } finally {
-    showDeleteModal.value = false
-    deleteTargetId.value = null
+    showDeleteModal.value = false;
+    deleteTargetId.value = null;
   }
 }
 
 function cancelDelete() {
-  showDeleteModal.value = false
-  deleteTargetId.value = null
+  showDeleteModal.value = false;
+  deleteTargetId.value = null;
 }
 
-onMounted(fetchActualInventory)
+onMounted(fetchActualInventory);
 </script>
 
 <template>
-  <div class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden">
+  <div
+    class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden"
+  >
     <div class="flex mb-6 items-center justify-between">
       <div>
         <PageTitle title="Equipment Inventory Management" />
@@ -246,19 +250,19 @@ onMounted(fetchActualInventory)
           >
             <TrashIcon class="w-5 h-5 text-red-500" />
           </button>
-          <div class="absolute -bottom-8 left-1/2 -translate-x-1/2
-                                opacity-0 invisible group-hover:opacity-100 group-hover:visible
-                                transition-all duration-300 ease-in-out
-                                bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded
-                                whitespace-nowrap shadow-md z-50">
-              Delete
+          <div
+            class="absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 ease-in-out bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded whitespace-nowrap shadow-md z-50"
+          >
+            Delete
           </div>
         </div>
 
         <div class="relative group inline-block">
           <div
             class="flex items-center border rounded-lg overflow-hidden transition-colors"
-            :class="selectionState !== 'none' ? 'border-blue-600' : 'border-gray-400'"
+            :class="
+              selectionState !== 'none' ? 'border-blue-600' : 'border-gray-400'
+            "
           >
             <button
               @click="handleMainSelectToggle"
@@ -283,16 +287,12 @@ onMounted(fetchActualInventory)
               </div>
             </button>
             <div
-          class="absolute -bottom-8 left-1/2 -translate-x-1/2
-                 opacity-0 invisible group-hover:opacity-100 group-hover:visible
-                 transition-all duration-300 ease-in-out
-                 bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded
-                 whitespace-nowrap shadow-md z-50"
-        >
-          Select All
+              class="absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 ease-in-out bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded whitespace-nowrap shadow-md z-50"
+            >
+              Select All
+            </div>
           </div>
         </div>
-      </div>
 
         <button
           @click="startCreate"
@@ -305,8 +305,12 @@ onMounted(fetchActualInventory)
             viewBox="0 0 24 24"
             stroke="currentColor"
           >
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M12 4v16m8-8H4" />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 4v16m8-8H4"
+            />
           </svg>
           Add
         </button>
@@ -314,8 +318,13 @@ onMounted(fetchActualInventory)
     </div>
 
     <div class="flex-1 overflow-y-auto pr-2 flex flex-col">
-      <div v-if="isLoading" class="flex-1 flex flex-col items-center justify-center gap-4">
-        <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+      <div
+        v-if="isLoading"
+        class="flex-1 flex flex-col items-center justify-center gap-4"
+      >
+        <div
+          class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"
+        ></div>
         <p class="text-gray-500 font-medium">Loading equipment inventory...</p>
       </div>
 
@@ -324,7 +333,7 @@ onMounted(fetchActualInventory)
         class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-6"
       >
         <EquipmentInventoryCard
-          v-for="item in localInventory"
+          v-for="item in filteredInventory"
           :key="item.id"
           :equipment="item"
           :is-editing="item.editing"

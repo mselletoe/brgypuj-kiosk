@@ -7,6 +7,12 @@ const TYPE_LABELS = {
   equipment: "Equipment",
   equipment_requests: "Equipment Requests",
   blotter: "Blotter Records",
+  pages: "Pages",
+  announcements: "Announcements",
+  faqs: "FAQs",
+  feedback: "Feedback",
+  doc_services: "Document Services",
+  contact: "Contact Information",
 };
 
 const TYPE_ICONS = {
@@ -15,6 +21,12 @@ const TYPE_ICONS = {
   equipment: "🎒",
   equipment_requests: "📋",
   blotter: "⚖️",
+  pages: "🔖",
+  announcements: "📢",
+  faqs: "❓",
+  feedback: "⭐",
+  doc_services: "📋",
+  contact: "📞",
 };
 
 export function useGlobalSearch() {

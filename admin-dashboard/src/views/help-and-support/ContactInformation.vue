@@ -1,10 +1,5 @@
 <script setup>
-/**
- * @file ContactInformation.vue
- * @description Admin interface for managing the barangay's contact information,
- * emergency hotlines, and technical support details displayed on the Kiosk.
- */
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
 import { useMessage, NInput, NForm, NFormItem, NCard } from "naive-ui";
 import {
   PhoneIcon,
@@ -13,39 +8,56 @@ import {
   InformationCircleIcon,
 } from "@heroicons/vue/24/outline";
 import PageTitle from "@/components/shared/PageTitle.vue";
+import axios from "axios";
 
 const message = useMessage();
+const isSaving = ref(false);
+const isLoading = ref(true);
 
-// Reactive state containing the contact details shown on the Kiosk
 const contactData = ref({
-  emergency: "911",
-  emergencyDesc: "For life-threatening emergencies",
-  phone: "(046) 123-4567",
-  email: "poblacion1.amadeo@gmail.com",
-  officeHours: "Monday to Friday, 8:00 AM - 5:00 PM",
-  address: "Brgy. Poblacion I, Amadeo, Cavite",
-  techSupport:
-    "If you're experiencing issues with the kiosk, please contact our office or visit during business hours for assistance.",
+  emergency_number: "",
+  emergency_desc: "",
+  phone: "",
+  email: "",
+  office_hours: "",
+  address: "",
+  tech_support: "",
 });
 
-const isSaving = ref(false);
+const loadContact = async () => {
+  try {
+    const { data } = await axios.get("/admin/contact");
+    contactData.value = {
+      emergency_number: data.emergency_number,
+      emergency_desc: data.emergency_desc,
+      phone: data.phone,
+      email: data.email,
+      office_hours: data.office_hours,
+      address: data.address,
+      tech_support: data.tech_support,
+    };
+  } catch (err) {
+    console.error(err);
+    message.error("Failed to load contact information.");
+  } finally {
+    isLoading.value = false;
+  }
+};
 
-/**
- * Handles the form submission to save contact information.
- */
 const handleSave = async () => {
   isSaving.value = true;
   try {
-    // Simulated API Call
-    await new Promise((resolve) => setTimeout(resolve, 800));
+    await axios.put("/admin/contact", contactData.value);
     message.success("Contact information updated successfully.");
-  } catch (error) {
-    console.error("Save error:", error);
+  } catch (err) {
+    console.error(err);
     message.error("Failed to update contact information.");
   } finally {
     isSaving.value = false;
   }
 };
+
+onMounted(loadContact);
 </script>
 
 <template>

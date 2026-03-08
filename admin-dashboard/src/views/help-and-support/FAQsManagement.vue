@@ -4,17 +4,25 @@
  * @description Admin interface for managing Frequently Asked Questions (FAQs).
  * Fully connected to backend: Create, Edit, Delete, Bulk Delete.
  */
-import { ref, computed, watch, h, onMounted } from "vue"
-import { NDataTable, NInput, NButton, NCheckbox, useMessage, NEmpty } from "naive-ui"
+import { ref, computed, watch, h, onMounted } from "vue";
+import {
+  NDataTable,
+  NInput,
+  NButton,
+  NCheckbox,
+  useMessage,
+  NEmpty,
+} from "naive-ui";
 import {
   PencilSquareIcon,
   TrashIcon,
   XMarkIcon,
   CheckIcon,
-} from "@heroicons/vue/24/outline"
-import PageTitle from "@/components/shared/PageTitle.vue"
-import ConfirmModal from "@/components/shared/ConfirmationModal.vue"
-import faqService from "@/api/faqService"
+} from "@heroicons/vue/24/outline";
+import PageTitle from "@/components/shared/PageTitle.vue";
+import ConfirmModal from "@/components/shared/ConfirmationModal.vue";
+import faqService from "@/api/faqService";
+import { useSearchSync } from "@/composables/useSearchSync";
 
 const message = useMessage();
 
@@ -26,6 +34,7 @@ const isLoading = ref(true);
 const editingId = ref(null);
 const showAddForm = ref(false);
 const searchQuery = ref("");
+useSearchSync(searchQuery);
 const showDeleteModal = ref(false);
 const deleteTargetId = ref(null);
 const selectedIds = ref([]);
@@ -112,7 +121,9 @@ const confirmDelete = async () => {
     if (isBulkDelete.value) {
       await faqService.bulkDeleteFAQs(selectedIds.value);
       faqs.value = faqs.value.filter((f) => !selectedIds.value.includes(f.id));
-      message.success(`${selectedIds.value.length} FAQ(s) deleted successfully.`);
+      message.success(
+        `${selectedIds.value.length} FAQ(s) deleted successfully.`,
+      );
       selectedIds.value = [];
     } else {
       await faqService.deleteFAQ(deleteTargetId.value);
@@ -142,7 +153,7 @@ const filteredFaqs = computed(() => {
     : faqs.value.filter(
         (f) =>
           f.question.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-          f.answer.toLowerCase().includes(searchQuery.value.toLowerCase())
+          f.answer.toLowerCase().includes(searchQuery.value.toLowerCase()),
       );
 
   if (editingId.value && !filtered.find((f) => f.id === editingId.value)) {
@@ -186,7 +197,8 @@ const columns = computed(() => [
         checked: selectedIds.value.includes(row.id),
         onUpdateChecked(checked) {
           if (checked) {
-            if (!selectedIds.value.includes(row.id)) selectedIds.value.push(row.id);
+            if (!selectedIds.value.includes(row.id))
+              selectedIds.value.push(row.id);
           } else {
             selectedIds.value = selectedIds.value.filter((id) => id !== row.id);
           }
@@ -204,7 +216,7 @@ const columns = computed(() => [
           value: row.question,
           onUpdateValue(v) {
             row.question = v;
-          }
+          },
         });
       }
       return h("span", { class: "font-semibold text-gray-800" }, row.question);
@@ -221,7 +233,7 @@ const columns = computed(() => [
           autosize: { minRows: 2, maxRows: 5 },
           onUpdateValue(v) {
             row.answer = v;
-          }
+          },
         });
       }
       return h("span", { class: "text-gray-600" }, row.answer);
@@ -234,14 +246,41 @@ const columns = computed(() => [
     render(row) {
       if (editingId.value === row.id) {
         return h("div", { class: "flex gap-2" }, [
-          h(NButton, { type: "success", size: "small", onClick: () => updateFaq(row) }, { default: () => "Save" }),
-          h(NButton, { type: "default", size: "small", onClick: () => (editingId.value = null) }, { default: () => "Cancel" }),
+          h(
+            NButton,
+            { type: "success", size: "small", onClick: () => updateFaq(row) },
+            { default: () => "Save" },
+          ),
+          h(
+            NButton,
+            {
+              type: "default",
+              size: "small",
+              onClick: () => (editingId.value = null),
+            },
+            { default: () => "Cancel" },
+          ),
         ]);
       }
 
       return h("div", { class: "flex gap-2 items-center flex-wrap" }, [
-        h("button", { onClick: () => (editingId.value = row.id), class: "p-1.5 text-orange-500 hover:bg-orange-50 rounded transition" }, [h(PencilSquareIcon, { class: "w-5 h-5" })]),
-        h("button", { onClick: () => requestDelete(row.id), class: "p-1.5 text-red-500 hover:bg-red-50 rounded transition" }, [h(TrashIcon, { class: "w-5 h-5" })]),
+        h(
+          "button",
+          {
+            onClick: () => (editingId.value = row.id),
+            class:
+              "p-1.5 text-orange-500 hover:bg-orange-50 rounded transition",
+          },
+          [h(PencilSquareIcon, { class: "w-5 h-5" })],
+        ),
+        h(
+          "button",
+          {
+            onClick: () => requestDelete(row.id),
+            class: "p-1.5 text-red-500 hover:bg-red-50 rounded transition",
+          },
+          [h(TrashIcon, { class: "w-5 h-5" })],
+        ),
       ]);
     },
   },
@@ -249,12 +288,15 @@ const columns = computed(() => [
 </script>
 
 <template>
-  <div class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden">
+  <div
+    class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden"
+  >
     <div class="flex mb-6 items-center justify-between">
       <div>
         <PageTitle title="FAQs Management" />
         <p class="text-sm text-gray-500 mt-1">
-          Create, edit, and manage frequently asked questions displayed on the Kiosk.
+          Create, edit, and manage frequently asked questions displayed on the
+          Kiosk.
         </p>
       </div>
 
@@ -262,7 +304,7 @@ const columns = computed(() => [
         <input
           v-model="searchQuery"
           type="text"
-          placeholder="Search FAQs"
+          placeholder="Search"
           class="border border-gray-200 text-gray-700 rounded-md py-2 px-3 w-[250px] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-gray-400"
         />
 
@@ -279,19 +321,19 @@ const columns = computed(() => [
           >
             <TrashIcon class="w-5 h-5 text-red-500" />
           </button>
-          <div class="absolute -bottom-8 left-1/2 -translate-x-1/2
-                                opacity-0 invisible group-hover:opacity-100 group-hover:visible
-                                transition-all duration-300 ease-in-out
-                                bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded
-                                whitespace-nowrap shadow-md z-50">
-              Delete
+          <div
+            class="absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 ease-in-out bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded whitespace-nowrap shadow-md z-50"
+          >
+            Delete
           </div>
         </div>
 
         <div class="relative group inline-block">
           <div
             class="flex items-center border rounded-lg overflow-hidden transition-colors"
-            :class="selectionState !== 'none' ? 'border-blue-600' : 'border-gray-400'"
+            :class="
+              selectionState !== 'none' ? 'border-blue-600' : 'border-gray-400'
+            "
           >
             <button
               @click="handleMainSelectToggle"
@@ -316,46 +358,75 @@ const columns = computed(() => [
               </div>
             </button>
             <div
-          class="absolute -bottom-8 left-1/2 -translate-x-1/2
-                 opacity-0 invisible group-hover:opacity-100 group-hover:visible
-                 transition-all duration-300 ease-in-out
-                 bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded
-                 whitespace-nowrap shadow-md z-50"
-        >
-          Select All
+              class="absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 ease-in-out bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded whitespace-nowrap shadow-md z-50"
+            >
+              Select All
+            </div>
           </div>
         </div>
-      </div>
 
-        <button @click="showAddForm = true" class="px-4 py-2 bg-blue-600 text-white rounded-md font-medium text-sm hover:bg-blue-700 transition flex items-center gap-2">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+        <button
+          @click="showAddForm = true"
+          class="px-4 py-2 bg-blue-600 text-white rounded-md font-medium text-sm hover:bg-blue-700 transition flex items-center gap-2"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-5 w-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 4v16m8-8H4"
+            />
           </svg>
           Add FAQ
         </button>
       </div>
     </div>
 
-    <div v-if="isLoading" class="flex-1 flex flex-col items-center justify-center gap-4">
-      <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+    <div
+      v-if="isLoading"
+      class="flex-1 flex flex-col items-center justify-center gap-4"
+    >
+      <div
+        class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"
+      ></div>
       <p class="text-gray-500 font-medium">Loading FAQs...</p>
     </div>
 
     <template v-else>
-      <div v-if="showAddForm" class="bg-[#F0F5FF] p-6 mb-3 rounded-lg border border-[#0957FF] relative shrink-0">
-        <button @click="showAddForm = false" class="absolute top-4 right-4 p-1 hover:bg-gray-200 rounded transition">
+      <div
+        v-if="showAddForm"
+        class="bg-[#F0F5FF] p-6 mb-3 rounded-lg border border-[#0957FF] relative shrink-0"
+      >
+        <button
+          @click="showAddForm = false"
+          class="absolute top-4 right-4 p-1 hover:bg-gray-200 rounded transition"
+        >
           <XMarkIcon class="w-5 h-5 text-gray-600" />
         </button>
 
         <div class="flex flex-col gap-4 max-w-4xl">
           <div>
             <label class="block text-sm text-gray-600 mb-1">Question</label>
-            <n-input v-model:value="newFaq.question" placeholder="e.g. What are the office hours?" />
+            <n-input
+              v-model:value="newFaq.question"
+              placeholder="e.g. What are the office hours?"
+            />
           </div>
 
           <div>
             <label class="block text-sm text-gray-600 mb-1">Answer</label>
-            <n-input v-model:value="newFaq.answer" type="textarea" placeholder="Provide a detailed answer here..." :autosize="{ minRows: 3, maxRows: 6 }" />
+            <n-input
+              v-model:value="newFaq.answer"
+              type="textarea"
+              placeholder="Provide a detailed answer here..."
+              :autosize="{ minRows: 3, maxRows: 6 }"
+            />
           </div>
         </div>
 
@@ -365,11 +436,21 @@ const columns = computed(() => [
         </div>
       </div>
 
-      <div v-if="faqs.length > 0 || showAddForm" class="overflow-y-auto bg-white rounded-lg border border-gray-200 flex-1">
-        <n-data-table :columns="columns" :data="filteredFaqs" :bordered="false" />
+      <div
+        v-if="faqs.length > 0 || showAddForm"
+        class="overflow-y-auto bg-white rounded-lg border border-gray-200 flex-1"
+      >
+        <n-data-table
+          :columns="columns"
+          :data="filteredFaqs"
+          :bordered="false"
+        />
       </div>
 
-      <div v-else class="h-full flex flex-col items-center justify-center flex-1">
+      <div
+        v-else
+        class="h-full flex flex-col items-center justify-center flex-1"
+      >
         <NEmpty description="No FAQs created yet">
           <template #extra>
             <NButton type="primary" @click="showAddForm = true">
@@ -380,6 +461,17 @@ const columns = computed(() => [
       </div>
     </template>
 
-    <ConfirmModal :show="showDeleteModal" :title="isBulkDelete ? `Delete ${selectedIds.length} FAQ(s)?` : 'Delete this FAQ?'" confirm-text="Delete" cancel-text="Cancel" @confirm="confirmDelete" @cancel="cancelDelete" />
+    <ConfirmModal
+      :show="showDeleteModal"
+      :title="
+        isBulkDelete
+          ? `Delete ${selectedIds.length} FAQ(s)?`
+          : 'Delete this FAQ?'
+      "
+      confirm-text="Delete"
+      cancel-text="Cancel"
+      @confirm="confirmDelete"
+      @cancel="cancelDelete"
+    />
   </div>
 </template>

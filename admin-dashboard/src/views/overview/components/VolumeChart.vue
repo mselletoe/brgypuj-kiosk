@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount } from "vue";
 import { Bar } from "vue-chartjs";
 import {
   Chart as ChartJS,
@@ -26,6 +26,39 @@ const props = defineProps({
 });
 
 const selectedTimeScale = ref("monthly");
+
+// --- Custom Dropdown Logic ---
+const isDropdownOpen = ref(false);
+const dropdownRef = ref(null);
+
+const dropdownOptions = [
+  { value: "weekly", label: "Last 7 Days" },
+  { value: "this_month", label: "This Month" },
+  { value: "monthly", label: "This Year" },
+  { value: "yearly", label: "Last 5 Years" },
+];
+
+const selectedDropdownLabel = computed(() => {
+  return dropdownOptions.find((opt) => opt.value === selectedTimeScale.value)
+    ?.label;
+});
+
+const selectOption = (value) => {
+  selectedTimeScale.value = value;
+  isDropdownOpen.value = false;
+};
+
+const handleClickOutside = (event) => {
+  if (dropdownRef.value && !dropdownRef.value.contains(event.target)) {
+    isDropdownOpen.value = false;
+  }
+};
+
+onMounted(() => document.addEventListener("click", handleClickOutside));
+onBeforeUnmount(() =>
+  document.removeEventListener("click", handleClickOutside),
+);
+// ------------------------------
 
 const chartOptions = {
   responsive: true,
@@ -220,15 +253,59 @@ const chartData = computed(() => {
         </p>
       </div>
 
-      <select
-        v-model="selectedTimeScale"
-        class="text-[11px] font-bold text-gray-500 uppercase tracking-widest bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer transition-colors hover:bg-gray-100 hover:text-gray-700 w-auto"
-      >
-        <option value="weekly">Last 7 Days</option>
-        <option value="this_month">This Month</option>
-        <option value="monthly">This Year</option>
-        <option value="yearly">Last 5 Years</option>
-      </select>
+      <div class="relative" ref="dropdownRef">
+        <button
+          @click="isDropdownOpen = !isDropdownOpen"
+          class="flex items-center gap-2 text-[11px] font-bold text-gray-500 uppercase tracking-widest bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer transition-colors hover:bg-gray-100 hover:text-gray-700 w-auto"
+        >
+          {{ selectedDropdownLabel }}
+          <svg
+            class="w-3.5 h-3.5 transition-transform duration-200"
+            :class="isDropdownOpen ? 'rotate-180' : ''"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M19 9l-7 7-7-7"
+            ></path>
+          </svg>
+        </button>
+
+        <Transition
+          enter-active-class="transition ease-out duration-100"
+          enter-from-class="transform opacity-0 scale-95"
+          enter-to-class="transform opacity-100 scale-100"
+          leave-active-class="transition ease-in duration-75"
+          leave-from-class="transform opacity-100 scale-100"
+          leave-to-class="transform opacity-0 scale-95"
+        >
+          <div
+            v-if="isDropdownOpen"
+            class="absolute right-0 z-50 mt-2 w-44 origin-top-right rounded-xl bg-white shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] ring-1 ring-black ring-opacity-5 focus:outline-none overflow-hidden"
+          >
+            <div class="py-1">
+              <button
+                v-for="option in dropdownOptions"
+                :key="option.value"
+                @click="selectOption(option.value)"
+                class="block w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase tracking-widest transition-colors"
+                :class="
+                  option.value === selectedTimeScale
+                    ? 'bg-blue-50 text-blue-600'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                "
+              >
+                {{ option.label }}
+              </button>
+            </div>
+          </div>
+        </Transition>
+      </div>
     </div>
 
     <div class="flex-1 w-full px-1 relative">
