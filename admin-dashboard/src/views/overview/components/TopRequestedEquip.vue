@@ -48,7 +48,7 @@ const topEquips = computed(() => {
 
 <template>
   <div
-    class="bg-white rounded-[24px] p-8 shadow-sm border border-gray-100 flex flex-col h-full"
+    class="bg-white rounded-[24px] p-6 shadow-sm border border-gray-100 flex flex-col h-full"
   >
     <div class="flex items-center justify-between mb-6">
       <div>

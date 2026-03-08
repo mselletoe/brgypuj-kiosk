@@ -2,10 +2,7 @@
 import { useRouter } from "vue-router";
 
 defineProps({
-  stats: {
-    type: Object,
-    required: true,
-  },
+  stats: { type: Object, required: true },
 });
 
 const router = useRouter();
@@ -13,10 +10,10 @@ const router = useRouter();
 
 <template>
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-    <div @click="router.push('/residents-management')" class="kpi-card group">
-      <div
-        class="color-strip bg-gradient-to-r from-[#FFFFFF] to-[#CBFCFF]"
-      ></div>
+    <div
+      @click="router.push('/residents-management')"
+      class="kpi-card cyan-card group"
+    >
       <div class="relative z-10 flex flex-col h-full">
         <div class="flex items-center justify-between mb-4">
           <span class="kpi-label">Residents</span>
@@ -42,10 +39,10 @@ const router = useRouter();
       </div>
     </div>
 
-    <div @click="router.push('/document-requests')" class="kpi-card group">
-      <div
-        class="color-strip bg-gradient-to-r from-[#FFFFFF] to-[#FCD6FF]"
-      ></div>
+    <div
+      @click="router.push('/document-requests')"
+      class="kpi-card purple-card group"
+    >
       <div class="relative z-10 flex flex-col h-full">
         <div class="flex items-center justify-between mb-4">
           <span class="kpi-label">Documents</span>
@@ -71,14 +68,14 @@ const router = useRouter();
       </div>
     </div>
 
-    <div @click="router.push('/equipment-requests')" class="kpi-card group">
-      <div
-        class="color-strip bg-gradient-to-r from-[#FFFFFF] to-[#FFF5D3]"
-      ></div>
+    <div
+      @click="router.push('/equipment-requests')"
+      class="kpi-card amber-card group"
+    >
       <div class="relative z-10 flex flex-col h-full">
         <div class="flex items-center justify-between mb-4">
           <span class="kpi-label">Equipment</span>
-          <div class="kpi-icon text-yellow-500">
+          <div class="kpi-icon text-amber-500">
             <svg
               class="w-11 h-11"
               fill="none"
@@ -100,10 +97,10 @@ const router = useRouter();
       </div>
     </div>
 
-    <div @click="router.push('/blotter-kp-logs')" class="kpi-card group">
-      <div
-        class="color-strip bg-gradient-to-r from-[#FFFFFF] to-[#B6FFC2]"
-      ></div>
+    <div
+      @click="router.push('/blotter-kp-logs')"
+      class="kpi-card green-card group"
+    >
       <div class="relative z-10 flex flex-col h-full">
         <div class="flex items-center justify-between mb-4">
           <span class="kpi-label">Blotters</span>
@@ -133,43 +130,82 @@ const router = useRouter();
 
 <style scoped lang="postcss">
 .kpi-card {
-  @apply bg-white rounded-[20px] p-6 border border-gray-100 shadow-sm flex flex-col cursor-pointer relative overflow-hidden;
-  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  @apply bg-white rounded-[20px] p-6 border border-gray-100 flex flex-col cursor-pointer relative overflow-hidden;
+  transition:
+    background-color 0.3s ease,
+    transform 0.3s ease,
+    border-color 0.3s ease;
 }
+
+/* Subtle colored shadow at rest — toned down */
+.cyan-card {
+  box-shadow: 0 4px 16px -4px rgba(6, 182, 212, 0.4);
+}
+.purple-card {
+  box-shadow: 0 4px 16px -4px rgba(168, 85, 247, 0.4);
+}
+.amber-card {
+  box-shadow: 0 4px 16px -4px rgba(245, 158, 11, 0.4);
+}
+.green-card {
+  box-shadow: 0 4px 16px -4px rgba(34, 197, 94, 0.4);
+}
+
+/* Hover — solid color fill, lift, no shadow change */
 .kpi-card:hover {
-  @apply shadow-lg border-transparent;
+  @apply border-transparent;
   transform: translateY(-4px);
 }
-.color-strip {
-  @apply absolute right-0 top-0 h-full w-[15px] z-0;
-  background-attachment: fixed;
-  transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+.cyan-card:hover {
+  background-color: #06b6d4;
 }
-.kpi-card:hover .color-strip {
-  @apply w-full;
+.purple-card:hover {
+  background-color: #a855f7;
 }
-.kpi-label {
-  @apply text-[13px] font-black text-gray-400 uppercase tracking-widest;
+.amber-card:hover {
+  background-color: #f59e0b;
 }
-.kpi-icon {
-  @apply flex items-center justify-center transition-all duration-500;
+.green-card:hover {
+  background-color: #22c55e;
 }
-.kpi-icon svg {
-  transition: filter 0.2s ease;
+
+/* Text goes white on hover */
+.kpi-card:hover .kpi-label,
+.kpi-card:hover .kpi-value,
+.kpi-card:hover .kpi-title,
+.kpi-card:hover .kpi-subtext {
+  color: rgba(255, 255, 255, 0.95) !important;
 }
+
+/* Icon goes white on hover */
 .kpi-card:hover .kpi-icon {
+  @apply text-white;
   transform: scale(1.1);
 }
 .kpi-card:hover .kpi-icon svg {
-  filter: brightness(0) invert(1) drop-shadow(0 2px 8px rgba(0, 0, 0, 0.5));
+  filter: brightness(0) invert(1);
+}
+
+.kpi-label {
+  @apply text-[13px] font-black text-gray-400 uppercase tracking-widest;
+  transition: color 0.3s ease;
+}
+.kpi-icon {
+  @apply flex items-center justify-center;
+  transition:
+    color 0.3s ease,
+    transform 0.3s ease;
 }
 .kpi-value {
   @apply text-[42px] font-black text-gray-800 leading-none tracking-tighter;
+  transition: color 0.3s ease;
 }
 .kpi-title {
   @apply text-[18px] font-bold text-gray-600 mt-2;
+  transition: color 0.3s ease;
 }
 .kpi-subtext {
   @apply text-[12px] font-medium text-gray-400 mt-0 italic;
+  transition: color 0.3s ease;
 }
 </style>

@@ -239,7 +239,7 @@ const chartData = computed(() => {
 
 <template>
   <div
-    class="lg:col-span-2 bg-white rounded-[24px] p-8 shadow-sm border border-gray-100 flex flex-col h-full"
+    class="lg:col-span-2 bg-white rounded-[24px] p-6 shadow-sm border border-gray-100 flex flex-col h-full"
   >
     <div class="mb-8 px-1 flex items-center justify-between">
       <div>

@@ -55,14 +55,14 @@ onBeforeUnmount(() =>
 const doughnutChartOptions = {
   responsive: true,
   maintainAspectRatio: false,
-  cutout: "75%",
+  cutout: "70%",
   plugins: {
     legend: {
       position: "bottom",
       labels: {
         usePointStyle: true,
-        boxWidth: 8,
-        padding: 20,
+        boxWidth: 6,
+        padding: 15,
         font: { size: 12 },
       },
     },
@@ -126,9 +126,9 @@ const doughnutChartData = computed(() => {
 
 <template>
   <div
-    class="lg:col-span-1 bg-white rounded-[24px] p-8 shadow-sm border border-gray-100 flex flex-col h-full"
+    class="lg:col-span-1 bg-white rounded-[24px] p-6 shadow-sm border border-gray-100 flex flex-col h-full"
   >
-    <div class="mb-6 px-1 flex flex-col items-center text-center">
+    <div class="mb-2 px-1 flex flex-col items-center text-center">
       <h2 class="text-xl font-bold text-gray-800 tracking-tight">
         Requests Breakdown
       </h2>

@@ -69,7 +69,7 @@ const navigate = (action) => {
 
 <template>
   <div
-    class="bg-white rounded-[24px] p-6 shadow-sm border border-gray-100 min-h-[310px]"
+    class="bg-white rounded-[24px] p-6 shadow-sm border border-gray-100 min-h-[290px]"
   >
     <h3
       class="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-4"
