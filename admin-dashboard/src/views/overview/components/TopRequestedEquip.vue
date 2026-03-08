@@ -8,14 +8,13 @@ const props = defineProps({
 });
 
 const router = useRouter();
-const inventoryMap = ref({}); // item_name -> available count
+const inventoryMap = ref({});
 
 onMounted(async () => {
   try {
     const response = await getEquipmentInventory();
     const data = response.data || response || [];
     data.forEach((item) => {
-      // inventory uses item.name and item.available_quantity
       inventoryMap.value[item.name] = item.available_quantity ?? 0;
     });
   } catch (e) {
@@ -80,7 +79,7 @@ const topEquips = computed(() => {
       <div
         v-for="(item, i) in topEquips"
         :key="item.name"
-        class="equip-card border border-gray-100 rounded-[16px] p-4 flex flex-col gap-2 bg-gray-50 hover:bg-white hover:shadow-sm transition-all duration-300"
+        class="equip-card border border-gray-200 rounded-[16px] p-4 flex flex-col gap-2 bg-gray-100 hover:bg-white hover:shadow-md transition-all duration-300"
         :style="{ animationDelay: `${0.1 + i * 0.07}s` }"
       >
         <span class="text-sm font-bold text-gray-800 leading-tight">{{

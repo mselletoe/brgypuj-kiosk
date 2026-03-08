@@ -86,7 +86,9 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="flex flex-col w-full h-full gap-8 animate-fade-in">
+  <div
+    class="flex flex-col w-full h-full gap-8 animate-fade-in overflow-x-clip"
+  >
     <template v-if="!isLoading">
       <!-- Header -->
       <div class="section-row" style="animation-delay: 0s">
