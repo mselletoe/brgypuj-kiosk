@@ -89,6 +89,18 @@ class AdminChangePasswordResponse(BaseModel):
 
 
 # ================================================================
+# RELINK RESIDENT  (superadmin only)
+# ================================================================
+
+class AdminRelinkResidentRequest(BaseModel):
+    """
+    Body for PATCH /me/resident.
+    The superadmin picks a resident from the dropdown; only the ID is needed.
+    """
+    resident_id: int
+
+
+# ================================================================
 # AUTH
 # ================================================================
 

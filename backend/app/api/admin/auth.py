@@ -9,14 +9,16 @@ Route map:
   GET    /me                     — get own profile
   PATCH  /me                     — update username / position
   PATCH  /me/password            — change password
+  PATCH  /me/resident            — relink to a different resident (superadmin only)
   PUT    /me/photo               — upload / replace profile photo
   GET    /me/photo               — serve profile photo as image
+  DELETE /me/photo               — remove profile photo
 """
 from fastapi import APIRouter, Depends, UploadFile, File
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_db, get_current_admin
+from app.api.deps import get_db, get_current_admin, require_superadmin
 from app.schemas.admin.auth import (
     AdminLoginRequest,
     AdminCreateRequest,
@@ -26,6 +28,7 @@ from app.schemas.admin.auth import (
     AdminUpdateProfileResponse,
     AdminChangePasswordRequest,
     AdminChangePasswordResponse,
+    AdminRelinkResidentRequest,
 )
 from app.services.auth_service import (
     authenticate_admin,
@@ -35,6 +38,7 @@ from app.services.auth_service import (
     change_admin_password,
     update_admin_photo,
     get_admin_photo,
+    relink_admin_resident,
 )
 from app.core.security import create_access_token
 from app.models.admin import Admin
@@ -57,7 +61,7 @@ def admin_login(payload: AdminLoginRequest, db: Session = Depends(get_db)):
     token = create_access_token(
         data={
             "sub": str(admin.id),
-            "role": admin.system_role,        # updated field name
+            "role": admin.system_role,
         }
     )
 
@@ -68,7 +72,7 @@ def admin_login(payload: AdminLoginRequest, db: Session = Depends(get_db)):
 def register_admin(payload: AdminCreateRequest, db: Session = Depends(get_db)):
     """
     Creates a new admin account.
-    
+
     In production: protect this with `get_current_admin` and add a
     superadmin role guard so only superadmins can register new accounts.
     For initial seeding, the seed_admin.py script is used instead.
@@ -135,6 +139,26 @@ def change_my_password(
     return {"detail": "Password updated successfully"}
 
 
+@router.patch("/me/resident", response_model=AdminProfileResponse)
+def relink_my_resident(
+    payload: AdminRelinkResidentRequest,
+    db: Session = Depends(get_db),
+    current_admin: Admin = Depends(require_superadmin),
+):
+    """
+    Superadmin only — re-links this admin account to a different resident record.
+    The target resident must exist and must not be linked to another admin.
+    Returns the updated full profile so the frontend can refresh in one round-trip.
+    """
+    admin = relink_admin_resident(
+        db,
+        admin_id=current_admin.id,
+        new_resident_id=payload.resident_id,
+    )
+    admin.has_photo = admin.photo is not None
+    return admin
+
+
 @router.put("/me/photo", status_code=204)
 async def upload_my_photo(
     photo: UploadFile = File(...),
@@ -166,8 +190,6 @@ def get_my_photo(
 ):
     """
     Streams the admin's profile photo as a raw image response.
-    The frontend can use this URL directly in an <img> src tag with the
-    Authorization header set (or embed as a blob URL after fetching).
     Returns 404 if no photo has been uploaded yet.
     """
     photo_bytes = get_admin_photo(db, admin_id=current_admin.id)

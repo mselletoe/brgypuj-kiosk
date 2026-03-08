@@ -2,6 +2,7 @@
 /**
  * @file AccountSettings.vue
  * @description Admin account settings page — Profile and Security tabs wired to the backend.
+ * Superadmins also see a "Linked Resident" section to relink their account to any resident.
  */
 
 import { ref, computed, onMounted, onUnmounted } from 'vue'
@@ -12,6 +13,7 @@ import {
   NButton,
   NAvatar,
   NSpin,
+  NSelect,
   useMessage,
 } from 'naive-ui'
 import PageTitle from '@/components/shared/PageTitle.vue'
@@ -23,7 +25,9 @@ import {
   uploadAdminPhoto,
   getAdminPhotoUrl,
   removeAdminPhoto,
+  relinkAdminResident,
 } from '@/api/adminService'
+import { fetchResidentsDropdown } from '@/api/authService'
 import { useAdminAuthStore } from '@/stores/auth'
 
 const message = useMessage()
@@ -55,12 +59,17 @@ const loadingProfile = ref(false)
 const savingProfile  = ref(false)
 const savingPassword = ref(false)
 const uploadingPhoto = ref(false)
+const relinking      = ref(false)
 
 // ── Profile ───────────────────────────────────────────────────────────────────
 const fullName    = ref('')
 const profileData = ref({ username: '', position: '' })
 const photoUrl    = ref(null)
 let   photoBlobUrl = null
+
+// ── Linked Resident (superadmin only) ─────────────────────────────────────────
+const residentOptions    = ref([])   // [{ label: 'First Last', value: id }]
+const selectedResidentId = ref(null)
 
 // ── Security ──────────────────────────────────────────────────────────────────
 const securityData = ref({
@@ -91,14 +100,28 @@ const passwordStrength = computed(() => {
 onMounted(async () => {
   loadingProfile.value = true
   try {
-    const data = await getAdminProfile()
+    const [data, residents] = await Promise.all([
+      getAdminProfile(),
+      auth.isSuperAdmin ? fetchResidentsDropdown() : Promise.resolve([]),
+    ])
+
     const { last_name, first_name, middle_name, suffix } = data.resident
     fullName.value = [first_name, middle_name, last_name, suffix].filter(Boolean).join(' ')
     profileData.value.username = data.username
     profileData.value.position = data.position ?? ''
+
     if (data.has_photo) {
       photoBlobUrl   = await getAdminPhotoUrl()
       photoUrl.value = photoBlobUrl
+    }
+
+    if (auth.isSuperAdmin) {
+      residentOptions.value = residents.map(r => ({
+        label: r.full_name,   // ResidentDropdownItem shape from the backend
+        value: r.id,
+      }))
+      // Pre-select the currently linked resident
+      selectedResidentId.value = data.resident_id ?? null
     }
   } catch {
     message.error('Failed to load profile.')
@@ -122,6 +145,30 @@ const handleSaveProfile = async () => {
   } finally {
     savingProfile.value = false
   }
+}
+
+const handleRelinkResident = () => {
+  if (!selectedResidentId.value) {
+    message.warning('Please select a resident first.')
+    return
+  }
+  const chosen = residentOptions.value.find(o => o.value === selectedResidentId.value)
+  openConfirm(
+    `Relink your account to "${chosen?.label ?? 'this resident'}"? Your displayed name will change immediately.`,
+    async () => {
+      relinking.value = true
+      try {
+        const updated = await relinkAdminResident(selectedResidentId.value)
+        const { last_name, first_name, middle_name, suffix } = updated.resident
+        fullName.value = [first_name, middle_name, last_name, suffix].filter(Boolean).join(' ')
+        message.success('Account successfully relinked.')
+      } catch (err) {
+        message.error(err.response?.data?.detail || 'Failed to relink resident.')
+      } finally {
+        relinking.value = false
+      }
+    }
+  )
 }
 
 const handleUploadPhoto = () => {
@@ -240,7 +287,7 @@ const initials = computed(() => {
             class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold tracking-wide"
             :class="auth.isSuperAdmin
               ? 'bg-indigo-100 text-indigo-700 border border-indigo-200'
-              : 'bg-gray-100 text-gray-600 border border-gray-200'"
+              : 'bg-pink-100 text-pink-600 border border-pink-200'"
           >
             <!-- Crown icon for superadmin -->
             <svg v-if="auth.isSuperAdmin" class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
@@ -277,57 +324,63 @@ const initials = computed(() => {
         </div>
 
         <!-- Right: Form -->
-        <div class="flex-1 flex flex-col gap-8 ">
+        <div class="flex-1 flex flex-col gap-8">
 
           <!-- Section: Personal Info -->
           <div class="border-b border-gray-100 max-w-lg">
             <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Personal Information</h3>
-            <div class="flex flex-col gap-6 mb-3">
+            <div class="flex flex-col gap-5">
               <div class="flex flex-col gap-1.5">
                 <label class="text-[13px] font-semibold text-gray-700">Full Name</label>
-                <n-input :value="fullName" disabled placeholder="Full Name" />
+                <!-- Superadmin: searchable resident select + relink button inline -->
+                <template v-if="auth.isSuperAdmin">
+                  <div class="flex gap-2">
+                    <n-select
+                      v-model:value="selectedResidentId"
+                      :options="residentOptions"
+                      filterable
+                      placeholder="Search resident by name…"
+                      clearable
+                      class="flex-1"
+                    />
+                    <n-button
+                      size="medium"
+                      :loading="relinking"
+                      :disabled="!selectedResidentId"
+                      @click="handleRelinkResident"
+                    >
+                      Relink
+                    </n-button>
+                  </div>
+                  <p class="text-[11px] text-gray-400">Currently linked to: <span class="font-medium text-indigo-600">{{ fullName || '—' }}</span></p>
+                </template>
+                <!-- Regular admin: read-only name field -->
+                <n-input v-else :value="fullName" disabled placeholder="Full Name" />
               </div>
               <div class="flex flex-col gap-1.5">
                 <label class="text-[13px] font-semibold text-gray-700">Position</label>
                 <n-input v-model:value="profileData.position" placeholder="e.g. Barangay Secretary" />
               </div>
             </div>
-            <p class="text-[11px] text-gray-400">Linked to your resident record — contact the super admin to update.</p>
           </div>
 
           <!-- Section: Account -->
-          <div class="border-b border-gray-100">
+          <div class="border-b border-gray-100 max-w-lg">
             <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Account</h3>
-            <div class="flex flex-col gap-5 max-w-lg">
+            <div class="flex flex-col gap-5">
               <div class="flex flex-col gap-1.5">
                 <label class="text-[13px] font-semibold text-gray-700">Username</label>
                 <n-input v-model:value="profileData.username" placeholder="Username" />
               </div>
-              <div class="flex flex-col gap-1.5">
-                <label class="text-[13px] font-semibold text-gray-700">Role</label>
-                <div class="flex items-center gap-2 h-[34px] px-3 rounded-md border border-gray-200 bg-gray-50 w-full max-w-lg">
-                  <svg v-if="auth.isSuperAdmin" class="w-3.5 h-3.5 text-indigo-600 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M2 19h20v2H2v-2zm2-8l4 4 4-6 4 6 4-4v6H4v-6z"/>
-                  </svg>
-                  <svg v-else class="w-3.5 h-3.5 text-gray-500 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/>
-                  </svg>
-                  <span class="text-[13px]" :class="auth.isSuperAdmin ? 'text-indigo-700 font-semibold' : 'text-gray-600'">
-                    {{ auth.isSuperAdmin ? 'Super Admin' : 'Admin' }}
-                  </span>
-                </div>
-                <p class="text-[11px] text-gray-400">Your system role controls what features you can access.</p>
-              </div>
             </div>
           </div>
 
-          <!-- Save -->
+          <!-- Save profile -->
           <div>
             <n-button type="primary" :loading="savingProfile" @click="handleSaveProfile">
               Save Changes
             </n-button>
           </div>
-
         </div>
       </div>
 
@@ -335,10 +388,10 @@ const initials = computed(() => {
       <div v-if="activeTab === 'Security'" class="flex gap-8 items-start max-w-5xl">
 
         <!-- Left: Password form -->
-        <div class="flex-1 flex flex-col gap-0">
+        <div class="flex-1 flex flex-col gap-8">
 
-          <div class="pb-6 border-b border-gray-100">
-            <h3 class="text-[13px] font-bold text-gray-400 uppercase tracking-widest mb-5">Change Password</h3>
+          <div class="border-b border-gray-100">
+            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Change Password</h3>
             <div class="flex flex-col gap-5 max-w-lg">
 
               <div class="flex flex-col gap-1.5">
@@ -393,7 +446,7 @@ const initials = computed(() => {
             </div>
           </div>
 
-          <div class="pt-6">
+          <div>
             <n-button type="primary" :loading="savingPassword" @click="handleChangePassword">
               Update Password
             </n-button>

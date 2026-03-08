@@ -222,3 +222,40 @@ def get_admin_photo(db: Session, admin_id: int) -> bytes:
             detail="No photo uploaded for this account"
         )
     return admin.photo
+
+
+def relink_admin_resident(db: Session, admin_id: int, new_resident_id: int) -> Admin:
+    """
+    Superadmin-only: re-links the admin account to a different resident record.
+
+    Guards:
+    - The target resident must exist.
+    - The target resident must not already be linked to another admin account.
+    """
+    admin = _get_admin_or_404(db, admin_id)
+
+    # Ensure the target resident exists
+    resident = db.query(Resident).filter(Resident.id == new_resident_id).first()
+    if not resident:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Resident not found"
+        )
+
+    # Ensure no other admin is already linked to this resident
+    conflict = (
+        db.query(Admin)
+        .filter(Admin.resident_id == new_resident_id, Admin.id != admin_id)
+        .first()
+    )
+    if conflict:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This resident is already linked to another admin account"
+        )
+
+    admin.resident_id = new_resident_id
+    db.commit()
+
+    # Re-query with eager-loaded resident so the response is fully populated
+    return _get_admin_or_404(db, admin_id)

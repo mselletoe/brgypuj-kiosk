@@ -1,7 +1,8 @@
 /**
  * @file adminService.js
  * @description Admin account settings service module.
- * Handles profile retrieval, profile updates, password changes, and photo management.
+ * Handles profile retrieval, profile updates, password changes, photo management,
+ * and superadmin-only resident relinking.
  */
 import api from './http'
 
@@ -41,6 +42,18 @@ export const changeAdminPassword = async ({ current_password, new_password }) =>
 }
 
 /**
+ * Superadmin only — re-links the current admin account to a different resident record.
+ * The target resident must not already be linked to another admin.
+ * Returns the updated full AdminProfileResponse so the UI can refresh in one call.
+ * @param {number} residentId - The ID of the resident to link to.
+ * @returns {Promise<Object>} Updated admin profile.
+ */
+export const relinkAdminResident = async (residentId) => {
+  const res = await api.patch('/admin/auth/me/resident', { resident_id: residentId })
+  return res.data
+}
+
+/**
  * Uploads or replaces the admin's profile photo.
  * @param {File} file - A JPEG, PNG, or WebP file under 5MB.
  * @returns {Promise<void>} 204 No Content on success.
@@ -69,8 +82,7 @@ export const getAdminPhotoUrl = async () => {
 }
 
 /**
- * Removes the admin's profile photo by sending an empty upload.
- * Calls the same PUT endpoint with an empty file to clear the photo.
+ * Removes the admin's profile photo.
  * @returns {Promise<void>}
  */
 export const removeAdminPhoto = async () => {
