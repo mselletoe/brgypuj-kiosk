@@ -136,7 +136,7 @@ onMounted(loadContact);
                 <div class="flex-1">
                   <n-form-item label="Emergency Number">
                     <n-input
-                      v-model:value="contactData.emergency"
+                      v-model:value="contactData.emergency_number"
                       placeholder="e.g. 911"
                     />
                   </n-form-item>
@@ -144,7 +144,7 @@ onMounted(loadContact);
                 <div class="flex-1">
                   <n-form-item label="Description">
                     <n-input
-                      v-model:value="contactData.emergencyDesc"
+                      v-model:value="contactData.emergency_desc"
                       placeholder="e.g. For life-threatening emergencies"
                     />
                   </n-form-item>
@@ -178,7 +178,7 @@ onMounted(loadContact);
                 </div>
                 <n-form-item label="Office Hours">
                   <n-input
-                    v-model:value="contactData.officeHours"
+                    v-model:value="contactData.office_hours"
                     placeholder="e.g. Monday to Friday, 8:00 AM - 5:00 PM"
                   />
                 </n-form-item>
@@ -209,7 +209,7 @@ onMounted(loadContact);
               </div>
               <n-form-item label="Support Description">
                 <n-input
-                  v-model:value="contactData.techSupport"
+                  v-model:value="contactData.tech_support"
                   type="textarea"
                   placeholder="Instructions for kiosk technical issues"
                   :autosize="{ minRows: 3, maxRows: 6 }"

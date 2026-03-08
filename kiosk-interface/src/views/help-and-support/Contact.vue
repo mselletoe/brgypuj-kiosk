@@ -49,20 +49,26 @@ onMounted(async () => {
     <!-- Emergency -->
     <div
       class="bg-[#FFF0F1] border border-[#FFD5D8] rounded-xl shadow px-6 py-3 flex flex-col items-center pb-4 min-h-[180px] justify-center"
-      :class="!contact.emergency_number ? 'text-gray-300' : 'text-[#D32F2F]'"
     >
-      <div class="flex justify-center items-center gap-2 mb-2">
+      <div class="flex justify-center items-center gap-2 mb-2 text-[#D32F2F]">
         <PhoneIcon class="w-6 h-6" />
         <h3 class="text-xl font-bold">Emergency</h3>
       </div>
-      <p class="text-7xl font-bold mb-1">
+
+      <p
+        class="text-7xl font-bold mb-1"
+        :class="!contact.emergency_number ? 'text-[#FFF0F1]' : 'text-[#D32F2F]'"
+      >
         {{ contact.emergency_number || "—" }}
       </p>
+
       <p
-        class="text-sm italic"
-        :class="!contact.emergency_desc ? 'text-gray-300' : ''"
+        class="text-sm"
+        :class="
+          !contact.emergency_desc ? 'text-gray-400 italic' : 'text-[#D32F2F]'
+        "
       >
-        {{ contact.emergency_desc || "No description set yet" }}
+        {{ contact.emergency_desc || "Not set yet" }}
       </p>
     </div>
 
@@ -78,7 +84,7 @@ onMounted(async () => {
         <div>
           <span class="font-semibold block text-gray-700">Phone</span>
           <span
-            :class="!contact.phone ? 'text-gray-300 italic' : 'text-gray-700'"
+            :class="!contact.phone ? 'text-gray-400 italic' : 'text-gray-700'"
           >
             {{ contact.phone || "Not set yet" }}
           </span>
@@ -86,7 +92,7 @@ onMounted(async () => {
         <div>
           <span class="font-semibold block text-gray-700">Email</span>
           <span
-            :class="!contact.email ? 'text-gray-300 italic' : 'text-gray-700'"
+            :class="!contact.email ? 'text-gray-400 italic' : 'text-gray-700'"
           >
             {{ contact.email || "Not set yet" }}
           </span>
@@ -95,7 +101,7 @@ onMounted(async () => {
           <span class="font-semibold block text-gray-700">Office Hours</span>
           <span
             :class="
-              !contact.office_hours ? 'text-gray-300 italic' : 'text-gray-700'
+              !contact.office_hours ? 'text-gray-400 italic' : 'text-gray-700'
             "
           >
             {{ contact.office_hours || "Not set yet" }}
@@ -115,7 +121,7 @@ onMounted(async () => {
       <div>
         <span class="font-semibold block text-gray-700">Address</span>
         <span
-          :class="!contact.address ? 'text-gray-300 italic' : 'text-gray-700'"
+          :class="!contact.address ? 'text-gray-400 italic' : 'text-gray-700'"
         >
           {{ contact.address || "Not set yet" }}
         </span>
@@ -132,7 +138,7 @@ onMounted(async () => {
       </div>
       <p
         :class="
-          !contact.tech_support ? 'text-gray-300 italic' : 'text-gray-700'
+          !contact.tech_support ? 'text-gray-400 italic' : 'text-gray-700'
         "
       >
         {{ contact.tech_support || "Not set yet" }}
