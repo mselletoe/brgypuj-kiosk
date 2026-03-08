@@ -81,16 +81,16 @@ const resetDefaults = () => {
         </div>
       </div>
 
-      <div class="text-[12px] text-gray-400 bg-blue-50 border border-blue-100 rounded-md px-4 py-3 mt-1">
+      <div class="text-[12px] text-gray-600 bg-blue-50 border border-blue-200 rounded-md px-4 py-3 mt-1">
         ℹ️ IDs issued today will expire on <strong>{{ new Date(Date.now() + rfidExpirationMonths * 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) }}</strong>.
         Reminders will be sent <strong>{{ rfidReminderDays }} days</strong> before expiry.
       </div>
     </section>
 
-    <div class="border-t border-gray-100" />
+    <!-- <div class="border-t border-gray-100" /> -->
 
     <!-- ── Idle Timeout ────────────────────────────────────── -->
-    <section class="flex flex-col gap-4">
+    <!-- <section class="flex flex-col gap-4">
       <div class="flex items-center justify-between">
         <div>
           <span class="font-semibold text-[16px] text-[#373737]">Idle Timeout</span>
@@ -110,7 +110,7 @@ const resetDefaults = () => {
           <span class="text-[13px] text-gray-400">minutes of inactivity</span>
         </div>
       </div>
-    </section>
+    </section> -->
 
     <div class="border-t border-gray-100" />
 
@@ -119,13 +119,13 @@ const resetDefaults = () => {
       <div class="flex items-center justify-between">
         <div>
           <span class="font-semibold text-[16px] text-[#373737]">Auto-Logout</span>
-          <p class="text-[13px] text-gray-400 mt-0.5">Automatically log out admin sessions after prolonged inactivity.</p>
+          <p class="text-[13px] text-gray-400 mt-0.5">Automatically log out kiosk sessions after prolonged inactivity.</p>
         </div>
         <n-switch v-model:value="autoLogoutEnabled" />
       </div>
 
       <div class="flex items-center gap-3" :class="{ 'opacity-40 pointer-events-none': !autoLogoutEnabled }">
-        <label class="text-[13px] font-medium text-gray-600 w-48">Log out admin after</label>
+        <label class="text-[13px] font-medium text-gray-600 w-48">Log out kiosk user after</label>
         <div class="flex items-center gap-2">
           <input
             v-model.number="autoLogoutMinutes"
@@ -135,10 +135,6 @@ const resetDefaults = () => {
           <span class="text-[13px] text-gray-400">minutes of inactivity</span>
         </div>
       </div>
-
-      <p class="text-[12px] text-gray-400">
-        Note: Idle Timeout locks the kiosk screen. Auto-Logout ends the admin dashboard session entirely.
-      </p>
     </section>
 
     <div class="border-t border-gray-100" />
@@ -148,7 +144,7 @@ const resetDefaults = () => {
       <div class="flex items-center justify-between">
         <div>
           <span class="font-semibold text-[16px] text-[#373737]">Failed Login Lockout</span>
-          <p class="text-[13px] text-gray-400 mt-0.5">Temporarily block access after too many failed login attempts.</p>
+          <p class="text-[13px] text-gray-400 mt-0.5">Temporarily block RFID user access after too many failed login attempts.</p>
         </div>
         <n-switch v-model:value="lockoutEnabled" />
       </div>
@@ -180,7 +176,7 @@ const resetDefaults = () => {
       </div>
 
       <div v-if="lockoutEnabled" class="text-[12px] text-amber-700 bg-amber-50 border border-amber-100 rounded-md px-4 py-3">
-        ⚠️ After <strong>{{ maxFailedAttempts }}</strong> failed attempts, the account will be locked for
+        ⚠️ After <strong>{{ maxFailedAttempts }}</strong> failed attempts, the rfid number will be locked and won't be able to log in for
         <strong>{{ lockoutDurationMins }} minutes</strong>.
       </div>
     </section>

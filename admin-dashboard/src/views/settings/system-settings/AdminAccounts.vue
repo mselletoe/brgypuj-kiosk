@@ -13,14 +13,12 @@ const searchQuery  = ref("");
 const roleOptions = [
   { label: "Super Admin", value: "super_admin" },
   { label: "Admin",       value: "admin" },
-  { label: "Staff",       value: "staff" },
 ];
 
 // Mock data — replace with API call
 const accounts = ref([
   { id: 1, name: "Juan dela Cruz",  email: "juan@brgy.gov.ph",  role: "super_admin", status: "active",   lastLogin: "Mar 6, 2026" },
   { id: 2, name: "Maria Santos",    email: "maria@brgy.gov.ph", role: "admin",       status: "active",   lastLogin: "Mar 5, 2026" },
-  { id: 3, name: "Pedro Reyes",     email: "pedro@brgy.gov.ph", role: "staff",       status: "inactive", lastLogin: "Feb 20, 2026" },
 ]);
 
 const newAccount = ref({ name: "", email: "", role: "admin", password: "" });
@@ -38,15 +36,14 @@ const filteredAccounts = computed(() => {
 
 const roleBadge = (role) => {
   const map = {
-    super_admin: "bg-purple-50 text-purple-700 border border-purple-200",
-    admin:       "bg-blue-50 text-blue-700 border border-blue-200",
-    staff:       "bg-gray-100 text-gray-600 border border-gray-200",
+    super_admin: "bg-indigo-50 text-indigo-700 border border-indigo-200",
+    admin:       "bg-pink-50 text-pink-700 border border-pink-200"
   };
   return map[role] || "bg-gray-100 text-gray-600 border border-gray-200";
 };
 
 const roleLabel = (role) => {
-  const map = { super_admin: "Super Admin", admin: "Admin", staff: "Staff" };
+  const map = { super_admin: "Super Admin", admin: "Admin" };
   return map[role] || role;
 };
 
@@ -87,7 +84,15 @@ const submitAdd = () => {
           placeholder="Search accounts..."
           class="border border-gray-200 text-gray-700 rounded-md py-2 px-3 w-[220px] text-[13px] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition placeholder:text-gray-400"
         />
-        <n-button type="primary" size="small" @click="showAddModal = true">+ Add Account</n-button>
+        <button
+          @click="showAddForm = true"
+          class="px-4 py-2 bg-blue-600 text-white rounded-md font-medium text-sm hover:bg-blue-700 transition flex items-center gap-2"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          </svg>
+          Add
+        </button>
       </div>
     </div>
 

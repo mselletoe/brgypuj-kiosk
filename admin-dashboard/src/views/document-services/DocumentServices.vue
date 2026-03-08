@@ -1,7 +1,16 @@
 <script setup>
 import { ref, onMounted, h, computed, watch } from 'vue'
 import { NDataTable, NInput, NButton, NCheckbox, useMessage, NEmpty } from 'naive-ui'
-import { PencilSquareIcon, TrashIcon, XMarkIcon, CheckIcon } from '@heroicons/vue/24/outline'
+import {
+  PencilSquareIcon,
+  TrashIcon,
+  XMarkIcon,
+  CheckIcon,
+  ListBulletIcon,
+  ClipboardDocumentListIcon,
+  ArrowUpTrayIcon,
+  ArrowDownTrayIcon,
+} from '@heroicons/vue/24/outline'
 import PageTitle from '@/components/shared/PageTitle.vue'
 import FieldEditor from './FieldEditor.vue'
 import RequirementsEditor from './RequirementsEditor.vue'
@@ -146,11 +155,7 @@ async function updateService(service) {
 async function toggleAvailability(service) {
   try {
     const newStatus = !service.available
-    
-    const { data } = await updateDocumentType(service.id, {
-      is_available: newStatus
-    })
-
+    const { data } = await updateDocumentType(service.id, { is_available: newStatus })
     service.available = data.is_available
     message.success(`Service ${newStatus ? 'enabled' : 'disabled'} successfully.`)
   } catch (err) {
@@ -188,7 +193,6 @@ async function confirmDelete() {
     }
   } catch (err) {
     console.error('Delete error:', err)
-    console.error('Error response:', err.response)
     const errorMsg = err.response?.data?.detail || 'Delete failed.'
     message.error(errorMsg)
   } finally {
@@ -244,8 +248,7 @@ async function handleUploadTemplate(service) {
       return
     }
 
-    const maxSize = 10 * 1024 * 1024 // 10MB
-    if (file.size > maxSize) {
+    if (file.size > 10 * 1024 * 1024) {
       message.error('File size must not exceed 10MB.')
       return
     }
@@ -351,7 +354,6 @@ const filteredServices = computed(() => {
         s.request_type_name.toLowerCase().includes(searchQuery.value.toLowerCase())
       )
 
-  // Clear editing if filtered out
   if (editingId.value && !filtered.find(s => s.id === editingId.value)) {
     editingId.value = null
   }
@@ -359,10 +361,38 @@ const filteredServices = computed(() => {
   return filtered
 })
 
-// Clear selections when search changes
 watch(searchQuery, () => {
   selectedIds.value = []
 })
+
+// ======================================
+// Icon button helper — matches existing edit/delete style
+// ======================================
+function iconBtn({ onClick, icon, colorClass, tooltip }) {
+  return h(
+    'div',
+    { class: 'relative group/tip inline-flex' },
+    [
+      h(
+        'button',
+        { onClick, class: `p-1.5 ${colorClass} rounded transition` },
+        [h(icon, { class: 'w-5 h-5' })]
+      ),
+      h(
+        'div',
+        {
+          class:
+            'pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 ' +
+            'opacity-0 invisible group-hover/tip:opacity-100 group-hover/tip:visible ' +
+            'transition-all duration-200 ' +
+            'bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded ' +
+            'whitespace-nowrap shadow-md z-50'
+        },
+        tooltip
+      )
+    ]
+  )
+}
 
 // ======================================
 // Table Columns
@@ -377,9 +407,7 @@ const columns = computed(() => [
         checked: selectedIds.value.includes(row.id),
         onUpdateChecked(checked) {
           if (checked) {
-            if (!selectedIds.value.includes(row.id)) {
-              selectedIds.value.push(row.id)
-            }
+            if (!selectedIds.value.includes(row.id)) selectedIds.value.push(row.id)
           } else {
             selectedIds.value = selectedIds.value.filter(id => id !== row.id)
           }
@@ -394,9 +422,7 @@ const columns = computed(() => [
       if (editingId.value === row.id) {
         return h(NInput, {
           value: row.request_type_name,
-          onUpdateValue(v) {
-            row.request_type_name = v
-          }
+          onUpdateValue(v) { row.request_type_name = v }
         })
       }
       return row.request_type_name
@@ -411,9 +437,7 @@ const columns = computed(() => [
         return h(NInput, {
           value: row.price,
           type: 'number',
-          onUpdateValue(v) {
-            row.price = Number(v)
-          }
+          onUpdateValue(v) { row.price = Number(v) }
         })
       }
       return `₱${parseFloat(row.price).toFixed(2)}`
@@ -430,8 +454,8 @@ const columns = computed(() => [
           {
             onClick: () => toggleAvailability(row),
             class: `px-3 py-1 rounded-full text-xs font-medium cursor-pointer transition ${
-              row.available 
-                ? 'bg-green-100 text-green-800 hover:bg-green-200' 
+              row.available
+                ? 'bg-green-100 text-green-800 hover:bg-green-200'
                 : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
             }`
           },
@@ -443,7 +467,7 @@ const columns = computed(() => [
   {
     title: 'Actions',
     key: 'actions',
-    width: 500,
+    width: 300,
     render(row) {
       if (editingId.value === row.id) {
         return h('div', { class: 'flex gap-2' }, [
@@ -452,14 +476,52 @@ const columns = computed(() => [
         ])
       }
 
-      return h('div', { class: 'flex gap-2 items-center flex-wrap' }, [
-        h('button', { onClick: () => (editingId.value = row.id), class: 'p-1.5 text-orange-500 hover:bg-orange-50 rounded transition' }, [h(PencilSquareIcon, { class: 'w-5 h-5' })]),
-        h('button', { onClick: () => requestDelete(row.id), class: 'p-1.5 text-red-500 hover:bg-red-50 rounded transition' }, [h(TrashIcon, { class: 'w-5 h-5' })]),
-        h(NButton, { type: 'info', size: 'small', onClick: () => editFields(row) }, { default: () => 'Fields' }),
-        h(NButton, { type: 'default', size: 'small', onClick: () => editRequirements(row) }, { default: () => 'Requirements' }),
-        h(NButton, { type: 'warning', size: 'small', onClick: () => handleUploadTemplate(row) }, { default: () => row.has_template ? 'Replace' : 'Upload' }),
+      return h('div', { class: 'flex gap-1 items-center' }, [
+        // Edit
+        iconBtn({
+          onClick: () => (editingId.value = row.id),
+          icon: PencilSquareIcon,
+          colorClass: 'text-orange-500 hover:bg-orange-50',
+          tooltip: 'Edit'
+        }),
+        // Delete
+        iconBtn({
+          onClick: () => requestDelete(row.id),
+          icon: TrashIcon,
+          colorClass: 'text-red-500 hover:bg-red-50',
+          tooltip: 'Delete'
+        }),
+        // Fields
+        iconBtn({
+          onClick: () => editFields(row),
+          icon: ListBulletIcon,
+          colorClass: 'text-blue-500 hover:bg-blue-50',
+          tooltip: 'Fields'
+        }),
+        // Requirements
+        iconBtn({
+          onClick: () => editRequirements(row),
+          icon: ClipboardDocumentListIcon,
+          colorClass: 'text-purple-500 hover:bg-purple-50',
+          tooltip: 'Requirements'
+        }),
+        // Upload / Replace template
+        iconBtn({
+          onClick: () => handleUploadTemplate(row),
+          icon: ArrowUpTrayIcon,
+          colorClass: row.has_template
+            ? 'text-yellow-500 hover:bg-yellow-50'
+            : 'text-blue-600 hover:bg-blue-100',
+          tooltip: row.has_template ? 'Replace Template' : 'Upload Template'
+        }),
+        // Download template (only if exists)
         row.has_template
-          ? h(NButton, { type: 'success', size: 'small', onClick: () => handleDownload(row) }, { default: () => 'Download' })
+          ? iconBtn({
+              onClick: () => handleDownload(row),
+              icon: ArrowDownTrayIcon,
+              colorClass: 'text-green-500 hover:bg-green-50',
+              tooltip: 'Download Template'
+            })
           : null
       ].filter(Boolean))
     }
@@ -492,75 +554,41 @@ onMounted(fetchServices)
             @click="bulkDelete"
             :disabled="selectionState === 'none'"
             class="p-2 border border-red-400 rounded-lg transition-colors"
-            :class="
-              selectionState === 'none'
-                ? 'opacity-50 cursor-not-allowed'
-                : 'hover:bg-red-50'
-            "
+            :class="selectionState === 'none' ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-50'"
           >
             <TrashIcon class="w-5 h-5 text-red-500" />
           </button>
-          <div
-          class="absolute -bottom-8 left-1/2 -translate-x-1/2
-                 opacity-0 invisible group-hover:opacity-100 group-hover:visible
-                 transition-all duration-300 ease-in-out
-                 bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded
-                 whitespace-nowrap shadow-md z-50"
-        >
-          Delete
-        </div>
-      </div>
-
-      <div class="relative group inline-block">
-        <div
-          class="flex items-center border rounded-lg overflow-hidden transition-colors"
-          :class="selectionState !== 'none' ? 'border-blue-600' : 'border-gray-400'"
-        >
-          <button
-            @click="handleMainSelectToggle"
-            class="p-2 hover:bg-gray-50 flex items-center"
-          >
-            <div
-              class="w-5 h-5 border rounded flex items-center justify-center transition-colors"
-              :class="
-                selectionState !== 'none'
-                  ? 'bg-blue-600 border-blue-600'
-                  : 'border-gray-400'
-              "
-            >
-              <div v-if="selectionState === 'partial'" class="w-2 h-0.5 bg-white"></div>
-              <CheckIcon v-if="selectionState === 'all'" class="w-3 h-3 text-white" />
-            </div>
-          </button>
-          <div
-          class="absolute -bottom-8 left-1/2 -translate-x-1/2
-                 opacity-0 invisible group-hover:opacity-100 group-hover:visible
-                 transition-all duration-300 ease-in-out
-                 bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded
-                 whitespace-nowrap shadow-md z-50"
-        >
-          Select All
+          <div class="absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 ease-in-out bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded whitespace-nowrap shadow-md z-50">
+            Delete
           </div>
         </div>
-      </div>
+
+        <div class="relative group inline-block">
+          <div
+            class="flex items-center border rounded-lg overflow-hidden transition-colors"
+            :class="selectionState !== 'none' ? 'border-blue-600' : 'border-gray-400'"
+          >
+            <button @click="handleMainSelectToggle" class="p-2 hover:bg-gray-50 flex items-center">
+              <div
+                class="w-5 h-5 border rounded flex items-center justify-center transition-colors"
+                :class="selectionState !== 'none' ? 'bg-blue-600 border-blue-600' : 'border-gray-400'"
+              >
+                <div v-if="selectionState === 'partial'" class="w-2 h-0.5 bg-white"></div>
+                <CheckIcon v-if="selectionState === 'all'" class="w-3 h-3 text-white" />
+              </div>
+            </button>
+            <div class="absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 ease-in-out bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded whitespace-nowrap shadow-md z-50">
+              Select All
+            </div>
+          </div>
+        </div>
 
         <button
           @click="showAddForm = true"
           class="px-4 py-2 bg-blue-600 text-white rounded-md font-medium text-sm hover:bg-blue-700 transition flex items-center gap-2"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="h-5 w-5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 4v16m8-8H4"
-            />
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
           </svg>
           Add
         </button>
@@ -573,60 +601,32 @@ onMounted(fetchServices)
     </div>
 
     <template v-else>
-      <div
-        v-if="showAddForm"
-        class="bg-[#F0F5FF] p-6 mb-3 rounded-lg border border-[#0957FF] relative"
-      >
-        <button
-          @click="showAddForm = false"
-          class="absolute top-4 right-4 p-1 hover:bg-gray-200 rounded"
-        >
+      <div v-if="showAddForm" class="bg-[#F0F5FF] p-6 mb-3 rounded-lg border border-[#0957FF] relative">
+        <button @click="showAddForm = false" class="absolute top-4 right-4 p-1 hover:bg-gray-200 rounded">
           <XMarkIcon class="w-5 h-5 text-gray-600" />
         </button>
 
         <div class="grid grid-cols-2 gap-4">
           <div>
             <label class="block text-sm text-gray-600 mb-1">Document Name</label>
-            <n-input
-              v-model:value="newService.request_type_name"
-              placeholder="Enter name"
-            />
+            <n-input v-model:value="newService.request_type_name" placeholder="Enter name" />
           </div>
-          
           <div>
             <label class="block text-sm text-gray-600 mb-1">Description</label>
-            <n-input
-              v-model:value="newService.description"
-              placeholder="Enter description"
-            />
+            <n-input v-model:value="newService.description" placeholder="Enter description" />
           </div>
-
           <div>
             <label class="block text-sm text-gray-600 mb-1">Price (₱)</label>
-            <n-input 
-              v-model:value="newService.price" 
-              type="number" 
-              placeholder="0.00"
-              min="0"
-              step="0.01"
-            />
+            <n-input v-model:value="newService.price" type="number" placeholder="0.00" min="0" step="0.01" />
           </div>
-
           <div class="flex items-end">
-            <NCheckbox v-model:checked="newService.available">
-              Available for Residents
-            </NCheckbox>
+            <NCheckbox v-model:checked="newService.available">Available for Residents</NCheckbox>
           </div>
         </div>
 
         <div class="flex justify-end gap-3 mt-6">
           <n-button @click="showAddForm = false">Cancel</n-button>
-          <n-button 
-            type="primary" 
-            @click="addService"
-          >
-            Add Document Type
-          </n-button>
+          <n-button type="primary" @click="addService">Add Document Type</n-button>
         </div>
       </div>
 
@@ -637,9 +637,7 @@ onMounted(fetchServices)
       <div v-else class="h-full flex flex-col items-center justify-center flex-1">
         <NEmpty description="No document services yet">
           <template #extra>
-            <NButton type="primary" @click="showAddForm = true">
-              Add Document Type
-            </NButton>
+            <NButton type="primary" @click="showAddForm = true">Add Document Type</NButton>
           </template>
         </NEmpty>
       </div>
@@ -664,11 +662,7 @@ onMounted(fetchServices)
 
   <ConfirmModal
     :show="showDeleteModal"
-    :title="
-      isBulkDelete
-        ? `Delete ${selectedIds.length} service(s)?`
-        : 'Delete this service?'
-    "
+    :title="isBulkDelete ? `Delete ${selectedIds.length} service(s)?` : 'Delete this service?'"
     confirm-text="Delete"
     cancel-text="Cancel"
     @confirm="confirmDelete"
