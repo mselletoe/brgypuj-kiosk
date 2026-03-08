@@ -3,16 +3,11 @@ import { computed } from "vue";
 import { useRouter } from "vue-router";
 
 const props = defineProps({
-  auditLogs: {
-    type: Array,
-    required: true,
-  },
+  auditLogs: { type: Array, required: true },
 });
 
 const router = useRouter();
-
-// Slices the incoming array so we only ever show a maximum of 8 logs
-const displayedLogs = computed(() => props.auditLogs.slice(0, 6));
+const displayedLogs = computed(() => props.auditLogs.slice(0, 10));
 
 const navigateToLog = (log) => {
   if (log.type === "doc") router.push("/document-requests");
@@ -21,7 +16,6 @@ const navigateToLog = (log) => {
   else if (log.type === "blotter") router.push("/blotter-kp-logs");
 };
 
-// Target the specific tab in System Settings
 const viewAllSettings = () => {
   router.push({ path: "/system-settings", query: { tab: "audit" } });
 };
@@ -29,7 +23,7 @@ const viewAllSettings = () => {
 
 <template>
   <div
-    class="w-full xl:w-1/4 shrink-0 bg-white rounded-[24px] p-8 shadow-sm border border-gray-100 flex flex-col h-[480px] xl:h-[600px]"
+    class="w-full bg-white rounded-[24px] p-8 shadow-sm border border-gray-100 flex flex-col h-[480px] xl:h-[580px]"
   >
     <div class="mb-8 flex items-start justify-between">
       <div>
@@ -42,7 +36,6 @@ const viewAllSettings = () => {
           Audit Log
         </p>
       </div>
-
       <button
         @click="viewAllSettings"
         class="text-[11px] font-bold text-blue-600 uppercase tracking-widest hover:text-blue-800 transition-colors bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg"
@@ -59,7 +52,6 @@ const viewAllSettings = () => {
         >
           No recent activity logs found.
         </div>
-
         <div
           v-for="log in displayedLogs"
           :key="log.id"
@@ -81,12 +73,11 @@ const viewAllSettings = () => {
           <div class="flex justify-between items-start">
             <span
               class="text-sm font-bold text-gray-700 group-hover:text-blue-600 transition-colors"
+              >{{ log.action }}</span
             >
-              {{ log.action }}
-            </span>
-            <span class="text-[10px] font-bold text-gray-400 uppercase">
-              {{ log.relativeTime }}
-            </span>
+            <span class="text-[10px] font-bold text-gray-400 uppercase">{{
+              log.relativeTime
+            }}</span>
           </div>
           <p
             class="text-[13px] text-gray-500 font-medium mt-0.5 leading-relaxed"

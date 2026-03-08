@@ -14,7 +14,7 @@ const props = defineProps({
 const router = useRouter();
 const adminAuth = useAdminAuthStore();
 
-const adminFirstName = ref('Admin');
+const adminFirstName = ref("Admin");
 
 const timeInterval = ref(null);
 const currentDate = ref("");
@@ -45,7 +45,7 @@ watch(
     if (newVal) {
       setTimeout(() => {
         bannerVisible.value = true;
-      }, 300);
+      }, 600); // slightly delayed so page loads first
     } else {
       bannerVisible.value = false;
     }
@@ -59,9 +59,10 @@ onMounted(async () => {
 
   try {
     const data = await getAdminProfile();
-    adminFirstName.value = data.resident?.first_name || adminAuth.admin?.username || 'Admin';
+    adminFirstName.value =
+      data.resident?.first_name || adminAuth.admin?.username || "Admin";
   } catch {
-    adminFirstName.value = adminAuth.admin?.username || 'Admin';
+    adminFirstName.value = adminAuth.admin?.username || "Admin";
   }
 });
 
@@ -131,7 +132,7 @@ onUnmounted(() => clearInterval(timeInterval.value));
           >
             Review Docs
           </button>
-          
+
           <button
             v-if="stats.pendingEquip > 0"
             @click="router.push('/equipment-requests')"
@@ -149,22 +150,22 @@ onUnmounted(() => clearInterval(timeInterval.value));
 .banner-wrap {
   transition:
     opacity 0.5s ease,
-    transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* Slides in from the RIGHT */
 .banner-hidden {
   opacity: 0;
-  /* Changed from translateX(40px) to translateY(-10px) */
-  transform: translateY(-10px);
+  transform: translateX(60px);
   pointer-events: none;
 }
 
 .banner-visible {
   opacity: 1;
-  /* Changed to match the Y axis */
-  transform: translateY(0);
+  transform: translateX(0);
   pointer-events: auto;
 }
+
 .banner-buttons {
   display: flex;
   gap: 8px;
