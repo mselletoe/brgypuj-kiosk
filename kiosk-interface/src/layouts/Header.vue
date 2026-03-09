@@ -3,6 +3,8 @@
  * @file Header.vue
  * @description Global navigation component for the Barangay Kiosk System.
  * Displays real-time clock, branding (dynamic from system config), and user auth status.
+ *
+ * ADDED: Live inactivity countdown from useAutoLogout — shown beside the user badge.
  */
 
 import { ref, onMounted, onUnmounted, computed } from "vue";
@@ -10,6 +12,7 @@ import { useRouter, useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useRfidRegistrationStore } from "@/stores/registration";
 import { useSystemConfig } from "@/composables/useSystemConfig";
+import { useAutoLogout } from "@/composables/useAutoLogout";
 import '../assets/vectors/Logout.svg';
 
 const router       = useRouter();
@@ -19,6 +22,21 @@ const rfidRegStore = useRfidRegistrationStore();
 
 // ── System config (logo + brgy name/subname) ──────────────────────────────────
 const { brgyName, brgySubname, resolvedLogoUrl } = useSystemConfig();
+
+// ── Auto-logout countdown ─────────────────────────────────────────────────────
+const { secondsRemaining } = useAutoLogout();
+
+const countdownDisplay = computed(() => {
+  const s = secondsRemaining.value
+  if (s <= 0) return null
+  if (s < 60) return `Session ends in ${s}s`
+  const m = Math.floor(s / 60)
+  const rem = s % 60
+  return rem > 0 ? `Session ends in ${m}m ${rem}s` : `Session ends in ${m}m`
+})
+
+// Turns red when 30 seconds or less remain
+const countdownUrgent = computed(() => secondsRemaining.value > 0 && secondsRemaining.value <= 30)
 
 // ── Clock ─────────────────────────────────────────────────────────────────────
 const currentTime = ref("");
@@ -67,8 +85,19 @@ const logout = () => { authStore.logout(); router.push('/idle'); };
       <p class="text-[14px] font-light mt-1 leading-[1] tracking-tight">{{ currentDate }}</p>
     </div>
 
-    <!-- ── User badge + logout ────────────────────────────────────────────── -->
+    <!-- ── User badge + countdown + logout ───────────────────────────────── -->
     <div class="flex items-center space-x-4">
+
+      <!-- Countdown timer — only shown when a session is active -->
+      <div
+        v-if="authStore.isAuthenticated && countdownDisplay"
+        class="text-[10px] font-medium px-3 py-1 rounded-full border transition-colors duration-300"
+        :class="countdownUrgent
+          ? 'text-red-600 border-red-300 bg-red-50'
+          : 'text-gray-400 border-gray-200 bg-gray-50'"
+      >
+        {{ countdownDisplay }}
+      </div>
 
       <!-- Admin Registration Badge -->
       <div

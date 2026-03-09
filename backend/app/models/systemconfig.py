@@ -24,7 +24,7 @@ class SystemConfig(Base):
 
     # ── Security ──────────────────────────────────────────────────────────────
     rfid_expiry_days = Column(Integer, nullable=False, default=365)
-    auto_logout_minutes = Column(Integer, nullable=False, default=30)
+    auto_logout_duration = Column(Integer, nullable=False, default=1800)
     max_failed_attempts = Column(Integer, nullable=False, default=5)
     lockout_minutes = Column(Integer, nullable=False, default=15)
 
