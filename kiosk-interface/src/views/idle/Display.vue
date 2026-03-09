@@ -1,8 +1,10 @@
 <script setup>
 import { ref } from 'vue'
+import { useSystemConfig } from '@/composables/useSystemConfig'
 
 const emit = defineEmits(['see-announcements'])
 const currentLang = ref('FIL')
+const { resolvedLogoUrl } = useSystemConfig()
 
 const toggleLang = () => (currentLang.value = currentLang.value === 'FIL' ? 'ENG' : 'FIL')
 </script>
@@ -72,8 +74,10 @@ const toggleLang = () => (currentLang.value = currentLang.value === 'FIL' ? 'ENG
       </div>      
     </div>
 
-    <img src="@/assets/images/Pob1Logo.svg" alt="Barangay Logo"
-      class="absolute -bottom-56 -right-24 w-[600px] h-[600px] object-contain opacity-50 pointer-events-none"
+    <img
+      :src="resolvedLogoUrl"
+      alt="Barangay Logo"
+      class="absolute -bottom-56 -right-24 w-[600px] h-[600px] object-cover rounded-full opacity-50 pointer-events-none"
     />
   </div>
 </template>
