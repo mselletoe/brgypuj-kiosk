@@ -51,6 +51,29 @@ def set_logo_path(db: Session, path: str) -> SystemConfig:
     return config
 
 
+def get_logo_bytes(db: Session) -> tuple[bytes, str]:
+    """
+    Reads the barangay logo from disk and returns (bytes, content_type).
+    Raises 404 HTTPException if no logo path is set or the file doesn't exist.
+    """
+    from pathlib import Path
+    from fastapi import HTTPException
+    import mimetypes
+
+    config = get_config(db)
+    if not config.brgy_logo_path:
+        raise HTTPException(status_code=404, detail="No logo uploaded.")
+
+    path = Path(config.brgy_logo_path)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Logo file not found on disk.")
+
+    content_type, _ = mimetypes.guess_type(str(path))
+    content_type = content_type or "application/octet-stream"
+
+    return path.read_bytes(), content_type
+
+
 def set_last_backup(db: Session) -> SystemConfig:
     """Called after a successful backup to stamp last_backup_at."""
     from datetime import datetime, timezone

@@ -26,3 +26,4 @@ def get_kiosk_brgy_logo(db: Session = Depends(get_db)):
     """
     logo_bytes, content_type = get_logo_bytes(db)
     return Response(content=logo_bytes, media_type=content_type)
+
