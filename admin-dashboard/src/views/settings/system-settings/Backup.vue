@@ -58,8 +58,8 @@ const statusClass = (status) =>
 
 const typeBadge = (type) =>
   type === "manual"
-    ? "bg-indigo-50 text-indigo-600 border border-indigo-200"
-    : "bg-gray-100 text-gray-500 border border-gray-200";
+    ? "bg-orange-50 text-orange-600 border border-orange-200"
+    : "bg-blue-50 text-blue-600 border border-blue-200";
 
 const formatDate = (iso) => {
   if (!iso) return "—";
