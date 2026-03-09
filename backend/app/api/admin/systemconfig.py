@@ -15,7 +15,7 @@ from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, status
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_db, get_current_admin, require_superadmin
+from app.api.deps import get_db, get_current_admin
 from app.models.admin import Admin
 from app.schemas.systemconfig import SystemConfigRead, SystemConfigUpdate
 from app.services.systemconfig_service import get_config, update_config
@@ -45,7 +45,7 @@ def get_system_config(
 def patch_system_config(
     data: SystemConfigUpdate,
     db: Session = Depends(get_db),
-    current_admin: Admin = Depends(require_superadmin),
+    current_admin: Admin = Depends(get_current_admin),
 ):
     """
     Partial update — only the fields you send are changed.
@@ -61,7 +61,7 @@ def patch_system_config(
 async def upload_brgy_logo(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    current_admin: Admin = Depends(require_superadmin),
+    current_admin: Admin = Depends(get_current_admin),
 ):
     """
     Upload or replace the barangay logo.
@@ -112,7 +112,7 @@ def get_brgy_logo(
 @router.delete("/logo", status_code=204)
 def delete_brgy_logo(
     db: Session = Depends(get_db),
-    current_admin: Admin = Depends(require_superadmin),
+    current_admin: Admin = Depends(get_current_admin),
 ):
     """Removes the barangay logo."""
     config = get_config(db)
