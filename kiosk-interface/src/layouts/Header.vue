@@ -54,7 +54,7 @@ const logout = () => { authStore.logout(); router.push('/idle'); };
 
     <!-- ── Branding ───────────────────────────────────────────────────────── -->
     <div class="flex items-center gap-2">
-      <img :src="resolvedLogoUrl" alt="Barangay Logo" class="w-[40px] h-[40px] min-w-[40px] object-cover rounded-full overflow-hidden" />
+      <img v-if="resolvedLogoUrl" :src="resolvedLogoUrl" alt="Barangay Logo" class="w-[40px] h-[40px] min-w-[40px] object-cover rounded-full overflow-hidden" />
       <div class="flex flex-col">
         <h1 class="text-[14px] font-bold leading-[1] tracking-tight">{{ brgyName }}</h1><br />
         <h2 class="text-[14px] font-light -mt-5 leading-[1] tracking-tight">{{ brgySubname }}</h2>

@@ -74,7 +74,7 @@ const setSlide = (index) => { if (isAnimating.value || index === displayIndex.va
 
     <header class="flex items-center justify-between mb-6">
       <div class="flex items-center gap-4 text-[#013C6D]">
-        <img :src="resolvedLogoUrl" class="w-[60px] h-[60px] min-w-[60px] object-cover rounded-full" />
+        <img v-if="resolvedLogoUrl" :src="resolvedLogoUrl" class="w-[60px] h-[60px] min-w-[60px] object-cover rounded-full" />
         <div>
           <h1 class="text-[18px] font-extrabold">{{ brgyName }}</h1>
           <p class="text-[16px] opacity-90 -mt-1">{{ brgySubname }}</p>

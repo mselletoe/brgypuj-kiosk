@@ -91,7 +91,7 @@ onMounted(() => {
       <!-- Left panel -->
       <div class="flex-1 flex flex-col text-[#013C6D] pr-12">
         <div class="flex items-center gap-3 mb-10">
-          <img :src="resolvedLogoUrl" alt="Barangay Logo" class="w-14 h-14 min-w-[56px] object-cover rounded-full">
+          <img v-if="resolvedLogoUrl" :src="resolvedLogoUrl" alt="Barangay Logo" class="w-14 h-14 min-w-[56px] object-cover rounded-full">
           <div>
             <h1 class="text-lg font-bold">{{ brgyName }}</h1>
             <p class="text-base font-light">{{ brgySubname }}</p>

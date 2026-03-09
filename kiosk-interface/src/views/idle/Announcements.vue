@@ -76,7 +76,7 @@ onBeforeUnmount(() => { if (autoSlide) clearInterval(autoSlide) })
 
       <div class="relative z-10 h-full flex flex-col">
         <div class="flex items-center gap-4 p-6">
-          <img :src="resolvedLogoUrl" class="w-[90px] h-[90px] min-w-[90px] object-cover rounded-full" />
+          <img v-if="resolvedLogoUrl" :src="resolvedLogoUrl" class="w-[90px] h-[90px] min-w-[90px] object-cover rounded-full" />
           <div>
             <h2 class="text-white text-[15px] font-bold leading-tight">{{ brgyName }}</h2>
             <p class="text-white text-[15px] opacity-90 -mt-1">{{ brgySubname }}</p>

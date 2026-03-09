@@ -75,6 +75,7 @@ const toggleLang = () => (currentLang.value = currentLang.value === 'FIL' ? 'ENG
     </div>
 
     <img
+      v-if="resolvedLogoUrl"
       :src="resolvedLogoUrl"
       alt="Barangay Logo"
       class="absolute -bottom-56 -right-24 w-[600px] h-[600px] object-cover rounded-full opacity-50 pointer-events-none"

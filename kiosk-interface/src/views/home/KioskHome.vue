@@ -41,6 +41,7 @@ function goTo(path) {
       </div>
       <div class="logo-section">
         <img
+          v-if="resolvedLogoUrl"
           :src="resolvedLogoUrl"
           alt="Barangay Logo"
           class="h-[180px] w-[180px] min-w-[180px] object-cover rounded-full"

@@ -48,7 +48,7 @@ onUnmounted(() => { if (timerInterval) clearInterval(timerInterval) })
   <div @click="resetTimer" class="h-screen w-screen bg-gradient-to-br from-[#003A6B] to-[#89CFF1] flex justify-center items-center font-poppins">
     <div class="bg-white w-[974px] h-[550px] rounded-lg shadow-2xl relative flex flex-col justify-center items-center p-8">
 
-      <img :src="resolvedLogoUrl" alt="Barangay Logo" class="h-[120px] w-[120px] min-w-[120px] object-cover rounded-full mb-0 drop-shadow-lg">
+      <img v-if="resolvedLogoUrl" :src="resolvedLogoUrl" alt="Barangay Logo" class="h-[120px] w-[120px] min-w-[120px] object-cover rounded-full mb-0 drop-shadow-lg">
 
       <div class="flex flex-col gap-2 mt-2 text-center text-gray-800">
         <h1 class="mt-3 text-5xl font-bold">{{ brgyName }}</h1>
