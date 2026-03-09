@@ -6,7 +6,7 @@ Only one row should ever exist (id=1). Use the service
 helpers to get/update it — never instantiate directly.
 """
 
-from sqlalchemy import Column, Integer, String, Boolean, DateTime
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, LargeBinary
 from sqlalchemy.sql import func
 
 from app.db.base import Base
@@ -20,7 +20,7 @@ class SystemConfig(Base):
     # ── General (Barangay Info) ────────────────────────────────────────────────
     brgy_name = Column(String(150), nullable=True, default="Barangay")
     brgy_subname = Column(String(200), nullable=True)
-    brgy_logo_path = Column(String(500), nullable=True)
+    brgy_logo = Column(LargeBinary, nullable=True)
 
     # ── Security ──────────────────────────────────────────────────────────────
     rfid_expiry_days = Column(Integer, nullable=False, default=365)

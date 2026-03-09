@@ -7,6 +7,8 @@ If it doesn't exist yet, get_config() creates it with defaults.
 """
 
 from sqlalchemy.orm import Session
+from fastapi import HTTPException, status
+
 from app.models.systemconfig import SystemConfig
 from app.schemas.systemconfig import SystemConfigUpdate
 
@@ -32,7 +34,6 @@ def update_config(db: Session, data: SystemConfigUpdate) -> SystemConfig:
     """
     config = get_config(db)
 
-    # Only update fields that were explicitly provided
     update_data = data.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(config, field, value)
@@ -42,36 +43,31 @@ def update_config(db: Session, data: SystemConfigUpdate) -> SystemConfig:
     return config
 
 
-def set_logo_path(db: Session, path: str) -> SystemConfig:
-    """Convenience helper called after a logo file upload succeeds."""
-    config = get_config(db)
-    config.brgy_logo_path = path
-    db.commit()
-    db.refresh(config)
-    return config
-
-
 def get_logo_bytes(db: Session) -> tuple[bytes, str]:
     """
-    Reads the barangay logo from disk and returns (bytes, content_type).
-    Raises 404 HTTPException if no logo path is set or the file doesn't exist.
+    Returns (bytes, content_type) for the stored barangay logo.
+    Raises 404 if no logo has been uploaded yet.
+    Content type is sniffed from the bytes via imghdr; falls back to image/png.
     """
-    from pathlib import Path
-    from fastapi import HTTPException
-    import mimetypes
-
     config = get_config(db)
-    if not config.brgy_logo_path:
-        raise HTTPException(status_code=404, detail="No logo uploaded.")
+    if not config.brgy_logo:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No logo uploaded."
+        )
 
-    path = Path(config.brgy_logo_path)
-    if not path.exists():
-        raise HTTPException(status_code=404, detail="Logo file not found on disk.")
-
-    content_type, _ = mimetypes.guess_type(str(path))
-    content_type = content_type or "application/octet-stream"
-
-    return path.read_bytes(), content_type
+    raw = config.brgy_logo
+    if raw[:4] == b'\x89PNG':
+        content_type = "image/png"
+    elif raw[:2] in (b'\xff\xd8',):
+        content_type = "image/jpeg"
+    elif raw[:4] == b'RIFF' and raw[8:12] == b'WEBP':
+        content_type = "image/webp"
+    elif raw[:5] in (b'<?xml', b'<svg '):
+        content_type = "image/svg+xml"
+    else:
+        content_type = "image/png"
+    return raw, content_type
 
 
 def set_last_backup(db: Session) -> SystemConfig:

@@ -1,29 +1,26 @@
 """
 System Config Routes
 --------------------
-GET  /admin/settings        → fetch full config (all tabs read from this)
-PATCH /admin/settings       → partial update (each tab sends only its fields)
-POST /admin/settings/logo   → upload brgy logo (multipart/form-data)
+GET   /admin/settings        → fetch full config (all tabs read from this)
+PATCH /admin/settings        → partial update (each tab sends only its fields)
+PUT   /admin/settings/logo   → upload brgy logo (multipart/form-data) — stored as bytes in DB
+GET   /admin/settings/logo   → serve brgy logo as raw image response
+DELETE /admin/settings/logo  → remove brgy logo
 
 All routes require a valid admin JWT.
-PATCH and logo upload require superadmin.
+PATCH and logo mutation routes require superadmin.
 """
 
-import os
-import uuid
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, status
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db, get_current_admin, require_superadmin
 from app.models.admin import Admin
 from app.schemas.systemconfig import SystemConfigRead, SystemConfigUpdate
-from app.services.systemconfig_service import get_config, update_config, set_logo_path
+from app.services.systemconfig_service import get_config, update_config
 
 router = APIRouter(prefix="/settings")
-
-# Where uploaded logos are saved — adjust to your static files directory
-LOGO_UPLOAD_DIR = "uploads/logos"
-os.makedirs(LOGO_UPLOAD_DIR, exist_ok=True)
 
 ALLOWED_IMAGE_TYPES = {"image/png", "image/jpeg", "image/webp", "image/svg+xml"}
 MAX_LOGO_SIZE_MB = 2
@@ -36,11 +33,10 @@ def get_system_config(
     db: Session = Depends(get_db),
     current_admin: Admin = Depends(get_current_admin),
 ):
-    """
-    Returns the full system config.
-    Readable by any authenticated admin.
-    """
-    return get_config(db)
+    """Returns the full system config. Readable by any authenticated admin."""
+    config = get_config(db)
+    config.has_logo = config.brgy_logo is not None
+    return config
 
 
 # ── PATCH /admin/settings ─────────────────────────────────────────────────────
@@ -59,27 +55,26 @@ def patch_system_config(
     return update_config(db, data)
 
 
-# ── POST /admin/settings/logo ─────────────────────────────────────────────────
+# ── PUT /admin/settings/logo ──────────────────────────────────────────────────
 
-@router.post("/logo", response_model=SystemConfigRead)
+@router.put("/logo", status_code=204)
 async def upload_brgy_logo(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
     current_admin: Admin = Depends(require_superadmin),
 ):
     """
-    Upload a new barangay logo.
+    Upload or replace the barangay logo.
     Accepts PNG, JPEG, WebP, or SVG. Max 2 MB.
-    Returns the updated config with the new logo path.
+    Stores raw bytes directly in the DB — no folder created.
+    Returns 204 No Content on success.
     """
-    # Validate content type
     if file.content_type not in ALLOWED_IMAGE_TYPES:
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-            detail=f"Unsupported file type. Allowed: PNG, JPEG, WebP, SVG",
+            detail="Unsupported file type. Allowed: PNG, JPEG, WebP, SVG",
         )
 
-    # Read and validate size
     contents = await file.read()
     size_mb = len(contents) / (1024 * 1024)
     if size_mb > MAX_LOGO_SIZE_MB:
@@ -88,14 +83,39 @@ async def upload_brgy_logo(
             detail=f"File too large. Max size is {MAX_LOGO_SIZE_MB} MB.",
         )
 
-    # Save with a unique filename to avoid cache issues
-    ext = os.path.splitext(file.filename or "logo.png")[1] or ".png"
-    filename = f"brgy_logo_{uuid.uuid4().hex[:8]}{ext}"
-    save_path = os.path.join(LOGO_UPLOAD_DIR, filename)
+    config = get_config(db)
+    config.brgy_logo = contents
+    config.brgy_logo_content_type = file.content_type
+    db.commit()
 
-    with open(save_path, "wb") as f:
-        f.write(contents)
 
-    # Store the relative path (serve via your static files mount)
-    logo_url_path = f"/uploads/logos/{filename}"
-    return set_logo_path(db, logo_url_path)
+# ── GET /admin/settings/logo ──────────────────────────────────────────────────
+
+@router.get("/logo")
+def get_brgy_logo(
+    db: Session = Depends(get_db),
+    current_admin: Admin = Depends(get_current_admin),
+):
+    """
+    Streams the barangay logo as a raw image response.
+    Returns 404 if no logo has been uploaded yet.
+    """
+    config = get_config(db)
+    if not config.brgy_logo:
+        raise HTTPException(status_code=404, detail="No logo uploaded.")
+    content_type = getattr(config, "brgy_logo_content_type", None) or "image/png"
+    return Response(content=config.brgy_logo, media_type=content_type)
+
+
+# ── DELETE /admin/settings/logo ───────────────────────────────────────────────
+
+@router.delete("/logo", status_code=204)
+def delete_brgy_logo(
+    db: Session = Depends(get_db),
+    current_admin: Admin = Depends(require_superadmin),
+):
+    """Removes the barangay logo."""
+    config = get_config(db)
+    config.brgy_logo = None
+    config.brgy_logo_content_type = None
+    db.commit()

@@ -18,16 +18,6 @@ export const getSystemConfig = async () => {
 /**
  * Partial update — pass only the fields you want to change.
  * Each tab calls this with its own subset of fields.
- *
- * @example
- * // General tab
- * await updateSystemConfig({ brgy_name: "Barangay San Jose", brgy_subname: "District 4" });
- *
- * // Security tab
- * await updateSystemConfig({ auto_logout_minutes: 30, max_failed_attempts: 5 });
- *
- * // Preferences tab
- * await updateSystemConfig({ maintenance_mode: true });
  */
 export const updateSystemConfig = async (fields = {}) => {
   const response = await http.patch("/admin/settings", fields);
@@ -35,14 +25,36 @@ export const updateSystemConfig = async (fields = {}) => {
 };
 
 /**
- * Upload a new barangay logo.
- * @param {File} file - The image file from an <input type="file">
+ * Upload or replace the barangay logo.
+ * Stored as bytes in DB — no folder created on the server.
+ * @param {File} file - PNG, JPEG, WebP, or SVG under 2 MB.
  */
 export const uploadBrgyLogo = async (file) => {
   const formData = new FormData();
   formData.append("file", file);
-  const response = await http.post("/admin/settings/logo", formData, {
+  await http.put("/admin/settings/logo", formData, {
     headers: { "Content-Type": "multipart/form-data" },
   });
-  return response.data;
+};
+
+/**
+ * Fetches the barangay logo as a blob URL for use in <img> src.
+ * Returns null if no logo has been uploaded yet (404).
+ * @returns {Promise<string|null>} Object URL string or null.
+ */
+export const getBrgyLogoUrl = async () => {
+  try {
+    const response = await http.get("/admin/settings/logo", { responseType: "blob" });
+    return URL.createObjectURL(response.data);
+  } catch (err) {
+    if (err.response?.status === 404) return null;
+    throw err;
+  }
+};
+
+/**
+ * Removes the barangay logo.
+ */
+export const removeBrgyLogo = async () => {
+  await http.delete("/admin/settings/logo");
 };

@@ -20,6 +20,7 @@ export const useSystemConfigStore = defineStore('systemConfig', () => {
   const hasLogo     = computed(() => !!config.value?.has_logo)
 
   async function fetchConfig(force = false) {
+    console.log('[systemConfig] fetchConfig called, fetched:', fetched.value)
     if (fetched.value && !force) return
     loading.value = true
     error.value   = null

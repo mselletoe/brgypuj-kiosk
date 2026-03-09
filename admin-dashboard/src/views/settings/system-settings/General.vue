@@ -2,10 +2,17 @@
 /**
  * @file General.vue
  * @description Barangay Information — name, subtitle, and logo management.
+ * Logo is fetched as a blob URL (same pattern as AccountSettings.vue admin photo).
  */
-import { ref, onMounted } from "vue";
+import { ref, onMounted, onUnmounted } from "vue";
 import { NButton, NInput, NAvatar, NSpin, useMessage } from "naive-ui";
-import { getSystemConfig, updateSystemConfig, uploadBrgyLogo } from "@/api/systemConfigService";
+import {
+  getSystemConfig,
+  updateSystemConfig,
+  uploadBrgyLogo,
+  getBrgyLogoUrl,
+  removeBrgyLogo,
+} from "@/api/systemConfigService";
 
 const message = useMessage();
 
@@ -16,19 +23,25 @@ const uploadingLogo = ref(false);
 const brgyName     = ref("");
 const brgySubtitle = ref("");
 const logoUrl      = ref(null);
-
-// Hidden file input ref
-const fileInputRef = ref(null);
+let   logoBlobUrl  = null;   // held separately so we can revoke it
 
 // ── Load ──────────────────────────────────────────────────────────────────────
 onMounted(async () => {
   const config = await getSystemConfig();
   if (config) {
-    brgyName.value     = config.brgy_name     ?? "";
-    brgySubtitle.value = config.brgy_subname  ?? "";
-    logoUrl.value      = config.brgy_logo_path ?? null;
+    brgyName.value     = config.brgy_name    ?? "";
+    brgySubtitle.value = config.brgy_subname ?? "";
+
+    if (config.has_logo) {
+      logoBlobUrl   = await getBrgyLogoUrl();
+      logoUrl.value = logoBlobUrl;
+    }
   }
   loading.value = false;
+});
+
+onUnmounted(() => {
+  if (logoBlobUrl) URL.revokeObjectURL(logoBlobUrl);
 });
 
 // ── Save Info ─────────────────────────────────────────────────────────────────
@@ -52,39 +65,47 @@ const saveInfo = async () => {
 };
 
 // ── Logo Upload ───────────────────────────────────────────────────────────────
-const triggerFileInput = () => fileInputRef.value?.click();
+const handleUploadLogo = () => {
+  const input = document.createElement("input");
+  input.type   = "file";
+  input.accept = "image/png,image/jpeg,image/webp,image/svg+xml";
+  input.onchange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-const handleFileChange = async (e) => {
-  const file = e.target.files?.[0];
-  if (!file) return;
+    const allowedTypes = ["image/png", "image/jpeg", "image/webp", "image/svg+xml"];
+    if (!allowedTypes.includes(file.type)) {
+      message.error("Only PNG, JPG, WebP, or SVG files are allowed.");
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      message.error("File is too large. Maximum size is 2 MB.");
+      return;
+    }
 
-  const allowedTypes = ["image/png", "image/jpeg", "image/webp", "image/svg+xml"];
-  if (!allowedTypes.includes(file.type)) {
-    message.error("Only PNG, JPG, WebP, or SVG files are allowed.");
-    return;
-  }
-  if (file.size > 2 * 1024 * 1024) {
-    message.error("File is too large. Maximum size is 2 MB.");
-    return;
-  }
-
-  uploadingLogo.value = true;
-  try {
-    const updated = await uploadBrgyLogo(file);
-    logoUrl.value = updated.brgy_logo_path;
-    message.success("Logo updated successfully.");
-  } catch {
-    message.error("Failed to upload logo. Please try again.");
-  } finally {
-    uploadingLogo.value = false;
-    e.target.value = "";
-  }
+    uploadingLogo.value = true;
+    try {
+      await uploadBrgyLogo(file);
+      // Build a local blob URL immediately — no round-trip needed
+      if (logoBlobUrl) URL.revokeObjectURL(logoBlobUrl);
+      logoBlobUrl   = URL.createObjectURL(file);
+      logoUrl.value = logoBlobUrl;
+      message.success("Logo updated successfully.");
+    } catch {
+      message.error("Failed to upload logo. Please try again.");
+    } finally {
+      uploadingLogo.value = false;
+    }
+  };
+  input.click();
 };
 
 const handleRemoveLogo = async () => {
   uploadingLogo.value = true;
   try {
-    await updateSystemConfig({ brgy_logo_path: null });
+    await removeBrgyLogo();
+    if (logoBlobUrl) URL.revokeObjectURL(logoBlobUrl);
+    logoBlobUrl   = null;
     logoUrl.value = null;
     message.warning("Logo has been removed.");
   } catch {
@@ -110,15 +131,6 @@ const initials = () => {
 
   <div v-else class="flex gap-8 items-start max-w-5xl">
 
-    <!-- Hidden file input -->
-    <input
-      ref="fileInputRef"
-      type="file"
-      accept="image/png,image/jpeg,image/webp,image/svg+xml"
-      class="hidden"
-      @change="handleFileChange"
-    />
-
     <!-- ── Left: Logo card ─────────────────────────────────────────────────── -->
     <div class="w-64 flex-shrink-0 flex flex-col items-center gap-4
                 border border-gray-200 rounded-xl p-6 bg-gray-50">
@@ -128,7 +140,7 @@ const initials = () => {
           round
           :size="96"
           :src="logoUrl || undefined"
-          style="background: linear-gradient(135deg, #0066d4, #011784); color: white; font-size: 32px; font-weight: 700;"
+          :style="{ background: 'linear-gradient(135deg,#0066d4,#011784)', color: 'white', fontSize: '32px', fontWeight: '700' }"
           class="ring-4 ring-white shadow-md"
         >
           <span v-if="!logoUrl">{{ initials() }}</span>
@@ -142,7 +154,7 @@ const initials = () => {
 
       <div class="w-full border-t border-gray-200 pt-4 flex flex-col gap-2">
         <button
-          @click="triggerFileInput"
+          @click="handleUploadLogo"
           :disabled="uploadingLogo"
           class="w-full text-[13px] font-medium text-[#0957FF] border border-[#0957FF]
                  rounded-md py-1.5 hover:bg-blue-50 transition-colors disabled:opacity-50"

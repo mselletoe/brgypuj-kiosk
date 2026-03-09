@@ -10,13 +10,14 @@ from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import datetime
 
+
 class SystemConfigRead(BaseModel):
     id: int
 
     # General
     brgy_name: Optional[str]
     brgy_subname: Optional[str]
-    brgy_logo_path: Optional[str]
+    has_logo: bool = False          # True when brgy_logo bytes are present in DB
 
     # Security
     rfid_expiry_days: int
@@ -40,32 +41,27 @@ class SystemConfigRead(BaseModel):
 
 class SystemConfigUpdate(BaseModel):
     # General
-    brgy_name: Optional[str]   = Field(None, max_length=150)
-    brgy_subname: Optional[str]   = Field(None, max_length=200)
-    brgy_logo_path: Optional[str]   = Field(None, max_length=500)
+    brgy_name:    Optional[str] = Field(None, max_length=150)
+    brgy_subname: Optional[str] = Field(None, max_length=200)
 
     # Security
-    rfid_expiry_days: Optional[int] = Field(None, ge=1)
+    rfid_expiry_days:    Optional[int] = Field(None, ge=1)
     auto_logout_minutes: Optional[int] = Field(None, ge=1)
     max_failed_attempts: Optional[int] = Field(None, ge=1)
-    lockout_minutes: Optional[int] = Field(None, ge=1)
+    lockout_minutes:     Optional[int] = Field(None, ge=1)
 
     # Preferences
-    default_view: Optional[str]  = Field(None, max_length=50)
+    default_view:     Optional[str]  = Field(None, max_length=50)
     maintenance_mode: Optional[bool] = None
 
     # Backup
     backup_schedule: Optional[str] = Field(None, pattern="^(manual|daily|weekly)$")
-    backup_time: Optional[str] = Field(None, pattern="^([01]\\d|2[0-3]):[0-5]\\d$")
-
-
-class SystemConfigLogoUpdate(BaseModel):
-    brgy_logo_path: str
+    backup_time:     Optional[str] = Field(None, pattern="^([01]\\d|2[0-3]):[0-5]\\d$")
 
 
 class KioskSystemConfigRead(BaseModel):
-    brgy_name: Optional[str]
+    brgy_name:    Optional[str]
     brgy_subname: Optional[str]
-    brgy_logo_path: Optional[str]
+    has_logo:     bool = False      # frontend hits GET /kiosk/settings/logo to fetch the image
 
     model_config = {"from_attributes": True}
