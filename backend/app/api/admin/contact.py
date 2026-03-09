@@ -4,7 +4,7 @@ from app.api.deps import get_db
 from app.models.contact import ContactInformation
 from app.schemas.contact import ContactInformationOut, ContactInformationUpdate
 
-router = APIRouter(prefix="/contact", tags=["Contact Information"])
+router = APIRouter(prefix="/contact")
 
 
 def get_or_create_contact(db: Session) -> ContactInformation:
