@@ -3,6 +3,7 @@
  */
 import { computed } from 'vue'
 import { useSystemConfigStore } from '@/stores/systemConfig'
+import fallbackLogo from '@/assets/images/Pob1Logo.svg'
 
 export function useSystemConfig() {
   const store = useSystemConfigStore()
@@ -17,7 +18,7 @@ export function useSystemConfig() {
   // Use the in-memory blob URL; fall back to the bundled SVG if no logo is set
   const resolvedLogoUrl = computed(() => {
     if (store.loading) return null
-    return store.logoBlobUrl ?? fallbackLogo
+    return store.logoBlobUrl ?? null
   })
 
   return { brgyName, brgySubname, resolvedLogoUrl, hasLogo }
