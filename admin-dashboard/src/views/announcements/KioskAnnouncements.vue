@@ -25,7 +25,7 @@ const creatingNew = ref(false);
 const showDeleteModal = ref(false);
 const deleteTargetId = ref(null);
 const loading = ref(false);
-const selectedAnnouncements = ref(new Set());
+const selectedAnnouncements = ref([]);
 const searchQuery = ref("");
 useSearchSync(searchQuery);
 
@@ -41,7 +41,7 @@ const filteredAnnouncements = computed(() => {
 });
 
 /* -------------------- COMPUTED -------------------- */
-const selectedCount = computed(() => selectedAnnouncements.value.size);
+const selectedCount = computed(() => selectedAnnouncements.value.length);
 const totalCount = computed(() => announcements.value.length);
 
 const selectionState = computed(() => {
@@ -84,18 +84,19 @@ const handleMainSelectToggle = () => {
 };
 
 const selectAll = () => {
-  selectedAnnouncements.value = new Set(announcements.value.map((a) => a.id));
+  selectedAnnouncements.value = announcements.value.map((a) => a.id);
 };
 
 const deselectAll = () => {
-  selectedAnnouncements.value.clear();
+  selectedAnnouncements.value = [];
 };
 
 const handleSelectionUpdate = (announcementId, isSelected) => {
   if (isSelected) {
-    selectedAnnouncements.value.add(announcementId);
+    if (!selectedAnnouncements.value.includes(announcementId))
+      selectedAnnouncements.value.push(announcementId);
   } else {
-    selectedAnnouncements.value.delete(announcementId);
+    selectedAnnouncements.value = selectedAnnouncements.value.filter(id => id !== announcementId);
   }
 };
 

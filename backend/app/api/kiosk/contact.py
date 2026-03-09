@@ -4,7 +4,7 @@ from app.api.deps import get_db
 from app.models.contact import ContactInformation
 from app.schemas.contact import ContactInformationOut
 
-router = APIRouter(prefix="/contact", tags=["Kiosk Contact"])
+router = APIRouter(prefix="/contact")
 
 
 @router.get("", response_model=ContactInformationOut)
