@@ -61,3 +61,11 @@ class SystemConfigUpdate(BaseModel):
 
 class SystemConfigLogoUpdate(BaseModel):
     brgy_logo_path: str
+
+
+class KioskSystemConfigRead(BaseModel):
+    brgy_name: Optional[str]
+    brgy_subname: Optional[str]
+    brgy_logo_path: Optional[str]
+
+    model_config = {"from_attributes": True}
