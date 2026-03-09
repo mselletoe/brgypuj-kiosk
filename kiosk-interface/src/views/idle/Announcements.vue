@@ -1,17 +1,50 @@
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from "vue"; import { useRouter } from "vue-router"; import Pob1Logo from "@/assets/images/Pob1Logo.svg"; import { getActiveAnnouncements } from "@/api/announcementService";
-const router = useRouter(); const current = ref(0); const announcements = ref([]); const loading = ref(true); const error = ref(null); let autoSlide = null;
-const fetchAnnouncements = async () => { try { loading.value = true; error.value = null; const data = await getActiveAnnouncements(); announcements.value = data; if (announcements.value.length > 0) { startSlider(); } } catch (err) { console.error('Failed to fetch announcements:', err); error.value = 'Unable to load announcements. Please try again later.'; setTimeout(fetchAnnouncements, 10000); } finally { loading.value = false; } };
-const startSlider = () => { if (autoSlide) clearInterval(autoSlide); autoSlide = setInterval(() => { nextSlide(); }, 5000); };
-const nextSlide = () => { if (announcements.value.length === 0) return; current.value = (current.value + 1) % announcements.value.length; };
-const prevSlide = () => { if (announcements.value.length === 0) return; current.value = (current.value - 1 + announcements.value.length) % announcements.value.length; };
-const formatDate = (date) => { if (!date) return ""; return new Date(date + 'T00:00:00').toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", }); };
-const formatDay = (date) => { if (!date) return ""; return new Date(date + 'T00:00:00').toLocaleDateString("en-US", { weekday: "long", }); };
-const formatTime = (timeStr) => { if (!timeStr) return ""; const [h, m] = timeStr.split(":").map(Number); const period = h >= 12 ? "PM" : "AM"; const hour = h % 12 || 12; return `${hour}:${String(m).padStart(2, "0")} ${period}`; };
-const getImageUrl = (base64) => { if (!base64) return null; return `data:image/jpeg;base64,${base64}`; };
-const start = () => { router.push("/login"); };
-onMounted(() => { fetchAnnouncements(); const pollInterval = setInterval(fetchAnnouncements, 300000); onBeforeUnmount(() => { clearInterval(pollInterval); }); });
-onBeforeUnmount(() => { if (autoSlide) { clearInterval(autoSlide); } });
+import { ref, onMounted, onBeforeUnmount } from "vue"
+import { useRouter } from "vue-router"
+import { useSystemConfig } from "@/composables/useSystemConfig"
+import { getActiveAnnouncements } from "@/api/announcementService"
+
+const router = useRouter()
+const { brgyName, brgySubname, resolvedLogoUrl } = useSystemConfig()
+
+const current = ref(0)
+const announcements = ref([])
+const loading = ref(true)
+const error = ref(null)
+let autoSlide = null
+
+const fetchAnnouncements = async () => {
+  try {
+    loading.value = true; error.value = null
+    const data = await getActiveAnnouncements()
+    announcements.value = data
+    if (announcements.value.length > 0) startSlider()
+  } catch (err) {
+    console.error('Failed to fetch announcements:', err)
+    error.value = 'Unable to load announcements. Please try again later.'
+    setTimeout(fetchAnnouncements, 10000)
+  } finally { loading.value = false }
+}
+
+const startSlider = () => {
+  if (autoSlide) clearInterval(autoSlide)
+  autoSlide = setInterval(() => nextSlide(), 5000)
+}
+const nextSlide = () => { if (announcements.value.length === 0) return; current.value = (current.value + 1) % announcements.value.length }
+const prevSlide = () => { if (announcements.value.length === 0) return; current.value = (current.value - 1 + announcements.value.length) % announcements.value.length }
+
+const formatDate = (date) => { if (!date) return ""; return new Date(date + 'T00:00:00').toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) }
+const formatDay  = (date) => { if (!date) return ""; return new Date(date + 'T00:00:00').toLocaleDateString("en-US", { weekday: "long" }) }
+const formatTime = (timeStr) => { if (!timeStr) return ""; const [h, m] = timeStr.split(":").map(Number); const period = h >= 12 ? "PM" : "AM"; const hour = h % 12 || 12; return `${hour}:${String(m).padStart(2, "0")} ${period}` }
+const getImageUrl = (base64) => { if (!base64) return null; return `data:image/jpeg;base64,${base64}` }
+const start = () => router.push("/login")
+
+onMounted(() => {
+  fetchAnnouncements()
+  const pollInterval = setInterval(fetchAnnouncements, 300000)
+  onBeforeUnmount(() => clearInterval(pollInterval))
+})
+onBeforeUnmount(() => { if (autoSlide) clearInterval(autoSlide) })
 </script>
 
 <template>
@@ -35,7 +68,7 @@ onBeforeUnmount(() => { if (autoSlide) { clearInterval(autoSlide); } });
     <template v-else>
       <div class="fixed inset-0 pointer-events-none">
         <transition name="fade">
-          <div v-if="announcements.length && announcements[current]?.image_base64" :key="current" class="fixed inset-0 bg-cover bg-center" :style="{ backgroundImage: `url('${getImageUrl(announcements[current].image_base64)}')`, }"></div>
+          <div v-if="announcements.length && announcements[current]?.image_base64" :key="current" class="fixed inset-0 bg-cover bg-center" :style="{ backgroundImage: `url('${getImageUrl(announcements[current].image_base64)}')` }"></div>
           <div v-else :key="'fallback-' + current" class="fixed inset-0 bg-gradient-to-br from-[#003d73] to-[#00325D]"></div>
         </transition>
         <div class="fixed inset-0 bg-[#00325D] opacity-70"></div>
@@ -43,10 +76,10 @@ onBeforeUnmount(() => { if (autoSlide) { clearInterval(autoSlide); } });
 
       <div class="relative z-10 h-full flex flex-col">
         <div class="flex items-center gap-4 p-6">
-          <img :src="Pob1Logo" class="w-[110px] h-[110px]" />
+          <img v-if="resolvedLogoUrl" :src="resolvedLogoUrl" class="w-[90px] h-[90px] min-w-[90px] object-cover rounded-full" />
           <div>
-            <h2 class="text-white text-[15px] font-bold leading-tight">Brgy. Poblacion I</h2>
-            <p class="text-white text-[15px] opacity-90 -mt-1">Amadeo, Cavite - Kiosk System</p>
+            <h2 class="text-white text-[15px] font-bold leading-tight">{{ brgyName }}</h2>
+            <p class="text-white text-[15px] opacity-90 -mt-1">{{ brgySubname }}</p>
             <h3 class="text-white text-[30px] font-bold leading-tight">BARANGAY ANNOUNCEMENTS</h3>
           </div>
         </div>
@@ -70,7 +103,7 @@ onBeforeUnmount(() => { if (autoSlide) { clearInterval(autoSlide); } });
         </div>
 
         <div class="flex items-center justify-between px-6 pb-10">
-          <button v-if="announcements.length > 1" @click.stop.prevent="prevSlide" class="text-white transition-all duration-300 hover:scale-110 hover:opacity-100 opacity-70" aria-label="Previous announcement"><svg class="w-16 h-16" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" /></svg></button>
+          <button v-if="announcements.length > 1" @click.stop.prevent="prevSlide" class="text-white transition-all duration-300 hover:scale-110 hover:opacity-100 opacity-70"><svg class="w-16 h-16" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" /></svg></button>
           <div v-else class="w-16"></div>
 
           <div class="flex flex-col items-center gap-4 flex-1">
@@ -80,7 +113,7 @@ onBeforeUnmount(() => { if (autoSlide) { clearInterval(autoSlide); } });
             <p class="text-white text-xl opacity-90 pointer-events-none animate-pulse">Touch the screen to start</p>
           </div>
 
-          <button v-if="announcements.length > 1" @click.stop.prevent="nextSlide" class="text-white transition-all duration-300 hover:scale-110 hover:opacity-100 opacity-70" aria-label="Next announcement"><svg class="w-16 h-16" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg></button>
+          <button v-if="announcements.length > 1" @click.stop.prevent="nextSlide" class="text-white transition-all duration-300 hover:scale-110 hover:opacity-100 opacity-70"><svg class="w-16 h-16" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg></button>
           <div v-else class="w-16"></div>
         </div>
       </div>

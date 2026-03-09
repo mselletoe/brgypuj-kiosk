@@ -2,106 +2,72 @@
 /**
  * @file Header.vue
  * @description Global navigation component for the Barangay Kiosk System.
- * Displays real-time clock, branding, and dynamic user authentication status.
- * Interacts with the Pinia Auth Store to reflect live user data and handle session termination.
+ * Displays real-time clock, branding (dynamic from system config), and user auth status.
  */
 
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { ref, onMounted, onUnmounted, computed } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useRfidRegistrationStore } from "@/stores/registration";
-import '../assets/images/Pob1Logo.svg';
+import { useSystemConfig } from "@/composables/useSystemConfig";
 import '../assets/vectors/Logout.svg';
 
-// --- Component State & Composables ---
-const router = useRouter();
-const route = useRoute();
-const authStore = useAuthStore();
+const router       = useRouter();
+const route        = useRoute();
+const authStore    = useAuthStore();
 const rfidRegStore = useRfidRegistrationStore();
 
-/** @type {import('vue').Ref<string>} Reactive string for formatted 12-hour time */
-const currentTime = ref("");
+// ── System config (logo + brgy name/subname) ──────────────────────────────────
+const { brgyName, brgySubname, resolvedLogoUrl } = useSystemConfig();
 
-/** @type {import('vue').Ref<string>} Reactive string for the full formatted date */
+// ── Clock ─────────────────────────────────────────────────────────────────────
+const currentTime = ref("");
 const currentDate = ref("");
 
-// --- Computed Properties (Auth State) ---
-
-/** True when the admin is in the RFID registration flow (/register route) */
-const isAdminRegistration = computed(() => route.path === '/register')
-
-/** @returns {boolean} True if the current session is in Guest mode */
-const isGuest = computed(() => authStore.isGuest);
-
-/** @returns {string} The name of the authenticated resident or 'Guest' */
-const displayName = computed(() => authStore.userName);
-
-/** @returns {string} Contextual string describing the current auth method for UI feedback */
-const userDetail = computed(() =>
-  authStore.isRFID ? "Authenticated via RFID" : "Logged in as Guest User"
-);
-
-/**
- * Updates the reactive date and time refs with current system values.
- * Formats time to 'HH:MM:SS AM/PM' and date to 'Weekday, Month Day, Year'.
- */
 const updateDateTime = () => {
   const now = new Date();
-  currentTime.value = now.toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: true,
-  })
-  .toUpperCase();
-
+  currentTime.value = now
+    .toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true })
+    .toUpperCase();
   currentDate.value = now.toLocaleDateString("en-US", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
+    weekday: "long", year: "numeric", month: "long", day: "numeric",
   });
 };
 
-/** @type {ReturnType<typeof setInterval> | null} Reference to the clock sync timer */
 let interval;
+onMounted(() => { updateDateTime(); interval = setInterval(updateDateTime, 1000); });
+onUnmounted(() => { if (interval) clearInterval(interval); });
 
-// --- Lifecycle Hooks ---
+// ── Auth ──────────────────────────────────────────────────────────────────────
+const isAdminRegistration = computed(() => route.path === '/register');
+const isGuest             = computed(() => authStore.isGuest);
+const displayName         = computed(() => authStore.userName);
+const userDetail          = computed(() =>
+  authStore.isRFID ? "Authenticated via RFID" : "Logged in as Guest User"
+);
 
-onMounted(() => {
-  updateDateTime();
-  interval = setInterval(updateDateTime, 1000);
-});
-
-onUnmounted(() => {
-  if (interval) clearInterval(interval);
-});
-
-/**
- * Terminates the user session.
- * Clears global auth state (Pinia + LocalStorage) and redirects to the idle screen.
- */
-const logout = () => {
-  authStore.logout();
-  router.push('/idle');
-};
+const logout = () => { authStore.logout(); router.push('/idle'); };
 </script>
 
 <template>
   <header class="flex items-center justify-between px-5 py-2 bg-white text-[#003A6B] shadow-md border-b-2 border-[#003A6B]">
-    <div class="flex items-center space-x-1">
-      <img src="../assets/images/Pob1Logo.svg" alt="Poblacion 1, Amadeo, Cavite" class="w-[40px] h-[40px]" />
+
+    <!-- ── Branding ───────────────────────────────────────────────────────── -->
+    <div class="flex items-center gap-2">
+      <img v-if="resolvedLogoUrl" :src="resolvedLogoUrl" alt="Barangay Logo" class="w-[40px] h-[40px] min-w-[40px] object-cover rounded-full overflow-hidden" />
       <div class="flex flex-col">
-        <h1 class="text-[14px] font-bold leading-[1] tracking-tight">Brgy. Poblacion 1</h1> <br/>
-        <h2 class="text-[14px] font-light -mt-5 leading-[1] tracking-tight">Amadeo, Cavite - Kiosk System</h2>
+        <h1 class="text-[14px] font-bold leading-[1] tracking-tight">{{ brgyName }}</h1><br />
+        <h2 class="text-[14px] font-light -mt-5 leading-[1] tracking-tight">{{ brgySubname }}</h2>
       </div>
     </div>
 
+    <!-- ── Clock ─────────────────────────────────────────────────────────── -->
     <div class="text-center">
       <p class="text-[14px] font-bold leading-none tracking-tight">{{ currentTime }}</p>
       <p class="text-[14px] font-light mt-1 leading-[1] tracking-tight">{{ currentDate }}</p>
     </div>
 
+    <!-- ── User badge + logout ────────────────────────────────────────────── -->
     <div class="flex items-center space-x-4">
 
       <!-- Admin Registration Badge -->
@@ -131,14 +97,17 @@ const logout = () => {
         <span class="text-[9px] italic font-medium text-[#003A6B]">{{ userDetail }}</span>
       </div>
 
-      <button @click="logout" class="px-4 py-2 bg-[#FF2B3A] border-2 border-[#FF2B3A]
-        hover:bg-[#CD000E] text-white font-light rounded-md
-        transition-colors duration-300 ease-in-out
-        flex items-center space-x-2 text-[12px]">
+      <button
+        @click="logout"
+        class="px-4 py-2 bg-[#FF2B3A] border-2 border-[#FF2B3A] hover:bg-[#CD000E]
+               text-white font-light rounded-md transition-colors duration-300 ease-in-out
+               flex items-center space-x-2 text-[12px]"
+      >
         <span>Logout</span>
         <img src="../assets/vectors/Logout.svg" class="w-6" />
       </button>
     </div>
+
   </header>
 </template>
 
