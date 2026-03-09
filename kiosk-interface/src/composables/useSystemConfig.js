@@ -3,6 +3,7 @@
  */
 import { computed } from "vue";
 import { useSystemConfigStore } from "@/stores/systemConfig";
+import fallbackLogo from "@/assets/images/Pob1Logo.svg";
 
 export function useSystemConfig() {
   const store = useSystemConfigStore();
