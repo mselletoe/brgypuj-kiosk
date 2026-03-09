@@ -10,3 +10,4 @@ from .faqs import FAQ
 from .audit import AdminAuditLog
 from .systemlogs import SystemLog
 from .contact import ContactInformation
+from .systemconfig import SystemConfig

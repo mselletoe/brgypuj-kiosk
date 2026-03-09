@@ -1,37 +1,125 @@
 <script setup>
 /**
- * @file GeneralSettings.vue
+ * @file General.vue
  * @description Barangay Information — name, subtitle, and logo management.
  */
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
 import { NButton, NInput, NAvatar, NSpin, useMessage } from "naive-ui";
+import { getSystemConfig, updateSystemConfig, uploadBrgyLogo } from "@/api/systemConfigService";
 
 const message = useMessage();
 
-const brgyName     = ref("Brgy. Poblacion Uno");
-const brgySubtitle = ref("Municipality of San Jose, Bulacan");
+const loading       = ref(true);
+const saving        = ref(false);
 const uploadingLogo = ref(false);
-const logoUrl       = ref(null);
 
-const saveInfo = () => {
+const brgyName     = ref("");
+const brgySubtitle = ref("");
+const logoUrl      = ref(null);
+
+// Hidden file input ref
+const fileInputRef = ref(null);
+
+// ── Load ──────────────────────────────────────────────────────────────────────
+onMounted(async () => {
+  const config = await getSystemConfig();
+  if (config) {
+    brgyName.value     = config.brgy_name     ?? "";
+    brgySubtitle.value = config.brgy_subname  ?? "";
+    logoUrl.value      = config.brgy_logo_path ?? null;
+  }
+  loading.value = false;
+});
+
+// ── Save Info ─────────────────────────────────────────────────────────────────
+const saveInfo = async () => {
   if (!brgyName.value.trim()) {
     message.warning("Barangay name cannot be empty.");
     return;
   }
-  message.success("Barangay information updated.");
+  saving.value = true;
+  try {
+    await updateSystemConfig({
+      brgy_name:    brgyName.value.trim(),
+      brgy_subname: brgySubtitle.value.trim(),
+    });
+    message.success("Barangay information updated.");
+  } catch {
+    message.error("Failed to save. Please try again.");
+  } finally {
+    saving.value = false;
+  }
 };
 
-const handleUploadLogo = () => message.success("Ready to upload a new logo.");
-const handleRemoveLogo = () => {
-  logoUrl.value = null;
-  message.warning("Logo has been removed.");
+// ── Logo Upload ───────────────────────────────────────────────────────────────
+const triggerFileInput = () => fileInputRef.value?.click();
+
+const handleFileChange = async (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+
+  const allowedTypes = ["image/png", "image/jpeg", "image/webp", "image/svg+xml"];
+  if (!allowedTypes.includes(file.type)) {
+    message.error("Only PNG, JPG, WebP, or SVG files are allowed.");
+    return;
+  }
+  if (file.size > 2 * 1024 * 1024) {
+    message.error("File is too large. Maximum size is 2 MB.");
+    return;
+  }
+
+  uploadingLogo.value = true;
+  try {
+    const updated = await uploadBrgyLogo(file);
+    logoUrl.value = updated.brgy_logo_path;
+    message.success("Logo updated successfully.");
+  } catch {
+    message.error("Failed to upload logo. Please try again.");
+  } finally {
+    uploadingLogo.value = false;
+    e.target.value = "";
+  }
+};
+
+const handleRemoveLogo = async () => {
+  uploadingLogo.value = true;
+  try {
+    await updateSystemConfig({ brgy_logo_path: null });
+    logoUrl.value = null;
+    message.warning("Logo has been removed.");
+  } catch {
+    message.error("Failed to remove logo.");
+  } finally {
+    uploadingLogo.value = false;
+  }
+};
+
+// Derive initials for the avatar fallback
+const initials = () => {
+  const parts = brgyName.value.trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return "BR";
 };
 </script>
 
 <template>
-  <div class="flex gap-8 items-start max-w-5xl">
+  <div v-if="loading" class="flex justify-center items-center py-16">
+    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+  </div>
 
-    <!-- ── Left: Logo card (mirrors AccountSettings profile card) ─────────── -->
+  <div v-else class="flex gap-8 items-start max-w-5xl">
+
+    <!-- Hidden file input -->
+    <input
+      ref="fileInputRef"
+      type="file"
+      accept="image/png,image/jpeg,image/webp,image/svg+xml"
+      class="hidden"
+      @change="handleFileChange"
+    />
+
+    <!-- ── Left: Logo card ─────────────────────────────────────────────────── -->
     <div class="w-64 flex-shrink-0 flex flex-col items-center gap-4
                 border border-gray-200 rounded-xl p-6 bg-gray-50">
 
@@ -43,18 +131,18 @@ const handleRemoveLogo = () => {
           style="background: linear-gradient(135deg, #0066d4, #011784); color: white; font-size: 32px; font-weight: 700;"
           class="ring-4 ring-white shadow-md"
         >
-          <span v-if="!logoUrl">PU</span>
+          <span v-if="!logoUrl">{{ initials() }}</span>
         </n-avatar>
       </n-spin>
 
       <div class="text-center">
-        <p class="text-[15px] font-semibold text-gray-800 leading-tight">{{ brgyName }}</p>
+        <p class="text-[15px] font-semibold text-gray-800 leading-tight">{{ brgyName || "Barangay" }}</p>
         <p class="text-[12px] text-gray-400 mt-0.5">{{ brgySubtitle }}</p>
       </div>
 
       <div class="w-full border-t border-gray-200 pt-4 flex flex-col gap-2">
         <button
-          @click="handleUploadLogo"
+          @click="triggerFileInput"
           :disabled="uploadingLogo"
           class="w-full text-[13px] font-medium text-[#0957FF] border border-[#0957FF]
                  rounded-md py-1.5 hover:bg-blue-50 transition-colors disabled:opacity-50"
@@ -72,13 +160,12 @@ const handleRemoveLogo = () => {
         </button>
       </div>
 
-      <p class="text-[11px] text-gray-400 text-center">JPG, PNG · Max 2 MB</p>
+      <p class="text-[11px] text-gray-400 text-center">JPG, PNG, WebP, SVG · Max 2 MB</p>
     </div>
 
-    <!-- ── Right: Form (mirrors AccountSettings form sections) ───────────── -->
+    <!-- ── Right: Form ────────────────────────────────────────────────────── -->
     <div class="flex-1 flex flex-col gap-8">
 
-      <!-- Section: Barangay Information -->
       <div class="border-b border-gray-100">
         <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">
           Barangay Information
@@ -100,9 +187,8 @@ const handleRemoveLogo = () => {
         </div>
       </div>
 
-      <!-- Save -->
       <div>
-        <n-button type="primary" @click="saveInfo">Save Changes</n-button>
+        <n-button type="primary" :loading="saving" @click="saveInfo">Save Changes</n-button>
       </div>
 
     </div>
