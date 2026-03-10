@@ -296,7 +296,7 @@ const submitAdd = async () => {
             <th class="py-3 px-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider">Role</th>
             <th class="py-3 px-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider">Status</th>
             <th class="py-3 px-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider">Created</th>
-            <th class="py-3 px-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-right">Actions</th>
+            <th class="py-3 px-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -358,17 +358,24 @@ const submitAdd = async () => {
                 </span>
               </template>
               <template v-else>
-                <select
-                  :value="acc.system_role"
-                  @change="changeRole(acc, $event.target.value)"
-                  class="text-[12px] font-semibold border rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400 transition cursor-pointer"
+                <div
+                  class="inline-flex rounded-md overflow-hidden"
                   :class="acc.system_role === 'superadmin'
-                    ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
-                    : 'bg-sky-50 text-sky-700 border-sky-200'"
+                    ? 'bg-indigo-100 border border-indigo-200'
+                    : 'bg-sky-50 border border-sky-200'"
                 >
-                  <option value="admin">Admin</option>
-                  <option value="superadmin">Super Admin</option>
-                </select>
+                  <n-select
+                    :value="acc.system_role"
+                    :options="roleOptions"
+                    size="small"
+                    style="width: 120px"
+                    :bordered="false"
+                    @update:value="(val) => changeRole(acc, val)"
+                    :class="acc.system_role === 'superadmin'
+                      ? 'text-indigo-700'
+                      : 'text-sky-700'"
+                  />
+                </div>
               </template>
             </td>
 
@@ -393,7 +400,7 @@ const submitAdd = async () => {
 
             <!-- Actions -->
             <td class="py-3.5 px-4">
-              <div class="flex items-center justify-end gap-2">
+              <div class="flex items-center gap-2">
                 <!-- Activate / Deactivate — hidden for self -->
                 <button
                   v-if="!isSelf(acc.id)"
