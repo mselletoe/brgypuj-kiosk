@@ -37,3 +37,4 @@ requests
 pyserial
 
 apscheduler
+reportlab

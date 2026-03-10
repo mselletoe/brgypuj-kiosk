@@ -13,6 +13,7 @@ import {
   FunnelIcon,
   ArrowUturnLeftIcon,
   TrashIcon,
+  InformationCircleIcon,
 } from "@heroicons/vue/24/outline";
 
 import PageTitle from "@/components/shared/PageTitle.vue";
@@ -238,7 +239,7 @@ const hasActiveFilters = computed(() => {
             <ArrowUturnLeftIcon class="w-5 h-5 text-orange-500" />
           </button>
           <div
-            class="absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 ease-in-out bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded whitespace-nowrap shadow-md z-50"
+            class="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 ease-in-out bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded whitespace-nowrap shadow-md z-50"
           >
             Undo
           </div>
@@ -258,7 +259,7 @@ const hasActiveFilters = computed(() => {
             <TrashIcon class="w-5 h-5 text-red-500" />
           </button>
           <div
-            class="absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 ease-in-out bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded whitespace-nowrap shadow-md z-50"
+            class="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 ease-in-out bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded whitespace-nowrap shadow-md z-50"
           >
             Delete
           </div>
@@ -303,23 +304,30 @@ const hasActiveFilters = computed(() => {
                 </svg>
               </div>
             </button>
-            <div
-              class="absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 ease-in-out bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded whitespace-nowrap shadow-md z-50"
-            >
-              Select All
-            </div>
+          </div>
+          <div
+            class="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 ease-in-out bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded whitespace-nowrap shadow-md z-50"
+          >
+            Select All
           </div>
         </div>
       </div>
     </div>
 
-    <div class="flex justify-between items-center border-b border-gray-200">
+    <div class="flex items-center border-b border-gray-200">
       <n-tabs v-model:value="activeTab" type="line" animated class="flex-grow">
         <n-tab-pane name="pending" tab="Pending" />
         <n-tab-pane name="approved" tab="Approved" />
         <n-tab-pane name="released" tab="Released" />
         <n-tab-pane name="rejected" tab="Rejected" />
       </n-tabs>
+      <router-link
+        :to="{ path: '/system-settings', query: { section: 'financial-statement' } }"
+        class="inline-flex items-center gap-1 text-xs text-blue-500 hover:text-blue-700 hover:underline whitespace-nowrap pb-2 transition-colors"
+      >
+        <InformationCircleIcon class="w-3.5 h-3.5 shrink-0" />
+        Export Financial Statement
+      </router-link>
     </div>
 
     <div class="overflow-y-auto h-[calc(100vh-260px)] pr-2 pt-2 relative">
