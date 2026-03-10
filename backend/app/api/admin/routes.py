@@ -8,7 +8,7 @@ resident management, and system configuration.
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.api.deps import get_db
-from app.api.admin import document, auth, residents, equipment, feedback, announcement, blotter, transaction, faqs, id, audit, search, systemlogs, contact, systemconfig, backup, adminaccounts
+from app.api.admin import document, auth, residents, equipment, feedback, announcement, blotter, transaction, faqs, id, audit, search, systemlogs, contact, systemconfig, backup, adminaccounts, finance
 
 
 
@@ -34,6 +34,7 @@ router.include_router(contact.router)
 router.include_router(systemconfig.router)
 router.include_router(backup.router)
 router.include_router(adminaccounts.router)
+router.include_router(finance.router)
 
 @router.get("/health")
 def admin_health(db: Session = Depends(get_db)):

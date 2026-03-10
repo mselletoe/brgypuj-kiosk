@@ -1,10 +1,10 @@
 <script setup>
-import { ref, computed, onMounted } from "vue";
-import { useMessage, NInput, NButton, NSpin, NEmpty } from "naive-ui";
-import { TrashIcon } from "@heroicons/vue/24/outline";
-import PageTitle from "@/components/shared/PageTitle.vue";
-import KioskAnnouncementCard from "@/views/announcements/KioskAnnouncementCard.vue";
-import ConfirmModal from "@/components/shared/ConfirmationModal.vue";
+import { ref, computed, onMounted } from 'vue'
+import { useMessage, NInput, NButton, NSpin, NEmpty } from 'naive-ui'
+import { TrashIcon } from '@heroicons/vue/24/outline'
+import PageTitle from '@/components/shared/PageTitle.vue'
+import KioskAnnouncementCard from '@/views/announcements/KioskAnnouncementCard.vue'
+import ConfirmModal from '@/components/shared/ConfirmationModal.vue'
 import {
   getAllAnnouncements,
   getAnnouncementById,
@@ -12,151 +12,135 @@ import {
   updateAnnouncement,
   deleteAnnouncement as deleteAnnouncementApi,
   bulkDeleteAnnouncements,
-  toggleAnnouncementStatus,
-} from "@/api/announcementService";
-import { useSearchSync } from "@/composables/useSearchSync";
+  toggleAnnouncementStatus
+} from '@/api/announcementService'
 
-const message = useMessage();
+const message = useMessage()
 
 /* -------------------- STATE -------------------- */
-const announcements = ref([]);
-const editingId = ref(null);
-const creatingNew = ref(false);
-const showDeleteModal = ref(false);
-const deleteTargetId = ref(null);
-const loading = ref(false);
-const selectedAnnouncements = ref([]);
-const searchQuery = ref("");
-useSearchSync(searchQuery);
-
-const filteredAnnouncements = computed(() => {
-  if (!searchQuery.value) return announcements.value;
-  const q = searchQuery.value.toLowerCase();
-  return announcements.value.filter(
-    (a) =>
-      a.title?.toLowerCase().includes(q) ||
-      a.location?.toLowerCase().includes(q) ||
-      a.description?.toLowerCase().includes(q),
-  );
-});
+const announcements = ref([])
+const editingId = ref(null)
+const creatingNew = ref(false)
+const showDeleteModal = ref(false)
+const deleteTargetId = ref(null)
+const loading = ref(false)
+const selectedAnnouncements = ref(new Set())
+const searchQuery = ref('')
 
 /* -------------------- COMPUTED -------------------- */
-const selectedCount = computed(() => selectedAnnouncements.value.length);
-const totalCount = computed(() => announcements.value.length);
+const selectedCount = computed(() => selectedAnnouncements.value.size)
+const totalCount = computed(() => announcements.value.length)
 
 const selectionState = computed(() => {
-  const count = selectedCount.value;
-  const total = totalCount.value;
-
-  if (count === 0) return "none";
-  if (count > 0 && count < total) return "partial";
-  return "all";
-});
+  const count = selectedCount.value
+  const total = totalCount.value
+  
+  if (count === 0) return 'none'
+  if (count > 0 && count < total) return 'partial'
+  return 'all'
+})
 
 /* -------------------- LOAD DATA -------------------- */
 const loadAnnouncements = async () => {
-  loading.value = true;
+  loading.value = true
   try {
-    const data = await getAllAnnouncements();
+    const data = await getAllAnnouncements()
     const detailedAnnouncements = await Promise.all(
-      data.map((announcement) => getAnnouncementById(announcement.id)),
-    );
-    announcements.value = detailedAnnouncements;
+      data.map(announcement => getAnnouncementById(announcement.id))
+    )
+    announcements.value = detailedAnnouncements
   } catch (err) {
-    console.error("Failed to fetch announcements:", err);
-    message.error("Failed to load announcements. Please try again.");
+    console.error('Failed to fetch announcements:', err)
+    message.error('Failed to load announcements. Please try again.')
   } finally {
-    loading.value = false;
+    loading.value = false
   }
-};
+}
 
 onMounted(() => {
-  loadAnnouncements();
-});
+  loadAnnouncements()
+})
 
 /* -------------------- SELECTION ACTIONS -------------------- */
 const handleMainSelectToggle = () => {
-  if (selectionState.value === "all" || selectionState.value === "partial") {
-    deselectAll();
+  if (selectionState.value === 'all' || selectionState.value === 'partial') {
+    deselectAll()
   } else {
-    selectAll();
+    selectAll()
   }
-};
+}
 
 const selectAll = () => {
-  selectedAnnouncements.value = announcements.value.map((a) => a.id);
-};
+  selectedAnnouncements.value = new Set(announcements.value.map(a => a.id))
+}
 
 const deselectAll = () => {
-  selectedAnnouncements.value = [];
-};
+  selectedAnnouncements.value.clear()
+}
 
 const handleSelectionUpdate = (announcementId, isSelected) => {
   if (isSelected) {
-    if (!selectedAnnouncements.value.includes(announcementId))
-      selectedAnnouncements.value.push(announcementId);
+    selectedAnnouncements.value.add(announcementId)
   } else {
-    selectedAnnouncements.value = selectedAnnouncements.value.filter(id => id !== announcementId);
+    selectedAnnouncements.value.delete(announcementId)
   }
-};
+}
 
 /* -------------------- BULK DELETE -------------------- */
 const bulkDelete = () => {
-  if (selectedAnnouncements.value.size === 0) return;
-  deleteTargetId.value = "bulk";
-  showDeleteModal.value = true;
-};
+  if (selectedAnnouncements.value.size === 0) return
+  deleteTargetId.value = 'bulk'
+  showDeleteModal.value = true
+}
 
 const confirmBulkDelete = async () => {
-  loading.value = true;
+  loading.value = true
   try {
-    await bulkDeleteAnnouncements(Array.from(selectedAnnouncements.value));
-    await loadAnnouncements();
-    selectedAnnouncements.value.clear();
-    showDeleteModal.value = false;
-    deleteTargetId.value = null;
-    message.success(
-      `${selectedCount.value} announcement(s) deleted successfully`,
-    );
+    await bulkDeleteAnnouncements(Array.from(selectedAnnouncements.value))
+    await loadAnnouncements()
+    selectedAnnouncements.value.clear()
+    showDeleteModal.value = false
+    deleteTargetId.value = null
+    message.success(`${selectedCount.value} announcement(s) deleted successfully`)
   } catch (err) {
-    console.error("Bulk delete failed:", err);
-    message.error("Failed to delete announcements. Please try again.");
+    console.error('Bulk delete failed:', err)
+    message.error('Failed to delete announcements. Please try again.')
   } finally {
-    loading.value = false;
+    loading.value = false
   }
-};
+}
 
 /* -------------------- CRUD ACTIONS -------------------- */
 const startCreate = () => {
-  creatingNew.value = true;
-  editingId.value = null;
-};
+  creatingNew.value = true
+  editingId.value = null
+}
 
 const startEdit = (announcement) => {
-  editingId.value = announcement.id;
-  creatingNew.value = false;
-};
+  editingId.value = announcement.id
+  creatingNew.value = false
+}
 
 const cancelEdit = () => {
-  editingId.value = null;
-  creatingNew.value = false;
-};
+  editingId.value = null
+  creatingNew.value = false
+}
 
 const saveAnnouncement = async ({ formData, imageFile }) => {
   if (!formData.title?.trim()) {
-    message.warning("Title is required");
-    return;
+    message.warning('Title is required')
+    return
   }
   if (!formData.event_date) {
-    message.warning("Event date is required");
-    return;
+    message.warning('Event date is required')
+    return
   }
   if (!formData.location?.trim()) {
-    message.warning("Location is required");
-    return;
+    message.warning('Location is required')
+    return
   }
 
-  loading.value = true;
+  loading.value = true
   try {
     const announcementData = {
       title: formData.title,
@@ -164,109 +148,96 @@ const saveAnnouncement = async ({ formData, imageFile }) => {
       event_date: formData.event_date,
       event_time: formData.event_time || null,
       location: formData.location,
-      is_active: formData.is_active ?? true,
-    };
-
-    if (creatingNew.value) {
-      await createAnnouncement(announcementData, imageFile);
-      message.success("Announcement created successfully");
-    } else {
-      await updateAnnouncement(
-        editingId.value,
-        announcementData,
-        imageFile,
-        false,
-      );
-      message.success("Announcement updated successfully");
+      is_active: formData.is_active ?? true
     }
 
-    await loadAnnouncements();
-    cancelEdit();
+    if (creatingNew.value) {
+      await createAnnouncement(announcementData, imageFile)
+      message.success('Announcement created successfully')
+    } else {
+      await updateAnnouncement(editingId.value, announcementData, imageFile, false)
+      message.success('Announcement updated successfully')
+    }
+
+    await loadAnnouncements()
+    cancelEdit()
   } catch (err) {
-    console.error("Save failed:", err);
-    message.error(
-      err.response?.data?.detail ||
-        "Failed to save announcement. Please try again.",
-    );
+    console.error('Save failed:', err)
+    message.error(err.response?.data?.detail || 'Failed to save announcement. Please try again.')
   } finally {
-    loading.value = false;
+    loading.value = false
   }
-};
+}
 
 const handleToggleStatus = async (announcement) => {
   try {
-    await toggleAnnouncementStatus(announcement.id);
-    await loadAnnouncements();
-    message.success(
-      `Announcement ${announcement.is_active ? "deactivated" : "activated"} successfully`,
-    );
+    await toggleAnnouncementStatus(announcement.id)
+    await loadAnnouncements()
+    message.success(`Announcement ${announcement.is_active ? 'deactivated' : 'activated'} successfully`)
   } catch (err) {
-    console.error("Toggle status failed:", err);
-    message.error("Failed to toggle announcement status");
+    console.error('Toggle status failed:', err)
+    message.error('Failed to toggle announcement status')
   }
-};
+}
 
 const requestDelete = (id) => {
-  deleteTargetId.value = id;
-  showDeleteModal.value = true;
-};
+  deleteTargetId.value = id
+  showDeleteModal.value = true
+}
 
 const confirmDelete = async () => {
-  if (deleteTargetId.value === "bulk") {
-    await confirmBulkDelete();
-    return;
+  if (deleteTargetId.value === 'bulk') {
+    await confirmBulkDelete()
+    return
   }
 
-  const id = deleteTargetId.value;
-  loading.value = true;
-
+  const id = deleteTargetId.value
+  loading.value = true
+  
   try {
-    await deleteAnnouncementApi(id);
-    await loadAnnouncements();
-    showDeleteModal.value = false;
-    deleteTargetId.value = null;
-    message.success("Announcement deleted successfully");
+    await deleteAnnouncementApi(id)
+    await loadAnnouncements()
+    showDeleteModal.value = false
+    deleteTargetId.value = null
+    message.success('Announcement deleted successfully')
   } catch (err) {
-    console.error("Delete failed:", err);
-    message.error("Failed to delete announcement. Please try again.");
+    console.error('Delete failed:', err)
+    message.error('Failed to delete announcement. Please try again.')
   } finally {
-    loading.value = false;
+    loading.value = false
   }
-};
+}
 
 const cancelDelete = () => {
-  showDeleteModal.value = false;
-  deleteTargetId.value = null;
-};
+  showDeleteModal.value = false
+  deleteTargetId.value = null
+}
 
 const deleteModalTitle = computed(() => {
-  if (deleteTargetId.value === "bulk") {
-    return `Delete ${selectedCount.value} announcement(s)?`;
+  if (deleteTargetId.value === 'bulk') {
+    return `Delete ${selectedCount.value} announcement(s)?`
   }
-  return "Delete this announcement?";
-});
+  return 'Delete this announcement?'
+})
 
 const deleteModalMessage = computed(() => {
-  if (deleteTargetId.value === "bulk") {
-    return `This action cannot be undone. ${selectedCount.value} announcement(s) will be permanently removed from the system.`;
+  if (deleteTargetId.value === 'bulk') {
+    return `This action cannot be undone. ${selectedCount.value} announcement(s) will be permanently removed from the system.`
   }
-  return "This action cannot be undone. The announcement will be permanently removed from the system.";
-});
+  return 'This action cannot be undone. The announcement will be permanently removed from the system.'
+})
 </script>
 
 <template>
-  <div
-    class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden animate-fade-in"
-  >
+  <div class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden animate-fade-in">
     <div class="flex justify-between items-center mb-4">
       <div>
         <PageTitle title="Kiosk Announcements" />
         <p class="text-sm text-gray-500 mt-1">
-          Create and schedule public notices for the community information
-          kiosks.
+          Create and schedule public notices for the community information kiosks.
         </p>
       </div>
-
+      
       <div class="flex items-center gap-3">
         <input
           v-model="searchQuery"
@@ -275,61 +246,30 @@ const deleteModalMessage = computed(() => {
           class="border border-gray-200 text-gray-700 rounded-md py-2 px-3 w-[250px] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-gray-400"
         />
 
-        <div class="relative group inline-block">
-          <button
-            @click="requestBulkDelete"
-            :disabled="selectionState === 'none'"
-            class="p-2 border border-red-400 rounded-lg transition-colors"
-            :class="
-              selectionState === 'none'
-                ? 'opacity-50 cursor-not-allowed'
-                : 'hover:bg-red-50'
-            "
-          >
-            <TrashIcon class="w-5 h-5 text-red-500" />
-          </button>
-          <div
-            class="absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 ease-in-out bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded whitespace-nowrap shadow-md z-50"
-          >
-            Delete
-          </div>
-        </div>
+        <button 
+          @click="bulkDelete"
+          :disabled="selectionState === 'none'"
+          :class="[selectionState === 'none' ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-50']"
+          class="p-2 border border-red-400 rounded-lg transition-colors"
+        >
+          <TrashIcon class="w-5 h-5 text-red-500" />
+        </button>
 
-        <div class="relative group inline-block">
-          <div
-            class="flex items-center border rounded-lg overflow-hidden transition-colors"
-            :class="
-              selectionState !== 'none' ? 'border-blue-600' : 'border-gray-400'
-            "
+        <div class="flex items-center border rounded-lg overflow-hidden"
+          :class="selectionState !== 'none' ? 'border-blue-600' : 'border-gray-400'"
+        >
+          <button 
+            @click="handleMainSelectToggle"
+            class="p-2 hover:bg-gray-50 flex items-center"
           >
-            <button
-              @click="handleMainSelectToggle"
-              class="p-2 hover:bg-gray-50 flex items-center"
-            >
-              <div
-                class="w-5 h-5 border rounded flex items-center justify-center transition-colors"
-                :class="
-                  selectionState !== 'none'
-                    ? 'bg-blue-600 border-blue-600'
-                    : 'border-gray-400'
-                "
-              >
-                <div
-                  v-if="selectionState === 'partial'"
-                  class="w-2 h-0.5 bg-white"
-                ></div>
-                <CheckIcon
-                  v-if="selectionState === 'all'"
-                  class="w-3 h-3 text-white"
-                />
-              </div>
-            </button>
-            <div
-              class="absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 ease-in-out bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded whitespace-nowrap shadow-md z-50"
-            >
-              Select All
+            <div class="w-5 h-5 border rounded flex items-center justify-center" 
+                 :class="selectionState !== 'none' ? 'bg-blue-600 border-blue-600' : 'border-gray-400'">
+              <div v-if="selectionState === 'partial'" class="w-2 h-0.5 bg-white"></div>
+              <svg v-if="selectionState === 'all'" class="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7" />
+              </svg>
             </div>
-          </div>
+          </button>
         </div>
 
         <button
@@ -344,25 +284,16 @@ const deleteModalMessage = computed(() => {
             viewBox="0 0 24 24"
             stroke="currentColor"
           >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 4v16m8-8H4"
-            />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M12 4v16m8-8H4" />
           </svg>
           Add
         </button>
       </div>
     </div>
 
-    <div
-      v-if="loading && !announcements.length"
-      class="flex-1 flex flex-col items-center justify-center gap-4"
-    >
-      <div
-        class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"
-      ></div>
+    <div v-if="loading && !announcements.length" class="flex-1 flex flex-col items-center justify-center gap-4">
+      <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
       <p class="text-gray-500 font-medium">Loading announcements...</p>
     </div>
 
@@ -382,14 +313,14 @@ const deleteModalMessage = computed(() => {
             event_time: '',
             location: '',
             image_base64: null,
-            is_active: true,
+            is_active: true
           }"
           @save="saveAnnouncement"
           @cancel="cancelEdit"
         />
 
         <KioskAnnouncementCard
-          v-for="item in filteredAnnouncements"
+          v-for="item in announcements"
           :key="item.id"
           :announcement="item"
           :is-editing="editingId === item.id"
@@ -414,8 +345,8 @@ const deleteModalMessage = computed(() => {
       </div>
     </div>
 
-    <div
-      v-if="loading && announcements.length"
+    <div 
+      v-if="loading && announcements.length" 
       class="fixed inset-0 bg-black bg-opacity-10 flex items-center justify-center z-50"
     >
       <div class="bg-white rounded-lg p-4 shadow-xl">
@@ -434,3 +365,19 @@ const deleteModalMessage = computed(() => {
     @cancel="cancelDelete"
   />
 </template>
+
+<style scoped>
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+</style>
