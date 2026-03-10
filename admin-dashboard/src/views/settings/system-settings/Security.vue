@@ -1,193 +1,296 @@
 <script setup>
 /**
  * @file SecuritySettings.vue
- * @description Security-related settings: RFID expiration, idle timeout,
- *              auto-logout, and failed login lockout threshold.
+ * @description Security settings tab — wired to backend via PATCH /admin/settings.
+ *
+ * auto_logout_duration is stored in seconds on the backend.
+ * The UI splits it into minutes + seconds inputs and converts on save/load.
  */
-import { ref } from "vue";
-import { NButton, NSwitch, useMessage } from "naive-ui";
+import { ref, computed, onMounted } from 'vue'
+import { NButton, NSwitch, NSpin, useMessage } from 'naive-ui'
+import { getSystemConfig, updateSystemConfig } from '@/api/systemconfigService'
 
-const message = useMessage();
+const message = useMessage()
+const loading = ref(true)
+const saving  = ref(false)
 
-// ── RFID / Brgy ID Expiration ─────────────────────────────────────────────────
-const rfidExpirationMonths = ref(12);
-const rfidReminderDays     = ref(30);
+// ── RFID Expiration ───────────────────────────────────────────────────────────
+const rfidExpiryDays = ref(365)
 
-// ── Session / Idle ────────────────────────────────────────────────────────────
-const idleTimeoutMinutes  = ref(10);
-const autoLogoutMinutes   = ref(30);
-const idleEnabled         = ref(true);
-const autoLogoutEnabled   = ref(true);
+// ── Auto-Logout (stored as seconds in DB; UI splits into mins + secs) ─────────
+const autoLogoutEnabled = ref(true)
+const autoLogoutMins    = ref(30)
+const autoLogoutSecs    = ref(0)
+
+// Converts the two UI fields → single seconds value for the API
+const autoLogoutDuration = computed(() =>
+  autoLogoutMins.value * 60 + autoLogoutSecs.value
+)
 
 // ── Failed Login Lockout ──────────────────────────────────────────────────────
-const maxFailedAttempts   = ref(5);
-const lockoutDurationMins = ref(15);
-const lockoutEnabled      = ref(true);
+const lockoutEnabled    = ref(true)
+const maxFailedAttempts = ref(5)
+const lockoutMinutes    = ref(15)
 
-const saveSettings = () => {
-  // Replace with actual API save call
-  message.success("Security settings saved successfully.");
-};
+// ── Load from backend ─────────────────────────────────────────────────────────
+onMounted(async () => {
+  try {
+    const config = await getSystemConfig()
 
+    rfidExpiryDays.value    = config.rfid_expiry_days    ?? 365
+    maxFailedAttempts.value = config.max_failed_attempts ?? 5
+    lockoutMinutes.value    = config.lockout_minutes     ?? 15
+    lockoutEnabled.value    = maxFailedAttempts.value > 0
+
+    // Split stored seconds back into mins + secs for the UI
+    const totalSecs      = config.auto_logout_duration ?? 1800
+    autoLogoutEnabled.value = totalSecs > 0
+    autoLogoutMins.value = Math.floor(totalSecs / 60)
+    autoLogoutSecs.value = totalSecs % 60
+  } catch {
+    message.error('Failed to load security settings.')
+  } finally {
+    loading.value = false
+  }
+})
+
+// ── Save ──────────────────────────────────────────────────────────────────────
+const saveSettings = async () => {
+  // Validate
+  if (autoLogoutEnabled.value && autoLogoutDuration.value < 10) {
+    message.warning('Auto-logout duration must be at least 10 seconds.')
+    return
+  }
+  if (autoLogoutSecs.value < 0 || autoLogoutSecs.value > 59) {
+    message.warning('Seconds must be between 0 and 59.')
+    return
+  }
+
+  saving.value = true
+  try {
+    await updateSystemConfig({
+      rfid_expiry_days:     rfidExpiryDays.value,
+      auto_logout_duration: autoLogoutEnabled.value ? autoLogoutDuration.value : 0,
+      max_failed_attempts:  lockoutEnabled.value ? maxFailedAttempts.value : 0,
+      lockout_minutes:      lockoutMinutes.value,
+    })
+    message.success('Security settings saved.')
+  } catch {
+    message.error('Failed to save settings.')
+  } finally {
+    saving.value = false
+  }
+}
+
+// ── Reset ─────────────────────────────────────────────────────────────────────
 const resetDefaults = () => {
-  rfidExpirationMonths.value = 12;
-  rfidReminderDays.value     = 30;
-  idleTimeoutMinutes.value   = 10;
-  autoLogoutMinutes.value    = 30;
-  idleEnabled.value          = true;
-  autoLogoutEnabled.value    = true;
-  maxFailedAttempts.value    = 5;
-  lockoutDurationMins.value  = 15;
-  lockoutEnabled.value       = true;
-  message.info("Settings reset to defaults.");
-};
+  rfidExpiryDays.value    = 365
+  autoLogoutEnabled.value = true
+  autoLogoutMins.value    = 30
+  autoLogoutSecs.value    = 0
+  lockoutEnabled.value    = true
+  maxFailedAttempts.value = 5
+  lockoutMinutes.value    = 15
+  message.info('Reset to defaults — click Save to apply.')
+}
+
+// ── Computed preview strings ──────────────────────────────────────────────────
+const autoLogoutPreview = computed(() => {
+  const m = autoLogoutMins.value
+  const s = autoLogoutSecs.value
+  if (m === 0 && s === 0) return '—'
+  if (m === 0) return `${s}s`
+  if (s === 0) return `${m} min`
+  return `${m} min ${s}s`
+})
+
+const rfidExpiryPreview = computed(() => {
+  const ms = rfidExpiryDays.value * 24 * 60 * 60 * 1000
+  return new Date(Date.now() + ms).toLocaleDateString('en-US', {
+    month: 'long', day: 'numeric', year: 'numeric',
+  })
+})
 </script>
 
 <template>
   <div class="flex flex-col gap-8 max-w-2xl">
 
-    <!-- ── RFID Expiration ─────────────────────────────────── -->
-    <section class="flex flex-col gap-4">
-      <div class="flex items-center gap-2 mb-1">
-        <span class="font-semibold text-[16px] text-[#373737]">Brgy. ID (RFID) Expiration</span>
-      </div>
-      <p class="text-[13px] text-gray-400 -mt-3 leading-relaxed">
-        Define how long a barangay ID remains valid and when residents are notified of upcoming expiry.
-      </p>
-
-      <div class="grid grid-cols-2 gap-4">
-        <div class="flex flex-col gap-1.5">
-          <label class="text-[13px] font-medium text-gray-600">Validity Period (months)</label>
-          <div class="flex items-center gap-2">
-            <input
-              v-model.number="rfidExpirationMonths"
-              type="number" min="1" max="120"
-              class="border border-gray-200 rounded-md px-3 py-2 text-[14px] w-full focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
-            />
-            <span class="text-[13px] text-gray-400 whitespace-nowrap">months</span>
-          </div>
-        </div>
-
-        <div class="flex flex-col gap-1.5">
-          <label class="text-[13px] font-medium text-gray-600">Expiry Reminder (days before)</label>
-          <div class="flex items-center gap-2">
-            <input
-              v-model.number="rfidReminderDays"
-              type="number" min="1" max="365"
-              class="border border-gray-200 rounded-md px-3 py-2 text-[14px] w-full focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
-            />
-            <span class="text-[13px] text-gray-400 whitespace-nowrap">days</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="text-[12px] text-gray-600 bg-blue-50 border border-blue-200 rounded-md px-4 py-3 mt-1">
-        ℹ️ IDs issued today will expire on <strong>{{ new Date(Date.now() + rfidExpirationMonths * 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) }}</strong>.
-        Reminders will be sent <strong>{{ rfidReminderDays }} days</strong> before expiry.
-      </div>
-    </section>
-
-    <!-- <div class="border-t border-gray-100" /> -->
-
-    <!-- ── Idle Timeout ────────────────────────────────────── -->
-    <!-- <section class="flex flex-col gap-4">
-      <div class="flex items-center justify-between">
-        <div>
-          <span class="font-semibold text-[16px] text-[#373737]">Idle Timeout</span>
-          <p class="text-[13px] text-gray-400 mt-0.5">Lock the screen after a period of inactivity on the kiosk.</p>
-        </div>
-        <n-switch v-model:value="idleEnabled" />
-      </div>
-
-      <div class="flex items-center gap-3" :class="{ 'opacity-40 pointer-events-none': !idleEnabled }">
-        <label class="text-[13px] font-medium text-gray-600 w-48">Lock screen after</label>
-        <div class="flex items-center gap-2">
-          <input
-            v-model.number="idleTimeoutMinutes"
-            type="number" min="1" max="60"
-            class="border border-gray-200 rounded-md px-3 py-2 text-[14px] w-24 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
-          />
-          <span class="text-[13px] text-gray-400">minutes of inactivity</span>
-        </div>
-      </div>
-    </section> -->
-
-    <div class="border-t border-gray-100" />
-
-    <!-- ── Auto-Logout ────────────────────────────────────── -->
-    <section class="flex flex-col gap-4">
-      <div class="flex items-center justify-between">
-        <div>
-          <span class="font-semibold text-[16px] text-[#373737]">Auto-Logout</span>
-          <p class="text-[13px] text-gray-400 mt-0.5">Automatically log out kiosk sessions after prolonged inactivity.</p>
-        </div>
-        <n-switch v-model:value="autoLogoutEnabled" />
-      </div>
-
-      <div class="flex items-center gap-3" :class="{ 'opacity-40 pointer-events-none': !autoLogoutEnabled }">
-        <label class="text-[13px] font-medium text-gray-600 w-48">Log out kiosk user after</label>
-        <div class="flex items-center gap-2">
-          <input
-            v-model.number="autoLogoutMinutes"
-            type="number" min="1" max="480"
-            class="border border-gray-200 rounded-md px-3 py-2 text-[14px] w-24 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
-          />
-          <span class="text-[13px] text-gray-400">minutes of inactivity</span>
-        </div>
-      </div>
-    </section>
-
-    <div class="border-t border-gray-100" />
-
-    <!-- ── Failed Login Lockout ───────────────────────────── -->
-    <section class="flex flex-col gap-4">
-      <div class="flex items-center justify-between">
-        <div>
-          <span class="font-semibold text-[16px] text-[#373737]">Failed Login Lockout</span>
-          <p class="text-[13px] text-gray-400 mt-0.5">Temporarily block RFID user access after too many failed login attempts.</p>
-        </div>
-        <n-switch v-model:value="lockoutEnabled" />
-      </div>
-
-      <div class="grid grid-cols-2 gap-4" :class="{ 'opacity-40 pointer-events-none': !lockoutEnabled }">
-        <div class="flex flex-col gap-1.5">
-          <label class="text-[13px] font-medium text-gray-600">Max Failed Attempts</label>
-          <div class="flex items-center gap-2">
-            <input
-              v-model.number="maxFailedAttempts"
-              type="number" min="1" max="20"
-              class="border border-gray-200 rounded-md px-3 py-2 text-[14px] w-full focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
-            />
-            <span class="text-[13px] text-gray-400">attempts</span>
-          </div>
-        </div>
-
-        <div class="flex flex-col gap-1.5">
-          <label class="text-[13px] font-medium text-gray-600">Lockout Duration</label>
-          <div class="flex items-center gap-2">
-            <input
-              v-model.number="lockoutDurationMins"
-              type="number" min="1" max="1440"
-              class="border border-gray-200 rounded-md px-3 py-2 text-[14px] w-full focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
-            />
-            <span class="text-[13px] text-gray-400">minutes</span>
-          </div>
-        </div>
-      </div>
-
-      <div v-if="lockoutEnabled" class="text-[12px] text-amber-700 bg-amber-50 border border-amber-100 rounded-md px-4 py-3">
-        ⚠️ After <strong>{{ maxFailedAttempts }}</strong> failed attempts, the rfid number will be locked and won't be able to log in for
-        <strong>{{ lockoutDurationMins }} minutes</strong>.
-      </div>
-    </section>
-
-    <div class="border-t border-gray-100" />
-
-    <!-- Save / Reset -->
-    <div class="flex items-center gap-3 pb-4">
-      <n-button type="primary" @click="saveSettings">Save Settings</n-button>
-      <n-button @click="resetDefaults">Reset to Defaults</n-button>
+    <!-- Loading -->
+    <div v-if="loading" class="flex justify-center py-12">
+      <n-spin size="medium" />
     </div>
 
+    <template v-else>
+
+      <!-- ── RFID Expiration ─────────────────────────────────────────────── -->
+      <section class="flex flex-col gap-4">
+        <div class="flex items-center gap-2 mb-1">
+          <span class="font-semibold text-[16px] text-[#373737]">Brgy. ID (RFID) Expiration</span>
+        </div>
+        <p class="text-[13px] text-gray-400 -mt-3 leading-relaxed">
+          Define how long a barangay ID remains valid and when residents are notified of upcoming expiry.
+        </p>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div class="flex flex-col gap-1.5">
+            <label class="text-[13px] font-medium text-gray-600">Validity Period (months)</label>
+            <div class="flex items-center gap-2">
+              <input
+                v-model.number="rfidExpirationMonths"
+                type="number" min="1" max="120"
+                class="border border-gray-200 rounded-md px-3 py-2 text-[14px] w-full focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
+              />
+              <span class="text-[13px] text-gray-400 whitespace-nowrap">months</span>
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-1.5">
+            <label class="text-[13px] font-medium text-gray-600">Expiry Reminder (days before)</label>
+            <div class="flex items-center gap-2">
+              <input
+                v-model.number="rfidReminderDays"
+                type="number" min="1" max="365"
+                class="border border-gray-200 rounded-md px-3 py-2 text-[14px] w-full focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
+              />
+              <span class="text-[13px] text-gray-400 whitespace-nowrap">days</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="text-[12px] text-gray-600 bg-blue-50 border border-blue-200 rounded-md px-4 py-3 mt-1">
+          ℹ️ IDs issued today will expire on <strong>{{ new Date(Date.now() + rfidExpirationMonths * 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) }}</strong>.
+          Reminders will be sent <strong>{{ rfidReminderDays }} days</strong> before expiry.
+        </div>
+      </section>
+
+      <div class="border-t border-gray-100" />
+
+      <!-- ── Auto-Logout ────────────────────────────────────────────────── -->
+      <section class="flex flex-col gap-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <span class="font-semibold text-[16px] text-[#373737]">Auto-Logout</span>
+            <p class="text-[13px] text-gray-400 mt-0.5">
+              Automatically log out kiosk sessions after prolonged inactivity.
+            </p>
+          </div>
+          <n-switch v-model:value="autoLogoutEnabled" />
+        </div>
+
+        <div
+          class="flex flex-col gap-3 transition-opacity"
+          :class="{ 'opacity-40 pointer-events-none': !autoLogoutEnabled }"
+        >
+          <label class="text-[13px] font-medium text-gray-600">Log out kiosk user after</label>
+
+          <!-- Minutes + Seconds side by side -->
+          <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2">
+              <input
+                v-model.number="autoLogoutMins"
+                type="number" min="0" max="480"
+                class="border border-gray-200 rounded-md px-3 py-2 text-[14px] w-24 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
+              />
+              <span class="text-[13px] text-gray-400">min</span>
+            </div>
+
+            <span class="text-gray-300 text-lg font-light">:</span>
+
+            <div class="flex items-center gap-2">
+              <input
+                v-model.number="autoLogoutSecs"
+                type="number" min="0" max="59"
+                class="border border-gray-200 rounded-md px-3 py-2 text-[14px] w-24 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
+              />
+              <span class="text-[13px] text-gray-400">sec</span>
+            </div>
+
+            <!-- Live preview -->
+            <span
+              v-if="autoLogoutEnabled && autoLogoutDuration >= 10"
+              class="ml-2 text-[12px] text-blue-600 bg-blue-50 border border-blue-200 rounded-full px-3 py-1 font-medium"
+            >
+              {{ autoLogoutPreview }} of inactivity
+            </span>
+            <span
+              v-else-if="autoLogoutEnabled && autoLogoutDuration < 10"
+              class="ml-2 text-[12px] text-red-500"
+            >
+              Minimum is 10 seconds
+            </span>
+          </div>
+
+          <p class="text-[12px] text-gray-400">
+            A 30-second warning will appear before the session is ended.
+            Both Guest and RFID sessions are affected.
+          </p>
+        </div>
+      </section>
+
+      <div class="border-t border-gray-100" />
+
+      <!-- ── Failed Login Lockout ───────────────────────────────────────── -->
+      <section class="flex flex-col gap-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <span class="font-semibold text-[16px] text-[#373737]">Failed Login Lockout</span>
+            <p class="text-[13px] text-gray-400 mt-0.5">
+              Temporarily block RFID access after too many consecutive wrong PINs.
+            </p>
+          </div>
+          <n-switch v-model:value="lockoutEnabled" />
+        </div>
+
+        <div
+          class="grid grid-cols-2 gap-4"
+          :class="{ 'opacity-40 pointer-events-none': !lockoutEnabled }"
+        >
+          <div class="flex flex-col gap-1.5">
+            <label class="text-[13px] font-medium text-gray-600">Max Failed Attempts</label>
+            <div class="flex items-center gap-2">
+              <input
+                v-model.number="maxFailedAttempts"
+                type="number" min="1" max="20"
+                class="border border-gray-200 rounded-md px-3 py-2 text-[14px] w-full focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
+              />
+              <span class="text-[13px] text-gray-400">attempts</span>
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-1.5">
+            <label class="text-[13px] font-medium text-gray-600">Lockout Duration</label>
+            <div class="flex items-center gap-2">
+              <input
+                v-model.number="lockoutMinutes"
+                type="number" min="1" max="1440"
+                class="border border-gray-200 rounded-md px-3 py-2 text-[14px] w-full focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
+              />
+              <span class="text-[13px] text-gray-400">minutes</span>
+            </div>
+          </div>
+        </div>
+
+        <div
+          v-if="lockoutEnabled"
+          class="text-[12px] text-amber-700 bg-amber-50 border border-amber-100 rounded-md px-4 py-3"
+        >
+          ⚠️ After <strong>{{ maxFailedAttempts }}</strong> failed attempts, the RFID card will be
+          locked for <strong>{{ lockoutMinutes }} minute{{ lockoutMinutes !== 1 ? 's' : '' }}</strong>.
+        </div>
+      </section>
+
+      <div class="border-t border-gray-100" />
+
+      <!-- ── Actions ────────────────────────────────────────────────────── -->
+      <div class="flex items-center gap-3 pb-4">
+        <n-button type="primary" :loading="saving" @click="saveSettings">
+          Save Settings
+        </n-button>
+        <n-button :disabled="saving" @click="resetDefaults">
+          Reset to Defaults
+        </n-button>
+      </div>
+
+    </template>
   </div>
 </template>

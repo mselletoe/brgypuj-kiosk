@@ -34,9 +34,7 @@ def get_system_config(
     current_admin: Admin = Depends(get_current_admin),
 ):
     """Returns the full system config. Readable by any authenticated admin."""
-    config = get_config(db)
-    config.has_logo = config.brgy_logo is not None
-    return config
+    return get_config(db)
 
 
 # ── PATCH /admin/settings ─────────────────────────────────────────────────────

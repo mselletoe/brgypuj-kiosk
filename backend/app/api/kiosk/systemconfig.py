@@ -13,9 +13,11 @@ router = APIRouter(prefix="/settings")
 
 @router.get("", response_model=KioskSystemConfigRead)
 def get_kiosk_system_config(db: Session = Depends(get_db)):
-    config = get_config(db)
-    config.has_logo = config.brgy_logo is not None
-    return config
+    """
+    Public endpoint — no auth required.
+    Used by the kiosk to check maintenance mode, branding, and security settings.
+    """
+    return get_config(db)
 
 
 @router.get("/logo")
@@ -26,4 +28,3 @@ def get_kiosk_brgy_logo(db: Session = Depends(get_db)):
     """
     logo_bytes, content_type = get_logo_bytes(db)
     return Response(content=logo_bytes, media_type=content_type)
-

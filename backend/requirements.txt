@@ -35,3 +35,5 @@ requests
 
 # Serial Communication (SIM800L)
 pyserial
+
+apscheduler

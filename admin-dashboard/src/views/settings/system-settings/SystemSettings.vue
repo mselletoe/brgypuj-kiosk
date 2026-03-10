@@ -7,7 +7,7 @@
 
 import { ref, onMounted, computed, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
-import { NTabs, NTabPane, useMessage } from "naive-ui";
+import { NTabs, NTabPane, NSelect, useMessage } from "naive-ui";
 import PageTitle from "@/components/shared/PageTitle.vue";
 import { useAdminAuthStore } from "@/stores/auth";
 

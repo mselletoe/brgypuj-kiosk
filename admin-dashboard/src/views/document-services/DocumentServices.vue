@@ -401,7 +401,7 @@ function iconBtn({ onClick, icon, colorClass, tooltip }) {
       "div",
       {
         class:
-          "pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 " +
+          "pointer-events-none absolute -top-7 left-1/2 -translate-x-1/2 " +
           "opacity-0 invisible group-hover/tip:opacity-100 group-hover/tip:visible " +
           "transition-all duration-200 " +
           "bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded " +
