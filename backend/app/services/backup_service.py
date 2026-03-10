@@ -2,7 +2,7 @@
 Backup Scheduler
 ----------------
 Uses APScheduler to run pg_dump at the schedule stored in system_config.
-Mount this in your FastAPI lifespan (startup/shutdown).
+Timezone is fixed to Asia/Manila (PH Time, UTC+8).
 """
 
 import os
@@ -24,8 +24,9 @@ logger = logging.getLogger(__name__)
 BACKUP_DIR = Path(os.getenv("BACKUP_DIR", "/var/backups/barangay"))
 BACKUP_DIR.mkdir(parents=True, exist_ok=True)
 
-# ── Use local system timezone so backup_time matches what admin sets in the UI
-_scheduler = BackgroundScheduler()
+PH_TIMEZONE = "Asia/Manila"
+
+_scheduler = BackgroundScheduler(timezone=PH_TIMEZONE)
 _JOB_ID = "auto_backup"
 
 
@@ -43,7 +44,7 @@ def _parse_db_url(url: str) -> dict:
 
 def _do_backup() -> None:
     """Runs pg_dump and saves the result. Called by the scheduler."""
-    print("✅ SCHEDULER FIRED")
+    print("✅ SCHEDULER FIRED", flush=True)
     logger.info("Scheduler triggered _do_backup()")
     db = SessionLocal()
     try:
@@ -97,8 +98,8 @@ def _do_backup() -> None:
 
 def _build_trigger(schedule: str, backup_time: str) -> CronTrigger:
     """
-    Converts schedule + backup_time (HH:MM) into a CronTrigger.
-    Uses local system time — no UTC offset needed.
+    Converts schedule + backup_time (HH:MM, PH time) into a CronTrigger.
+    The scheduler itself runs in Asia/Manila so no offset conversion needed.
     """
     try:
         hour, minute = backup_time.split(":")
@@ -106,12 +107,12 @@ def _build_trigger(schedule: str, backup_time: str) -> CronTrigger:
         hour, minute = "2", "0"
 
     if schedule == "daily":
-        return CronTrigger(hour=int(hour), minute=int(minute))
+        return CronTrigger(hour=int(hour), minute=int(minute), timezone=PH_TIMEZONE)
     elif schedule == "weekly":
-        return CronTrigger(day_of_week="mon", hour=int(hour), minute=int(minute))
+        return CronTrigger(day_of_week="mon", hour=int(hour), minute=int(minute), timezone=PH_TIMEZONE)
     else:
-        # manual — still schedule a job, it will check and skip inside _do_backup
-        return CronTrigger(hour=int(hour), minute=int(minute))
+        # manual — job still exists but skips inside _do_backup
+        return CronTrigger(hour=int(hour), minute=int(minute), timezone=PH_TIMEZONE)
 
 
 def _reschedule() -> None:
@@ -127,7 +128,7 @@ def _reschedule() -> None:
 
     if _scheduler.get_job(_JOB_ID):
         _scheduler.reschedule_job(_JOB_ID, trigger=trigger)
-        logger.info("Backup job rescheduled: %s @ %s (local time)", schedule, backup_time)
+        logger.info("Backup job rescheduled: %s @ %s PHT", schedule, backup_time)
     else:
         _scheduler.add_job(
             _do_backup,
@@ -136,14 +137,22 @@ def _reschedule() -> None:
             replace_existing=True,
             misfire_grace_time=3600,
         )
-        logger.info("Backup job added: %s @ %s (local time)", schedule, backup_time)
+        logger.info("Backup job added: %s @ %s PHT", schedule, backup_time)
 
 
 def start_scheduler() -> None:
     """Call on FastAPI startup."""
     _reschedule()
     _scheduler.start()
-    logger.info("Backup scheduler started.")
+
+    # Debug: show next run time
+    job = _scheduler.get_job(_JOB_ID)
+    if job:
+        print(f"✅ Next backup scheduled at: {job.next_run_time}", flush=True)
+    else:
+        print("❌ No backup job found!", flush=True)
+
+    logger.info("Backup scheduler started (timezone: %s).", PH_TIMEZONE)
 
 
 def stop_scheduler() -> None:
@@ -157,3 +166,6 @@ def apply_new_schedule() -> None:
     """Call from settings PATCH endpoint after saving backup_schedule/backup_time."""
     if _scheduler.running:
         _reschedule()
+        job = _scheduler.get_job(_JOB_ID)
+        if job:
+            print(f"✅ Backup rescheduled. Next run: {job.next_run_time}", flush=True)

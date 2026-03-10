@@ -68,5 +68,7 @@ class KioskSystemConfigRead(BaseModel):
     auto_logout_duration: int = 1800
     max_failed_attempts:  int = 5
     lockout_minutes:      int = 15
+    maintenance_mode:     bool = False    
+    maintenance_message:  Optional[str] = None 
 
     model_config = {"from_attributes": True}

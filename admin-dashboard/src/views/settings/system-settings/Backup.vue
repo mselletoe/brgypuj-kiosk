@@ -4,7 +4,7 @@
  * @description Backup settings tab — wired to the real backend.
  */
 import { ref, computed, onMounted } from "vue";
-import { NButton, NSwitch, NSelect, NModal, useMessage } from "naive-ui";
+import { NButton, NSwitch, NSelect, NModal, NTimePicker, useMessage } from "naive-ui";
 import { getSystemConfig, updateSystemConfig } from "@/api/systemConfigService";
 import {
   triggerManualBackup,
@@ -23,7 +23,7 @@ const historyLoading   = ref(false);
 
 const autoBackupEnabled = ref(false);
 const backupFrequency   = ref("daily");
-const backupTime        = ref("02:00");
+const backupTime        = ref("02:00");   // stored as "HH:MM" string
 
 const backupHistory = ref([]);
 
@@ -39,6 +39,26 @@ const frequencyOptions = [
   { label: "Daily",  value: "daily"  },
   { label: "Weekly", value: "weekly" },
 ];
+
+// ── NTimePicker computed — same pattern as your announcement component ────────
+// NTimePicker uses a ms timestamp; backend/state uses "HH:MM"
+
+const timeTimestamp = computed({
+  get() {
+    if (!backupTime.value) return null;
+    const [h, m] = backupTime.value.split(":").map(Number);
+    const base = new Date();
+    base.setHours(h, m, 0, 0);
+    return base.getTime();
+  },
+  set(ts) {
+    if (!ts) { backupTime.value = "02:00"; return; }
+    const d = new Date(ts);
+    const h = String(d.getHours()).padStart(2, "0");
+    const m = String(d.getMinutes()).padStart(2, "0");
+    backupTime.value = `${h}:${m}`;
+  },
+});
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -156,7 +176,7 @@ const runManualBackup = async () => {
   }
 };
 
-// ── Download a saved backup from Pi ──────────────────────────────────────────
+// ── Download a saved backup ───────────────────────────────────────────────────
 
 const handleDownload = async (backup) => {
   try {
@@ -247,11 +267,14 @@ const confirmRestore = async () => {
 
           <div class="flex flex-col gap-1.5">
             <label class="text-[13px] font-medium text-gray-600">Time</label>
-            <input
-              v-model="backupTime"
-              type="time"
-              class="border border-gray-200 rounded-md px-3 py-2 text-[14px]
-                     focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
+            <n-time-picker
+              v-model:value="timeTimestamp"
+              :use12-hours="true"
+              format="hh:mm a"
+              placeholder="Select time"
+              style="width: 100%"
+              :to="false"
+              clearable
             />
           </div>
         </div>

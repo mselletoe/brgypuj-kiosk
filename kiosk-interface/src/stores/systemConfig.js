@@ -15,12 +15,16 @@ export const useSystemConfigStore = defineStore('systemConfig', () => {
   let _logoBlobUrl = null
   const logoBlobUrl = ref(null)
 
-  const brgyName    = computed(() => config.value?.brgy_name    ?? 'Barangay')
-  const brgySubname = computed(() => config.value?.brgy_subname ?? '')
-  const hasLogo     = computed(() => !!config.value?.has_logo)
+  const brgyName          = computed(() => config.value?.brgy_name           ?? 'Barangay')
+  const brgySubname       = computed(() => config.value?.brgy_subname        ?? '')
+  const hasLogo           = computed(() => !!config.value?.has_logo)
+  const maintenanceMode   = computed(() => !!config.value?.maintenance_mode)
+  const maintenanceMessage = computed(() =>
+    config.value?.maintenance_message
+    ?? 'The system is currently undergoing scheduled maintenance. Please try again later.'
+  )
 
   async function fetchConfig(force = false) {
-    console.log('[systemConfig] fetchConfig called, fetched:', fetched.value)
     if (fetched.value && !force) return
     loading.value = true
     error.value   = null
@@ -29,7 +33,6 @@ export const useSystemConfigStore = defineStore('systemConfig', () => {
       config.value  = response.data
       fetched.value = true
 
-      // Fetch logo bytes separately — same pattern as admin photo
       if (config.value.has_logo) {
         await _fetchLogoBlobUrl()
       } else {
@@ -40,6 +43,24 @@ export const useSystemConfigStore = defineStore('systemConfig', () => {
       error.value = err.message
     } finally {
       loading.value = false
+    }
+  }
+
+  // Lightweight poll — only updates config fields, skips logo re-fetch unless has_logo changed
+  async function pollConfig() {
+    try {
+      const response   = await http.get('/kiosk/settings')
+      const prev       = config.value?.has_logo
+      config.value     = response.data
+      fetched.value    = true
+
+      if (config.value.has_logo && !prev) {
+        await _fetchLogoBlobUrl()
+      } else if (!config.value.has_logo && prev) {
+        _revokeLogo()
+      }
+    } catch (err) {
+      console.error('[systemConfig] Poll failed:', err)
     }
   }
 
@@ -62,7 +83,6 @@ export const useSystemConfigStore = defineStore('systemConfig', () => {
     }
   }
 
-  // Call this after a logo upload/removal in General.vue so the store stays in sync
   async function refreshLogo(hasLogoNow) {
     if (config.value) config.value.has_logo = hasLogoNow
     if (hasLogoNow) {
@@ -75,6 +95,7 @@ export const useSystemConfigStore = defineStore('systemConfig', () => {
   return {
     config, loading, error, fetched,
     brgyName, brgySubname, hasLogo, logoBlobUrl,
-    fetchConfig, refreshLogo,
+    maintenanceMode, maintenanceMessage,
+    fetchConfig, pollConfig, refreshLogo,
   }
 })

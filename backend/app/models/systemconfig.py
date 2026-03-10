@@ -31,6 +31,7 @@ class SystemConfig(Base):
     # ── Preferences ───────────────────────────────────────────────────────────
     default_view = Column(String(50), nullable=False, default="dashboard")
     maintenance_mode = Column(Boolean, nullable=False, default=False)
+    maintenance_message  = Column(String(500), nullable=True)
 
     # ── Backup ────────────────────────────────────────────────────────────────
     backup_schedule = Column(String(20), nullable=False, default="manual")
@@ -44,6 +45,10 @@ class SystemConfig(Base):
         onupdate=func.now(),
         nullable=False,
     )
+
+    @property
+    def has_logo(self) -> bool:
+        return self.brgy_logo is not None
 
     def __repr__(self):
         return f"<SystemConfig brgy='{self.brgy_name}' maintenance={self.maintenance_mode}>"
