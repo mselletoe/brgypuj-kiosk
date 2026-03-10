@@ -35,6 +35,7 @@ class Resident(Base):
     blotter_records_as_respondent = relationship("BlotterRecord", foreign_keys="BlotterRecord.respondent_id", back_populates="respondent")
     addresses = relationship("Address", back_populates="resident", cascade="all, delete")
     rfids = relationship("ResidentRFID", back_populates="resident", cascade="all, delete")
+    barangay_ids = relationship("BarangayID", back_populates="resident", cascade="all, delete-orphan")
     admin_accounts = relationship("Admin", back_populates="resident")
     feedbacks = relationship("Feedback", back_populates="resident", cascade="all, delete-orphan")
     rfid_reports = relationship("RFIDReport", back_populates="resident", cascade="all, delete-orphan")
@@ -71,3 +72,4 @@ class ResidentRFID(Base):
     is_active = Column(Boolean, nullable=False, server_default="true")
 
     resident = relationship("Resident", back_populates="rfids")
+    barangay_id = relationship("BarangayID", back_populates="rfid", uselist=False)

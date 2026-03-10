@@ -25,6 +25,8 @@ docxtpl
 pdfkit
 python-docx
 pypandoc
+pikepdf
+python-dateutil
 
 # Validation
 pydantic-settings
