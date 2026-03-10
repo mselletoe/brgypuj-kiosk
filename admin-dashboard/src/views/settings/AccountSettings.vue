@@ -26,7 +26,7 @@ import {
   getAdminPhotoUrl,
   removeAdminPhoto,
   relinkAdminResident,
-} from '@/api/adminService'
+} from '@/api/accountSettingsService'
 import { fetchResidentsDropdown } from '@/api/authService'
 import { useAdminAuthStore } from '@/stores/auth'
 
