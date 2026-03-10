@@ -17,6 +17,7 @@ import {
   ClipboardDocumentListIcon,
   ArrowUpTrayIcon,
   ArrowDownTrayIcon,
+  IdentificationIcon,
 } from "@heroicons/vue/24/outline";
 import PageTitle from "@/components/shared/PageTitle.vue";
 import FieldEditor from "./FieldEditor.vue";
@@ -32,8 +33,10 @@ import {
   updateDocumentRequirements,
 } from "@/api/documentService";
 import { useSearchSync } from "@/composables/useSearchSync";
+import { useRouter } from "vue-router";
 
 const message = useMessage();
+const router = useRouter();
 
 // ======================================
 // State Management
@@ -54,6 +57,7 @@ const newService = ref({
   description: "",
   price: 0,
   available: true,
+  is_id_application: false,
   fields: [],
 });
 
@@ -70,6 +74,7 @@ async function fetchServices() {
       description: d.description,
       price: Number(d.price),
       available: d.is_available,
+      is_id_application: d.is_id_application || false,
       fields: d.fields || [],
       requirements: d.requirements || [],
       has_template: d.has_template || false,
@@ -97,6 +102,7 @@ async function addService() {
       price: newService.value.price,
       fields: newService.value.fields || [],
       is_available: newService.value.available,
+      is_id_application: newService.value.is_id_application,
     });
 
     services.value.push({
@@ -105,6 +111,7 @@ async function addService() {
       description: data.description,
       price: Number(data.price),
       available: data.is_available,
+      is_id_application: data.is_id_application || false,
       fields: data.fields || [],
       requirements: data.requirements || [],
       has_template: false,
@@ -120,6 +127,7 @@ async function addService() {
       description: "",
       price: 0,
       available: true,
+      is_id_application: false,
       fields: [],
     };
   } catch (error) {
@@ -136,6 +144,7 @@ async function updateService(service) {
       description: service.description,
       price: service.price,
       is_available: service.available,
+      is_id_application: service.is_id_application,
       fields: service.fields,
     });
 
@@ -147,6 +156,7 @@ async function updateService(service) {
         description: data.description,
         price: Number(data.price),
         available: data.is_available,
+        is_id_application: data.is_id_application || false,
         fields: data.fields || [],
         requirements: services.value[idx].requirements,
         has_template: services.value[idx].has_template,
@@ -446,7 +456,19 @@ const columns = computed(() => [
           },
         });
       }
-      return row.request_type_name;
+      return h("div", { class: "flex items-center gap-2" }, [
+        row.request_type_name,
+        row.is_id_application
+          ? h(
+              "span",
+              {
+                class:
+                  "text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 uppercase tracking-wide flex-shrink-0",
+              },
+              "ID Application",
+            )
+          : null,
+      ]);
     },
   },
   {
@@ -652,6 +674,15 @@ onMounted(fetchServices);
           </div>
         </div>
 
+        <!-- ID Template Settings button -->
+        <button
+          @click="router.push('/id-template-settings')"
+          class="px-4 py-2 bg-indigo-600 text-white rounded-md font-medium text-sm hover:bg-indigo-700 transition flex items-center gap-2"
+        >
+          <IdentificationIcon class="h-5 w-5" />
+          ID Template Settings
+        </button>
+
         <button
           @click="showAddForm = true"
           class="px-4 py-2 bg-blue-600 text-white rounded-md font-medium text-sm hover:bg-blue-700 transition flex items-center gap-2"
@@ -728,6 +759,11 @@ onMounted(fetchServices);
             <NCheckbox v-model:checked="newService.available"
               >Available for Residents</NCheckbox
             >
+          </div>
+          <div class="flex items-end">
+            <NCheckbox v-model:checked="newService.is_id_application">
+              This is the ID Application type
+            </NCheckbox>
           </div>
         </div>
 

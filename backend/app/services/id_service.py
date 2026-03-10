@@ -69,6 +69,19 @@ def _generate_transaction_no(db: Session) -> str:
 # 1. RESIDENT SEARCH  (shared by Apply-for-ID & Report-Lost-Card)
 # =========================================================
 
+def get_id_application_fields(db: Session) -> list:
+    """
+    Kiosk: Returns the admin-configured fields for the ID Application form.
+    These are the extra fields the admin added in IDTemplateSettings.
+    Returns an empty list if no ID Application doctype exists yet.
+    """
+    from app.models.document import DocumentType
+    doc_type = db.query(DocumentType).filter(
+        DocumentType.is_id_application.is_(True)
+    ).first()
+    return doc_type.fields or [] if doc_type else []
+
+
 def search_residents_by_name(db: Session, query: str) -> list[dict]:
     """
     Expects input in the format "LastPrefix, FirstPrefix"
@@ -149,6 +162,8 @@ def apply_for_id(
     applicant_resident_id: int,
     rfid_uid: str | None,
     photo: str | None,
+    use_manual_data: bool = False,
+    manual_data=None,
 ) -> dict:
     """
     Creates a DocumentRequest for an ID Application.

@@ -41,6 +41,7 @@ from app.services.id_service import (
     verify_pin,
     get_rfid_report_card_info,
     report_lost_card,
+    get_id_application_fields,
 )
 
 router = APIRouter(prefix="/id-services")
@@ -72,6 +73,19 @@ def search_residents(query: str, db: Session = Depends(get_db)):
 # =========================================================
 # APPLY FOR ID
 # =========================================================
+
+@router.get(
+    "/apply/fields",
+    summary="Get ID application form fields",
+    description=(
+        "Returns the admin-configured fields for the ID Application form. "
+        "The kiosk uses this to render the correct form fields dynamically. "
+        "Returns an empty list if no fields have been configured yet."
+    ),
+)
+def get_id_fields(db: Session = Depends(get_db)):
+    return get_id_application_fields(db)
+
 
 @router.post(
     "/apply/verify-birthdate",
@@ -108,6 +122,8 @@ def apply(payload: IDApplicationRequest, db: Session = Depends(get_db)):
         payload.applicant_resident_id,
         payload.rfid_uid,
         payload.photo,
+        use_manual_data=payload.use_manual_data,
+        manual_data=payload.manual_data,
     )
 
 

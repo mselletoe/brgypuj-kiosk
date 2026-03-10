@@ -1,11 +1,12 @@
 <script setup>
-import { ref, computed, watch, onUnmounted } from "vue";
+import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import ArrowBackButton from "@/components/shared/ArrowBackButton.vue";
 import Modal from "@/components/shared/Modal.vue";
 import Button from "@/components/shared/Button.vue";
-import { searchResidents, verifyBirthdate, applyForID } from "@/api/idService";
+import { searchResidents, verifyBirthdate, applyForID, getIDApplicationFields } from "@/api/idService";
+import { getResidentAutofillData } from "@/api/residentService";
 import {
   CalendarDaysIcon,
   UserIcon,
@@ -17,7 +18,69 @@ const router = useRouter();
 const authStore = useAuthStore();
 
 // State & Phases
-const currentPhase = ref("selection"); // 'selection' | 'camera'
+const currentPhase = ref("selection"); // 'selection' | 'details' | 'camera'
+
+// Details Phase State
+const idFields = ref([]);
+const detailsForm = ref({});
+const detailsErrors = ref({});
+const useManualEntry = ref(false);
+const isFetchingAutofill = ref(false);
+
+// Maps fixed placeholder names → autofill response keys from getResidentAutofillData
+const AUTOFILL_MAP = {
+  last_name:      "last_name",
+  first_name:     "first_name",
+  middle_name:    "middle_name",
+  birthdate:      "birthdate",
+  address:        "full_address",
+  contact_number: "phone_number",
+};
+
+// Fetch the admin-configured ID fields on mount
+async function loadIDFields() {
+  try {
+    const { data } = await getIDApplicationFields();
+    idFields.value = data;
+  } catch {
+    idFields.value = [];
+  }
+}
+
+function buildEmptyForm() {
+  const form = {};
+  const errors = {};
+  for (const field of idFields.value) {
+    form[field.name] = "";
+    errors[field.name] = "";
+  }
+  detailsForm.value = form;
+  detailsErrors.value = errors;
+}
+
+function applyAutofill(autofill) {
+  for (const field of idFields.value) {
+    const autofillKey = AUTOFILL_MAP[field.name];
+    if (autofillKey) {
+      let val = autofill[autofillKey] || "";
+      // Normalize date to YYYY-MM-DD for <input type="date">
+      if (field.type === "date" && val) val = String(val).slice(0, 10);
+      detailsForm.value[field.name] = val;
+    }
+  }
+}
+
+function validateDetails() {
+  let valid = true;
+  for (const field of idFields.value) {
+    detailsErrors.value[field.name] = "";
+    if (field.required && !detailsForm.value[field.name]) {
+      detailsErrors.value[field.name] = "This field is required.";
+      valid = false;
+    }
+  }
+  return valid;
+}
 const isSubmitting = ref(false);
 const showSuccessModal = ref(false);
 const showErrorModal = ref(false);
@@ -84,8 +147,8 @@ watch([lastNameLetter, firstNameLetter], async ([last, first]) => {
   }
   isFetching.value = true;
   try {
-    // Format: "LastPrefix, FirstPrefix" — matches backend split logic
-    residentList.value = await searchResidents(`${last}, ${first}`);
+    const { data } = await searchResidents(`${last}, ${first}`);
+    residentList.value = data;
     selectedResident.value = null;
   } catch {
     residentList.value = [];
@@ -168,21 +231,14 @@ const retakePhoto = () => {
 
 // --- NAVIGATION & ACTIONS ---
 
-/**
- * Called when resident is selected and "Next: Take Photo" is clicked.
- * Guard: block if resident already has an active RFID (has_rfid = true).
- * Otherwise open the birthdate verification modal.
- */
 const proceedToCamera = () => {
   if (!selectedResident.value) return;
 
-  // has_rfid comes from the API — true means an active card is already linked
   if (selectedResident.value.has_rfid) {
     showErrorModal.value = true;
     return;
   }
 
-  // has_pending comes from the API — true means a pending application already exists
   if (selectedResident.value.has_pending) {
     showPendingModal.value = true;
     return;
@@ -195,11 +251,6 @@ const proceedToCamera = () => {
   showVerificationModal.value = true;
 };
 
-/**
- * Sends birthdate to the API for verification.
- * On success: closes modal and moves to camera phase.
- * On failure: shows inline error.
- */
 const handleVerification = async () => {
   if (!verifyMonth.value || !verifyDay.value || !verifyYear.value) {
     verificationError.value = "Please complete the date.";
@@ -211,15 +262,27 @@ const handleVerification = async () => {
   verificationError.value = "";
 
   try {
-    const result = await verifyBirthdate({
+    const { data: result } = await verifyBirthdate({
       resident_id: selectedResident.value.resident_id,
       birthdate: inputDate,
     });
 
     if (result.verified) {
       showVerificationModal.value = false;
-      currentPhase.value = "camera";
-      startCamera();
+      useManualEntry.value = !authStore.rfidUid;
+      buildEmptyForm();
+      if (authStore.rfidUid && selectedResident.value?.resident_id) {
+        isFetchingAutofill.value = true;
+        try {
+          const { data: autofill } = await getResidentAutofillData(selectedResident.value.resident_id);
+          applyAutofill(autofill);
+        } catch {
+          useManualEntry.value = true;
+        } finally {
+          isFetchingAutofill.value = false;
+        }
+      }
+      currentPhase.value = "details";
     } else {
       verificationError.value = "Birthdate does not match our records.";
     }
@@ -230,16 +293,20 @@ const handleVerification = async () => {
   }
 };
 
-const backToSelection = () => {
-  stopCamera();
-  photoData.value = null;
-  currentPhase.value = "selection";
+const proceedToCameraFromDetails = () => {
+  if (!validateDetails()) return;
+  currentPhase.value = "camera";
+  startCamera();
 };
 
 const goBack = () => {
   if (isCountingDown.value) return;
   if (currentPhase.value === "camera") {
-    backToSelection();
+    stopCamera();
+    photoData.value = null;
+    currentPhase.value = "details";
+  } else if (currentPhase.value === "details") {
+    currentPhase.value = "selection";
   } else {
     router.push("/id-services");
   }
@@ -252,10 +319,6 @@ const handleReset = () => {
   residentList.value = [];
 };
 
-/**
- * Submits the ID application to the backend.
- * Passes rfid_uid from auth store if logged in, null if guest.
- */
 const submitApplication = async () => {
   if (!selectedResident.value || !photoData.value) return;
 
@@ -263,23 +326,21 @@ const submitApplication = async () => {
   stopCamera();
 
   try {
-    const result = await applyForID({
-      // logged-in user (null for guest — backend falls back to applicant for FK)
+    const { data: result } = await applyForID({
       resident_id: authStore.residentId || null,
-      // the resident selected via the form ("Request for")
       applicant_resident_id: selectedResident.value.resident_id,
       rfid_uid: authStore.rfidUid || null,
-      photo: photoData.value, // base64 PNG string from canvas capture
+      photo: photoData.value,
+      use_manual_data: useManualEntry.value,
+      manual_data: { ...detailsForm.value },
     });
 
     referenceId.value = result.transaction_no;
     showSuccessModal.value = true;
   } catch (err) {
-    // Surface API error message if available
     const msg =
       err?.response?.data?.detail || "Submission failed. Please try again.";
     console.error("ID application failed:", msg);
-    // Re-open camera so user can retry
     startCamera();
   } finally {
     isSubmitting.value = false;
@@ -287,6 +348,8 @@ const submitApplication = async () => {
 };
 
 const handleModalDone = () => router.push("/id-services");
+
+onMounted(loadIDFields);
 
 onUnmounted(() => {
   stopCamera();
@@ -503,6 +566,81 @@ const selectYear = (y) => {
           </div>
         </div>
 
+        <!-- Details Phase -->
+        <div
+          v-else-if="currentPhase === 'details'"
+          class="flex w-full h-full items-start justify-start animate-fadeIn"
+        >
+          <div class="w-full flex flex-col px-2">
+            <h2 class="text-[25px] font-bold text-[#03335C] text-left">
+              ID Card Details
+            </h2>
+            <p class="text-gray-500 italic text-xs mb-6 text-left">
+              Review and confirm the information to be printed on the ID card.
+            </p>
+
+            <div v-if="isFetchingAutofill" class="flex items-center gap-3 py-6 text-[#03335C]">
+              <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-[#03335C]"></div>
+              <span class="text-sm font-medium">Loading resident data...</span>
+            </div>
+
+            <template v-else>
+              <!-- Manual override toggle (RFID users only) -->
+              <div v-if="authStore.rfidUid" class="mb-5 flex items-center gap-2">
+                <input
+                  id="manualEntry"
+                  type="checkbox"
+                  v-model="useManualEntry"
+                  class="w-4 h-4 accent-[#03335C] cursor-pointer"
+                />
+                <label for="manualEntry" class="text-sm text-gray-500 cursor-pointer select-none">
+                  Enter information manually instead of using database records
+                </label>
+              </div>
+
+              <div v-if="idFields.length === 0" class="text-sm text-gray-400 italic py-4">
+                No fields have been configured by the admin for this form.
+              </div>
+
+              <div v-else class="grid grid-cols-2 gap-4">
+                <div
+                  v-for="field in idFields"
+                  :key="field.id || field.name"
+                  :class="field.type === 'textarea' ? 'col-span-2' : 'col-span-1'"
+                  class="flex flex-col gap-1"
+                >
+                  <label class="text-[10px] font-bold text-gray-400 uppercase">
+                    {{ field.label }}
+                    <span v-if="field.required" class="text-red-400">*</span>
+                  </label>
+
+                  <textarea
+                    v-if="field.type === 'textarea'"
+                    v-model="detailsForm[field.name]"
+                    :disabled="!useManualEntry && !!AUTOFILL_MAP[field.name]"
+                    :placeholder="field.label"
+                    class="border border-gray-300 rounded-xl px-4 py-2 text-[#03335C] font-bold text-sm focus:outline-none focus:border-[#03335C] transition-colors disabled:bg-gray-50 disabled:text-gray-400 resize-none"
+                    rows="2"
+                  ></textarea>
+
+                  <input
+                    v-else
+                    v-model="detailsForm[field.name]"
+                    :disabled="!useManualEntry && !!AUTOFILL_MAP[field.name]"
+                    :type="field.type === 'date' ? 'date' : field.type === 'number' ? 'number' : 'text'"
+                    :placeholder="field.label"
+                    class="h-11 border border-gray-300 rounded-xl px-4 text-[#03335C] font-bold text-sm focus:outline-none focus:border-[#03335C] transition-colors disabled:bg-gray-50 disabled:text-gray-400"
+                  />
+
+                  <p v-if="detailsErrors[field.name]" class="text-red-500 text-xs italic">
+                    {{ detailsErrors[field.name] }}
+                  </p>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+
         <!-- Camera Phase -->
         <div
           v-else-if="currentPhase === 'camera'"
@@ -630,6 +768,19 @@ const selectYear = (y) => {
         size="md"
         :disabled="!selectedResident"
         @click="proceedToCamera"
+        >Next: Take Photo</Button
+      >
+    </div>
+
+    <div
+      v-else-if="currentPhase === 'details'"
+      class="flex gap-6 mt-6 justify-between items-center flex-shrink-0"
+    >
+      <Button variant="outline" size="md" @click="currentPhase = 'selection'">Back</Button>
+      <Button
+        variant="secondary"
+        size="md"
+        @click="proceedToCameraFromDetails"
         >Next: Take Photo</Button
       >
     </div>
