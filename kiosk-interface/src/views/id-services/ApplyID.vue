@@ -5,7 +5,7 @@ import { useAuthStore } from "@/stores/auth";
 import ArrowBackButton from "@/components/shared/ArrowBackButton.vue";
 import Modal from "@/components/shared/Modal.vue";
 import Button from "@/components/shared/Button.vue";
-import { searchResidents, verifyBirthdate, applyForID, getIDApplicationFields } from "@/api/idService";
+import { searchResidents, verifyBirthdate, applyForID, getIDApplicationFields, generateBrgyID } from "@/api/idService";
 import { getResidentAutofillData } from "@/api/residentService";
 import {
   CalendarDaysIcon,
@@ -26,6 +26,7 @@ const detailsForm = ref({});
 const detailsErrors = ref({});
 const useManualEntry = ref(false);
 const isFetchingAutofill = ref(false);
+const brgyIdNumber = ref("");
 
 // Maps fixed placeholder names → autofill response keys from getResidentAutofillData
 const AUTOFILL_MAP = {
@@ -282,6 +283,13 @@ const handleVerification = async () => {
           isFetchingAutofill.value = false;
         }
       }
+      // Generate and reserve the brgy_id_number immediately
+      try {
+        const { data: idData } = await generateBrgyID();
+        brgyIdNumber.value = idData.brgy_id_number;
+      } catch {
+        brgyIdNumber.value = "";
+      }
       currentPhase.value = "details";
     } else {
       verificationError.value = "Birthdate does not match our records.";
@@ -332,7 +340,7 @@ const submitApplication = async () => {
       rfid_uid: authStore.rfidUid || null,
       photo: photoData.value,
       use_manual_data: useManualEntry.value,
-      field_values: { ...detailsForm.value },  // all form fields keyed by field name
+      field_values: { brgy_id_number: brgyIdNumber.value, ...detailsForm.value },
     });
 
     referenceId.value = result.transaction_no;
@@ -698,16 +706,29 @@ const selectYear = (y) => {
               <p class="text-gray-500 italic text-sm mb-6">
                 Take a clear photo for your new RFID Card.
               </p>
-              <div class="bg-[#EAF6FB] rounded-2xl p-6 border border-[#BDE0EF]">
-                <p
-                  class="text-[#03335C] text-xs uppercase font-bold tracking-wider opacity-60 mb-1"
-                >
-                  Applying For:
-                </p>
-                <p class="font-black text-[#03335C] text-2xl truncate">
-                  {{ selectedResident?.first_name }}
-                  {{ selectedResident?.last_name }}
-                </p>
+              <div class="bg-[#EAF6FB] rounded-2xl p-6 border border-[#BDE0EF] flex flex-col gap-3">
+                <div>
+                  <p
+                    class="text-[#03335C] text-xs uppercase font-bold tracking-wider opacity-60 mb-1"
+                  >
+                    Applying For:
+                  </p>
+                  <p class="font-black text-[#03335C] text-2xl truncate">
+                    {{ selectedResident?.first_name }}
+                    {{ selectedResident?.last_name }}
+                  </p>
+                </div>
+                <div class="border-t border-[#BDE0EF] pt-3">
+                  <p
+                    class="text-[#03335C] text-xs uppercase font-bold tracking-wider opacity-60 mb-1"
+                  >
+                    Barangay ID No.:
+                  </p>
+                  <p v-if="brgyIdNumber" class="font-black text-[#03335C] text-2xl tracking-widest font-mono">
+                    {{ brgyIdNumber }}
+                  </p>
+                  <p v-else class="text-gray-400 text-sm italic">Generating...</p>
+                </div>
               </div>
             </div>
             <div class="flex flex-col gap-3 mt-4">

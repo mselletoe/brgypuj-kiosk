@@ -42,6 +42,7 @@ from app.services.id_service import (
     get_rfid_report_card_info,
     report_lost_card,
     get_id_application_fields,
+    generate_brgy_id_number,
 )
 
 router = APIRouter(prefix="/id-services")
@@ -85,6 +86,19 @@ def search_residents(query: str, db: Session = Depends(get_db)):
 )
 def get_id_fields(db: Session = Depends(get_db)):
     return get_id_application_fields(db)
+
+
+@router.get(
+    "/apply/generate-brgy-id",
+    summary="Generate next Barangay ID number",
+    description=(
+        "Returns the next sequential brgy_id_number without persisting anything. "
+        "Called by the kiosk when entering the details phase so the number "
+        "can be displayed on the camera screen and submitted with the application."
+    ),
+)
+def get_next_brgy_id(db: Session = Depends(get_db)):
+    return {"brgy_id_number": generate_brgy_id_number(db)}
 
 
 @router.post(

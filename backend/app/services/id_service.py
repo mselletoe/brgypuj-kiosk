@@ -202,6 +202,22 @@ def _save_id_pdf(transaction_no: str, pdf_bytes: bytes) -> str:
 
 
 # =========================================================
+# PUBLIC: GENERATE BRGY ID NUMBER
+# Called by the kiosk before the details phase so the number
+# can be displayed on the camera screen and passed in field_values.
+# =========================================================
+
+def generate_brgy_id_number(db: Session) -> str:
+    """
+    Public wrapper around _generate_brgy_id_number.
+    Returns the next sequential brgy_id_number without persisting anything.
+    The frontend calls this when entering the details phase so the number
+    can be shown on the camera screen and submitted with the application.
+    """
+    return _generate_brgy_id_number(db)
+
+
+# =========================================================
 # 1. RESIDENT SEARCH  (shared by Apply-for-ID & Report-Lost-Card)
 # =========================================================
 
@@ -372,6 +388,21 @@ def apply_for_id(
     db.commit()
     db.refresh(request)
 
+    # ── Create BarangayID row immediately (is_active=False until released) ────
+    # This ensures brgy_id_number is reserved in barangay_ids at application
+    # time. is_active is set to True only when admin releases the application.
+    barangay_id_row = BarangayID(
+        resident_id=applicant.id,
+        rfid_id=None,               # RFID not linked yet — set on release
+        request_id=request.id,
+        brgy_id_number=brgy_id_number,
+        issued_date=date.today(),
+        expiration_date=None,       # Set on release when RFID is linked
+        is_active=False,            # Activated on release
+    )
+    db.add(barangay_id_row)
+    db.commit()
+
     # ── Generate PDF immediately at application time ──────────────────────────
     # Build template context: strip metadata keys, inject photo separately.
     # id_doctype already fetched above
@@ -382,6 +413,7 @@ def apply_for_id(
                 k: v for k, v in request.form_data.items()
                 if k not in _FORM_DATA_META_KEYS
             }
+            context["id_num"] = context.get("brgy_id_number", "")
             context["photo"] = bytes(applicant.photo) if applicant.photo else None
 
             pdf_bytes = _generate_id_pdf(bytes(id_doctype.file), context)
@@ -454,40 +486,42 @@ def release_id_application(db: Session, request_id: int) -> dict:
 
     # ── 3. Read brgy_id_number from form_data (generated at apply time) ───────
     brgy_id_number = form_data.get("brgy_id_number")
-    if not brgy_id_number:
-        # Fallback for applications created before this fix
-        brgy_id_number = _generate_brgy_id_number(db)
 
-    # ── 4. Guard: prevent duplicate active BarangayID ─────────────────────────
-    existing_brgy_id = (
+    # ── 4. Activate the existing BarangayID row (created at apply time) ───────
+    # Link the resident's active RFID and set is_active = True.
+    barangay_id_row = (
         db.query(BarangayID)
         .filter(
-            BarangayID.resident_id == applicant.id,
-            BarangayID.is_active.is_(True),
+            BarangayID.request_id == req.id,
+            BarangayID.is_active.is_(False),
         )
         .first()
     )
-    if existing_brgy_id:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="This resident already has an active Barangay ID."
+
+    if barangay_id_row:
+        active_rfid = _get_active_rfid(applicant)
+        barangay_id_row.rfid_id = active_rfid.id if active_rfid else None
+        barangay_id_row.expiration_date = active_rfid.expiration_date if active_rfid else None
+        barangay_id_row.is_active = True
+        if not brgy_id_number:
+            brgy_id_number = barangay_id_row.brgy_id_number
+    else:
+        # Fallback: create the row if it doesn't exist (old applications)
+        if not brgy_id_number:
+            brgy_id_number = _generate_brgy_id_number(db)
+        active_rfid = _get_active_rfid(applicant)
+        barangay_id_row = BarangayID(
+            resident_id=applicant.id,
+            rfid_id=active_rfid.id if active_rfid else None,
+            request_id=req.id,
+            brgy_id_number=brgy_id_number,
+            issued_date=date.today(),
+            expiration_date=active_rfid.expiration_date if active_rfid else None,
+            is_active=True,
         )
+        db.add(barangay_id_row)
 
-    # ── 5. Create BarangayID row ──────────────────────────────────────────────
-    active_rfid = _get_active_rfid(applicant)
-
-    barangay_id_row = BarangayID(
-        resident_id=applicant.id,
-        rfid_id=active_rfid.id if active_rfid else None,
-        request_id=req.id,
-        brgy_id_number=brgy_id_number,
-        issued_date=date.today(),
-        expiration_date=active_rfid.expiration_date if active_rfid else None,
-        is_active=True,
-    )
-    db.add(barangay_id_row)
-
-    # ── 6. Mark the request as Released ──────────────────────────────────────
+    # ── 5. Mark the request as Released ──────────────────────────────────────
     req.status = "Released"
 
     db.commit()

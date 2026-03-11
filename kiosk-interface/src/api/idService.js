@@ -98,3 +98,17 @@ export function getReportCardInfo(residentId) {
 export function reportLostCard(payload) {
   return api.post('/kiosk/id-services/report-lost', payload)
 }
+
+// ──────────────────────────────────────────────────────────────
+// KIOSK — GENERATE BRGY ID NUMBER
+// ──────────────────────────────────────────────────────────────
+
+/**
+ * Generates and returns the next sequential Barangay ID number.
+ * Called when entering the details phase so the number can be
+ * displayed on the camera screen and submitted with the application.
+ * @returns {Promise<{ brgy_id_number: string }>}
+ */
+export function generateBrgyID() {
+  return api.get('/kiosk/id-services/apply/generate-brgy-id')
+}
