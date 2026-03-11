@@ -23,6 +23,7 @@ import tempfile
 import os
 import platform
 from io import BytesIO
+from PIL import Image, ImageDraw
 from datetime import date, datetime
 from pathlib import Path
 from sqlalchemy import func
@@ -155,13 +156,44 @@ def _convert_docx_to_pdf(docx_bytes: bytes) -> bytes:
             return f.read()
 
 
+def _make_circle_photo(photo_bytes: bytes, size: int = 300) -> bytes:
+    """
+    Crops photo_bytes into a circle and returns PNG bytes.
+    The output is a square PNG with the face masked to a circle
+    and a transparent background (alpha channel).
+    """
+    img = Image.open(BytesIO(photo_bytes)).convert("RGBA")
+
+    # Crop to square from center
+    w, h = img.size
+    min_side = min(w, h)
+    left = (w - min_side) // 2
+    top = (h - min_side) // 2
+    img = img.crop((left, top, left + min_side, top + min_side))
+    img = img.resize((size, size), Image.LANCZOS)
+
+    # Create circular mask
+    mask = Image.new("L", (size, size), 0)
+    draw = ImageDraw.Draw(mask)
+    draw.ellipse((0, 0, size, size), fill=255)
+
+    # Apply mask as alpha
+    result = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    result.paste(img, (0, 0), mask=mask)
+
+    out = BytesIO()
+    result.save(out, format="PNG")
+    return out.getvalue()
+
+
 def _generate_id_pdf(template_bytes: bytes, context: dict) -> bytes:
     """
     Renders the ID Application docx template using docxtpl (Jinja2 {{ var }} syntax)
     and converts it to PDF via LibreOffice.
 
     Photo is passed as a docxtpl InlineImage — the template must use
-    {{ photo }} where the image should appear.
+    {{ photo }} where the image should appear. The photo is automatically
+    cropped into a circle before rendering.
     """
     from docxtpl import InlineImage
     from docx.shared import Mm
@@ -172,7 +204,8 @@ def _generate_id_pdf(template_bytes: bytes, context: dict) -> bytes:
     if context.get("photo") is not None:
         photo_bytes = context["photo"]  # raw bytes stored earlier
         if isinstance(photo_bytes, bytes):
-            context["photo"] = InlineImage(tpl, BytesIO(photo_bytes), width=Mm(30))
+            circle_bytes = _make_circle_photo(photo_bytes)
+            context["photo"] = InlineImage(tpl, BytesIO(circle_bytes), width=Mm(85))
 
     tpl.render(context)
 
@@ -413,6 +446,7 @@ def apply_for_id(
                 k: v for k, v in request.form_data.items()
                 if k not in _FORM_DATA_META_KEYS
             }
+            # Alias brgy_id_number → id_num for the docx template placeholder
             context["id_num"] = context.get("brgy_id_number", "")
             context["photo"] = bytes(applicant.photo) if applicant.photo else None
 
