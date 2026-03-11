@@ -341,11 +341,16 @@ def apply_for_id(
     # Generate brgy_id_number now so it's available as a template placeholder
     brgy_id_number = _generate_brgy_id_number(db)
 
+    # Fetch ID Application DocumentType once — used for both price and PDF generation
+    id_doctype = db.query(DocumentType).filter(
+        DocumentType.is_id_application.is_(True)
+    ).first()
+
     request = DocumentRequest(
         transaction_no=tx_no,
         resident_id=requester_id,   # logged-in user (or applicant for guest)
         doctype_id=None,            # NULL — ID Applications are not a document type
-        price=0,
+        price=id_doctype.price if id_doctype else 0,  # read from DB, not hardcoded
         status="Pending",
         payment_status="unpaid",
         form_data={
@@ -369,9 +374,7 @@ def apply_for_id(
 
     # ── Generate PDF immediately at application time ──────────────────────────
     # Build template context: strip metadata keys, inject photo separately.
-    id_doctype = db.query(DocumentType).filter(
-        DocumentType.is_id_application.is_(True)
-    ).first()
+    # id_doctype already fetched above
 
     if id_doctype and id_doctype.file:
         try:

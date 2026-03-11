@@ -33,6 +33,7 @@ const idDocType = ref(null)
 
 // Inline field editing
 const localFields = ref([])
+const localPrice  = ref(0)
 
 // ======================================
 // Fixed placeholders (date fields removed)
@@ -60,6 +61,7 @@ async function loadIDDocType() {
     const found = data.find(t => t.is_id_application === true)
     idDocType.value = found || null
     localFields.value = JSON.parse(JSON.stringify(found?.fields || []))
+    localPrice.value  = found?.price ?? 0
   } catch (err) {
     console.error(err)
     message.error('Failed to load ID template settings.')
@@ -76,7 +78,7 @@ async function ensureIDDocType() {
   const { data } = await createDocumentType({
     doctype_name:      'ID Application',
     description:       'Barangay Identification Card application template.',
-    price:             0,
+    price:             localPrice.value,
     fields:            [],
     is_available:      true,
     is_id_application: true,
@@ -158,12 +160,30 @@ async function saveFields() {
   saving.value = true
   try {
     const docType = await ensureIDDocType()
-    await updateDocumentType(docType.id, { fields: JSON.parse(JSON.stringify(localFields.value)) })
+    await updateDocumentType(docType.id, { fields: JSON.parse(JSON.stringify(localFields.value)), price: localPrice.value })
     message.success('Fields saved.')
     await loadIDDocType()
   } catch (err) {
     console.error(err)
     message.error('Failed to save fields.')
+  } finally {
+    saving.value = false
+  }
+}
+
+// ======================================
+// Save Price (standalone — separate from saveFields)
+// ======================================
+async function savePrice() {
+  saving.value = true
+  try {
+    const docType = await ensureIDDocType()
+    await updateDocumentType(docType.id, { price: localPrice.value })
+    message.success('Price saved.')
+    await loadIDDocType()
+  } catch (err) {
+    console.error(err)
+    message.error('Failed to save price.')
   } finally {
     saving.value = false
   }
@@ -194,6 +214,22 @@ const hasTemplate = computed(() => !!idDocType.value?.has_template)
           <template #icon><DocumentTextIcon class="w-4 h-4" /></template>
           Download
         </NButton>
+        <!-- Price setting -->
+        <div class="flex items-center gap-2">
+          <span class="text-sm text-gray-500 font-medium">Fee (₱)</span>
+          <NInput
+            v-model:value="localPrice"
+            type="number"
+            size="small"
+            style="width: 100px"
+            :min="0"
+            :step="0.01"
+            placeholder="0.00"
+          />
+          <NButton size="small" type="primary" :loading="saving" @click="savePrice">
+            Save
+          </NButton>
+        </div>
       </div>
     </div>
 

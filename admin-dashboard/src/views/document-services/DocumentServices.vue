@@ -380,13 +380,14 @@ async function saveRequirements(updatedRequirements, serviceId) {
 // Filtering & Search
 // ======================================
 const filteredServices = computed(() => {
-  const filtered = !searchQuery.value
-    ? services.value
-    : services.value.filter((s) =>
-        s.request_type_name
-          .toLowerCase()
-          .includes(searchQuery.value.toLowerCase()),
-      );
+  // Always exclude the ID Application type — it has its own dedicated
+  // IDTemplateSettings page and must not appear here.
+  const filtered = services.value
+    .filter((s) => !s.is_id_application)
+    .filter((s) =>
+      !searchQuery.value ||
+      s.request_type_name.toLowerCase().includes(searchQuery.value.toLowerCase())
+    );
 
   if (editingId.value && !filtered.find((s) => s.id === editingId.value)) {
     editingId.value = null;
