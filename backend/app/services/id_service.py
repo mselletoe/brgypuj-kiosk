@@ -205,7 +205,7 @@ def _generate_id_pdf(template_bytes: bytes, context: dict) -> bytes:
         photo_bytes = context["photo"]  # raw bytes stored earlier
         if isinstance(photo_bytes, bytes):
             circle_bytes = _make_circle_photo(photo_bytes)
-            context["photo"] = InlineImage(tpl, BytesIO(circle_bytes), width=Mm(25))
+            context["photo"] = InlineImage(tpl, BytesIO(circle_bytes), width=Mm(24))
 
     tpl.render(context)
 
