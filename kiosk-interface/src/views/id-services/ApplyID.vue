@@ -40,7 +40,7 @@ const AUTOFILL_MAP = {
   middle_name:    "middle_name",
   birthdate:      "birthdate",
   address:        "full_address",
-  contact_number: "phone_number",
+  phone_number: "phone_number",
 };
 
 // Fetch the admin-configured ID fields on mount
@@ -70,7 +70,15 @@ function applyAutofill(autofill) {
     if (autofillKey) {
       let val = autofill[autofillKey] || "";
       // Normalize date to YYYY-MM-DD for <input type="date">
-      if (field.type === "date" && val) val = String(val).slice(0, 10);
+      if (field.type === "date" && val) {
+        // Convert MM/DD/YYYY → YYYY-MM-DD
+        const parts = val.split("/");
+        if (parts.length === 3) {
+          val = `${parts[2]}-${parts[0]}-${parts[1]}`;
+        } else {
+          val = String(val).slice(0, 10); // fallback for ISO format
+        }
+      }
       detailsForm.value[field.name] = val;
     }
   }
@@ -617,7 +625,7 @@ const selectYear = (y) => {
               Review and confirm the information to be printed on the ID card.
             </p>
 
-            <div class="flex-1 overflow-y-auto pr-1 min-h-0 custom-scroll">
+            <div class="flex-1 overflow-y-auto pr-1 min-h-0 custom-scroll px-1 pt-1">
               <div v-if="isFetchingAutofill" class="flex items-center gap-3 py-6 text-[#03335C]">
                 <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-[#03335C]"></div>
                 <span class="text-sm font-medium">Loading resident data...</span>
@@ -736,7 +744,7 @@ const selectYear = (y) => {
               <h2 class="text-3xl font-bold text-[#03335C] mb-1">
                 Capture ID Photo
               </h2>
-              <p class="text-gray-500 italic text-sm mb-6">
+              <p class="text-gray-500 italic text-sm mb-4">
                 Take a clear photo for your new RFID Card.
               </p>
               <div class="bg-[#EAF6FB] rounded-2xl p-6 border border-[#BDE0EF] flex flex-col gap-3">
@@ -746,7 +754,7 @@ const selectYear = (y) => {
                   >
                     Applying For:
                   </p>
-                  <p class="font-black text-[#03335C] text-2xl truncate">
+                  <p class="font-black text-[#03335C] text-xl truncate">
                     {{ selectedResident?.first_name }}
                     {{ selectedResident?.last_name }}
                   </p>
@@ -757,7 +765,7 @@ const selectYear = (y) => {
                   >
                     Barangay ID No.:
                   </p>
-                  <p v-if="brgyIdNumber" class="font-black text-[#03335C] text-2xl tracking-widest font-mono">
+                  <p v-if="brgyIdNumber" class="font-black text-[#03335C] text-xl tracking-widest font-mono">
                     {{ brgyIdNumber }}
                   </p>
                   <p v-else class="text-gray-400 text-sm italic">Generating...</p>
