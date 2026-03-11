@@ -104,6 +104,17 @@ export function reportLostCard(payload) {
 // ──────────────────────────────────────────────────────────────
 
 /**
+ * Check whether a resident meets all ID Application requirements.
+ * Called after birthdate verification succeeds, before proceeding to details.
+ * Returns { eligible: bool, checks: Array<{ id, label, type, passed, message }> }
+ * @param {number} residentId
+ * @returns {Promise}
+ */
+export function checkIDRequirements(residentId) {
+  return api.get(`/kiosk/id-services/apply/requirements-check/${residentId}`)
+}
+
+/**
  * Generates and returns the next sequential Barangay ID number.
  * Called when entering the details phase so the number can be
  * displayed on the camera screen and submitted with the application.

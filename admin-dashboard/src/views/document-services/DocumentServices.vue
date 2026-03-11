@@ -930,6 +930,7 @@ onMounted(fetchServices);
         :show="showIdReqModal"
         :requirements-data="idDocType?.requirements"
         :service-id="idDocType?.id"
+        :is-id-application="true"
         @close="showIdReqModal = false"
         @saved="saveIdRequirements"
       />

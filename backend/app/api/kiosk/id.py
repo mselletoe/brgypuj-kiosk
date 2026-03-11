@@ -7,6 +7,8 @@ by the Barangay Kiosk and Admin Dashboard.
 Kiosk-facing (guest + RFID sessions):
   POST /id-services/residents/search             — name search for resident selection
   POST /id-services/apply/verify-birthdate       — identity check before applying
+  GET  /id-services/apply/requirements-check/{resident_id}
+                                                 — check if resident meets ID requirements
   POST /id-services/apply                        — submit ID application
   GET  /id-services/report-lost/info/{rid}       — check if resident has an active card
   POST /id-services/report-lost                  — confirm & submit lost card report
@@ -43,6 +45,7 @@ from app.services.id_service import (
     report_lost_card,
     get_id_application_fields,
     generate_brgy_id_number,
+    check_id_requirements,
 )
 
 router = APIRouter(prefix="/id-services")
@@ -56,11 +59,6 @@ router = APIRouter(prefix="/id-services")
     "/residents/search",
     response_model=list[ResidentSearchResult],
     summary="Search residents by name",
-    description=(
-        "Returns up to 20 residents whose first or last name matches the query. "
-        "Available to both guest and authenticated sessions. "
-        "Used by Apply-for-ID and Report-Lost-Card flows."
-    ),
 )
 def search_residents(query: str, db: Session = Depends(get_db)):
     if not query or len(query.strip()) < 2:
@@ -78,11 +76,6 @@ def search_residents(query: str, db: Session = Depends(get_db)):
 @router.get(
     "/apply/fields",
     summary="Get ID application form fields",
-    description=(
-        "Returns the admin-configured fields for the ID Application form. "
-        "The kiosk uses this to render the correct form fields dynamically. "
-        "Returns an empty list if no fields have been configured yet."
-    ),
 )
 def get_id_fields(db: Session = Depends(get_db)):
     return get_id_application_fields(db)
@@ -91,25 +84,23 @@ def get_id_fields(db: Session = Depends(get_db)):
 @router.get(
     "/apply/generate-brgy-id",
     summary="Generate next Barangay ID number",
-    description=(
-        "Returns the next sequential brgy_id_number without persisting anything. "
-        "Called by the kiosk when entering the details phase so the number "
-        "can be displayed on the camera screen and submitted with the application."
-    ),
 )
 def get_next_brgy_id(db: Session = Depends(get_db)):
     return {"brgy_id_number": generate_brgy_id_number(db)}
+
+
+@router.get(
+    "/apply/requirements-check/{resident_id}",
+    summary="Check if a resident meets ID application requirements",
+)
+def requirements_check(resident_id: int, db: Session = Depends(get_db)):
+    return check_id_requirements(db, resident_id)
 
 
 @router.post(
     "/apply/verify-birthdate",
     response_model=BirthdateVerifyResponse,
     summary="Verify resident identity via birthdate",
-    description=(
-        "Step 1 of the Apply-for-ID flow. "
-        "Checks if the supplied birthdate matches the resident's record. "
-        "The frontend should only proceed to /apply if verified=true."
-    ),
 )
 def verify_birthdate(payload: BirthdateVerifyRequest, db: Session = Depends(get_db)):
     verified = verify_resident_birthdate(db, payload.resident_id, payload.birthdate)
@@ -121,16 +112,6 @@ def verify_birthdate(payload: BirthdateVerifyRequest, db: Session = Depends(get_
     response_model=IDApplicationResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Submit an ID application",
-    description=(
-        "Creates a DocumentRequest of type 'ID Application'. "
-        "Available to both guest (resident_id=null) and authenticated sessions. "
-        "The request appears in the admin Document Requests dashboard.\n\n"
-        "resident_id            — the logged-in user ('Request from'). Null for guests.\n"
-        "applicant_resident_id  — the resident selected via the form ('Request for').\n"
-        "field_values           — all admin-configured form field values, keyed by field name.\n"
-        "                         These are stored flat in form_data and used directly as\n"
-        "                         docx template placeholders at release time."
-    ),
 )
 def apply(payload: IDApplicationRequest, db: Session = Depends(get_db)):
     return apply_for_id(
@@ -152,11 +133,6 @@ def apply(payload: IDApplicationRequest, db: Session = Depends(get_db)):
     "/verify-pin",
     response_model=VerifyPinResponse,
     summary="Verify current PIN without changing it",
-    description=(
-        "Step 1 of the Change Passcode flow. "
-        "Checks that the supplied PIN matches the resident's stored hash without mutating anything. "
-        "Returns verified=true on success, or 401 if the PIN is incorrect."
-    ),
 )
 def check_pin(payload: VerifyPinRequest, db: Session = Depends(get_db)):
     return verify_pin(db, payload.resident_id, payload.pin)
@@ -166,11 +142,6 @@ def check_pin(payload: VerifyPinRequest, db: Session = Depends(get_db)):
     "/change-pin",
     response_model=ChangePinResponse,
     summary="Change security PIN",
-    description=(
-        "Verifies the resident's current 4-digit PIN, then replaces it with a new one. "
-        "Only available to residents who are logged in via RFID. "
-        "Guest users cannot access this endpoint."
-    ),
 )
 def update_pin(payload: ChangePinRequest, db: Session = Depends(get_db)):
     return change_pin(db, payload.resident_id, payload.current_pin, payload.new_pin)
@@ -184,11 +155,6 @@ def update_pin(payload: ChangePinRequest, db: Session = Depends(get_db)):
     "/report-lost/info/{resident_id}",
     response_model=ReportLostCardVerifyResponse,
     summary="Get resident RFID card status",
-    description=(
-        "Returns whether the selected resident has an active RFID card linked. "
-        "The frontend uses has_rfid to enable or disable the 'Submit Report' button. "
-        "Available to both guest and authenticated sessions."
-    ),
 )
 def get_report_card_info(resident_id: int, db: Session = Depends(get_db)):
     return get_rfid_report_card_info(db, resident_id)
@@ -199,11 +165,6 @@ def get_report_card_info(resident_id: int, db: Session = Depends(get_db)):
     response_model=ReportLostCardResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Report a lost RFID card",
-    description=(
-        "Verifies the resident's PIN, deactivates their active RFID card (is_active=False), "
-        "and creates an RFIDReport record visible in the admin Reports dashboard. "
-        "Available to both guest and authenticated sessions."
-    ),
 )
 def submit_lost_card_report(payload: ReportLostCardRequest, db: Session = Depends(get_db)):
     return report_lost_card(db, payload.resident_id, payload.pin, payload.rfid_uid)
