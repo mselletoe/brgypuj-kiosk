@@ -450,6 +450,13 @@ def apply_for_id(
             context["id_num"] = context.get("brgy_id_number", "")
             context["photo"] = bytes(applicant.photo) if applicant.photo else None
 
+            # Build full_name for the template: Lastname, Firstname Middlename
+            name_parts = [applicant.first_name]
+            if applicant.middle_name:
+                name_parts.append(applicant.middle_name)
+            context.setdefault("full_name", f"{applicant.last_name}, {' '.join(name_parts)}")
+            context.setdefault("last_name", applicant.last_name.upper())
+
             pdf_bytes = _generate_id_pdf(bytes(id_doctype.file), context)
             relative_path = _save_id_pdf(request.transaction_no, pdf_bytes)
             request.request_file_path = relative_path

@@ -35,12 +35,13 @@ const brgyIdNumber = ref("");
 
 // Maps fixed placeholder names → autofill response keys from getResidentAutofillData
 const AUTOFILL_MAP = {
-  last_name:      "last_name",
-  first_name:     "first_name",
-  middle_name:    "middle_name",
-  birthdate:      "birthdate",
-  address:        "full_address",
+  last_name: "last_name",
+  first_name: "first_name",
+  middle_name: "middle_name",
+  birthdate: "birthdate",
+  address: "full_address",
   phone_number: "phone_number",
+  full_name: "full_name",
 };
 
 // Fetch the admin-configured ID fields on mount
@@ -65,20 +66,35 @@ function buildEmptyForm() {
 }
 
 function applyAutofill(autofill) {
+  // Derive full_name if API doesn't return one
+  // Format: LASTNAME, Firstname Middlename
+  if (!autofill.full_name && autofill.last_name) {
+    const parts = [];
+    if (autofill.first_name) parts.push(autofill.first_name);
+    if (autofill.middle_name) parts.push(autofill.middle_name);
+    autofill.full_name = `${autofill.last_name}, ${parts.join(" ")}`;
+  }
+
   for (const field of idFields.value) {
     const autofillKey = AUTOFILL_MAP[field.name];
     if (autofillKey) {
       let val = autofill[autofillKey] || "";
+
+      // Capitalize last name
+      if (field.name === "last_name" && val) {
+        val = val.toUpperCase();
+      }
+
       // Normalize date to YYYY-MM-DD for <input type="date">
       if (field.type === "date" && val) {
-        // Convert MM/DD/YYYY → YYYY-MM-DD
         const parts = val.split("/");
         if (parts.length === 3) {
           val = `${parts[2]}-${parts[0]}-${parts[1]}`;
         } else {
-          val = String(val).slice(0, 10); // fallback for ISO format
+          val = String(val).slice(0, 10);
         }
       }
+
       detailsForm.value[field.name] = val;
     }
   }
