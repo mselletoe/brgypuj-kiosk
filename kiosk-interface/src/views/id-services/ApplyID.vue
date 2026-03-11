@@ -12,6 +12,7 @@ import {
   UserIcon,
   ChevronDownIcon,
   CameraIcon,
+  DocumentTextIcon
 } from "@heroicons/vue/24/outline";
 
 const router = useRouter();
@@ -410,8 +411,9 @@ const selectYear = (y) => {
     </div>
 
     <!-- Main -->
-    <div class="flex-1 mb-4">
+    <div class="flex-1 mb-4 min-h-0">
       <div
+        :class="currentPhase === 'details' ? 'h-full' : ''"
         class="w-full bg-white rounded-2xl border border-gray-200 shadow-lg p-6 flex flex-col transition-all duration-500 ease-in-out"
       >
         <!-- Resident Selection Form-->
@@ -577,75 +579,79 @@ const selectYear = (y) => {
         <!-- Details Phase -->
         <div
           v-else-if="currentPhase === 'details'"
-          class="flex w-full h-full items-start justify-start animate-fadeIn"
+          class="flex w-full h-full items-start justify-start animate-fadeIn overflow-hidden"
         >
-          <div class="w-full flex flex-col px-2">
-            <h2 class="text-[25px] font-bold text-[#03335C] text-left">
+          <div class="w-full h-full flex flex-col px-2">
+            <h2 class="text-2xl font-bold text-[#03335C] flex items-center gap-2 mb-1 flex-shrink-0">
+              <DocumentTextIcon class="w-8 h-8" />
               ID Card Details
             </h2>
-            <p class="text-gray-500 italic text-xs mb-6 text-left">
+            <p class="text-gray-500 italic text-xs mb-6 text-left flex-shrink-0">
               Review and confirm the information to be printed on the ID card.
             </p>
 
-            <div v-if="isFetchingAutofill" class="flex items-center gap-3 py-6 text-[#03335C]">
-              <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-[#03335C]"></div>
-              <span class="text-sm font-medium">Loading resident data...</span>
+            <div class="flex-1 overflow-y-auto pr-1 min-h-0 custom-scroll">
+              <div v-if="isFetchingAutofill" class="flex items-center gap-3 py-6 text-[#03335C]">
+                <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-[#03335C]"></div>
+                <span class="text-sm font-medium">Loading resident data...</span>
+              </div>
+
+              <template v-else>
+                <!-- Manual override toggle (RFID users only) -->
+                <div v-if="authStore.rfidUid" class="mb-5 flex items-center gap-3">
+                  <input
+                    id="manualEntry"
+                    type="checkbox"
+                    v-model="useManualEntry"
+                    class="h-5 w-5 text-[#013C6D]"
+                  />
+                  <label for="manualEntry" class="text-sm text-gray-700 italic cursor-pointer select-none">
+                    Enter information manually instead of using database records
+                  </label>
+                </div>
+
+                <div v-if="idFields.length === 0" class="text-sm text-gray-400 italic py-4">
+                  No fields have been configured by the admin for this form.
+                </div>
+
+                <div v-else class="grid grid-cols-2 gap-x-6 gap-y-4 pb-2">
+                  <div
+                    v-for="field in idFields"
+                    :key="field.id || field.name"
+                    :class="field.type === 'textarea' ? 'col-span-2' : 'col-span-1'"
+                    class="flex flex-col"
+                  >
+                    <label class="block text-base font-bold text-[#003A6B] mb-2">
+                      {{ field.label }}
+                      <span v-if="field.required" class="text-red-600">*</span>
+                    </label>
+
+                    <textarea
+                      v-if="field.type === 'textarea'"
+                      v-model="detailsForm[field.name]"
+                      :disabled="!useManualEntry && !!AUTOFILL_MAP[field.name]"
+                      :placeholder="field.label"
+                      class="w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm transition-shadow focus:outline-none focus:ring-2 focus:ring-[#013C6D] disabled:bg-gray-50 disabled:text-gray-400 resize-none"
+                      rows="2"
+                    ></textarea>
+
+                    <input
+                      v-else
+                      v-model="detailsForm[field.name]"
+                      :disabled="!useManualEntry && !!AUTOFILL_MAP[field.name]"
+                      :type="field.type === 'date' ? 'date' : field.type === 'number' ? 'number' : 'text'"
+                      :placeholder="field.label"
+                      class="w-full h-[48px] px-4 py-3 border border-gray-300 rounded-xl shadow-sm transition-shadow focus:outline-none focus:ring-2 focus:ring-[#013C6D] disabled:bg-gray-50 disabled:text-gray-400"
+                    />
+
+                    <p v-if="detailsErrors[field.name]" class="text-red-500 text-xs italic mt-1">
+                      {{ detailsErrors[field.name] }}
+                    </p>
+                  </div>
+                </div>
+              </template>
             </div>
 
-            <template v-else>
-              <!-- Manual override toggle (RFID users only) -->
-              <div v-if="authStore.rfidUid" class="mb-5 flex items-center gap-2">
-                <input
-                  id="manualEntry"
-                  type="checkbox"
-                  v-model="useManualEntry"
-                  class="w-4 h-4 accent-[#03335C] cursor-pointer"
-                />
-                <label for="manualEntry" class="text-sm text-gray-500 cursor-pointer select-none">
-                  Enter information manually instead of using database records
-                </label>
-              </div>
-
-              <div v-if="idFields.length === 0" class="text-sm text-gray-400 italic py-4">
-                No fields have been configured by the admin for this form.
-              </div>
-
-              <div v-else class="grid grid-cols-2 gap-4">
-                <div
-                  v-for="field in idFields"
-                  :key="field.id || field.name"
-                  :class="field.type === 'textarea' ? 'col-span-2' : 'col-span-1'"
-                  class="flex flex-col gap-1"
-                >
-                  <label class="text-[10px] font-bold text-gray-400 uppercase">
-                    {{ field.label }}
-                    <span v-if="field.required" class="text-red-400">*</span>
-                  </label>
-
-                  <textarea
-                    v-if="field.type === 'textarea'"
-                    v-model="detailsForm[field.name]"
-                    :disabled="!useManualEntry && !!AUTOFILL_MAP[field.name]"
-                    :placeholder="field.label"
-                    class="border border-gray-300 rounded-xl px-4 py-2 text-[#03335C] font-bold text-sm focus:outline-none focus:border-[#03335C] transition-colors disabled:bg-gray-50 disabled:text-gray-400 resize-none"
-                    rows="2"
-                  ></textarea>
-
-                  <input
-                    v-else
-                    v-model="detailsForm[field.name]"
-                    :disabled="!useManualEntry && !!AUTOFILL_MAP[field.name]"
-                    :type="field.type === 'date' ? 'date' : field.type === 'number' ? 'number' : 'text'"
-                    :placeholder="field.label"
-                    class="h-11 border border-gray-300 rounded-xl px-4 text-[#03335C] font-bold text-sm focus:outline-none focus:border-[#03335C] transition-colors disabled:bg-gray-50 disabled:text-gray-400"
-                  />
-
-                  <p v-if="detailsErrors[field.name]" class="text-red-500 text-xs italic">
-                    {{ detailsErrors[field.name] }}
-                  </p>
-                </div>
-              </div>
-            </template>
           </div>
         </div>
 
@@ -731,7 +737,7 @@ const selectYear = (y) => {
                 </div>
               </div>
             </div>
-            <div class="flex flex-col gap-3 mt-4">
+            <div class="flex gap-3 mt-4">
               <template v-if="!photoData">
                 <Button
                   :variant="isCountingDown ? 'disabled' : 'primary'"
@@ -754,7 +760,7 @@ const selectYear = (y) => {
                   class="w-full justify-center text-lg py-3"
                   @click="retakePhoto"
                   :disabled="isSubmitting"
-                  >Retake Photo</Button
+                  >Retake</Button
                 >
                 <Button
                   :variant="isSubmitting ? 'disabled' : 'secondary'"
@@ -763,7 +769,7 @@ const selectYear = (y) => {
                   :disabled="isSubmitting"
                   @click="submitApplication"
                   >{{
-                    isSubmitting ? "Processing..." : "Submit Application"
+                    isSubmitting ? "Processing..." : "Submit"
                   }}</Button
                 >
               </template>
