@@ -252,6 +252,21 @@ const photoUrl = computed(() => {
   return null
 })
 
+// Brgy ID expiration — formatted for display, with status tag
+const brgyIdExpiration = computed(() => {
+  const raw = residentDetails.value?.brgy_id_expiration_date
+  if (!raw) return null
+  const d = new Date(raw + 'T00:00:00')
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const msLeft = d - today
+  const daysLeft = Math.ceil(msLeft / (1000 * 60 * 60 * 24))
+  const formatted = d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+  if (daysLeft < 0)   return { text: formatted, label: 'Expired',           color: 'text-red-600 bg-red-50 border-red-200' }
+  if (daysLeft <= 30) return { text: formatted, label: `${daysLeft}d left`,  color: 'text-amber-600 bg-amber-50 border-amber-200' }
+  return               { text: formatted, label: 'Active',            color: 'text-green-600 bg-green-50 border-green-200' }
+})
+
 // Human-readable residency duration label
 const residencyLabel = computed(() => {
   return residentDetails.value?.residency_label || 
@@ -527,26 +542,43 @@ function handleClose() {
           </div>
           <!-- Stats -->
           <div class="flex gap-6 justify-between">
-            <div class="flex flex-col">
+            <!-- Age -->
+            <div class="flex flex-col gap-1">
               <span class="text-xs text-gray-500 font-medium uppercase tracking-wide">Age</span>
               <span class="text-2xl font-bold text-gray-800">{{ residentDetails.age }}</span>
-              <span class="text-xs text-gray-500">years old</span>
+              <span class="text-xs text-gray-400">years old</span>
             </div>
+
             <div class="w-[1.1px] bg-gray-300 self-stretch"></div>
-            <div class="flex flex-col">
+
+            <!-- Residency -->
+            <div class="flex flex-col gap-1">
               <span class="text-xs text-gray-500 font-medium uppercase tracking-wide">Residency</span>
               <span class="text-2xl font-bold text-gray-800">{{ residencyLabel }}</span>
-              <span class="text-xs text-gray-500">since {{ residentDetails.residency_start_date }}</span>
+              <span class="text-xs text-gray-400">since {{ residentDetails.residency_start_date }}</span>
             </div>
+
             <div class="w-[1.1px] bg-gray-300 self-stretch"></div>
-            <div class="flex flex-col">
+
+            <!-- Brgy. ID Number -->
+            <div class="flex flex-col gap-1">
               <span class="text-xs text-gray-500 font-medium uppercase tracking-wide">Brgy. I.D No.</span>
               <span class="text-2xl font-bold text-gray-800">{{ residentDetails.brgy_id_number || '—' }}</span>
+              <template v-if="brgyIdExpiration">
+                <span class="text-xs text-gray-400">Expires {{ brgyIdExpiration.text }}</span>
+                <span :class="['text-[10px] font-semibold px-2 py-0.5 rounded-full border w-fit', brgyIdExpiration.color]">
+                  {{ brgyIdExpiration.label }}
+                </span>
+              </template>
+              <span v-else class="text-xs text-gray-400 italic">No expiry on record</span>
             </div>
+
             <div class="w-[1.1px] bg-gray-300 self-stretch"></div>
+            
+            <!-- RFID Number -->
             <div class="flex flex-col gap-1">
               <span class="text-xs text-gray-500 font-medium uppercase tracking-wide">RFID No.</span>
-              <span class="text-xl font-bold text-blue-700">{{ formData.rfid_uid || '—' }}</span>
+              <span class="text-2xl font-bold text-blue-700">{{ formData.rfid_uid || '—' }}</span>
               <div class="flex items-center gap-2">
                 <NSwitch
                   v-model:value="formData.is_active"

@@ -236,17 +236,9 @@ def _save_id_pdf(transaction_no: str, pdf_bytes: bytes) -> str:
 
 # =========================================================
 # PUBLIC: GENERATE BRGY ID NUMBER
-# Called by the kiosk before the details phase so the number
-# can be displayed on the camera screen and passed in field_values.
 # =========================================================
 
 def generate_brgy_id_number(db: Session) -> str:
-    """
-    Public wrapper around _generate_brgy_id_number.
-    Returns the next sequential brgy_id_number without persisting anything.
-    The frontend calls this when entering the details phase so the number
-    can be shown on the camera screen and submitted with the application.
-    """
     return _generate_brgy_id_number(db)
 
 

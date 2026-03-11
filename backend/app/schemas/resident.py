@@ -180,6 +180,10 @@ class ResidentDetailResponse(BaseModel):
     
     # RFID Info (active RFID only)
     active_rfid: Optional[ResidentRFIDResponse] = None
+
+    # Barangay ID Info
+    brgy_id_number:          Optional[str] = None
+    brgy_id_expiration_date: Optional[str] = None       # ISO date string "YYYY-MM-DD"
     
     # Timestamps
     registered_at: str

@@ -4,23 +4,19 @@ RFID Registration Service Layer
 Business logic for linking a newly scanned (unregistered) RFID card
 to an approved ID Application resident.
 
-Workflows:
-  1. check_rfid_status    — determines whether a scanned UID is new or already linked
-  2. verify_admin_passcode — validates the hardcoded admin passcode gate
-  3. get_approved_id_applications — lists approved ID Applications awaiting RFID linking
-  4. link_rfid_to_resident — creates a ResidentRFID row and marks the application Completed
 """
 
-from datetime import datetime
+from datetime import datetime, date, timedelta
 from sqlalchemy.orm import Session, joinedload
 from fastapi import HTTPException, status
 
 from app.models.resident import Resident, ResidentRFID
 from app.models.document import DocumentRequest
+from app.models.barangayid import BarangayID
+from app.services.systemconfig_service import get_config
 
 # ---------------------------------------------------------------------------
-# Admin passcode — stored here for easy rotation.
-# In production, move this to an environment variable or a settings table.
+# Admin passcode (Hardcoded)
 # ---------------------------------------------------------------------------
 ADMIN_PASSCODE = "7890"
 
@@ -33,16 +29,6 @@ ID_APPLICATION_DOCTYPE_NAME = "ID Application"
 # =========================================================
 
 def check_rfid_status(db: Session, rfid_uid: str) -> dict:
-    """
-    Checks whether a scanned RFID UID already exists in the ResidentRFID table.
-
-    Returns:
-        { "is_new": True }   — UID is unregistered; proceed to admin passcode → Register
-        { "is_new": False }  — UID is already linked; continue with normal auth flow
-
-    The caller (ScanRFID.vue) uses this to decide which route to push.
-    This endpoint never raises — it always returns a clean boolean result.
-    """
     existing = (
         db.query(ResidentRFID)
         .filter(ResidentRFID.rfid_uid == rfid_uid)
@@ -56,22 +42,6 @@ def check_rfid_status(db: Session, rfid_uid: str) -> dict:
 # =========================================================
 
 def verify_admin_passcode(passcode: str) -> dict:
-    """
-    Validates the admin passcode required before accessing the Register screen.
-
-    A simple string comparison is used because this is an offline kiosk context
-    and the passcode is an operational gate — not a cryptographic secret.
-
-    Args:
-        passcode: The 4-digit code entered on the keypad.
-
-    Returns:
-        { "valid": True }  — passcode matches; frontend may proceed to /register
-        { "valid": False } — passcode mismatch; frontend should show error
-
-    Raises:
-        HTTP 429 — placeholder for future rate-limiting (not yet implemented).
-    """
     return {"valid": passcode == ADMIN_PASSCODE}
 
 
@@ -80,18 +50,6 @@ def verify_admin_passcode(passcode: str) -> dict:
 # =========================================================
 
 def get_approved_id_applications(db: Session) -> list[dict]:
-    """
-    Returns all ID Application DocumentRequests that have been:
-      - Approved (status = "Approved")
-      - Not yet linked to an RFID card (checked via form_data["rfid_linked"] flag)
-
-    These are the transactions shown in the Register screen left panel so the
-    admin can pick the correct one to pair with the freshly scanned card.
-
-    The applicant resident's full details (name, birthdate, address) are
-    joined in and returned so the right panel can display them without a
-    second API call.
-    """
     applications = (
         db.query(DocumentRequest)
         .options(
@@ -99,7 +57,7 @@ def get_approved_id_applications(db: Session) -> list[dict]:
         )
         .filter(
             DocumentRequest.doctype_id.is_(None),          # ID Applications only
-            DocumentRequest.status == "Approved",           # Admin-approved
+            DocumentRequest.status == "Approved",          # Admin-approved
         )
         .order_by(DocumentRequest.requested_at.desc())
         .all()
@@ -203,14 +161,35 @@ def link_rfid_to_resident(
             detail="ID Application is not in Approved status."
         )
 
-    # Create the RFID record
+    # ── Compute expiration from SystemConfig ─────────────────────────────────
+    config = get_config(db)
+    expiration_date = date.today() + timedelta(days=config.rfid_expiry_days)
+
+    # Create the RFID record — expiration stamped immediately
     new_rfid = ResidentRFID(
         resident_id=resident_id,
         rfid_uid=rfid_uid,
         is_active=True,
+        expiration_date=expiration_date,
         created_at=datetime.now(),
     )
     db.add(new_rfid)
+    db.flush()  # get new_rfid.id before linking to BarangayID
+
+    # ── Activate and stamp the linked BarangayID row ──────────────────────────
+    # The BarangayID row was created (is_active=False) at application time.
+    barangay_id_row = (
+        db.query(BarangayID)
+        .filter(
+            BarangayID.request_id == document_request_id,
+            BarangayID.is_active.is_(False),
+        )
+        .first()
+    )
+    if barangay_id_row:
+        barangay_id_row.rfid_id         = new_rfid.id
+        barangay_id_row.expiration_date = expiration_date
+        barangay_id_row.is_active       = True
 
     # Update the DocumentRequest: mark linked and complete
     updated_form_data = dict(doc_request.form_data or {})
@@ -223,6 +202,8 @@ def link_rfid_to_resident(
     db.commit()
     db.refresh(new_rfid)
 
+    brgy_id_number = barangay_id_row.brgy_id_number if barangay_id_row else None
+
     return {
         "success": True,
         "rfid_uid": rfid_uid,
@@ -230,5 +211,7 @@ def link_rfid_to_resident(
         "resident_first_name": resident.first_name,
         "resident_last_name": resident.last_name,
         "transaction_no": doc_request.transaction_no,
+        "brgy_id_number": brgy_id_number,
+        "expiration_date": str(expiration_date),
         "linked_at": new_rfid.created_at,
     }
