@@ -78,24 +78,6 @@ const actions = [
     cardBg: "bg-rose-100 hover:bg-rose-200 border-rose-200",
     route: "/blotter-kp-logs",
   },
-  {
-    label: "Documents",
-    description: "Browse all requests",
-    icon: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>`,
-    color: "text-indigo-600",
-    iconBg: "bg-indigo-100",
-    cardBg: "bg-indigo-100 hover:bg-indigo-200 border-indigo-200",
-    route: "/document-requests",
-  },
-  {
-    label: "Equipment",
-    description: "View borrow requests",
-    icon: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>`,
-    color: "text-teal-600",
-    iconBg: "bg-teal-100",
-    cardBg: "bg-teal-100 hover:bg-teal-200 border-teal-200",
-    route: "/equipment-requests",
-  },
 ];
 
 const navigate = (action) => {
