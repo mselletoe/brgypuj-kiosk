@@ -60,6 +60,42 @@ const actions = [
     cardBg: "bg-green-100 hover:bg-green-200 border-green-200",
     route: "/help-and-support",
   },
+  {
+    label: "Residents",
+    description: "Manage resident records",
+    icon: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>`,
+    color: "text-cyan-600",
+    iconBg: "bg-cyan-100",
+    cardBg: "bg-cyan-100 hover:bg-cyan-200 border-cyan-200",
+    route: "/residents-management",
+  },
+  {
+    label: "Blotter Logs",
+    description: "View incident reports",
+    icon: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>`,
+    color: "text-rose-600",
+    iconBg: "bg-rose-100",
+    cardBg: "bg-rose-100 hover:bg-rose-200 border-rose-200",
+    route: "/blotter-kp-logs",
+  },
+  {
+    label: "Documents",
+    description: "Browse all requests",
+    icon: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>`,
+    color: "text-indigo-600",
+    iconBg: "bg-indigo-100",
+    cardBg: "bg-indigo-100 hover:bg-indigo-200 border-indigo-200",
+    route: "/document-requests",
+  },
+  {
+    label: "Equipment",
+    description: "View borrow requests",
+    icon: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>`,
+    color: "text-teal-600",
+    iconBg: "bg-teal-100",
+    cardBg: "bg-teal-100 hover:bg-teal-200 border-teal-200",
+    route: "/equipment-requests",
+  },
 ];
 
 const navigate = (action) => {
@@ -68,20 +104,24 @@ const navigate = (action) => {
 </script>
 
 <template>
+  <!--
+    height: 100% fills the 1fr grid cell given by the right sidebar's grid-template-rows.
+    The button grid uses grid-auto-rows: 1fr so all 5 rows divide available height equally.
+  -->
   <div
-    class="bg-white rounded-[24px] p-6 shadow-sm border border-gray-100 min-h-[290px]"
+    class="qa-card bg-white rounded-[24px] p-6 shadow-sm border border-gray-100 flex flex-col"
   >
     <h3
-      class="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-4"
+      class="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-4 shrink-0"
     >
       Quick Actions
     </h3>
-    <div class="grid grid-cols-2 gap-3">
+    <div class="qa-grid" style="min-height: 0">
       <button
         v-for="(action, i) in actions"
         :key="action.label"
         @click="navigate(action)"
-        class="quick-action-btn flex items-center gap-3 p-3 rounded-[14px] border transition-all duration-200 cursor-pointer text-left group h-[60px]"
+        class="quick-action-btn flex items-center gap-2 px-3 rounded-[14px] border transition-all duration-200 cursor-pointer text-left group overflow-hidden"
         :class="action.cardBg"
         :style="{ animationDelay: `${0.05 + i * 0.05}s` }"
       >
@@ -97,12 +137,13 @@ const navigate = (action) => {
             v-html="action.icon"
           ></svg>
         </div>
-        <div class="flex flex-col min-w-0">
-          <span class="text-[12px] font-bold text-gray-700 leading-tight">{{
-            action.label
-          }}</span>
+        <div class="flex flex-col min-w-0 flex-1">
           <span
-            class="text-[10px] text-gray-400 font-medium leading-tight mt-0.5 truncate"
+            class="text-[11px] font-bold text-gray-700 leading-tight break-words"
+            >{{ action.label }}</span
+          >
+          <span
+            class="text-[10px] text-gray-400 font-medium leading-tight mt-0.5 break-words"
             >{{ action.description }}</span
           >
         </div>
@@ -112,8 +153,22 @@ const navigate = (action) => {
 </template>
 
 <style scoped>
+/* Card natural height */
+.qa-card {
+  height: auto;
+}
+
+/* Button grid: 2 cols, fixed 62px rows so all buttons are uniform */
+.qa-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-auto-rows: 62px;
+  gap: 12px;
+}
+
 .quick-action-btn {
   opacity: 0;
+  height: 100%;
   animation: actionIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 @keyframes actionIn {

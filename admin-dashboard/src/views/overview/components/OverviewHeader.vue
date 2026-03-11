@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import { useAdminAuthStore } from "@/stores/auth";
-import { getAdminProfile } from "@/api/adminService";
+import { getAdminProfile } from "@/api/accountSettingsService";
 
 const props = defineProps({
   stats: {

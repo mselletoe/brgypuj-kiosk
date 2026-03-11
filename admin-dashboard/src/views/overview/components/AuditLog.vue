@@ -7,7 +7,7 @@ const props = defineProps({
 });
 
 const router = useRouter();
-const displayedLogs = computed(() => props.auditLogs.slice(0, 10));
+const displayedLogs = computed(() => props.auditLogs.slice(0, 5));
 
 const navigateToLog = (log) => {
   if (log.type === "doc") router.push("/document-requests");
@@ -22,10 +22,16 @@ const viewAllSettings = () => {
 </script>
 
 <template>
+  <!--
+    No fixed height here. The parent (Overview.vue) passes class="flex-1"
+    so this card stretches to fill the full sidebar height in its row.
+    We use h-full + flex flex-col internally so the scrollable list fills the card.
+  -->
   <div
-    class="w-full bg-white rounded-[24px] p-8 shadow-sm border border-gray-100 flex flex-col h-[480px] xl:h-[580px]"
+    class="w-full bg-white rounded-[24px] p-6 shadow-sm border border-gray-100 flex flex-col overflow-hidden"
+    style="height: auto"
   >
-    <div class="mb-8 flex items-start justify-between">
+    <div class="mb-4 flex items-start justify-between shrink-0">
       <div>
         <h2 class="text-xl font-bold text-gray-800 tracking-tight">
           Recent Activity
@@ -44,8 +50,9 @@ const viewAllSettings = () => {
       </button>
     </div>
 
-    <div class="flex-1 overflow-y-auto px-4 min-h-0">
-      <div class="ml-2 border-l-2 border-gray-50 space-y-4 pb-4">
+    <!-- min-h-0 is critical: allows flex child to shrink and scroll rather than overflow -->
+    <div class="flex-1 min-h-0 pr-1">
+      <div class="ml-2 border-l-2 border-gray-50 space-y-3 pb-2">
         <div
           v-if="displayedLogs.length === 0"
           class="text-sm text-gray-400 text-center mt-10"

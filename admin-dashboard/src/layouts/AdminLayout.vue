@@ -1,11 +1,21 @@
 <script setup>
-import { ref } from "vue";
+import { ref, computed } from "vue";
+import { useRoute } from "vue-router";
 import Drawer from "@/components/Drawer.vue";
 import Header from "@/components/Header.vue";
 import logo from "@/assets/logo.svg";
 import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/vue/24/solid";
 
 const isSidebarOpen = ref(false);
+const route = useRoute();
+
+// Only the overview/dashboard page gets the edge-to-edge scroll treatment
+const isOverview = computed(
+  () =>
+    route.path === "/" ||
+    route.path === "/overview" ||
+    route.name === "overview",
+);
 </script>
 
 <template>
@@ -44,12 +54,41 @@ const isSidebarOpen = ref(false);
       </div>
     </div>
 
+    <!--
+      Content wrapper:
+      - Overview page: remove px padding so the scrollbar sits flush at the
+        window edge. The overview content itself handles its own inner padding.
+      - All other pages: keep original px-6/px-8 padding as before.
+    -->
     <div
-      class="flex flex-col flex-1 pt-4 px-6 pb-6 lg:pt-5 lg:px-8 lg:pb-8 min-w-0 overflow-hidden relative z-10"
+      class="flex flex-col flex-1 min-w-0 overflow-hidden relative z-10"
+      :class="
+        isOverview
+          ? 'pt-4 lg:pt-5 pb-0'
+          : 'pt-4 px-6 pb-6 lg:pt-5 lg:px-8 lg:pb-8'
+      "
     >
-      <Header />
+      <!--
+        Header: on overview we add back horizontal padding so it aligns
+        with the rest of the header items, not the page edge.
+      -->
+      <div :class="isOverview ? 'px-6 lg:px-8' : ''">
+        <Header />
+      </div>
 
-      <main class="flex-1 overflow-y-auto rounded-2xl relative hide-scrollbar">
+      <!--
+        Main scroll area:
+        - Overview: full-width scroll, no rounded clip, content adds own padding
+        - Others: original rounded-2xl with hide-scrollbar
+      -->
+      <main
+        class="flex-1 overflow-y-auto relative"
+        :class="
+          isOverview
+            ? 'overview-scrollbar px-6 lg:px-8 pb-6 lg:pb-8'
+            : 'rounded-2xl hide-scrollbar'
+        "
+      >
         <router-view />
       </main>
     </div>
@@ -57,8 +96,27 @@ const isSidebarOpen = ref(false);
 </template>
 
 <style>
+/* Original hide-scrollbar for non-overview pages */
 .hide-scrollbar::-webkit-scrollbar {
   width: 0px;
   background: transparent;
+}
+
+/*
+  Overview scrollbar: thin, styled, flush to the right edge.
+  Only applied when .overview-scrollbar class is present.
+*/
+.overview-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.overview-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.overview-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #d1d5db;
+  border-radius: 99px;
+}
+.overview-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: #9ca3af;
 }
 </style>

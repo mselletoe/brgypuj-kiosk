@@ -11,7 +11,7 @@ from app.models.faqs import FAQ
 from app.models.misc import Feedback
 from app.models.contact import ContactInformation
 
-router = APIRouter(prefix="/search", tags=["Search"])
+router = APIRouter(prefix="/search")
 
 STATIC_PAGES = [
     { "label": "System Settings",      "subtitle": "Page", "route": "/system-settings",      "type": "page" },

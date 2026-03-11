@@ -86,3 +86,15 @@ export function deleteRFIDReport(id) {
 export function bulkDeleteRFIDReports(ids) {
   return api.post('/admin/id-services/reports/bulk-delete', ids)
 }
+
+
+/**
+ * Returns a URL that streams the ID Application template as a PDF for inline browser preview.
+ * Pass this directly to an <iframe src="..."> or <embed src="...">.
+ * The URL is built from the API base URL so auth cookies are sent automatically.
+ *
+ * @returns {string} absolute URL to the ID template preview endpoint
+ */
+export function getIDTemplatePreviewUrl() {
+  return `${api.defaults.baseURL}/admin/id-services/template/preview`
+}

@@ -22,9 +22,8 @@ aiofiles
 # Document Generation
 jinja2
 docxtpl
-pdfkit
 python-docx
-pypandoc
+python-dateutil
 
 # Validation
 pydantic-settings
@@ -35,3 +34,9 @@ requests
 
 # Serial Communication (SIM800L)
 pyserial
+
+apscheduler
+reportlab
+
+# Image Processing
+Pillow

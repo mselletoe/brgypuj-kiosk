@@ -15,13 +15,13 @@ class DocumentType(Base):
     fields = Column(JSON, server_default="'[]'")
     is_available = Column(Boolean, nullable=False, server_default="true")
     requirements = Column(JSON, server_default="'[]'")
+    is_id_application = Column(Boolean, nullable=False, server_default="false")
 
     document_requests = relationship("DocumentRequest", back_populates="doctype")
 
     @property
     def has_template(self) -> bool:
-        """Check if document has an uploaded template file"""
-        return self.file is not None and len(self.file) > 0 if self.file else False
+        return bool(self.file and len(self.file) > 0)
 
 class DocumentRequest(Base):
     __tablename__ = "document_requests"
@@ -53,3 +53,4 @@ class DocumentRequest(Base):
     resident = relationship("Resident", back_populates="document_requests")
     doctype = relationship("DocumentType", back_populates="document_requests")
     processed_by_admin = relationship("Admin", back_populates="document_requests_processed")
+    barangay_id = relationship("BarangayID", back_populates="request", uselist=False)

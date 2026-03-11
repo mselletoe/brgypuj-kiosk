@@ -12,7 +12,7 @@ import {
 } from "@heroicons/vue/24/solid";
 import { useAdminAuthStore } from "@/stores/auth";
 import GlobalSearch from "@/components/global-search/index.vue";
-import { getAdminProfile, getAdminPhotoUrl } from "@/api/adminService";
+import { getAdminProfile, getAdminPhotoUrl } from "@/api/accountSettingsService";
 
 const router    = useRouter();
 const adminAuth = useAdminAuthStore();

@@ -39,6 +39,7 @@ class DocumentTypeCreate(DocumentTypeBase):
     Schema for creating a new document template via Admin Dashboard.
     """
     is_available: bool = True
+    is_id_application: bool = False   # marks this type as the special ID Application
 
 
 class DocumentTypeUpdate(BaseModel):
@@ -51,6 +52,7 @@ class DocumentTypeUpdate(BaseModel):
     price: Optional[Decimal] = None
     fields: Optional[List[Dict[str, Any]]] = None
     is_available: Optional[bool] = None
+    is_id_application: Optional[bool] = None   # allow toggling via PATCH
     requirements: Optional[List[Dict[str, Any]]] = None
 
 
@@ -70,9 +72,10 @@ class DocumentTypeKioskOut(DocumentTypeBase):
 class DocumentTypeAdminOut(DocumentTypeKioskOut):
     """
     Internal-facing document info for Admin tables.
-    Includes availability status for management toggles.
+    Includes availability status and ID Application flag.
     """
     is_available: bool
+    is_id_application: bool = False
     has_template: bool
 
     model_config = ConfigDict(from_attributes=True)

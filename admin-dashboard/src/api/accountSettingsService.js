@@ -1,5 +1,5 @@
 /**
- * @file adminService.js
+ * @file accountSettingsService.js
  * @description Admin account settings service module.
  * Handles profile retrieval, profile updates, password changes, photo management,
  * and superadmin-only resident relinking.

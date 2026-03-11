@@ -7,7 +7,7 @@
 
 import { ref, onMounted, computed, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
-import { NTabs, NTabPane, useMessage } from "naive-ui";
+import { NTabs, NTabPane, NSelect, useMessage } from "naive-ui";
 import PageTitle from "@/components/shared/PageTitle.vue";
 import { useAdminAuthStore } from "@/stores/auth";
 
@@ -17,6 +17,7 @@ import AdminAccounts from "@/views/settings/system-settings/AdminAccounts.vue";
 import Security from "@/views/settings/system-settings/Security.vue";
 import Backup from "@/views/settings/system-settings/Backup.vue";
 import SystemPreferences from "@/views/settings/system-settings/SystemPreferences.vue";
+import Finance from "@/views/settings/system-settings/Finance.vue";
 // import AuditLog from "@/views/settings/system-settings/AuditLog.vue";
 // import SystemLogs from "@/views/settings/system-settings/SystemLogs.vue";
 
@@ -196,6 +197,7 @@ onMounted(() => {
         <n-tab-pane name="preferences" tab="Preferences" />
         <n-tab-pane name="audit"       tab="Audit Log" />
         <!-- Superadmin-only tabs -->
+        <n-tab-pane v-if="auth.isSuperAdmin" name="finance"     tab="Finance" />
         <n-tab-pane v-if="auth.isSuperAdmin" name="admin"       tab="Admin Accounts" />
         <n-tab-pane v-if="auth.isSuperAdmin" name="system-logs" tab="System Logs" />
       </n-tabs>
@@ -208,6 +210,7 @@ onMounted(() => {
       <Security           v-if="activeTab === 'security'" />
       <Backup             v-if="activeTab === 'backup'" />
       <SystemPreferences  v-if="activeTab === 'preferences'" />
+      <Finance            v-if="activeTab === 'finance'" />
 
       <!-- Superadmin-only tab content -->
       <AdminAccounts v-if="activeTab === 'admin' && auth.isSuperAdmin" />
