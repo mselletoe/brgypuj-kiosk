@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, h } from 'vue'
+import { ref, computed, watch, h, onMounted } from 'vue'
 import { NDataTable, NCheckbox, NPopover, NSelect, NButton, useMessage } from 'naive-ui'
 import {
   TrashIcon,
@@ -8,12 +8,19 @@ import {
   FunnelIcon,
 } from '@heroicons/vue/24/outline'
 import PageTitle from '@/components/shared/PageTitle.vue'
+import { useNotificationStore } from '@/stores/notification'
 
 const message = useMessage()
+const notifStore = useNotificationStore()
 
 const searchQuery       = ref('')
 const showFilterPopover = ref(false)
 const selectedIds       = ref([])
+
+// ── Fetch persisted notifications on mount ────────────────────────────────────
+onMounted(() => {
+  notifStore.fetchNotifications()
+})
 
 // ── Filter state ──────────────────────────────────────────────────────────────
 const filterState = ref({
@@ -43,17 +50,8 @@ const handleFilterClear = () => {
   filterState.value = { status: null, type: null }
 }
 
-// ── Data ──────────────────────────────────────────────────────────────────────
-const notifications = ref([
-  { id: 1, type: 'Document',  msg: 'New Document Request submitted by Juan dela Cruz', date: 'Jan 30, 2026', time: '10:55 AM', unread: true },
-  { id: 2, type: 'Document',  msg: 'New Document Request submitted by Maria Santos',   date: 'Jan 30, 2026', time: '10:42 AM', unread: true },
-  { id: 3, type: 'Document',  msg: 'New Document Request submitted by Pedro Reyes',    date: 'Jan 30, 2026', time: '09:30 AM', unread: true },
-  { id: 4, type: 'Payment',   msg: 'Payment of ₱150.00 completed for Clearance',       date: 'Jan 30, 2026', time: '09:10 AM', unread: false },
-  { id: 5, type: 'Equipment', msg: 'Equipment "Sound System" is now overdue',           date: 'Jan 29, 2026', time: '04:00 PM', unread: true },
-  { id: 6, type: 'Feedback',  msg: 'New feedback received from a resident',             date: 'Jan 29, 2026', time: '02:15 PM', unread: false },
-  { id: 7, type: 'Payment',   msg: 'Payment of ₱75.00 received for Indigency',         date: 'Jan 29, 2026', time: '11:00 AM', unread: true },
-  { id: 8, type: 'Feedback',  msg: 'New feedback received — rated 4/5 stars',          date: 'Jan 28, 2026', time: '03:45 PM', unread: false },
-])
+// ── Data — from Pinia store ───────────────────────────────────────────────────
+const notifications = computed(() => notifStore.notifications)
 
 // ── Filtering ─────────────────────────────────────────────────────────────────
 const filteredNotifications = computed(() => {
@@ -92,9 +90,7 @@ watch(searchQuery, () => { selectedIds.value = [] })
 // ── Actions ───────────────────────────────────────────────────────────────────
 function markSelectedAsRead() {
   if (!selectedIds.value.length) return
-  notifications.value.forEach((n) => {
-    if (selectedIds.value.includes(n.id)) n.unread = false
-  })
+  notifStore.markAllRead(selectedIds.value)
   message.success(`${selectedIds.value.length} notification(s) marked as read.`)
   selectedIds.value = []
 }
@@ -102,13 +98,13 @@ function markSelectedAsRead() {
 function deleteSelected() {
   if (!selectedIds.value.length) return
   const count = selectedIds.value.length
-  notifications.value = notifications.value.filter((n) => !selectedIds.value.includes(n.id))
+  notifStore.deleteMany(selectedIds.value)
   selectedIds.value = []
   message.success(`${count} notification(s) deleted.`)
 }
 
 function markRowAsRead(row) {
-  row.unread = false
+  notifStore.markRead(row.id)
 }
 
 // ── Type meta ─────────────────────────────────────────────────────────────────

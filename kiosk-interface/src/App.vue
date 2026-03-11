@@ -2,9 +2,13 @@
 import { onMounted, onUnmounted } from 'vue'
 import { useAutoLogout } from '@/composables/useAutoLogout'
 import { useSystemConfigStore } from '@/stores/systemConfig'
+import { useWebSocket } from '@/composables/useWebSocket'
 import { storeToRefs } from 'pinia'
 
 useAutoLogout()
+
+const { connect } = useWebSocket()
+connect()  
 
 const store = useSystemConfigStore()
 const { maintenanceMode, maintenanceMessage, brgyName } = storeToRefs(store)

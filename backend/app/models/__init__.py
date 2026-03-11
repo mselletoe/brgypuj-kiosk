@@ -12,3 +12,4 @@ from .systemlogs import SystemLog
 from .contact import ContactInformation
 from .systemconfig import SystemConfig
 from .barangayid import BarangayID
+from .notification import Notification

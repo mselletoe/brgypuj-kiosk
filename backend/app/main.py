@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.admin.routes import router as admin_router
 from app.api.kiosk.routes import router as kiosk_router
+from app.api.websocket import router as ws_router
 from app.services.backup_service import start_scheduler, stop_scheduler
 
 @asynccontextmanager
@@ -29,6 +30,7 @@ app.add_middleware(
 
 app.include_router(admin_router, prefix="/admin", tags=["Admin"])
 app.include_router(kiosk_router, prefix="/kiosk", tags=["Kiosk"])
+app.include_router(ws_router, tags=["WebSocket"])
 
 @app.get("/")
 def root():

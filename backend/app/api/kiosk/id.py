@@ -21,6 +21,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
+from app.core.websocket_manager import ws_manager
 from app.schemas.id import (
     ResidentSearchResult,
     BirthdateVerifyRequest,
@@ -107,14 +108,9 @@ def verify_birthdate(payload: BirthdateVerifyRequest, db: Session = Depends(get_
     return {"verified": verified}
 
 
-@router.post(
-    "/apply",
-    response_model=IDApplicationResponse,
-    status_code=status.HTTP_201_CREATED,
-    summary="Submit an ID application",
-)
-def apply(payload: IDApplicationRequest, db: Session = Depends(get_db)):
-    return apply_for_id(
+@router.post("/apply", response_model=IDApplicationResponse, status_code=status.HTTP_201_CREATED)
+async def apply(payload: IDApplicationRequest, db: Session = Depends(get_db)):
+    result = apply_for_id(
         db,
         payload.resident_id,
         payload.applicant_resident_id,
@@ -123,6 +119,16 @@ def apply(payload: IDApplicationRequest, db: Session = Depends(get_db)):
         use_manual_data=payload.use_manual_data,
         field_values=payload.field_values,
     )
+    await ws_manager.broadcast_to_admin(
+        "new_id_application",
+        {
+            "type": "Document",
+            "resident_name": f"Resident #{payload.resident_id}",
+            "transaction_no": getattr(result, 'transaction_no', ''),
+        },
+        db=db 
+    )
+    return result
 
 
 # =========================================================
@@ -160,11 +166,15 @@ def get_report_card_info(resident_id: int, db: Session = Depends(get_db)):
     return get_rfid_report_card_info(db, resident_id)
 
 
-@router.post(
-    "/report-lost",
-    response_model=ReportLostCardResponse,
-    status_code=status.HTTP_201_CREATED,
-    summary="Report a lost RFID card",
-)
-def submit_lost_card_report(payload: ReportLostCardRequest, db: Session = Depends(get_db)):
-    return report_lost_card(db, payload.resident_id, payload.pin, payload.rfid_uid)
+@router.post("/report-lost", response_model=ReportLostCardResponse, status_code=status.HTTP_201_CREATED)
+async def submit_lost_card_report(payload: ReportLostCardRequest, db: Session = Depends(get_db)):
+    result = report_lost_card(db, payload.resident_id, payload.pin, payload.rfid_uid)
+    await ws_manager.broadcast_to_admin(
+        "new_lost_card_report",
+        {
+            "type": "Document",
+            "resident_name": f"Resident #{payload.resident_id}",
+        },
+        db=db
+    )
+    return result
