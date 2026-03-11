@@ -23,6 +23,7 @@ const isSubmitting = ref(false)
 const errorMessage = ref('')
 const showSuccessModal = ref(false)
 const showErrorModal = ref(false)
+const linkedExpiration = ref('')
 
 // ---- Computed ----
 const pendingUid = computed(() => rfidRegStore.pendingRfidUid)
@@ -65,11 +66,16 @@ const handleSubmit = async () => {
 
   isSubmitting.value = true
   try {
-    await linkRfidToResident({
+    const result = await linkRfidToResident({
       rfid_uid: pendingUid.value,
       resident_id: selectedApp.value.resident_id,
       document_request_id: selectedApp.value.document_request_id,
     })
+    // Format expiration date for display
+    if (result?.data?.expiration_date) {
+      const d = new Date(result.data.expiration_date + 'T00:00:00')
+      linkedExpiration.value = d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+    }
     showSuccessModal.value = true
   } catch (err) {
     errorMessage.value = err?.response?.data?.detail || 'Failed to link RFID. Please try again.'
@@ -240,7 +246,14 @@ onMounted(() => {
           :show-primary-button="true"
           :show-secondary-button="false"
           @primary-click="handleSuccessClose"
-        />
+        >
+          <template #extra>
+            <div v-if="linkedExpiration" class="mt-3 bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 text-sm text-[#013C6D] text-center">
+              <span class="font-medium">Card expires on:</span>
+              <span class="font-bold ml-1">{{ linkedExpiration }}</span>
+            </div>
+          </template>
+        </Modal>
       </div>
     </transition>
 

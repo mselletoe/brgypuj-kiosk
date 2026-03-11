@@ -7,8 +7,9 @@ All database mutations go through here; the router layer stays thin.
 from sqlalchemy.orm import Session, joinedload
 from fastapi import HTTPException, status
 from passlib.context import CryptContext
-
+from datetime import date
 from app.models.resident import Resident, ResidentRFID
+from app.models.barangayid import BarangayID
 from app.models.admin import Admin
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -66,6 +67,27 @@ def rfid_login(db: Session, rfid_uid: str):
         return None
 
     resident, rfid = result
+
+    # ── Expiry check ──────────────────────────────────────────────────────────
+    # If the RFID has an expiration_date and it has passed, auto-deactivate
+    # both the RFID and the linked BarangayID, then reject the login.
+    if rfid.expiration_date and rfid.expiration_date < date.today():
+        rfid.is_active = False
+
+        linked_brgy_id = (
+            db.query(BarangayID)
+            .filter(
+                BarangayID.rfid_id == rfid.id,
+                BarangayID.is_active.is_(True),
+            )
+            .first()
+        )
+        if linked_brgy_id:
+            linked_brgy_id.is_active = False
+
+        db.commit()
+        return None
+
     resident.has_pin = resident.rfid_pin not in (None, RFID_PIN_DEFAULT)
     return resident
 
