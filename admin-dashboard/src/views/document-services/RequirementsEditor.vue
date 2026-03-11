@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { NModal, NButton, NSelect, NInput, useMessage } from 'naive-ui'
 import { XMarkIcon, PlusIcon } from '@heroicons/vue/24/outline'
 
@@ -15,6 +15,10 @@ const props = defineProps({
   serviceId: {
     type: Number,
     default: null
+  },
+  isIdApplication: {
+    type: Boolean,
+    default: false
   }
 })
 
@@ -23,10 +27,22 @@ const emit = defineEmits(['close', 'saved'])
 
 const editingRequirements = ref([])
 
-const systemCheckOptions = [
+// Regular doc types: clean_blotter + min_residency
+// ID application: min_age + min_residency + recent_id_request (no clean_blotter)
+const regularSystemCheckOptions = [
   { label: 'Clean Blotter Record', value: 'clean_blotter' },
   { label: 'Minimum Years of Residency', value: 'min_residency' }
 ]
+
+const idSystemCheckOptions = [
+  { label: 'Minimum Age', value: 'min_age' },
+  { label: 'Minimum Years of Residency', value: 'min_residency' },
+  { label: 'Recent ID Request Check', value: 'recent_id_request' }
+]
+
+const systemCheckOptions = computed(() =>
+  props.isIdApplication ? idSystemCheckOptions : regularSystemCheckOptions
+)
 
 // Sync local copy when modal opens
 watch(() => props.show, (val) => {
@@ -67,6 +83,13 @@ function onSystemCheckSelect(index, value) {
     req.label = req.label || 'Minimum Residency'
     req.params = { years: 0, months: 6 }
     updateResidencyLabel(index)
+  } else if (value === 'min_age') {
+    req.label = req.label || 'Minimum Age'
+    req.params = { years: 18 }
+    updateAgeLabel(index)
+  } else if (value === 'recent_id_request') {
+    req.label = req.label || 'No Recent ID Request'
+    req.params = null
   }
 }
 
@@ -79,6 +102,13 @@ function updateResidencyLabel(index) {
   if (y > 0) parts.push(`${y} year${y !== 1 ? 's' : ''}`)
   if (m > 0) parts.push(`${m} month${m !== 1 ? 's' : ''}`)
   req.label = `Minimum ${parts.join(' and ') || '0 months'} of Residency`
+}
+
+function updateAgeLabel(index) {
+  const req = editingRequirements.value[index]
+  if (req.id !== 'min_age') return
+  const y = req.params?.years ?? 0
+  req.label = `Minimum Age: ${y} year${y !== 1 ? 's' : ''} old`
 }
 
 function handleSave() {
@@ -185,6 +215,25 @@ function handleClose() {
                 ({{ (req.params?.years ?? 0) * 12 + (req.params?.months ?? 0) }} months total)
               </span>
             </div>
+
+            <!-- min_age params -->
+            <div v-if="req.id === 'min_age'" class="flex items-center gap-3">
+              <div class="flex items-center gap-1.5">
+                <span class="text-xs text-gray-500">Minimum age (years):</span>
+                <n-input
+                  :value="String(req.params?.years ?? 18)"
+                  type="number"
+                  size="small"
+                  style="width: 72px"
+                  @update:value="(v) => { req.params = { ...req.params, years: Math.max(0, Number(v)) }; updateAgeLabel(index) }"
+                />
+              </div>
+            </div>
+
+            <!-- recent_id_request note -->
+            <p v-if="req.id === 'recent_id_request'" class="text-xs text-amber-600 italic">
+              ⚠ Automatic checking is not yet available. Staff will verify manually during release.
+            </p>
           </div>
 
           <!-- Remove -->

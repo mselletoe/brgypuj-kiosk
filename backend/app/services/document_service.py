@@ -482,7 +482,10 @@ def get_available_document_types(db: Session):
     """
     return (
         db.query(DocumentType)
-        .filter(DocumentType.is_available.is_(True))
+        .filter(
+            DocumentType.is_available.is_(True),
+            DocumentType.is_id_application.is_(False),
+        )
         .order_by(DocumentType.doctype_name.asc())
         .all()
     )

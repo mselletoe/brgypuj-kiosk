@@ -53,7 +53,7 @@ export const useAuthStore = defineStore("auth", {
      * Dynamically determines the greeting name displayed in the UI.
      */
     userName: (s) =>
-      s.mode === "rfid"
+      s.mode === "rfid" && s.resident
         ? `${s.resident.first_name} ${s.resident.last_name}`
         : "Guest"
   },
