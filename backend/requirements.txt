@@ -22,10 +22,7 @@ aiofiles
 # Document Generation
 jinja2
 docxtpl
-pdfkit
 python-docx
-pypandoc
-pikepdf
 python-dateutil
 
 # Validation
@@ -40,3 +37,6 @@ pyserial
 
 apscheduler
 reportlab
+
+# Image Processing
+Pillow
