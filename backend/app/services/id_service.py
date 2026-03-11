@@ -867,3 +867,19 @@ def bulk_delete_rfid_reports(db: Session, ids: list[int]) -> int:
     count = db.query(RFIDReport).filter(RFIDReport.id.in_(ids)).delete(synchronize_session=False)
     db.commit()
     return count
+
+def preview_id_template(db: Session) -> bytes | None:
+    """
+    Converts the stored ID Application .docx template to PDF bytes
+    for inline browser preview. Returns None if no template is uploaded.
+    """
+    from app.services.document_service import _convert_docx_to_pdf
+
+    doc_type = db.query(DocumentType).filter(
+        DocumentType.is_id_application.is_(True)
+    ).first()
+
+    if not doc_type or not doc_type.file:
+        return None
+
+    return _convert_docx_to_pdf(doc_type.file)

@@ -34,7 +34,8 @@ the shared document_service helpers.
 
 from pathlib import Path
 from fastapi import APIRouter, Depends, Body, HTTPException
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse, Response, StreamingResponse
+from io import BytesIO
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
@@ -51,6 +52,7 @@ from app.services.id_service import (
     undo_rfid_report,
     delete_rfid_report,
     bulk_delete_rfid_reports,
+    preview_id_template,
 )
 from app.services.document_service import (
     approve_request,
@@ -87,6 +89,32 @@ def list_id_applications(db: Session = Depends(get_db)):
 )
 def list_rfid_reports(db: Session = Depends(get_db)):
     return get_all_rfid_reports(db)
+
+
+# =========================================================
+# ID TEMPLATE PREVIEW
+# =========================================================
+
+@router.get(
+    "/template/preview",
+    summary="[Admin] Preview the ID Application template as PDF",
+    description=(
+        "Converts the stored ID Application .docx template to PDF on-the-fly "
+        "using LibreOffice and returns it inline for browser iframe display."
+    ),
+)
+def preview_id_template_endpoint(db: Session = Depends(get_db)):
+    pdf_bytes = preview_id_template(db)
+    if pdf_bytes is None:
+        raise HTTPException(
+            status_code=404,
+            detail="No ID template uploaded yet.",
+        )
+    return StreamingResponse(
+        BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": "inline; filename=id-template-preview.pdf"},
+    )
 
 
 # =========================================================

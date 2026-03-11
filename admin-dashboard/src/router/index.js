@@ -22,7 +22,6 @@ import ContactInformation from "@/views/help-and-support/ContactInformation.vue"
 import ResidentsManagement from "@/views/residents-management/ResidentsManagement.vue";
 import BlotterAndKPLogs from "@/views/blotters-and-kp/BlotterAndKPLogs.vue";
 import Notification from "@/views/notifications/Notification.vue";
-import IDTemplateSettings from "@/views/document-services/IDTemplateSettings.vue";
 
 const routes = [
   {
@@ -65,7 +64,6 @@ const routes = [
       },
 
       { path: "document-services", component: DocumentServices },
-      { path: "id-template-settings", component: IDTemplateSettings },
       { path: "kiosk-announcements", component: KioskAnnouncements },
       { path: "sms-announcements", component: SMSAnnouncements },
       { path: "residents-management", component: ResidentsManagement },
