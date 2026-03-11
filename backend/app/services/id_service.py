@@ -868,6 +868,167 @@ def bulk_delete_rfid_reports(db: Session, ids: list[int]) -> int:
     db.commit()
     return count
 
+def check_id_requirements(db: Session, resident_id: int) -> dict:
+    """
+    Checks whether a resident meets the requirements configured on the
+    ID Application document type.
+
+    Differences from document_service.check_resident_eligibility:
+    - Uses the is_id_application=True doctype (no doctype_id param needed).
+    - clean_blotter is SKIPPED — not applicable to ID applications.
+    - min_age is supported as an additional system_check type.
+    - recent_id_request is included but always returns passed=None
+      (feature not yet implemented).
+    - document-type requirements are returned as informational items.
+
+    Returns a dict with:
+      eligible: bool          — False if any hard (system_check) requirement fails.
+      checks:   list[dict]    — one entry per requirement with id/label/type/passed/message.
+    """
+    doc_type = db.query(DocumentType).filter(
+        DocumentType.is_id_application.is_(True)
+    ).first()
+
+    if not doc_type:
+        return {"eligible": True, "checks": []}
+
+    requirements = doc_type.requirements or []
+    if not requirements:
+        return {"eligible": True, "checks": []}
+
+    resident = db.query(Resident).filter(Resident.id == resident_id).first()
+    if not resident:
+        raise HTTPException(status_code=404, detail="Resident not found")
+
+    today = date.today()
+    checks = []
+    all_passed = True
+
+    for req in requirements:
+        req_id    = req.get("id", "unknown")
+        req_label = req.get("label", req_id)
+        req_type  = req.get("type", "document")
+        params    = req.get("params") or {}
+
+        # ── Informational document requirements ───────────────────────────────
+        if req_type == "document":
+            checks.append({
+                "id":      req_id,
+                "label":   req_label,
+                "type":    "document",
+                "passed":  None,
+                "message": "Must be presented at the barangay hall.",
+            })
+            continue
+
+        # ── System checks ─────────────────────────────────────────────────────
+        if req_type != "system_check":
+            continue
+
+        # clean_blotter — NOT applicable to ID applications; skip silently.
+        if req_id == "clean_blotter":
+            continue
+
+        # --- min_age ---
+        if req_id == "min_age":
+            min_years = params.get("years", 0)
+            age = (
+                today.year - resident.birthdate.year
+                - ((today.month, today.day) < (resident.birthdate.month, resident.birthdate.day))
+            ) if resident.birthdate else None
+
+            if age is None:
+                passed = False
+                message = "Birthdate not on record — age cannot be verified."
+            else:
+                passed = age >= min_years
+                message = (
+                    f"Must be at least {min_years} year{'s' if min_years != 1 else ''} old. "
+                    f"Applicant is {age} year{'s' if age != 1 else ''} old. "
+                    + ("✓ Passed." if passed else "✗ Requirement not met.")
+                )
+
+            checks.append({
+                "id":      req_id,
+                "label":   req_label,
+                "type":    "system_check",
+                "passed":  passed,
+                "message": message,
+            })
+            if not passed:
+                all_passed = False
+
+        # --- min_residency ---
+        elif req_id == "min_residency":
+            years_required  = params.get("years", 0)
+            months_required = params.get("months", 0)
+
+            if not resident.residency_start_date:
+                passed = False
+                message = "Residency start date not on record."
+            else:
+                total_months = (
+                    (today.year  - resident.residency_start_date.year)  * 12
+                    + (today.month - resident.residency_start_date.month)
+                )
+                if today.day < resident.residency_start_date.day:
+                    total_months -= 1
+                required_months = years_required * 12 + months_required
+                passed = total_months >= required_months
+
+                parts = []
+                if years_required:
+                    parts.append(f"{years_required} year{'s' if years_required != 1 else ''}")
+                if months_required:
+                    parts.append(f"{months_required} month{'s' if months_required != 1 else ''}")
+                duration = " and ".join(parts) or "required duration"
+                actual_years  = total_months // 12
+                actual_months = total_months % 12
+                actual_parts  = []
+                if actual_years:
+                    actual_parts.append(f"{actual_years} year{'s' if actual_years != 1 else ''}")
+                if actual_months:
+                    actual_parts.append(f"{actual_months} month{'s' if actual_months != 1 else ''}")
+                actual_str = " and ".join(actual_parts) or "less than 1 month"
+                message = (
+                    f"Minimum {duration} of residency required. "
+                    f"Resident has been registered for {actual_str}. "
+                    + ("✓ Passed." if passed else "✗ Requirement not met.")
+                )
+
+            checks.append({
+                "id":      req_id,
+                "label":   req_label,
+                "type":    "system_check",
+                "passed":  passed,
+                "message": message,
+            })
+            if not passed:
+                all_passed = False
+
+        # --- recent_id_request (not yet implemented) ---
+        elif req_id == "recent_id_request":
+            checks.append({
+                "id":      req_id,
+                "label":   req_label,
+                "type":    "system_check",
+                "passed":  None,
+                "message": "Automatic check not yet available. Staff will verify manually.",
+            })
+
+        # --- unknown system_check ---
+        else:
+            checks.append({
+                "id":      req_id,
+                "label":   req_label,
+                "type":    "system_check",
+                "passed":  None,
+                "message": f"Unknown check '{req_id}' — skipped.",
+            })
+
+    return {"eligible": all_passed, "checks": checks}
+
+
 def preview_id_template(db: Session) -> bytes | None:
     """
     Converts the stored ID Application .docx template to PDF bytes

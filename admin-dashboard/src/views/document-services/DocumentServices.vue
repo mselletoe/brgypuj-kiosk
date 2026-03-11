@@ -686,10 +686,42 @@ onMounted(fetchServices);
         </NEmpty>
       </div>
 
-      <FieldEditor :show="showFieldModal" :fields-data="editingFields?.fields" @close="showFieldModal = false" @saved="saveFields" :service-id="editingFields?.serviceId" />
-      <RequirementsEditor :show="showReqModal" :requirements-data="editingReqService?.requirements" :service-id="editingReqService?.id" @close="showReqModal = false" @saved="saveRequirements" />
-      <FieldEditor :show="showIdFieldModal" :fields-data="idDocType?.fields" @close="showIdFieldModal = false" @saved="saveIdFields" :service-id="idDocType?.id" />
-      <RequirementsEditor :show="showIdReqModal" :requirements-data="idDocType?.requirements" :service-id="idDocType?.id" @close="showIdReqModal = false" @saved="saveIdRequirements" />
+      <!-- ============================== -->
+      <!-- Regular doc type modals        -->
+      <!-- ============================== -->
+      <FieldEditor
+        :show="showFieldModal"
+        :fields-data="editingFields?.fields"
+        @close="showFieldModal = false"
+        @saved="saveFields"
+        :service-id="editingFields?.serviceId"
+      />
+      <RequirementsEditor
+        :show="showReqModal"
+        :requirements-data="editingReqService?.requirements"
+        :service-id="editingReqService?.id"
+        @close="showReqModal = false"
+        @saved="saveRequirements"
+      />
+
+      <!-- ============================== -->
+      <!-- ID Application modals          -->
+      <!-- ============================== -->
+      <FieldEditor
+        :show="showIdFieldModal"
+        :fields-data="idDocType?.fields"
+        @close="showIdFieldModal = false"
+        @saved="saveIdFields"
+        :service-id="idDocType?.id"
+      />
+      <RequirementsEditor
+        :show="showIdReqModal"
+        :requirements-data="idDocType?.requirements"
+        :service-id="idDocType?.id"
+        :is-id-application="true"
+        @close="showIdReqModal = false"
+        @saved="saveIdRequirements"
+      />
 
     </template>
   </div>

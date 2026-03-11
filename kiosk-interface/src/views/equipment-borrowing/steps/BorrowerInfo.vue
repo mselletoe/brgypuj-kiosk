@@ -28,6 +28,14 @@ const props = defineProps({
 
 const emit = defineEmits(['update:borrower-info']);
 
+// localInfo must be declared before the watcher that references it
+const localInfo = ref({
+  contactPerson: props.borrowerInfo.contactPerson || '',
+  contactNumber: props.borrowerInfo.contactNumber || '',
+  purpose: props.borrowerInfo.purpose || null,
+  notes: props.borrowerInfo.notes || ''
+});
+
 const applyAutofill = async () => {
   if (!residentId.value) return;
 
@@ -50,13 +58,6 @@ watch(useAutofill, async (enabled) => {
     localInfo.value.contactPerson = '';
     localInfo.value.contactNumber = '';
   }
-});
-
-const localInfo = ref({
-  contactPerson: props.borrowerInfo.contactPerson || '',
-  contactNumber: props.borrowerInfo.contactNumber || '',
-  purpose: props.borrowerInfo.purpose || null,
-  notes: props.borrowerInfo.notes || ''
 });
 
 const purposeOptions = ref([

@@ -5,14 +5,18 @@ import { useAuthStore } from "@/stores/auth";
 import ArrowBackButton from "@/components/shared/ArrowBackButton.vue";
 import Modal from "@/components/shared/Modal.vue";
 import Button from "@/components/shared/Button.vue";
-import { searchResidents, verifyBirthdate, applyForID, getIDApplicationFields, generateBrgyID } from "@/api/idService";
+import { searchResidents, verifyBirthdate, applyForID, getIDApplicationFields, generateBrgyID, checkIDRequirements } from "@/api/idService";
 import { getResidentAutofillData } from "@/api/residentService";
 import {
   CalendarDaysIcon,
   UserIcon,
   ChevronDownIcon,
   CameraIcon,
-  DocumentTextIcon
+  DocumentTextIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+  ClockIcon,
+  InformationCircleIcon,
 } from "@heroicons/vue/24/outline";
 
 const router = useRouter();
@@ -89,6 +93,12 @@ const showErrorModal = ref(false);
 const showPendingModal = ref(false);
 const showVerificationModal = ref(false);
 const referenceId = ref("");
+
+// Requirements Modal State
+const showRequirementsModal = ref(false);
+const requirementsChecks = ref([]);
+const isEligible = ref(true);
+const isCheckingRequirements = ref(false);
 
 // Selection State
 const lastNameLetter = ref("");
@@ -271,27 +281,19 @@ const handleVerification = async () => {
 
     if (result.verified) {
       showVerificationModal.value = false;
-      useManualEntry.value = !authStore.rfidUid;
-      buildEmptyForm();
-      if (authStore.rfidUid && selectedResident.value?.resident_id) {
-        isFetchingAutofill.value = true;
-        try {
-          const { data: autofill } = await getResidentAutofillData(selectedResident.value.resident_id);
-          applyAutofill(autofill);
-        } catch {
-          useManualEntry.value = true;
-        } finally {
-          isFetchingAutofill.value = false;
-        }
-      }
-      // Generate and reserve the brgy_id_number immediately
+      // Check requirements before proceeding
+      isCheckingRequirements.value = true;
       try {
-        const { data: idData } = await generateBrgyID();
-        brgyIdNumber.value = idData.brgy_id_number;
+        const { data: reqResult } = await checkIDRequirements(selectedResident.value.resident_id);
+        requirementsChecks.value = reqResult.checks;
+        isEligible.value = reqResult.eligible;
       } catch {
-        brgyIdNumber.value = "";
+        requirementsChecks.value = [];
+        isEligible.value = true;
+      } finally {
+        isCheckingRequirements.value = false;
       }
-      currentPhase.value = "details";
+      showRequirementsModal.value = true;
     } else {
       verificationError.value = "Birthdate does not match our records.";
     }
@@ -300,6 +302,31 @@ const handleVerification = async () => {
   } finally {
     isVerifying.value = false;
   }
+};
+
+const proceedFromRequirements = async () => {
+  showRequirementsModal.value = false;
+  useManualEntry.value = !authStore.rfidUid;
+  buildEmptyForm();
+  if (authStore.rfidUid && selectedResident.value?.resident_id) {
+    isFetchingAutofill.value = true;
+    try {
+      const { data: autofill } = await getResidentAutofillData(selectedResident.value.resident_id);
+      applyAutofill(autofill);
+    } catch {
+      useManualEntry.value = true;
+    } finally {
+      isFetchingAutofill.value = false;
+    }
+  }
+  // Generate and reserve the brgy_id_number immediately
+  try {
+    const { data: idData } = await generateBrgyID();
+    brgyIdNumber.value = idData.brgy_id_number;
+  } catch {
+    brgyIdNumber.value = "";
+  }
+  currentPhase.value = "details";
 };
 
 const proceedToCameraFromDetails = () => {
@@ -811,6 +838,119 @@ const selectYear = (y) => {
         >Next: Take Photo</Button
       >
     </div>
+
+    <!-- Requirements Modal -->
+    <Transition name="fade-blur">
+      <div
+        v-if="showRequirementsModal"
+        class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-8 modal-backdrop"
+      >
+        <div class="bg-white rounded-[28px] p-10 max-w-[560px] w-full shadow-2xl relative">
+          <!-- Loading state -->
+          <div v-if="isCheckingRequirements" class="flex flex-col items-center py-8 gap-4">
+            <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-[#03335C]"></div>
+            <p class="text-[#03335C] font-medium">Checking requirements...</p>
+          </div>
+
+          <template v-else>
+            <h2 class="text-2xl font-bold text-[#03335C] mb-1">Application Requirements</h2>
+            <p class="text-gray-500 text-sm mb-6">
+              The following requirements were checked for
+              <strong>{{ selectedResident?.first_name }} {{ selectedResident?.last_name }}</strong>.
+            </p>
+
+            <!-- No requirements configured -->
+            <div v-if="requirementsChecks.length === 0" class="flex items-center gap-3 py-4 px-4 bg-blue-50 rounded-2xl mb-6">
+              <InformationCircleIcon class="w-6 h-6 text-blue-500 flex-shrink-0" />
+              <p class="text-sm text-blue-700">No specific requirements have been configured for this ID application. You may proceed.</p>
+            </div>
+
+            <!-- Requirements list -->
+            <div v-else class="flex flex-col gap-3 mb-6 max-h-64 overflow-y-auto custom-scroll pr-1">
+              <div
+                v-for="check in requirementsChecks"
+                :key="check.id"
+                class="flex items-start gap-3 p-4 rounded-2xl border"
+                :class="{
+                  'bg-green-50 border-green-200': check.passed === true,
+                  'bg-red-50 border-red-200': check.passed === false,
+                  'bg-amber-50 border-amber-200': check.passed === null && check.type === 'system_check',
+                  'bg-blue-50 border-blue-200': check.type === 'document',
+                }"
+              >
+                <!-- Icon -->
+                <div class="flex-shrink-0 mt-0.5">
+                  <CheckCircleIcon v-if="check.passed === true" class="w-5 h-5 text-green-500" />
+                  <XCircleIcon v-else-if="check.passed === false" class="w-5 h-5 text-red-500" />
+                  <ClockIcon v-else-if="check.passed === null && check.type === 'system_check'" class="w-5 h-5 text-amber-500" />
+                  <InformationCircleIcon v-else class="w-5 h-5 text-blue-500" />
+                </div>
+
+                <!-- Content -->
+                <div class="flex-1 min-w-0">
+                  <p class="font-bold text-sm"
+                    :class="{
+                      'text-green-800': check.passed === true,
+                      'text-red-800': check.passed === false,
+                      'text-amber-800': check.passed === null && check.type === 'system_check',
+                      'text-blue-800': check.type === 'document',
+                    }"
+                  >{{ check.label }}</p>
+                  <p class="text-xs mt-0.5"
+                    :class="{
+                      'text-green-600': check.passed === true,
+                      'text-red-600': check.passed === false,
+                      'text-amber-600': check.passed === null && check.type === 'system_check',
+                      'text-blue-600': check.type === 'document',
+                    }"
+                  >{{ check.message }}</p>
+                </div>
+
+                <!-- Badge -->
+                <span class="flex-shrink-0 text-[10px] font-bold uppercase px-2 py-1 rounded-full"
+                  :class="{
+                    'bg-green-100 text-green-700': check.passed === true,
+                    'bg-red-100 text-red-700': check.passed === false,
+                    'bg-amber-100 text-amber-700': check.passed === null && check.type === 'system_check',
+                    'bg-blue-100 text-blue-700': check.type === 'document',
+                  }"
+                >
+                  {{ check.passed === true ? 'Passed' : check.passed === false ? 'Failed' : check.type === 'document' ? 'Bring this' : 'Pending' }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Ineligible warning -->
+            <div v-if="!isEligible" class="flex items-start gap-3 p-4 bg-red-50 rounded-2xl border border-red-200 mb-6">
+              <XCircleIcon class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+              <p class="text-sm text-red-700 font-medium">
+                This resident does not meet one or more required criteria. The application cannot be submitted at this time. Please visit the barangay hall for assistance.
+              </p>
+            </div>
+
+            <div class="flex gap-4 mt-2">
+              <Button
+                variant="outline"
+                class="flex-1"
+                @click="showRequirementsModal = false"
+              >Cancel</Button>
+              <Button
+                v-if="isEligible"
+                variant="secondary"
+                class="flex-1"
+                @click="proceedFromRequirements"
+              >Proceed to Application</Button>
+              <Button
+                v-else
+                variant="disabled"
+                class="flex-1"
+                disabled
+              >Cannot Proceed</Button>
+            </div>
+          </template>
+        </div>
+      </div>
+    </Transition>
 
     <!-- Birthdate Verification Modal -->
     <Transition name="fade-blur">

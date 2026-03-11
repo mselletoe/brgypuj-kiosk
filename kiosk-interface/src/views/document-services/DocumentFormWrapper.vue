@@ -142,7 +142,7 @@ const fetchResidentData = async () => {
   isLoadingResidentData.value = true;
   try {
     const data = await getResidentAutofillData(auth.residentId);
-    residentData.value = data;
+    residentData.value = data.data;
   } catch (err) {
     console.error("Failed to fetch resident data for autofill:", err);
     // Don't block the form - just proceed without autofill
