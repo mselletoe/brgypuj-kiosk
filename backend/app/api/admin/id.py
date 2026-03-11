@@ -110,12 +110,6 @@ def reject_id_application(request_id: int, db: Session = Depends(get_db)):
 @router.post(
     "/applications/{request_id}/release",
     summary="[Admin] Release ID application",
-    description=(
-        "Generates the next sequential brgy_id_number (00001, 00002, …), "
-        "fills the admin-uploaded .docx template with resident data, "
-        "creates a BarangayID row, and marks the request as Released. "
-        "Request must be in 'Approved' status."
-    ),
 )
 def release_id_application_endpoint(request_id: int, db: Session = Depends(get_db)):
     return release_id_application(db, request_id)
@@ -163,18 +157,15 @@ def download_filled_id(request_id: int, db: Session = Depends(get_db)):
             status_code=404,
             detail="No filled ID document available. The application may not have been released yet."
         )
-    try:
-        docx_bytes = base64.b64decode(req.request_file_path)
-    except Exception:
-        raise HTTPException(status_code=500, detail="Stored document is corrupted.")
+    pdf_path = BASE_DIR / req.request_file_path
+    if not pdf_path.exists():
+        raise HTTPException(status_code=404, detail="PDF file not found on disk.")
 
     tx_no = req.transaction_no or f"request-{request_id}"
-    filename = f"BarangayID-{tx_no}.docx"
-
-    return Response(
-        content=docx_bytes,
-        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    return FileResponse(
+        path=str(pdf_path),
+        media_type="application/pdf",
+        filename=f"BarangayID-{tx_no}.pdf",
     )
 
 

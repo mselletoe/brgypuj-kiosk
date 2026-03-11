@@ -7,9 +7,9 @@ Pydantic models for the three ID Service workflows:
   3. Report Lost Card      (kiosk + guest)
 
 MODIFIED:
-- IDApplicationRequest now includes `manual_data` (Optional[IDManualFormData])
-  for guest sessions or when the resident opts to override DB-fetched values.
-- IDFormData documents all template placeholder keys used in the ID docx.
+- IDApplicationRequest now uses `field_values: dict` (replaces IDManualFormData)
+  to support fully dynamic admin-configured form fields instead of hardcoded keys.
+- IDManualFormData removed — no longer needed.
 """
 
 from datetime import date, datetime
@@ -36,31 +36,6 @@ class ResidentSearchResult(BaseModel):
 
 
 # =========================================================
-# ID TEMPLATE FORM DATA
-# =========================================================
-
-class IDManualFormData(BaseModel):
-    """
-    Manual / guest entry fields for the ID card template.
-
-    All fields are optional — only provided values override the DB-fetched data.
-    This is used when:
-      a) The session is Guest mode (no resident login), OR
-      b) The resident opts to manually edit their info via the checkbox toggle.
-
-    These keys map directly to docx template placeholders:
-        {{last_name}}, {{first_name}}, {{middle_name}},
-        {{birthdate}}, {{address}}, {{contact_number}}
-    """
-    last_name:      Optional[str] = None
-    first_name:     Optional[str] = None
-    middle_name:    Optional[str] = None
-    birthdate:      Optional[str] = None   # "YYYY-MM-DD" or formatted string
-    address:        Optional[str] = None
-    contact_number: Optional[str] = None
-
-
-# =========================================================
 # 1. APPLY FOR ID
 # =========================================================
 
@@ -84,15 +59,17 @@ class IDApplicationRequest(BaseModel):
     applicant_resident_id — the resident selected via "Request for" form field.
     rfid_uid              — None for guest sessions.
     photo                 — base64-encoded PNG from the kiosk camera.
-    use_manual_data       — if True, `manual_data` overrides DB-fetched resident info.
-    manual_data           — explicit field values (required for guest; optional for RFID).
+    use_manual_data       — if True, field_values were typed manually by the user.
+    field_values          — all form field values keyed by admin-configured field names.
+                            These are stored flat in form_data and used directly as
+                            template placeholders at release time.
     """
     resident_id:           Optional[int] = None    # logged-in user; None → guest
     applicant_resident_id: int                     # the resident the ID is for
     rfid_uid:              Optional[str] = None    # None → guest session
     photo:                 Optional[str] = None    # base64 PNG
     use_manual_data:       bool = False            # checkbox: "use manually entered info"
-    manual_data:           Optional[IDManualFormData] = None
+    field_values:          dict = {}               # dynamic form field values
 
 
 class IDApplicationResponse(BaseModel):
@@ -168,7 +145,7 @@ class IDApplicationAdminOut(BaseModel):
     resident_first_name:  Optional[str]
     resident_last_name:   Optional[str]
     resident_rfid:        str              # "Guest Mode" or the active RFID UID
-    brgy_id_number:       Optional[str]    # assigned on card release; None until then
+    brgy_id_number:       Optional[str]    # assigned at application time
     requested_at:         datetime
     status:               str
     payment_status:       str
@@ -183,7 +160,7 @@ class RFIDReportAdminOut(BaseModel):
     resident_id:          Optional[int]
     resident_first_name:  Optional[str]
     resident_last_name:   Optional[str]
-    rfid_uid:             Optional[str] = None   # not on model; always None currently
+    rfid_uid:             Optional[str] = None
     status:               str
     reported_at:          datetime               # mapped from created_at in service
 

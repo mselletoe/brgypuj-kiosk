@@ -332,7 +332,7 @@ const submitApplication = async () => {
       rfid_uid: authStore.rfidUid || null,
       photo: photoData.value,
       use_manual_data: useManualEntry.value,
-      manual_data: { ...detailsForm.value },
+      field_values: { ...detailsForm.value },  // all form fields keyed by field name
     });
 
     referenceId.value = result.transaction_no;

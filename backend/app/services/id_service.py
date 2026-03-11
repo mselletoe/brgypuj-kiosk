@@ -6,16 +6,15 @@ Business logic for the three ID Service workflows:
   2. change_pin          — verifies current PIN then stores a new bcrypt hash
   3. report_lost_card    — verifies PIN, deactivates RFID, creates an RFIDReport row
 
-Helper utilities:
-  - search_residents_by_name
-  - verify_resident_birthdate
-  - get_rfid_report_card_info
-  - get_all_rfid_reports  (admin dashboard)
-  - get_all_id_applications (admin dashboard, thin wrapper around DocumentRequest)
-
-Release logic:
-  - release_id_application — generates brgy_id_number, fills docx template,
-                              creates BarangayID row, stores filled file
+MODIFIED:
+- apply_for_id now accepts `field_values: dict` (replaces manual_data/IDManualFormData).
+  All form field values are stored flat in form_data alongside metadata keys.
+  brgy_id_number is generated at apply time and stored in form_data.
+  PDF is generated immediately at apply time (same as document_service).
+- release_id_application no longer generates brgy_id_number or the PDF.
+  It only creates the BarangayID row and marks the request as Released.
+  Template context is built purely from form_data (minus metadata keys) —
+  no hardcoded DB field injections.
 """
 
 import random
@@ -32,7 +31,7 @@ from fastapi import HTTPException, status
 from passlib.context import CryptContext
 from docxtpl import DocxTemplate
 import base64
-
+from app.db.session import SessionLocal
 from app.models.resident import Resident, ResidentRFID
 from app.models.document import DocumentRequest, DocumentType
 from app.models.barangayid import BarangayID
@@ -51,6 +50,16 @@ ID_APPLICATION_DOCTYPE_NAME = "ID Application"
 
 # Sentinel PIN set during migration (no real PIN configured yet)
 RFID_PIN_DEFAULT = "0000"
+
+# Metadata keys stored in form_data that must NOT be passed to the docx template
+_FORM_DATA_META_KEYS = {
+    "request_type",
+    "request_for_id",
+    "request_for_name",
+    "session_rfid",
+    "requested_date",
+    "use_manual_data",
+}
 
 
 # =========================================================
@@ -197,11 +206,6 @@ def _save_id_pdf(transaction_no: str, pdf_bytes: bytes) -> str:
 # =========================================================
 
 def get_id_application_fields(db: Session) -> list:
-    """
-    Kiosk: Returns the admin-configured fields for the ID Application form.
-    These are the extra fields the admin added in IDTemplateSettings.
-    Returns an empty list if no ID Application doctype exists yet.
-    """
     doc_type = db.query(DocumentType).filter(
         DocumentType.is_id_application.is_(True)
     ).first()
@@ -209,13 +213,6 @@ def get_id_application_fields(db: Session) -> list:
 
 
 def search_residents_by_name(db: Session, query: str) -> list[dict]:
-    """
-    Expects input in the format "LastPrefix, FirstPrefix"
-    e.g. "del, max" → matches "del Valle, Maxwell Laurent"
-
-    If only one term is provided (no comma), filters by last name prefix only.
-    Result includes whether the resident currently has an active RFID linked.
-    """
     parts = [p.strip() for p in query.split(",")]
     last_prefix = parts[0] if len(parts) > 0 else ""
     first_prefix = parts[1] if len(parts) > 1 else ""
@@ -268,11 +265,6 @@ def search_residents_by_name(db: Session, query: str) -> list[dict]:
 # =========================================================
 
 def verify_resident_birthdate(db: Session, resident_id: int, birthdate) -> bool:
-    """
-    Checks that the supplied birthdate matches the resident's record.
-    Returns True on match, False on mismatch.
-    Does NOT raise — the API layer decides how to respond to False.
-    """
     resident = _get_resident_or_404(db, resident_id)
     return resident.birthdate == birthdate
 
@@ -288,28 +280,18 @@ def apply_for_id(
     rfid_uid: str | None,
     photo: str | None,
     use_manual_data: bool = False,
-    manual_data=None,
+    field_values: dict = {},
 ) -> dict:
     """
-    Creates a DocumentRequest for an ID Application.
+    Creates a pending ID application DocumentRequest.
 
-    doctype_id is intentionally NULL — ID Applications are a special built-in
-    feature and do not depend on any row in the document_types table.
-    The type is identified by form_data["request_type"] = "ID Application".
+    field_values contains all admin-configured form field values
+    (either autofilled from DB or manually entered by the user).
+    They are stored flat in form_data and used directly as docx
+    template placeholders at release time — no hardcoded field names.
 
-    resident_id            — the logged-in user (None for guest). Stored as
-                             DocumentRequest.resident_id so "Request from" resolves
-                             correctly in the admin dashboard (same as other doc types).
-                             For guests, falls back to applicant_resident_id so the
-                             FK is never NULL.
-    applicant_resident_id  — the resident selected via the form. Stored in form_data
-                             as request_for_id / request_for_name ("Request for").
-
-    - Saves the base64 photo to the *applicant* resident's profile (residents.photo).
-    - Prevents duplicate pending ID applications for the same applicant.
-    - Works for both guest (resident_id=None) and authenticated sessions.
-    - If use_manual_data=True, manual_data fields are merged into form_data so the
-      admin can use them when generating the ID card.
+    brgy_id_number is generated here and stored in form_data so it
+    is available for template rendering at release time.
     """
 
     # Resolve the applicant (the resident the ID is being made for)
@@ -356,12 +338,8 @@ def apply_for_id(
     tx_no = _generate_transaction_no(db)
     now = datetime.now()
 
-    # Build manual data overrides (stored so admin can use them at release time)
-    manual_overrides = {}
-    if use_manual_data and manual_data:
-        manual_overrides = {
-            k: v for k, v in manual_data.model_dump().items() if v is not None
-        }
+    # Generate brgy_id_number now so it's available as a template placeholder
+    brgy_id_number = _generate_brgy_id_number(db)
 
     request = DocumentRequest(
         transaction_no=tx_no,
@@ -371,16 +349,16 @@ def apply_for_id(
         status="Pending",
         payment_status="unpaid",
         form_data={
-            "request_type": ID_APPLICATION_DOCTYPE_NAME,
-            # "Request for" — the resident selected via the form
-            "request_for_id": applicant_resident_id,
+            # ── Metadata (stripped at template-render time) ──────────────
+            "request_type":    ID_APPLICATION_DOCTYPE_NAME,
+            "request_for_id":  applicant_resident_id,
             "request_for_name": f"{applicant.first_name} {applicant.last_name}",
-            # Session display helpers
-            "session_rfid": display_rfid,
-            "requested_date": now.isoformat(),
-            # Manual entry overrides (empty dict if DB data was used)
+            "session_rfid":    display_rfid,
+            "requested_date":  now.isoformat(),
             "use_manual_data": use_manual_data,
-            **manual_overrides,
+            # ── Template placeholders ────────────────────────────────────
+            "brgy_id_number":  brgy_id_number,
+            **field_values,    # all admin-configured fields, keyed by field name
         },
         requested_at=now,
     )
@@ -389,55 +367,27 @@ def apply_for_id(
     db.commit()
     db.refresh(request)
 
-    # Auto-generate PDF from template at submission time (same as regular documents)
+    # ── Generate PDF immediately at application time ──────────────────────────
+    # Build template context: strip metadata keys, inject photo separately.
     id_doctype = db.query(DocumentType).filter(
         DocumentType.is_id_application.is_(True)
     ).first()
 
     if id_doctype and id_doctype.file:
         try:
-            # Build context from applicant DB fields + manual overrides
-            from sqlalchemy.orm import joinedload as _jl
-            applicant_full = (
-                db.query(Resident)
-                .options(_jl(Resident.addresses))
-                .filter(Resident.id == applicant_resident_id)
-                .first()
-            )
-            current_address = next(
-                (a for a in (applicant_full.addresses if applicant_full else []) if a.is_current), None
-            )
-            full_address = (
-                f"{current_address.house_no_street}, Purok {current_address.purok_id}, "
-                f"{current_address.barangay}, {current_address.municipality}, "
-                f"{current_address.province}"
-                if current_address else ""
-            )
-
-            pdf_context = {
-                "last_name":      applicant.last_name,
-                "first_name":     applicant.first_name,
-                "middle_name":    applicant.middle_name or "",
-                "suffix":         applicant.suffix or "",
-                "birthdate":      str(applicant.birthdate) if applicant.birthdate else "",
-                "address":        full_address,
-                "contact_number": applicant.phone_number or "",
-                "photo":          bytes(applicant.photo) if applicant.photo else None,
-                "brgy_id_number": "",  # not assigned yet at submission time
+            context = {
+                k: v for k, v in request.form_data.items()
+                if k not in _FORM_DATA_META_KEYS
             }
+            context["photo"] = bytes(applicant.photo) if applicant.photo else None
 
-            # Apply manual overrides if submitted
-            for key in ("last_name", "first_name", "middle_name", "birthdate", "address", "contact_number"):
-                if manual_overrides.get(key):
-                    pdf_context[key] = manual_overrides[key]
-
-            pdf_bytes = _generate_id_pdf(bytes(id_doctype.file), pdf_context)
+            pdf_bytes = _generate_id_pdf(bytes(id_doctype.file), context)
             relative_path = _save_id_pdf(request.transaction_no, pdf_bytes)
             request.request_file_path = relative_path
             db.commit()
-            print(f"✅ ID PDF generated at submission for {request.transaction_no}")
+            print(f"✅ ID PDF generated for {request.transaction_no}")
         except Exception as e:
-            print(f"❌ ID PDF generation failed at submission for {request.transaction_no}: {str(e)}")
+            print(f"❌ ID PDF generation failed for {request.transaction_no}: {str(e)}")
 
     return {
         "transaction_no": request.transaction_no,
@@ -455,24 +405,17 @@ def release_id_application(db: Session, request_id: int) -> dict:
     """
     Admin: Releases an approved ID application.
 
-    Steps:
-      1. Validate the request exists and is in "Approved" status.
-      2. Resolve the applicant resident from form_data["request_for_id"].
-      3. Build the template context from:
-           - Resident DB fields (last_name, first_name, etc.)
-           - form_data manual overrides (if use_manual_data=True)
-           - residents.photo (bytes, for {{photo}} placeholder)
-      4. Generate the next sequential brgy_id_number (00001, 00002, …).
-      5. Fill the .docx template stored on the ID Application DocumentType.
-      6. Store the filled .docx bytes on DocumentRequest.request_file_path
-         (encoded as base64 string so it survives the Text column).
-      7. Create a BarangayID row linking resident ↔ request ↔ active RFID.
-      8. Mark the DocumentRequest status = "Released".
+    PDF is already generated at application submission time.
+    This function only:
+      1. Validates the request exists and is in "Approved" status.
+      2. Reads brgy_id_number from form_data (generated at apply time).
+      3. Guards against duplicate active BarangayID for the same resident.
+      4. Creates a BarangayID row linking resident ↔ request ↔ active RFID.
+      5. Marks the DocumentRequest status = "Released".
 
     Raises:
         404 — request not found
         400 — request is not in "Approved" status
-        400 — no ID Application template has been uploaded by admin
         409 — resident already has an active BarangayID
     """
     # ── 1. Fetch the request ──────────────────────────────────────────────────
@@ -499,69 +442,20 @@ def release_id_application(db: Session, request_id: int) -> dict:
 
     applicant = (
         db.query(Resident)
-        .options(joinedload(Resident.rfids), joinedload(Resident.addresses))
+        .options(joinedload(Resident.rfids))
         .filter(Resident.id == int(applicant_id))
         .first()
     )
     if not applicant:
         raise HTTPException(status_code=404, detail="Applicant resident not found.")
 
-    # ── 3. Build template context ─────────────────────────────────────────────
-    # Start from DB fields
-    current_address = next(
-        (a for a in applicant.addresses if a.is_current), None
-    )
-    full_address = (
-        f"{current_address.house_no_street}, Purok {current_address.purok_id}, "
-        f"{current_address.barangay}, {current_address.municipality}, "
-        f"{current_address.province}"
-        if current_address else ""
-    )
+    # ── 3. Read brgy_id_number from form_data (generated at apply time) ───────
+    brgy_id_number = form_data.get("brgy_id_number")
+    if not brgy_id_number:
+        # Fallback for applications created before this fix
+        brgy_id_number = _generate_brgy_id_number(db)
 
-    context = {
-        "last_name":      applicant.last_name,
-        "first_name":     applicant.first_name,
-        "middle_name":    applicant.middle_name or "",
-        "suffix":         applicant.suffix or "",
-        "birthdate":      str(applicant.birthdate) if applicant.birthdate else "",
-        "address":        full_address,
-        "contact_number": applicant.phone_number or "",
-        # Store raw bytes — _generate_id_pdf will bind it as InlineImage
-        "photo":          bytes(applicant.photo) if applicant.photo else None,
-    }
-
-    # Override with manual_data values if the applicant chose manual entry
-    if form_data.get("use_manual_data"):
-        manual_keys = [
-            "last_name", "first_name", "middle_name",
-            "birthdate", "address", "contact_number",
-        ]
-        for key in manual_keys:
-            if form_data.get(key):
-                context[key] = form_data[key]
-
-    # ── 4. Generate brgy_id_number ────────────────────────────────────────────
-    brgy_id_number = _generate_brgy_id_number(db)
-    context["brgy_id_number"] = brgy_id_number
-
-    # ── 5. Generate PDF from template ────────────────────────────────────────
-    id_doctype = db.query(DocumentType).filter(
-        DocumentType.is_id_application.is_(True)
-    ).first()
-
-    if id_doctype and id_doctype.file:
-        try:
-            pdf_bytes = _generate_id_pdf(bytes(id_doctype.file), context)
-            relative_path = _save_id_pdf(req.transaction_no, pdf_bytes)
-            req.request_file_path = relative_path
-            print(f"✅ ID PDF generated for {req.transaction_no}")
-        except Exception as e:
-            # PDF failure does not block the release — admin can regenerate manually
-            print(f"❌ ID PDF generation failed for {req.transaction_no}: {str(e)}")
-    # If no template uploaded, request_file_path stays None — that is fine
-
-    # ── 7. Create BarangayID row ──────────────────────────────────────────────
-    # Guard: prevent duplicate active BarangayID for the same resident
+    # ── 4. Guard: prevent duplicate active BarangayID ─────────────────────────
     existing_brgy_id = (
         db.query(BarangayID)
         .filter(
@@ -576,6 +470,7 @@ def release_id_application(db: Session, request_id: int) -> dict:
             detail="This resident already has an active Barangay ID."
         )
 
+    # ── 5. Create BarangayID row ──────────────────────────────────────────────
     active_rfid = _get_active_rfid(applicant)
 
     barangay_id_row = BarangayID(
@@ -589,7 +484,7 @@ def release_id_application(db: Session, request_id: int) -> dict:
     )
     db.add(barangay_id_row)
 
-    # ── 8. Mark the request as Released ──────────────────────────────────────
+    # ── 6. Mark the request as Released ──────────────────────────────────────
     req.status = "Released"
 
     db.commit()
@@ -602,7 +497,7 @@ def release_id_application(db: Session, request_id: int) -> dict:
         "resident_first_name": applicant.first_name,
         "resident_last_name": applicant.last_name,
         "issued_date": str(date.today()),
-        "has_filled_template": filled_docx_b64 is not None,
+        "has_filled_template": req.request_file_path is not None,
     }
 
 
@@ -796,7 +691,7 @@ def get_all_id_applications(db: Session) -> list:
     """
     Admin dashboard: returns all DocumentRequests that are ID Applications.
     Identified by doctype_id IS NULL (set intentionally at submission time).
-    Also returns brgy_id_number if a BarangayID row has been created (post-release).
+    brgy_id_number is read from form_data (assigned at application time).
     """
     requests = (
         db.query(DocumentRequest)
@@ -811,8 +706,12 @@ def get_all_id_applications(db: Session) -> list:
 
     result = []
     for req in requests:
-        session_rfid = (req.form_data or {}).get("session_rfid", "Guest Mode")
-        brgy_id_number = req.barangay_id.brgy_id_number if req.barangay_id else None
+        fd = req.form_data or {}
+        session_rfid = fd.get("session_rfid", "Guest Mode")
+        # Read brgy_id_number from form_data (set at apply time)
+        brgy_id_number = fd.get("brgy_id_number") or (
+            req.barangay_id.brgy_id_number if req.barangay_id else None
+        )
 
         result.append({
             "id": req.id,

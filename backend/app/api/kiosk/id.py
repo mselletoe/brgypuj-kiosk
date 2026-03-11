@@ -112,7 +112,10 @@ def verify_birthdate(payload: BirthdateVerifyRequest, db: Session = Depends(get_
         "Available to both guest (resident_id=null) and authenticated sessions. "
         "The request appears in the admin Document Requests dashboard.\n\n"
         "resident_id            — the logged-in user ('Request from'). Null for guests.\n"
-        "applicant_resident_id  — the resident selected via the form ('Request for')."
+        "applicant_resident_id  — the resident selected via the form ('Request for').\n"
+        "field_values           — all admin-configured form field values, keyed by field name.\n"
+        "                         These are stored flat in form_data and used directly as\n"
+        "                         docx template placeholders at release time."
     ),
 )
 def apply(payload: IDApplicationRequest, db: Session = Depends(get_db)):
@@ -123,7 +126,7 @@ def apply(payload: IDApplicationRequest, db: Session = Depends(get_db)):
         payload.rfid_uid,
         payload.photo,
         use_manual_data=payload.use_manual_data,
-        manual_data=payload.manual_data,
+        field_values=payload.field_values,
     )
 
 
