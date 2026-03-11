@@ -15,7 +15,9 @@ const loading = ref(true)
 const saving  = ref(false)
 
 // ── RFID Expiration ───────────────────────────────────────────────────────────
-const rfidExpiryDays = ref(365)
+// UI works in months; backend stores days. Conversion happens on load & save.
+const rfidExpirationMonths = ref(12)   // displayed in UI (months)
+const rfidReminderDays     = ref(30)   // days before expiry to notify resident
 
 // ── Auto-Logout (stored as seconds in DB; UI splits into mins + secs) ─────────
 const autoLogoutEnabled = ref(true)
@@ -37,8 +39,11 @@ onMounted(async () => {
   try {
     const config = await getSystemConfig()
 
-    rfidExpiryDays.value    = config.rfid_expiry_days    ?? 365
-    maxFailedAttempts.value = config.max_failed_attempts ?? 5
+    // Backend stores days; UI shows months — convert on load
+    const expiryDays             = config.rfid_expiry_days    ?? 365
+    rfidExpirationMonths.value   = Math.round(expiryDays / 30)
+    rfidReminderDays.value       = config.rfid_reminder_days  ?? 30
+    maxFailedAttempts.value      = config.max_failed_attempts ?? 5
     lockoutMinutes.value    = config.lockout_minutes     ?? 15
     lockoutEnabled.value    = maxFailedAttempts.value > 0
 
@@ -69,7 +74,8 @@ const saveSettings = async () => {
   saving.value = true
   try {
     await updateSystemConfig({
-      rfid_expiry_days:     rfidExpiryDays.value,
+      rfid_expiry_days:     rfidExpirationMonths.value * 30,  // convert months → days
+      rfid_reminder_days:   rfidReminderDays.value,
       auto_logout_duration: autoLogoutEnabled.value ? autoLogoutDuration.value : 0,
       max_failed_attempts:  lockoutEnabled.value ? maxFailedAttempts.value : 0,
       lockout_minutes:      lockoutMinutes.value,
@@ -84,7 +90,8 @@ const saveSettings = async () => {
 
 // ── Reset ─────────────────────────────────────────────────────────────────────
 const resetDefaults = () => {
-  rfidExpiryDays.value    = 365
+  rfidExpirationMonths.value  = 12
+  rfidReminderDays.value      = 30
   autoLogoutEnabled.value = true
   autoLogoutMins.value    = 30
   autoLogoutSecs.value    = 0
@@ -104,12 +111,7 @@ const autoLogoutPreview = computed(() => {
   return `${m} min ${s}s`
 })
 
-const rfidExpiryPreview = computed(() => {
-  const ms = rfidExpiryDays.value * 24 * 60 * 60 * 1000
-  return new Date(Date.now() + ms).toLocaleDateString('en-US', {
-    month: 'long', day: 'numeric', year: 'numeric',
-  })
-})
+
 </script>
 
 <template>
@@ -159,7 +161,7 @@ const rfidExpiryPreview = computed(() => {
 
         <div class="text-[12px] text-gray-600 bg-blue-50 border border-blue-200 rounded-md px-4 py-3 mt-1">
           ℹ️ IDs issued today will expire on <strong>{{ new Date(Date.now() + rfidExpirationMonths * 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) }}</strong>.
-          Reminders will be sent <strong>{{ rfidReminderDays }} days</strong> before expiry.
+          Reminders will be sent <strong>{{ rfidReminderDays }} day{{ rfidReminderDays !== 1 ? 's' : '' }}</strong> before expiry.
         </div>
       </section>
 
