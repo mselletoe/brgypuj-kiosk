@@ -86,56 +86,56 @@ onMounted(() => {
 </script>
 
 <template>
-  <div
-    class="flex flex-col w-full h-full gap-8 animate-fade-in overflow-x-clip"
-  >
+  <div class="flex flex-col w-full gap-8 animate-fade-in overflow-x-clip">
     <template v-if="!isLoading">
       <!-- Header -->
       <div class="section-row" style="animation-delay: 0s">
         <OverviewHeader :stats="stats" />
       </div>
 
-      <!--
-        Same outer structure as your original:
-        flex-col xl:flex-row, left = flex-1, right sidebar = direct child.
-        KPI cards are INSIDE the left column, same as original.
-      -->
-      <div class="flex flex-col xl:flex-row gap-6">
-        <!-- LEFT column -->
-        <div class="flex-1 flex flex-col gap-6">
-          <!-- KPI Cards -->
-          <div class="section-row" style="animation-delay: 0.08s">
-            <KpiCards :stats="stats" />
-          </div>
-
-          <!-- Original charts row -->
-          <div
-            class="section-row grid grid-cols-1 lg:grid-cols-3 gap-6 min-h-[350px]"
-            style="animation-delay: 0.16s"
-          >
-            <VolumeChart :docsList="rawDocsList" :equipsList="rawEquipsList" />
-            <BreakdownChart
-              :docsList="rawDocsList"
-              :equipsList="rawEquipsList"
-            />
-          </div>
-
-          <!-- New charts row — 2 equal columns -->
-          <div
-            class="section-row grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-[280px]"
-            style="animation-delay: 0.24s"
-          >
-            <TopRequestedDocs :docsList="rawDocsList" />
-            <TopRequestedEquip :equipsList="rawEquipsList" />
-          </div>
+      <!-- Responsive layout: stacks on small screens, 2-col grid on wide screens -->
+      <div class="overview-grid">
+        <!-- KPI Cards -->
+        <div
+          class="section-row"
+          style="animation-delay: 0.08s; grid-column: 1; grid-row: 1"
+        >
+          <KpiCards :stats="stats" />
         </div>
 
-        <!-- RIGHT sidebar — direct flex child, same as original -->
+        <!-- Charts: grid-cols-3 so VolumeChart spans 2, BreakdownChart spans 1 -->
         <div
-          class="section-row-right w-full xl:w-1/4 shrink-0 flex flex-col gap-6"
-          style="animation-delay: 0.2s"
+          class="section-row grid grid-cols-3 gap-6"
+          style="
+            animation-delay: 0.16s;
+            grid-column: 1;
+            grid-row: 2;
+            height: 380px;
+          "
         >
-          <!-- AuditLog has its own fixed height (h-[480px] xl:h-[600px]) -->
+          <VolumeChart :docsList="rawDocsList" :equipsList="rawEquipsList" />
+          <BreakdownChart :docsList="rawDocsList" :equipsList="rawEquipsList" />
+        </div>
+
+        <!-- Top Requested -->
+        <div
+          class="section-row grid gap-6 top-req-grid"
+          style="animation-delay: 0.24s; grid-column: 1; grid-row: 3"
+        >
+          <TopRequestedDocs :docsList="rawDocsList" />
+          <TopRequestedEquip :equipsList="rawEquipsList" />
+        </div>
+
+        <!-- Right sidebar: AuditLog + QuickActions stacked -->
+        <div
+          class="section-row-right flex flex-col gap-6 sidebar-col"
+          style="
+            animation-delay: 0.2s;
+            grid-column: 2;
+            grid-row: 1 / 4;
+            align-self: start;
+          "
+        >
           <AuditLog :auditLogs="auditLogs" />
           <QuickActions />
         </div>
@@ -155,6 +155,35 @@ onMounted(() => {
 </template>
 
 <style scoped>
+/*
+  Single responsive layout — no duplicate mobile/desktop divs.
+  Narrow: 1 column, sidebar flows below content naturally.
+  Wide (>1100px): 2 columns, sidebar fixed at 340px alongside content.
+*/
+.overview-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: auto auto auto;
+  gap: 24px;
+}
+
+/* Wide screens: 2-column layout with sidebar on the right */
+@media (min-width: 1100px) {
+  .overview-grid {
+    grid-template-columns: 1fr 400px;
+    grid-template-rows: auto 380px auto;
+  }
+
+  .top-req-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .sidebar-col {
+    grid-column: 2 !important;
+    grid-row: 1 / 4 !important;
+  }
+}
+
 .section-row {
   opacity: 0;
   animation: sectionUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
