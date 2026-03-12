@@ -1,46 +1,42 @@
 from app.db.session import SessionLocal
 from app.models.resident import ResidentRFID, Resident
+import random
 
-# RFID assignments - linking specific residents to their RFID cards
-RFID_ASSIGNMENTS = [
-    {
-        "first_name": "Maxpein Zin",
-        "last_name": "del Valle",
-        "rfid_uid": "0029536238"
-    },
-    {
-        "first_name": "Maxwell Laurent",
-        "last_name": "del Valle",
-        "rfid_uid": "0054973429"
-    },
-]
+# How many residents to assign RFIDs to
+RFID_COUNT = 10
+
+
+def generate_rfid_uid(index: int) -> str:
+    """Generate a zero-padded 10-digit RFID UID."""
+    return str(index + 1).zfill(10)
+
 
 def seed_rfids():
     db = SessionLocal()
     try:
         if db.query(ResidentRFID).count() > 0:
-            print("✅ RFID already seeded")
+            print("✅ RFIDs already seeded")
             return
 
-        for assignment in RFID_ASSIGNMENTS:
-            # Find the resident by first and last name
-            resident = db.query(Resident).filter(
-                Resident.first_name == assignment["first_name"],
-                Resident.last_name == assignment["last_name"]
-            ).first()
-            
-            if resident:
-                rfid_entry = ResidentRFID(
-                    resident_id=resident.id,
-                    rfid_uid=assignment["rfid_uid"]
-                )
-                db.add(rfid_entry)
-                print(f"   📇 Assigned RFID {assignment['rfid_uid']} to {assignment['first_name']} {assignment['last_name']}")
-            else:
-                print(f"   ⚠️  Resident not found: {assignment['first_name']} {assignment['last_name']}")
+        residents = db.query(Resident).all()
+        if not residents:
+            print("❌ No residents found. Seed residents first.")
+            return
+
+        # Pick a random subset of residents to assign RFIDs to
+        count = min(RFID_COUNT, len(residents))
+        selected = random.sample(residents, count)
+
+        for idx, resident in enumerate(selected):
+            db.add(ResidentRFID(
+                resident_id=resident.id,
+                rfid_uid=generate_rfid_uid(idx),
+            ))
+            print(f"   📇 Assigned {generate_rfid_uid(idx)} → "
+                  f"{resident.first_name} {resident.last_name}")
 
         db.commit()
-        print("🌱 RFID seeded successfully")
+        print(f"🌱 {count} RFID(s) seeded successfully")
 
     except Exception as e:
         db.rollback()

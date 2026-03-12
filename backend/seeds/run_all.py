@@ -3,8 +3,7 @@ from seeds.seed_residents import seed_residents
 from seeds.seed_addresses import seed_addresses
 from seeds.seed_rfid import seed_rfids
 from seeds.seed_admin import seed_admin
-from seeds.seed_document_types import seed_document_types
-from seeds.seed_equipment_inventory import seed_equipment_inventory
+from seeds.seed_barangay_ids import seed_barangay_ids
 
 def seed_all():
     """
@@ -29,12 +28,8 @@ def seed_all():
         
         # 5. Seed admin (depends on residents)
         seed_admin()
-        
-        # 6. Seed document types (no dependencies)
-        seed_document_types()
-        
-        # 7. Seed equipment inventory (no dependencies)
-        seed_equipment_inventory()
+
+        seed_barangay_ids()
         
         print("-" * 50)
         print("✅ Database seeding completed successfully!")

@@ -2,22 +2,23 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.db.session import SessionLocal
 from app.models.resident import Purok
 
-# List of default puroks
-default_puroks = [
-    "Purok 1", "Purok 2", "Purok 3", "Purok 4", "Purok 5",
-    "Purok 6", "Purok 7", "Purok 8", "Purok 9", "Purok 10"
-]
+# Amadeo, Cavite typically uses numbered puroks
+DEFAULT_PUROKS = [f"Purok {i}" for i in range(1, 11)]  # Purok 1–10
+
 
 def seed_puroks():
     db = SessionLocal()
     try:
-        for name in default_puroks:
-            # Check if purok already exists
-            existing = db.query(Purok).filter(Purok.purok_name == name).first()
-            if not existing:
+        seeded = 0
+        for name in DEFAULT_PUROKS:
+            if not db.query(Purok).filter(Purok.purok_name == name).first():
                 db.add(Purok(purok_name=name))
+                seeded += 1
         db.commit()
-        print("✅ Successfully seeded puroks.")
+        if seeded:
+            print(f"🌱 {seeded} purok(s) seeded.")
+        else:
+            print("✅ Puroks already seeded")
     except SQLAlchemyError as e:
         db.rollback()
         print("❌ Error seeding puroks:", e)

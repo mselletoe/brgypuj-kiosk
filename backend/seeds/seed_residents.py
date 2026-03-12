@@ -1,153 +1,67 @@
 from datetime import date
+from dateutil.relativedelta import relativedelta
+from faker import Faker
 from passlib.context import CryptContext
 from app.db.session import SessionLocal
 from app.models.resident import Resident
 
+fake = Faker("fil_PH")  # Filipino locale
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-RESIDENTS = [
-    {
-        "first_name": "Maxpein Zin",
-        "middle_name": "Park",
-        "last_name": "del Valle",
-        "gender": "female",
-        "birthdate": date(1989, 3, 16),
-        "email": "maxpeinzin@test.com",
-        "phone_number": "09123456789",
-        "rfid_pin": "1234",
-    },
-    {
-        "first_name": "Maxwell Laurent",
-        "last_name": "del Valle",
-        "gender": "male",
-        "birthdate": date(1986, 9, 22),
-        "email": "maxwelllaurent@test.com",
-        "phone_number": "09327564789",
-        "rfid_pin": "1234",
-    },
-    {
-        "first_name": "Maxrill Won",
-        "last_name": "del Valle",
-        "gender": "male",
-        "birthdate": date(1992, 4, 30),
-        "email": "maxrillwon@test.com",
-        "phone_number": "09731285937",
-        "rfid_pin": "1234",
-    },
-    {
-        "first_name": "Maze",
-        "last_name": "del Valle",
-        "gender": "female",
-        "birthdate": date(1960, 2, 3),
-        "email": "maze@test.com",
-        "phone_number": "09437859094",
-        "rfid_pin": "1234",
-    },
-    {
-        "first_name": "Maximor",
-        "last_name": "del Valle",
-        "gender": "male",
-        "birthdate": date(1960, 7, 24),
-        "email": "maximor@test.com",
-        "phone_number": "09432567894",
-        "rfid_pin": "1234",
-    },
-    {
-        "first_name": "Deib Lohr",
-        "last_name": "Enrile",
-        "gender": "male",
-        "birthdate": date(1989, 8, 4),
-        "email": "deiblohr@test.com",
-        "phone_number": "09997435672",
-        "rfid_pin": "1234",
-    },
-    {
-        "first_name": "Maxspaun Thaddeaus",
-        "middle_name": "del Valle",
-        "last_name": "Enrile",
-        "gender": "male",
-        "birthdate": date(2006, 8, 1),
-        "email": "maxspaunthaddeaus@test.com",
-        "phone_number": "09123456789",
-        "rfid_pin": "1234",
-    },
-    {
-        "first_name": "Zarnaih",
-        "last_name": "Marchessa",
-        "gender": "female",
-        "birthdate": date(1988, 3, 12),
-        "email": "zarnaih@test.com",
-        "phone_number": "09456734563",
-        "rfid_pin": "1234",
-    },
-    {
-        "first_name": "Lee Roi",
-        "last_name": "Gozon",
-        "gender": "male",
-        "birthdate": date(1989, 9, 13),
-        "email": "leeroi@test.com",
-        "phone_number": "09223412567",
-        "rfid_pin": "1234",
-    },
-    {
-        "first_name": "Zelestaire Donatelli",
-        "middle_name": "Marchessa",
-        "last_name": "Gozon",
-        "gender": "female",
-        "birthdate": date(2007, 9, 19),
-        "email": "zelestairedonatelli@test.com",
-        "phone_number": "09234533789",
-        "rfid_pin": "1234",
-    },
-    {
-        "first_name": "Randall",
-        "last_name": "Echavez",
-        "gender": "male",
-        "birthdate": date(1986, 10, 10),
-        "email": "randall@test.com",
-        "phone_number": "09223412567",
-        "rfid_pin": "1234",
-    },
-    {
-        "first_name": "Tokyo Athena",
-        "middle_name": "Cortez",
-        "last_name": "Velasquez",
-        "gender": "female",
-        "birthdate": date(2002, 4, 9),
-        "email": "tokyoathena@test.com",
-        "phone_number": "09223234567",
-        "rfid_pin": "1234",
-    },
-    {
-        "first_name": "Zeus Emmanuel",
-        "middle_name": "Cortez",
-        "last_name": "Velasquez",
-        "gender": "male",
-        "birthdate": date(2000, 5, 21),
-        "email": "zeusemmanuel@test.com",
-        "phone_number": "09324566734",
-        "rfid_pin": "1234",
-    },
-    {
-        "first_name": "Briane Leigh",
-        "middle_name": "Regillo",
-        "last_name": "Imperial",
-        "gender": "female",
-        "birthdate": date(2004, 7, 2),
-        "email": "brianeleigh@test.com",
-        "phone_number": "09234512345",
-        "rfid_pin": "1234",
-    },
-    {
-        "first_name": "Jandryll Pierce",
-        "last_name": "Peña",
-        "gender": "male",
-        "birthdate": date(2004, 9, 17),
-        "email": "jandryllpierce@test.com",
-        "phone_number": "09125564567",
-        "rfid_pin": "1234",
-    }, 
+# Target count per age group — adjust as needed
+AGE_GROUPS = [
+    {"label": "Child (0–12)",        "min_age": 0,  "max_age": 12, "count": 8},
+    {"label": "Teen (13–19)",        "min_age": 13, "max_age": 19, "count": 8},
+    {"label": "Young Adult (20–39)", "min_age": 20, "max_age": 39, "count": 16},
+    {"label": "Middle-aged (40–59)", "min_age": 40, "max_age": 59, "count": 12},
+    {"label": "Senior (60+)",        "min_age": 60, "max_age": 90, "count": 8},
 ]
+
+SUFFIXES = [None, None, None, None, "Jr.", "Sr.", "III"]  # weighted toward None
+
+
+def random_birthdate(min_age: int, max_age: int) -> date:
+    today = date.today()
+    start = today - relativedelta(years=max_age)
+    end   = today - relativedelta(years=min_age)
+    return fake.date_between(start_date=start, end_date=end)
+
+
+def generate_residents() -> list[dict]:
+    residents = []
+    seen_emails = set()
+
+    for group in AGE_GROUPS:
+        for _ in range(group["count"]):
+            gender = fake.random_element(["male", "female"])
+            first  = fake.first_name_male()   if gender == "male" else fake.first_name_female()
+            middle = fake.last_name()
+            last   = fake.last_name()
+            suffix = fake.random_element(SUFFIXES) if gender == "male" else None
+            is_child = group["max_age"] < 13
+
+            # Unique email
+            base = f"{first.lower().replace(' ', '')}.{last.lower().replace(' ', '')}@test.com"
+            email, counter = base, 1
+            while email in seen_emails:
+                email = f"{first.lower().replace(' ', '')}.{last.lower().replace(' ', '')}{counter}@test.com"
+                counter += 1
+            seen_emails.add(email)
+
+            residents.append({
+                "first_name":   first,
+                "middle_name":  middle,
+                "last_name":    last,
+                "suffix":       suffix,
+                "gender":       gender,
+                "birthdate":    random_birthdate(group["min_age"], group["max_age"]),
+                "email":        None if is_child else email,
+                "phone_number": None if is_child else fake.numerify("09#########"),
+                "rfid_pin":     "1234",
+            })
+
+    return residents
+
 
 def seed_residents():
     db = SessionLocal()
@@ -156,15 +70,18 @@ def seed_residents():
             print("✅ Residents already seeded")
             return
 
-        for r in RESIDENTS:
-            # HASH THE PIN HERE before saving to DB
+        residents = generate_residents()
+
+        for r in residents:
             r_copy = r.copy()
             r_copy["rfid_pin"] = pwd_context.hash(r["rfid_pin"])
-
             db.add(Resident(**r_copy))
 
         db.commit()
-        print("🌱 Residents seeded (with hashed PINs)")
+        print(f"🌱 {len(residents)} residents seeded (with hashed PINs)")
+        for group in AGE_GROUPS:
+            print(f"   • {group['label']}: {group['count']}")
+
     except Exception as e:
         db.rollback()
         print("❌ Error seeding residents:", e)
