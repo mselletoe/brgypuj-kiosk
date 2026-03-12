@@ -191,7 +191,7 @@ const initials = () => {
 
           <div class="flex flex-col gap-1.5">
             <label class="text-[13px] font-semibold text-gray-700">Subtitle / Municipality</label>
-            <n-input v-model:value="brgySubtitle" placeholder="e.g. Municipality of San Jose, Bulacan" />
+            <n-input v-model:value="brgySubtitle" placeholder="e.g. Amadeo, Cavite" />
             <p class="text-[11px] text-gray-400">
               These details appear on printed documents, the kiosk welcome screen, and all official barangay forms.
             </p>

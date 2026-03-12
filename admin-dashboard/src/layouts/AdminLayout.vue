@@ -3,7 +3,7 @@ import { ref, computed } from "vue";
 import { useRoute } from "vue-router";
 import Drawer from "@/components/Drawer.vue";
 import Header from "@/components/Header.vue";
-import logo from "@/assets/logo.svg";
+import logo from "@/assets/logo.png";
 import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/vue/24/solid";
 
 const isSidebarOpen = ref(false);

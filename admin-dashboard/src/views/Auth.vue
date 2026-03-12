@@ -6,7 +6,7 @@
  */
 import { ref } from 'vue'
 import { NInput, useMessage } from 'naive-ui'
-import logo from '@/assets/logo.svg'
+import logo from '@/assets/logo.png'
 import { useRouter } from 'vue-router'
 import { loginAdmin } from '@/api/authService'
 import { useAdminAuthStore } from '@/stores/auth'
