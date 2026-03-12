@@ -52,16 +52,16 @@ onBeforeUnmount(() => { if (autoSlide) clearInterval(autoSlide) })
     <div v-if="loading" class="fixed inset-0 bg-gradient-to-br from-[#003d73] to-[#00325D] flex items-center justify-center z-50">
       <div class="text-center flex flex-col items-center">
         <div class="loader-dots mb-4"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
-        <p class="text-white text-xl mt-4 opacity-90">Loading announcements...</p>
+        <p class="text-white text-xl mt-4 opacity-90">{{ $t('loadingAnnouncements') }}</p>
       </div>
     </div>
 
     <div v-else-if="error" class="fixed inset-0 bg-gradient-to-br from-[#003d73] to-[#00325D] flex items-center justify-center z-50">
       <div class="text-center px-6">
         <svg class="w-20 h-20 text-red-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-        <h2 class="text-white text-3xl font-bold mb-2">Connection Error</h2>
+        <h2 class="text-white text-3xl font-bold mb-2">{{ $t('connectionError') }}</h2>
         <p class="text-white text-xl opacity-90">{{ error }}</p>
-        <p class="text-white text-sm mt-4 opacity-75">Retrying automatically...</p>
+        <p class="text-white text-sm mt-4 opacity-75">{{ $t('retrying') }}</p>
       </div>
     </div>
 
@@ -80,7 +80,7 @@ onBeforeUnmount(() => { if (autoSlide) clearInterval(autoSlide) })
           <div>
             <h2 class="text-white text-[15px] font-bold leading-tight">{{ brgyName }}</h2>
             <p class="text-white text-[15px] opacity-90 -mt-1">{{ brgySubname }}</p>
-            <h3 class="text-white text-[30px] font-bold leading-tight">BARANGAY ANNOUNCEMENTS</h3>
+            <h3 class="text-white text-[30px] font-bold leading-tight">{{ $t('brgyAnnouncements') }}</h3>
           </div>
         </div>
 
@@ -96,8 +96,8 @@ onBeforeUnmount(() => { if (autoSlide) clearInterval(autoSlide) })
               </div>
             </div>
             <div v-else key="no-announcements">
-              <h1 class="text-white font-extrabold text-[60px] tracking-tight leading-[1.05] drop-shadow-lg">No Announcements Available</h1>
-              <p class="text-white text-[22px] mt-4 opacity-95 leading-[1.3]">Check back later for updates</p>
+              <h1 class="text-white font-extrabold text-[60px] tracking-tight leading-[1.05] drop-shadow-lg">{{ $t('noAnnouncements') }}</h1>
+              <p class="text-white text-[22px] mt-4 opacity-95 leading-[1.3]">{{ $t('checkBackLater') }}</p>
             </div>
           </transition>
         </div>
@@ -110,7 +110,7 @@ onBeforeUnmount(() => { if (autoSlide) clearInterval(autoSlide) })
             <div v-if="announcements.length > 1" class="flex justify-center gap-3">
               <span v-for="(a, i) in announcements" :key="a.id" class="w-3 h-3 rounded-full bg-white transition-all duration-300 cursor-pointer hover:opacity-100 hover:scale-125" :class="i === current ? 'opacity-100 scale-110' : 'opacity-40'" @click.stop="current = i"></span>
             </div>
-            <p class="text-white text-xl opacity-90 pointer-events-none animate-pulse">Touch the screen to start</p>
+            <p class="text-white text-xl opacity-90 pointer-events-none animate-pulse">{{ $t('touchScreen') }}</p>
           </div>
 
           <button v-if="announcements.length > 1" @click.stop.prevent="nextSlide" class="text-white transition-all duration-300 hover:scale-110 hover:opacity-100 opacity-70"><svg class="w-16 h-16" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg></button>
