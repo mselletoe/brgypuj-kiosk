@@ -1,10 +1,8 @@
 <script setup>
-  /**
+/**
  * @file Auth.vue
- * @description Administrative Authentication Gateway.
- * Provides the primary login interface for the Admin Dashboard.
- * Handles credential validation, JWT acquisition via the auth service,
- * and session initialization within the global Pinia store.
+ * @description Admin authentication view providing login functionality
+ * and navigation to account creation.
  */
 import { ref } from 'vue'
 import { NInput, useMessage } from 'naive-ui'
@@ -13,23 +11,19 @@ import { useRouter } from 'vue-router'
 import { loginAdmin } from '@/api/authService'
 import { useAdminAuthStore } from '@/stores/auth'
 
-// --- State Management ---
 const username = ref('')
 const password = ref('')
 const loading = ref(false)
-
-// --- Composition Utilities ---
 const router = useRouter()
 const message = useMessage()
 const adminAuth = useAdminAuthStore()
 
 /**
- * Orchestrates the administrative login process.
- * Validates local input, performs remote authentication,
- * and handles UI feedback for success or failure states.
+ * Handles the login form submission. Validates that both fields are filled,
+ * calls the login API, initializes the admin session with the returned access
+ * token, and redirects to the overview page on success.
  */
 const handleLogin = async () => {
-  // 1. Basic Client-Side Validation
   if (!username.value || !password.value) {
     message.warning('Please enter your username and password.')
     return
@@ -38,18 +32,11 @@ const handleLogin = async () => {
   loading.value = true
 
   try {
-    // 2. Request JWT from Backend Service
     const data = await loginAdmin(username.value, password.value)
-
-    // 3. Initialize Session: fetch full profile (including system_role) and store it
     await adminAuth.initSession(data.access_token)
-
     message.success('Login successful')
-
-    // 4. Redirect to the Dashboard Overview
     router.push('/overview')
   } catch (err) {
-    // 5. Error Handling: Extract backend detail or provide generic fallback
     const errorMsg = err.response?.data?.detail || 'Invalid username or password'
     message.error(errorMsg)
   } finally {
@@ -57,28 +44,26 @@ const handleLogin = async () => {
   }
 }
 
-/**
- * Navigates to the administrative registration flow.
- */
+/** Navigates the user to the account creation page. */
 function goToCreateAccount() {
   router.push('/create-account')
 }
 </script>
 
 <template>
-  <div
-    class="h-screen w-screen bg-[linear-gradient(to_bottom_right,_#3291E3,_#FFFFFF,_#C3EAFF)]
-           flex items-center justify-center"
-  >
-    <div
-      class="backdrop-blur-md bg-white/20 p-10 rounded-2xl shadow-2xl w-[30rem]
-             text-center flex flex-col items-center justify-center"
-    >
+  <div class="h-screen w-screen bg-[linear-gradient(to_bottom_right,_#3291E3,_#FFFFFF,_#C3EAFF)] flex items-center justify-center">
+    <!-- Glassmorphism login card -->
+    <div class="backdrop-blur-md bg-white/20 p-10 rounded-2xl shadow-2xl w-[30rem]
+          text-center flex flex-col items-center justify-center">
+
+      <!-- Logo -->
       <div class="mb-7">
         <img :src="logo" alt="Logo" class="w-[150px]" />
       </div>
 
+      <!-- Login Form -->
       <form @submit.prevent="handleLogin" class="space-y-7 w-full max-w-md">
+        <!-- Username -->
         <NInput
           v-model:value="username"
           type="text"
@@ -87,6 +72,7 @@ function goToCreateAccount() {
           class="text-left shadow-[4px_4px_10px_rgba(128,128,128,0.15)]"
         />
 
+        <!-- Password -->
         <NInput
           v-model:value="password"
           type="password"
@@ -96,6 +82,7 @@ function goToCreateAccount() {
           class="text-left shadow-[4px_4px_10px_rgba(128,128,128,0.15)]"
         />
 
+        <!-- Button: Login -->
         <button
           type="submit"
           class="w-full bg-[#0957FF] h-[42px] text-white font-semibold py-2 rounded-md
@@ -107,6 +94,7 @@ function goToCreateAccount() {
 
         <hr class="my-6 border-gray-300" />
 
+        <!-- Button: Create Account -->
         <button
           type="button"
           @click="goToCreateAccount"
