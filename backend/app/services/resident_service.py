@@ -125,8 +125,10 @@ def get_all_residents_list(db: Session) -> List[Dict]:
                 resident.first_name, resident.middle_name,
                 resident.last_name, resident.suffix
             ),
+            "gender": resident.gender,
             "phone_number": resident.phone_number,
             "rfid_no": rfid_display,
+            "purok_id": current_address.purok_id if current_address else None,
             "current_address": build_full_address(current_address) if current_address else None
         })
 
