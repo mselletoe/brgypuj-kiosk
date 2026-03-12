@@ -7,6 +7,7 @@ import {
   InformationCircleIcon,
 } from "@heroicons/vue/24/outline";
 import axios from "axios";
+import { useI18n } from "vue-i18n";
 
 const contact = ref({
   emergency_number: "",
@@ -19,6 +20,7 @@ const contact = ref({
 });
 
 const isLoading = ref(true);
+const { t } = useI18n();
 
 onMounted(async () => {
   try {
@@ -52,7 +54,7 @@ onMounted(async () => {
     >
       <div class="flex justify-center items-center gap-2 mb-2 text-[#D32F2F]">
         <PhoneIcon class="w-6 h-6" />
-        <h3 class="text-xl font-bold">Emergency</h3>
+        <h3 class="text-xl font-bold">{{ t('emergency') }}</h3>
       </div>
 
       <p
@@ -68,7 +70,7 @@ onMounted(async () => {
           !contact.emergency_desc ? 'text-gray-400 italic' : 'text-[#D32F2F]'
         "
       >
-        {{ contact.emergency_desc || "Not set yet" }}
+        {{ contact.emergency_desc || t('notSetYet') }}
       </p>
     </div>
 
@@ -78,33 +80,33 @@ onMounted(async () => {
     >
       <div class="flex items-center gap-2 mb-4 text-[#013C6D]">
         <ChatBubbleBottomCenterTextIcon class="w-6 h-6" />
-        <h3 class="text-xl font-bold">Barangay Office</h3>
+        <h3 class="text-xl font-bold">{{ t('barangayOffice') }}</h3>
       </div>
       <div class="space-y-2">
         <div>
-          <span class="font-semibold block text-gray-700">Phone</span>
+          <span class="font-semibold block text-gray-700">{{ t('phone') }}</span>
           <span
             :class="!contact.phone ? 'text-gray-400 italic' : 'text-gray-700'"
           >
-            {{ contact.phone || "Not set yet" }}
+            {{ contact.phone || t('notSetYet') }}
           </span>
         </div>
         <div>
-          <span class="font-semibold block text-gray-700">Email</span>
+          <span class="font-semibold block text-gray-700">{{ t('email') }}</span>
           <span
             :class="!contact.email ? 'text-gray-400 italic' : 'text-gray-700'"
           >
-            {{ contact.email || "Not set yet" }}
+            {{ contact.email || t('notSetYet') }}
           </span>
         </div>
         <div>
-          <span class="font-semibold block text-gray-700">Office Hours</span>
+          <span class="font-semibold block text-gray-700">{{ t('officeHours') }}</span>
           <span
             :class="
               !contact.office_hours ? 'text-gray-400 italic' : 'text-gray-700'
             "
           >
-            {{ contact.office_hours || "Not set yet" }}
+            {{ contact.office_hours || t('notSetYet') }}
           </span>
         </div>
       </div>
@@ -116,14 +118,14 @@ onMounted(async () => {
     >
       <div class="flex items-center gap-2 mb-4 text-[#013C6D]">
         <HomeIcon class="w-6 h-6" />
-        <h3 class="text-xl font-bold">Visit Us</h3>
+        <h3 class="text-xl font-bold">{{ t('visitUs') }}</h3>
       </div>
       <div>
-        <span class="font-semibold block text-gray-700">Address</span>
+        <span class="font-semibold block text-gray-700">{{ t('address') }}</span>
         <span
           :class="!contact.address ? 'text-gray-400 italic' : 'text-gray-700'"
         >
-          {{ contact.address || "Not set yet" }}
+          {{ contact.address || t('notSetYet') }}
         </span>
       </div>
     </div>
@@ -134,14 +136,14 @@ onMounted(async () => {
     >
       <div class="flex items-center gap-2 mb-4 text-[#013C6D]">
         <InformationCircleIcon class="w-6 h-6" />
-        <h3 class="text-xl font-bold">Technical Support</h3>
+        <h3 class="text-xl font-bold">{{ t('technicalSupport') }}</h3>
       </div>
       <p
         :class="
           !contact.tech_support ? 'text-gray-400 italic' : 'text-gray-700'
         "
       >
-        {{ contact.tech_support || "Not set yet" }}
+        {{ contact.tech_support || t('notSetYet') }}
       </p>
     </div>
   </div>

@@ -9,11 +9,13 @@
  */
 import { useRoute, useRouter } from "vue-router";
 import { ref, onMounted } from "vue";
+import { useI18n } from "vue-i18n";
 import ArrowBackButton from "@/components/shared/ArrowBackButton.vue";
 import { getDocumentTypes } from "@/api/documentService";
 
 const route = useRoute();
 const router = useRouter();
+const { t } = useI18n();
 
 /**
  * Navigates back to the main Kiosk Home.
@@ -63,11 +65,10 @@ onMounted(fetchDocuments);
       <ArrowBackButton @click="goBack" />
       <div>
         <h1 class="text-[45px] text-[#03335C] font-bold tracking-tight -mt-2">
-          Document Services
+          {{ t('documentServicesTitle') }}
         </h1>
         <p class="text-[#03335C] -mt-2">
-          Select and apply for barangay documents. Take note of the requirements
-          for each document type.
+          {{ t('documentServicesSubtitle') }}
         </p>
       </div>
     </div>
@@ -81,7 +82,7 @@ onMounted(fetchDocuments);
         <div class="dot"></div>
         <div class="dot"></div>
       </div>
-      <p class="text-[#03335C] text-lg font-semibold">Loading services...</p>
+      <p class="text-[#03335C] text-lg font-semibold">{{ t('loadingServices') }}</p>
     </div>
 
     <div v-if="error" class="text-center text-red-500 py-10">{{ error }}</div>
@@ -92,9 +93,7 @@ onMounted(fetchDocuments);
           v-if="documents.length === 0"
           class="flex justify-center items-center py-20"
         >
-          <p class="text-gray-400 text-xl font-medium">
-            No document services available at the moment.
-          </p>
+          <p class="text-gray-400 text-xl font-medium">{{ t('noDocumentServices') }}</p>
         </div>
 
         <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
@@ -119,7 +118,7 @@ onMounted(fetchDocuments);
             <div
               class="mt-auto flex justify-between items-center font-semibold text-[#003A6B] group-hover:text-white transition-all duration-300 ease-in-out"
             >
-              <span>Fee:</span>
+              <span>{{ t('fee') }}</span>
               <span class="text-[#09AA44] group-hover:text-white transition-all"
                 >₱{{ doc.price || 0 }}</span
               >

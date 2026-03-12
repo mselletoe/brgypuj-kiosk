@@ -6,6 +6,7 @@
 
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import ArrowBackButton from '@/components/shared/ArrowBackButton.vue'
 import Button from '@/components/shared/Button.vue'
 import Modal from '@/components/shared/Modal.vue'
@@ -14,6 +15,7 @@ import { getApprovedApplications, linkRfidToResident } from '@/api/registrationS
 
 const router = useRouter()
 const rfidRegStore = useRfidRegistrationStore()
+const { locale, t } = useI18n()
 
 // ---- State ----
 const applications = ref([])
@@ -119,13 +121,15 @@ onMounted(() => {
       <div class="flex justify-between items-center w-full">
         <div>
           <h1 class="text-[45px] text-[#03335C] font-bold tracking-tight -mt-2">
-            Register RFID
+            {{ t('registerRFID') }}
           </h1>
           <p class="text-[#03335C] -mt-2">
-            Link a new RFID card to an approved ID application.
+            {{ t('linkNewRFID') }}
           </p>
         </div>
-        <div class="text-right">
+        <div class="flex items-center gap-4">
+    
+
           <p class="text-[#03335C] font-bold text-[45px]">{{ pendingUid || '—' }}</p>
         </div>
       </div>
@@ -136,8 +140,8 @@ onMounted(() => {
 
       <!-- Left Panel: Transaction list -->
       <div class="bg-white rounded-2xl shadow-lg p-6 flex-1 border border-gray-200 text-[#003A6B] flex flex-col">
-        <p class="font-semibold text-base mb-1">Select a transaction number</p>
-        <p class="text-xs text-gray-400 mb-6 italic">Only approved applications without an active RFID are shown.</p>
+        <p class="font-semibold text-base mb-1">{{ t('selectTransaction') }}</p>
+        <p class="text-xs text-gray-400 mb-6 italic">{{ t('onlyApproved') }}</p>
 
         <!-- Loading -->
         <div v-if="isLoading" class="flex-1 flex items-center justify-center text-gray-400">
@@ -145,7 +149,7 @@ onMounted(() => {
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
           </svg>
-          Loading applications...
+          {{ t('loadingApplications') }}
         </div>
 
         <!-- Error -->
@@ -158,7 +162,7 @@ onMounted(() => {
           <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
-          <p>No approved applications pending RFID assignment.</p>
+          <p>{{ t('noApprovedApplications') }}</p>
         </div>
 
         <!-- Transaction grid -->
@@ -181,35 +185,35 @@ onMounted(() => {
 
       <!-- Right Panel: Resident details -->
       <div class="flex flex-col text-[#003A6B] bg-[#EBF5FF] rounded-2xl shadow-lg p-6 w-[380px] border border-[#B0D7F8]">
-        <h2 class="font-bold text-2xl text-center">Resident Details</h2>
-        <p class="italic text-[9px] text-center mb-4">Please verify resident details before linking the RFID card.</p>
+        <h2 class="font-bold text-2xl text-center">{{ t('residentDetails') }}</h2>
+        <p class="italic text-[9px] text-center mb-4">{{ t('verifyBeforeLinking') }}</p>
 
         <div v-if="!selectedApp" class="flex-1 flex items-center justify-center text-gray-400 text-sm italic text-center">
-          Select a transaction number<br>to view resident details.
+          {{ t('selectTransactionFirst') }}
         </div>
 
         <div v-else class="flex-1 flex flex-col gap-3 text-sm">
           <div class="bg-white rounded-xl p-4 border border-[#B0D7F8] space-y-3">
             <div>
-              <p class="text-xs text-gray-400 uppercase tracking-wide font-medium">Full Name</p>
+              <p class="text-xs text-gray-400 uppercase tracking-wide font-medium">{{ t('fullName') }}</p>
               <p class="font-bold text-base text-[#013C6D]">{{ fullName(selectedApp) }}</p>
             </div>
             <div class="border-t border-gray-100 pt-2">
-              <p class="text-xs text-gray-400 uppercase tracking-wide font-medium">Birthdate</p>
+              <p class="text-xs text-gray-400 uppercase tracking-wide font-medium">{{ t('birthdate') }}</p>
               <p class="font-semibold text-[#013C6D]">{{ formatBirthdate(selectedApp.birthdate) }}</p>
             </div>
             <div class="border-t border-gray-100 pt-2">
-              <p class="text-xs text-gray-400 uppercase tracking-wide font-medium">Address</p>
+              <p class="text-xs text-gray-400 uppercase tracking-wide font-medium">{{ t('address') }}</p>
               <p class="font-semibold text-[#013C6D]">{{ selectedApp.address || '—' }}</p>
             </div>
             <div class="border-t border-gray-100 pt-2">
-              <p class="text-xs text-gray-400 uppercase tracking-wide font-medium">Transaction No.</p>
+              <p class="text-xs text-gray-400 uppercase tracking-wide font-medium">{{ t('transactionNo') }}</p>
               <p class="font-bold text-[#013C6D]">{{ selectedApp.transaction_no }}</p>
             </div>
           </div>
 
           <div class="bg-blue-100 rounded-xl p-3 border border-blue-300 text-center">
-            <p class="text-xs text-gray-500 font-medium">RFID Card to Link</p>
+            <p class="text-xs text-gray-500 font-medium">{{ t('rfidCardToLink') }}</p>
             <p class="font-bold font-mono text-[#013C6D] text-base mt-0.5">{{ pendingUid }}</p>
           </div>
         </div>
@@ -219,7 +223,7 @@ onMounted(() => {
     <!-- Footer actions -->
     <div class="flex gap-6 mt-6 justify-between items-center flex-shrink-0">
       <Button variant="outline" size="md" @click="handleCancel">
-        Cancel
+        {{ t('cancel') }}
       </Button>
       <Button
         variant="secondary"
@@ -227,7 +231,7 @@ onMounted(() => {
         :disabled="!canSubmit"
         @click="handleSubmit"
       >
-        {{ isSubmitting ? 'Linking...' : 'Link RFID Card' }}
+        {{ isSubmitting ? t('linking') : t('linkRFIDCard') }}
       </Button>
     </div>
 
@@ -238,18 +242,18 @@ onMounted(() => {
         class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50"
       >
         <Modal
-          title="RFID Registered!"
-          :message="`The RFID card has been successfully linked to ${fullName(selectedApp)}. They can now use this card to log in to the kiosk.`"
+          :title="t('rfidRegistered')"
+          :message="t('rfidLinkedSuccess', { name: fullName(selectedApp) })"
           :reference-id="pendingUid"
           :show-reference-id="true"
-          primary-button-text="Done"
+          :primary-button-text="t('done')"
           :show-primary-button="true"
           :show-secondary-button="false"
           @primary-click="handleSuccessClose"
         >
           <template #extra>
             <div v-if="linkedExpiration" class="mt-3 bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 text-sm text-[#013C6D] text-center">
-              <span class="font-medium">Card expires on:</span>
+              <span class="font-medium">{{ t('cardExpiresOn') }}</span>
               <span class="font-bold ml-1">{{ linkedExpiration }}</span>
             </div>
           </template>
@@ -264,9 +268,9 @@ onMounted(() => {
         class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50"
       >
         <Modal
-          title="Registration Failed"
+          :title="t('registrationFailed')"
           :message="errorMessage"
-          primary-button-text="OK"
+          :primary-button-text="t('confirm')"
           :show-primary-button="true"
           :show-secondary-button="false"
           @primary-click="handleErrorClose"

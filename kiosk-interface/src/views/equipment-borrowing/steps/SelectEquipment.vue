@@ -7,6 +7,7 @@ import Modal from "@/components/shared/Modal.vue";
 import { PlusIcon, MinusIcon } from "@heroicons/vue/24/solid";
 import Keyboard from "@/components/shared/Keyboard.vue";
 import { getAvailableEquipment } from "@/api/equipmentService";
+import { useI18n } from 'vue-i18n';
 
 const props = defineProps({
   selectedEquipment: Array,
@@ -15,6 +16,7 @@ const props = defineProps({
 });
 const emit = defineEmits(["update:selected-equipment"]);
 const router = useRouter();
+const { t } = useI18n();
 
 const allEquipment = ref([]);
 const loading = ref(false);
@@ -162,10 +164,10 @@ onMounted(() => {
       <ArrowBackButton @click="handleBackClick" />
       <div>
         <h1 class="text-[45px] text-[#03335C] font-bold tracking-tight -mt-2">
-          Equipment Borrowing
+          {{ t('equipmentBorrowingTitle') }}
         </h1>
         <p class="text-[#03335C] -mt-2">
-          Below are list of available equipment.
+          {{ t('belowAvailableEquipment') }}
         </p>
       </div>
     </div>
@@ -180,7 +182,7 @@ onMounted(() => {
           <div class="dot"></div>
           <div class="dot"></div>
         </div>
-        <p class="text-[#03335C] text-lg font-semibold">Loading equipment...</p>
+        <p class="text-[#03335C] text-lg font-semibold">{{ t('loadingEquipment') }}</p>
       </div>
 
       <div v-else-if="loadError" class="text-center text-red-500 py-10">
@@ -191,9 +193,7 @@ onMounted(() => {
         v-else-if="allEquipment.length === 0"
         class="flex justify-center items-center py-20"
       >
-        <p class="text-gray-400 text-xl font-medium">
-          No equipment available for borrowing at the moment.
-        </p>
+        <p class="text-gray-400 text-xl font-medium">{{ t('noEquipmentAvailable') }}</p>
       </div>
 
       <div v-else class="grid grid-cols-4 gap-5">
@@ -209,15 +209,15 @@ onMounted(() => {
             </h1>
             <div class="mt-2 text-sm">
               <div class="flex justify-between">
-                <span>Available:</span>
+                <span>{{ t('available') }}</span>
                 <span class="font-medium"
                   >{{ equipment.available }}/{{ equipment.total }}</span
                 >
               </div>
               <div class="flex justify-between mt-1">
-                <span>Rate:</span>
+                <span>{{ t('rate') }}</span>
                 <span class="font-bold text-green-600">
-                  {{ formatCurrency(equipment.rate) }}/{{ equipment.ratePer }}
+                  {{ formatCurrency(equipment.rate) }}/{{ t('day') }}
                 </span>
               </div>
               <p
@@ -276,7 +276,7 @@ onMounted(() => {
         :disabled="!hasSelection"
         @click="resetSelection"
       >
-        Reset Selection
+        {{ t('resetSelection') }}
       </Button>
       <Button
         :variant="hasSelection ? 'secondary' : 'disabled'"
@@ -284,7 +284,7 @@ onMounted(() => {
         :disabled="!hasSelection"
         @click="continueStep"
       >
-        Continue to Dates
+        {{ t('continueToDates') }}
       </Button>
     </div>
 
@@ -306,11 +306,11 @@ onMounted(() => {
         class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-8 modal-backdrop"
       >
         <Modal
-          title="Exit Equipment Request?"
-          message="You have unsaved changes. Are you sure you want to exit? All your progress will be lost."
+          :title="t('exitEquipmentRequest')"
+          :message="t('unsavedChanges')"
           type="warning"
-          primaryButtonText="Exit"
-          secondaryButtonText="Stay"
+          :primaryButtonText="t('exit')"
+          :secondaryButtonText="t('stay')"
           :showPrimaryButton="true"
           :showSecondaryButton="true"
           :showReferenceId="false"

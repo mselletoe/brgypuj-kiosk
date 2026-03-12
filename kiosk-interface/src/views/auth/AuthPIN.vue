@@ -9,6 +9,7 @@
  */
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useSystemConfig } from '@/composables/useSystemConfig'
 import Keypad from '@/components/shared/Keypad.vue'
 import { EyeIcon, EyeSlashIcon, XCircleIcon, CheckCircleIcon, ShieldCheckIcon, LockClosedIcon } from '@heroicons/vue/24/outline'
@@ -23,6 +24,7 @@ const router      = useRouter()
 const authStore   = useAuthStore()
 const rfidRegStore = useRfidRegistrationStore()
 const { brgyName, brgySubname, resolvedLogoUrl } = useSystemConfig()
+const { locale, t } = useI18n()
 
 // ── Toast ──────────────────────────────────────────────────────────────────
 const showToast    = ref(false)
@@ -76,20 +78,20 @@ const lockoutDisplay = computed(() => {
 // ── Computed ───────────────────────────────────────────────────────────────
 const isAdminMode      = computed(() => rfidRegStore.isAdminMode)
 const title            = computed(() => {
-  if (isAdminMode.value) return 'Admin Access Required'
-  return `Welcome, ${authStore.tempResident?.first_name || 'Resident'}`
+  if (isAdminMode.value) return t('adminAccessRequired')
+  return t('welcome', { name: authStore.tempResident?.first_name || 'Resident' })
 })
 const subtitle         = computed(() => {
-  if (isAdminMode.value)       return 'Enter the admin passcode to register this new RFID card.'
-  if (!authStore.tempHasPin)   return 'Please set your 4-digit PIN'
-  return 'Please enter your PIN to continue'
+  if (isAdminMode.value)       return t('enterAdminPasscode')
+  if (!authStore.tempHasPin)   return t('setYourPIN')
+  return t('enterYourPIN')
 })
 const inputLabel       = computed(() => {
-  if (isAdminMode.value)       return 'Enter Admin Passcode'
-  if (!authStore.tempHasPin)   return 'Enter New 4-digit PIN'
-  return 'Enter 4-digit PIN'
+  if (isAdminMode.value)       return t('enterAdminPasscodeLabel')
+  if (!authStore.tempHasPin)   return t('enterNewPIN')
+  return t('enter4PIN')
 })
-const buttonLabel      = computed(() => isAdminMode.value ? 'Confirm' : 'Authenticate')
+const buttonLabel      = computed(() => isAdminMode.value ? t('confirm') : t('authenticate'))
 const pinDisplay       = computed(() => {
   if (!pin.value.length) return ''
   return showPin.value ? pin.value : '• '.repeat(pin.value.length).trim()
@@ -130,8 +132,8 @@ const submitPin = async () => {
     // ── Admin passcode flow ───────────────────────────────────────────────
     if (isAdminMode.value) {
       const { valid } = await verifyAdminPasscode(pin.value)
-      if (!valid) { triggerToast('Incorrect passcode. Please try again.'); onClear(); return }
-      triggerToast('Access granted!', true)
+      if (!valid) { triggerToast(t('incorrectPasscode')); onClear(); return }
+      triggerToast(t('accessGranted'), true)
       rfidRegStore.clearAdminMode()
       setTimeout(() => router.replace('/register'), 1000)
       return
@@ -139,10 +141,10 @@ const submitPin = async () => {
 
     // ── First-time PIN setup ──────────────────────────────────────────────
     if (!authStore.tempHasPin) {
-      if (pin.value !== confirmPin.value) { triggerToast('PINs do not match.'); onClear(); return }
+      if (pin.value !== confirmPin.value) { triggerToast(t('pinsDoNotMatch')); onClear(); return }
       await setupPin({ resident_id: authStore.tempResident.id, pin: pin.value, rfid_uid: authStore.tempUid })
       authStore.confirmRFIDLogin()
-      triggerToast('PIN set successfully!', true)
+      triggerToast(t('pinSetSuccessfully'), true)
       setTimeout(() => router.replace('/home'), 1000)
       return
     }
@@ -153,7 +155,7 @@ const submitPin = async () => {
     if (response.valid) {
       attemptsLeft.value = null
       authStore.confirmRFIDLogin()
-      triggerToast('Login successful!', true)
+      triggerToast(t('loginSuccessful'), true)
       router.replace('/home')
       return
     }
@@ -162,9 +164,9 @@ const submitPin = async () => {
     onClear()
     attemptsLeft.value = response.attempts_left ?? null
     if (attemptsLeft.value !== null && attemptsLeft.value <= 2) {
-      triggerToast(`Incorrect PIN. ${attemptsLeft.value} attempt${attemptsLeft.value !== 1 ? 's' : ''} remaining.`)
+      triggerToast(t('incorrectPINAttempts', { n: attemptsLeft.value, s: attemptsLeft.value !== 1 ? 's' : '' }))
     } else {
-      triggerToast('Incorrect PIN. Please try again.')
+      triggerToast(t('incorrectPIN'))
     }
 
   } catch (err) {
@@ -178,7 +180,7 @@ const submitPin = async () => {
       return
     }
 
-    triggerToast('An error occurred. Please try again.')
+    triggerToast(t('processing'))
   }
 }
 
@@ -190,10 +192,10 @@ const goBack = () => {
 
 onMounted(() => {
   if (rfidRegStore.isAdminMode) {
-    if (!rfidRegStore.pendingRfidUid) { triggerToast('No RFID scan found. Please try again.'); setTimeout(() => router.push('/login-rfid'), 1500) }
+    if (!rfidRegStore.pendingRfidUid) { triggerToast(t('noRFIDFound')); setTimeout(() => router.push('/login-rfid'), 1500) }
     return
   }
-  if (!authStore.tempResident || !authStore.tempUid) { triggerToast('No session found. Please scan again.'); setTimeout(() => router.push('/login-rfid'), 1500) }
+  if (!authStore.tempResident || !authStore.tempUid) { triggerToast(t('noSessionFound')); setTimeout(() => router.push('/login-rfid'), 1500) }
 })
 
 onUnmounted(() => clearInterval(lockoutInterval))
@@ -205,6 +207,8 @@ onUnmounted(() => clearInterval(lockoutInterval))
 
       <!-- Left panel -->
       <div class="flex-1 flex flex-col text-[#013C6D] pr-12">
+  
+
         <div class="flex items-center gap-3 mb-10">
           <img v-if="resolvedLogoUrl" :src="resolvedLogoUrl" alt="Barangay Logo" class="w-14 h-14 min-w-[56px] object-cover rounded-full">
           <div>
@@ -223,7 +227,7 @@ onUnmounted(() => clearInterval(lockoutInterval))
         </div>
 
         <Button @click="goBack" class="absolute bottom-8 left-8 w-auto px-3 text-[14px] rounded-[40px] h-[40px]" variant="outline">
-          <span class="flex items-center gap-x-2"><ArrowLeftIcon class="h-5 w-5" />Go Back</span>
+          <span class="flex items-center gap-x-2"><ArrowLeftIcon class="h-5 w-5" />{{ t('back') }}</span>
         </Button>
       </div>
 
@@ -251,8 +255,8 @@ onUnmounted(() => clearInterval(lockoutInterval))
             </span>
           </div>
           <div>
-            <p class="text-xl font-semibold text-red-600">Account Temporarily Locked</p>
-            <p class="text-sm text-gray-500 mt-1">Too many incorrect PIN attempts.<br>Please wait before trying again.</p>
+            <p class="text-xl font-semibold text-red-600">{{ t('accountLocked') }}</p>
+            <p class="text-sm text-gray-500 mt-1">{{ t('tooManyIncorrect') }}<br>{{ t('waitBeforeTrying') }}</p>
           </div>
         </div>
 
@@ -263,7 +267,7 @@ onUnmounted(() => clearInterval(lockoutInterval))
 
             <!-- Attempts warning -->
             <p v-if="attemptsLeft !== null && attemptsLeft <= 2" class="text-xs text-red-500 mb-1 font-medium">
-              ⚠ {{ attemptsLeft }} attempt{{ attemptsLeft !== 1 ? 's' : '' }} remaining before lockout
+              ⚠ {{ t('attemptsRemaining', { n: attemptsLeft, s: attemptsLeft !== 1 ? 's' : '' }) }}
             </p>
 
             <div class="relative w-full">
@@ -280,7 +284,7 @@ onUnmounted(() => clearInterval(lockoutInterval))
             </div>
 
             <template v-if="showConfirmField">
-              <label class="text-sm font-medium text-gray-500 mb-1 mt-4">Confirm 4-digit PIN</label>
+              <label class="text-sm font-medium text-gray-500 mb-1 mt-4">{{ t('confirm4PIN') }}</label>
               <div class="relative w-full">
                 <input :value="confirmPinDisplay" type="text" readonly class="w-full h-14 bg-gray-50 border border-gray-300 rounded-lg text-3xl text-center font-light focus:outline-none" :class="showPin ? 'tracking-normal' : 'tracking-widest'" />
               </div>

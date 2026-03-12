@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted, computed, nextTick } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { useI18n } from "vue-i18n";
 import commentSvg from "@/assets/vectors/Comment.svg?url";
 import ArrowBackButton from "@/components/shared/ArrowBackButton.vue";
 import Button from "@/components/shared/Button.vue";
@@ -13,6 +14,7 @@ import { useAuthStore } from "@/stores/auth";
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
+const { t } = useI18n();
 const starCount = ref(0);
 const ratingText = ref("");
 const experienceCategory = ref("general");
@@ -135,10 +137,8 @@ const handleKeyboardHide = () => {
     <div class="flex items-center mb-6 gap-7 flex-shrink-0">
       <ArrowBackButton @click="goBackToRating" />
       <div>
-        <h1 class="text-[45px] text-[#03335C] font-bold tracking-tight -mt-2">
-          Share Your Thoughts
-        </h1>
-        <p class="text-[#03335C] -mt-2">Tell us more about your experience</p>
+        <h1 class="text-[45px] text-[#03335C] font-bold tracking-tight -mt-2">{{ t('shareYourThoughts') }}</h1>
+        <p class="text-[#03335C] -mt-2">{{ t('tellUsMore') }}</p>
       </div>
     </div>
 
@@ -146,7 +146,7 @@ const handleKeyboardHide = () => {
       <div
         class="flex flex-wrap items-center justify-center w-full mb-[23px] text-xl"
       >
-        <h2 class="font-bold mr-[5px] whitespace-nowrap">Your Rating:</h2>
+        <h2 class="font-bold mr-[5px] whitespace-nowrap">{{ t('yourRating') }}</h2>
 
         <template v-for="n in Number(starCount)" :key="n">
           <img
@@ -163,9 +163,7 @@ const handleKeyboardHide = () => {
 
       <div class="flex items-center w-full mb-2">
         <img :src="commentSvg" alt="Comment Icon" class="w-6 h-6 mr-[5px]" />
-        <h3 class="text-[13px] font-bold text-left text-[#003a6b]">
-          Additional Comments (Optional)
-        </h3>
+        <h3 class="text-[13px] font-bold text-left text-[#003a6b]">{{ t('additionalComments') }}</h3>
       </div>
 
       <textarea
@@ -173,7 +171,7 @@ const handleKeyboardHide = () => {
         v-model="additionalComments"
         @focus="focusInput"
         class="w-full h-[200px] p-[15px] bg-white text-[13px] text-[#003a6b] border-2 border-[#003a6b] rounded-[10px] shadow-[3px_3px_6px_rgba(0,0,0,0.2)] resize-none outline-none box-border placeholder:text-[#003a6b]"
-        placeholder="Share any specific suggestions, compliments, and concerns..."
+        :placeholder="t('commentsPlaceholder')"
       ></textarea>
     </div>
 
@@ -181,14 +179,14 @@ const handleKeyboardHide = () => {
       class="flex gap-6 mt-6 justify-between items-center bottom-0 flex-shrink-0"
     >
       <Button variant="outline" @click="handleCancel" :disabled="isSubmitting">
-        Cancel
+        {{ t('cancel') }}
       </Button>
       <Button
         variant="secondary"
         @click="handleSubmit"
         :disabled="isSubmitting"
       >
-        {{ isSubmitting ? "Submitting..." : "Submit" }}
+        {{ isSubmitting ? t('submitting') : t('submit') }}
       </Button>
     </div>
 
@@ -210,11 +208,11 @@ const handleKeyboardHide = () => {
         class="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 p-8 modal-backdrop"
       >
         <Modal
-          title="Feedback Submitted!"
-          message="Thank you for taking the time to share your thoughts with us."
+          :title="t('feedbackSubmitted')"
+          :message="t('thankYouFeedback')"
           :showSecondaryButton="true"
-          primaryButtonText="Done"
-          secondaryButtonText="New Rating"
+          :primaryButtonText="t('done')"
+          :secondaryButtonText="t('newRating')"
           @primary-click="closeModal"
           @secondary-click="handleNewRating"
         />

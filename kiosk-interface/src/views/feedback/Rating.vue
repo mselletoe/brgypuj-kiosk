@@ -1,21 +1,26 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import ArrowBackButton from '@/components/shared/ArrowBackButton.vue'
 import StarIcon from '@/assets/vectors/Star.svg'
 
 const route = useRoute()
 const router = useRouter()
+const { t } = useI18n()
 const feedbackCategory = ref('')
 
 // Applied a vibrant, semantic color scale that bridges with your KioskHome palette
-const ratings = [
-  { stars: 1, text: 'Very Poor', color: '#E74C3C' }, // Vibrant Red
-  { stars: 2, text: 'Poor', color: '#F16C14' },      // Orange (Matches Equipment Borrowing)
-  { stars: 3, text: 'Average', color: '#E69500' },   // Golden Amber
-  { stars: 4, text: 'Good', color: '#13B3A1' },      // Teal (Matches Feedback)
-  { stars: 5, text: 'Excellent', color: '#2C67E7' }, // Brand Blue (Matches Document Services)
-]
+const ratingKeys = ['veryPoor', 'poor', 'average', 'good', 'excellent']
+const ratingColors = ['#E74C3C', '#F16C14', '#E69500', '#13B3A1', '#2C67E7']
+// ratings is computed so text updates reactively on locale change
+const ratings = computed(() =>
+  ratingKeys.map((key, i) => ({
+    stars: i + 1,
+    text: t(key),
+    color: ratingColors[i],
+  }))
+)
 
 onMounted(() => {
   feedbackCategory.value = route.query.category || 'Experience'
@@ -42,14 +47,14 @@ const goBack = () => {
     <div class="flex items-center w-full mb-6 gap-7 flex-shrink-0">
       <ArrowBackButton @click="goBack"/>
       <div class="flex flex-col text-left">
-        <h1 class="text-[45px] text-[#03335C] font-bold tracking-tight -mt-2">Your Feedback Matters</h1>
-        <p class="text-[#03335C] -mt-2">Tap a star to rate your experience</p>
+        <h1 class="text-[45px] text-[#03335C] font-bold tracking-tight -mt-2">{{ t('yourFeedbackMatters') }}</h1>
+        <p class="text-[#03335C] -mt-2">{{ t('tapStarRate') }}</p>
       </div>
     </div>
 
     <div class="text-center mt-2 mb-6 w-full">
       <h2 class="text-[42px] text-[#03335C] font-bold leading-none">
-        Rate our {{ feedbackCategory }}
+        {{ t('rateOur', { category: feedbackCategory }) }}
       </h2>
     </div>
 

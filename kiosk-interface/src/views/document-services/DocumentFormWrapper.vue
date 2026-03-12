@@ -7,6 +7,7 @@
  */
 import { ref, computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { useI18n } from "vue-i18n";
 import DocumentForm from "./DocumentForm.vue";
 import ArrowBackButton from "@/components/shared/ArrowBackButton.vue";
 import Modal from "@/components/shared/Modal.vue";
@@ -23,6 +24,7 @@ import { getResidentAutofillData } from "@/api/residentService";
 const auth = useAuthStore();
 const route = useRoute();
 const router = useRouter();
+const { t } = useI18n();
 
 // --- UI & Navigation State ---
 const currentStep = ref("form");
@@ -335,7 +337,7 @@ const handleNewRequest = () => {
           {{ displayTitle }}
         </h1>
         <p class="text-[#03335C] -mt-2">
-          Kindly fill up the details needed for the said document
+          {{ t('kindlyFillUp') }}
         </p>
       </div>
     </div>
@@ -355,7 +357,7 @@ const handleNewRequest = () => {
                 <div class="dot"></div>
                 <div class="dot"></div>
               </div>
-              <p class="text-gray-600 font-semibold">Loading details...</p>
+              <p class="text-gray-600 font-semibold">{{ t('loadingDetails') }}</p>
             </div>
 
             <DocumentForm
@@ -371,8 +373,7 @@ const handleNewRequest = () => {
 
             <div v-else class="text-center py-12">
               <p class="text-[#003A6B] text-lg">
-                The type of document you are requesting <br />
-                is currently unavailable.
+                {{ t('documentUnavailable') }}
               </p>
             </div>
           </div>
@@ -382,12 +383,9 @@ const handleNewRequest = () => {
           <div
             class="bg-[#EBF5FF] rounded-2xl shadow-lg border border-[#B0D7F8] p-6 min-h-[280px]"
           >
-            <h2 class="text-lg font-bold text-[#03335C] mb-2 tracking-tight">
-              Requirements
-            </h2>
+            <h2 class="text-lg font-bold text-[#03335C] mb-2 tracking-tight">{{ t('requirements') }}</h2>
             <p class="text-sm italic text-[#03335C] mb-4 tracking-tight">
-              Review the following requirements below. For further details,
-              please refer to the information desk at the counter.
+              {{ t('reviewRequirements') }}
             </p>
 
             <div v-if="loadingDocuments" class="flex justify-center py-10">
@@ -402,9 +400,7 @@ const handleNewRequest = () => {
               v-else-if="!config?.requirements?.length"
               class="flex flex-col items-center justify-center py-10 text-center"
             >
-              <p class="text-sm text-[#5A8DB8]">
-                No requirements needed for this document.
-              </p>
+              <p class="text-sm text-[#5A8DB8]">{{ t('noRequirements') }}</p>
             </div>
 
             <div v-else class="space-y-3">
@@ -424,8 +420,7 @@ const handleNewRequest = () => {
                   />
                 </svg>
                 <p class="text-xs text-red-700 font-medium">
-                  You may not be eligible for this document. Review the failed
-                  requirements below.
+                  {{ t('youMayNotBeEligible') }}
                 </p>
               </div>
 
@@ -501,7 +496,7 @@ const handleNewRequest = () => {
                     "
                   >
                     {{
-                      req.type === "system_check" ? "System Check" : "Document"
+                      req.type === "system_check" ? t('systemCheck') : t('document')
                     }}
                   </span>
 
@@ -531,7 +526,7 @@ const handleNewRequest = () => {
         size="md"
         :disabled="loadingDocuments || isLoadingResidentData || isSubmitting"
       >
-        Cancel
+        {{ t('cancel') }}
       </Button>
 
       <Button
@@ -546,7 +541,7 @@ const handleNewRequest = () => {
         "
         size="md"
       >
-        {{ isSubmitting ? "Submitting..." : "Submit Request" }}
+        {{ isSubmitting ? t('submittingRequest') : t('submitRequest') }}
       </Button>
     </div>
 
@@ -563,11 +558,9 @@ const handleNewRequest = () => {
             <div class="dot"></div>
             <div class="dot"></div>
           </div>
-          <p class="text-[#03335C] text-lg font-semibold mt-2">
-            Submitting your request...
-          </p>
+          <p class="text-[#03335C] text-lg font-semibold mt-2">{{ t('submittingRequest') }}</p>
           <p class="text-gray-500 text-sm">
-            Please wait while we generate your document
+            {{ t('pleaseWaitDoc') }}
           </p>
         </div>
       </div>
@@ -579,12 +572,12 @@ const handleNewRequest = () => {
         class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50"
       >
         <Modal
-          title="Application Submitted!"
-          :message="`Pay the fee at the counter and be informed of further details. Please take note of the Request ID number below for reference.`"
+          :title="t('applicationSubmitted')"
+          :message="t('applicationSubmittedMsg')"
           type="success"
           :referenceId="transactionNo"
           :showReferenceId="true"
-          primaryButtonText="Done"
+          :primaryButtonText="t('done')"
           :showPrimaryButton="true"
           :showSecondaryButton="false"
           :showNewRequest="true"
@@ -605,10 +598,10 @@ const handleNewRequest = () => {
         class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50"
       >
         <Modal
-          title="Request Cannot Be Processed"
+          :title="t('requestCannotBeProcessed')"
           :message="errorMessage"
           type="error"
-          primaryButtonText="OK"
+          :primaryButtonText="t('confirm')"
           :showPrimaryButton="true"
           :showSecondaryButton="false"
           :showNewRequest="false"

@@ -10,6 +10,7 @@
 
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { ArrowLeftIcon, SignalIcon } from '@heroicons/vue/24/solid'
 import { LockClosedIcon } from '@heroicons/vue/24/outline'
 import Button from '@/components/shared/Button.vue'
@@ -21,6 +22,7 @@ import { checkRfidStatus } from '@/api/registrationService'
 const router       = useRouter()
 const authStore    = useAuthStore()
 const rfidRegStore = useRfidRegistrationStore()
+const { locale, t } = useI18n()
 
 const scannedUID    = ref('')
 const isProcessing  = ref(false)
@@ -159,8 +161,8 @@ onUnmounted(() => {
           <LockClosedIcon class="h-16 w-16 text-red-400" />
           <span class="text-4xl font-bold text-red-500">{{ lockoutDisplay }}</span>
         </div>
-        <h2 class="text-3xl font-semibold text-red-600">Card Temporarily Locked</h2>
-        <p class="text-lg text-gray-500">Too many failed PIN attempts.<br>Please wait and try again.</p>
+        <h2 class="text-3xl font-semibold text-red-600">{{ t('cardLocked') }}</h2>
+        <p class="text-lg text-gray-500">{{ t('tooManyFailed') }}<br>{{ t('pleaseWait') }}</p>
       </div>
 
       <!-- ── NORMAL SCAN STATE ──────────────────────────────────────────── -->
@@ -169,30 +171,30 @@ onUnmounted(() => {
           <div class="bg-gray-200 w-80 h-52 rounded-lg flex justify-center items-center">
             <SignalIcon class="h-24 w-24 text-gray-400 animate-[pulse_2s_infinite]" />
           </div>
-          <h2 class="text-3xl font-semibold text-gray-700 mt-8">Please tap your RFID</h2>
-          <p class="text-lg text-gray-500 mt-2">Tap your card once and wait for processing.</p>
+          <h2 class="text-3xl font-semibold text-gray-700 mt-8">{{ t('tapRFID') }}</h2>
+          <p class="text-lg text-gray-500 mt-2">{{ t('tapOnce') }}</p>
         </div>
 
         <div v-else class="flex flex-col items-center">
           <div class="bg-[#1B5886] w-80 h-52 rounded-lg flex justify-center items-center">
             <SignalIcon class="h-24 w-24 text-white animate-pulse" />
           </div>
-          <h2 class="text-3xl font-semibold text-[#295B83] mt-8">Processing...</h2>
-          <p class="text-lg text-gray-500 mt-2">Keep your card near the scanner.</p>
+          <h2 class="text-3xl font-semibold text-[#295B83] mt-8">{{ t('processing') }}</h2>
+          <p class="text-lg text-gray-500 mt-2">{{ t('keepCard') }}</p>
         </div>
       </div>
 
       <!-- Dev mode -->
       <div v-if="isDevMode && !isProcessing && !isLocked" class="mt-6 w-80">
-        <p class="text-sm text-gray-400 text-center mb-2">Dev Mode: Manual RFID Entry</p>
-        <input v-model="manualUID" type="text" placeholder="Enter RFID UID" class="border border-gray-300 p-2 w-full rounded text-center" />
-        <button @click="handleManualLogin" class="mt-2 w-full bg-[#1B5886] text-white py-2 rounded hover:bg-[#164a70]">Login</button>
+        <p class="text-sm text-gray-400 text-center mb-2">{{ t('devMode') }}</p>
+        <input v-model="manualUID" type="text" :placeholder="t('enterRFIDUID')" class="border border-gray-300 p-2 w-full rounded text-center" />
+        <button @click="handleManualLogin" class="mt-2 w-full bg-[#1B5886] text-white py-2 rounded hover:bg-[#164a70]">{{ t('login') }}</button>
       </div>
 
       <input ref="hiddenInput" v-model="scannedUID" type="text" class="absolute opacity-0 pointer-events-none" />
 
       <Button @click="goBack" class="absolute bottom-8 left-8 w-auto px-3 text-[14px] rounded-[40px] h-[40px]" variant="outline">
-        <span class="flex items-center gap-x-2"><ArrowLeftIcon class="h-5 w-5" />Go Back</span>
+        <span class="flex items-center gap-x-2"><ArrowLeftIcon class="h-5 w-5" />{{ t('back') }}</span>
       </Button>
 
     </div>

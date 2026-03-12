@@ -477,7 +477,7 @@ const messages = {
     documentServicesSubtitle: 'Pumili at mag-apply para sa mga dokumento ng barangay. Tandaan ang mga kinakailangan para sa bawat uri ng dokumento.',
     loadingServices: 'Naglo-load ng mga serbisyo...',
     noDocumentServices: 'Walang magagamit na serbisyo sa dokumento sa ngayon.',
-    fee: 'Bayad:',
+    fee: 'Halaga:',
     kindlyFillUp: 'Mangyaring punan ang mga detalyeng kailangan para sa dokumentong ito',
     requirements: 'Mga Kinakailangan',
     reviewRequirements: 'Suriin ang mga sumusunod na kinakailangan. Para sa karagdagang detalye, mangyaring sumangguni sa impormasyon desk sa counter.',
