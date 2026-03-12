@@ -217,7 +217,7 @@ const handleSelect = (key) => {
               class="px-5 py-3.5 border-b border-gray-50 hover:bg-gray-50 cursor-pointer flex justify-between items-center transition-colors"
             >
               <div class="flex flex-col pr-4">
-                <span class="text-sm leading-tight font-bold text-gray-900">{{ notif.msg }}</span>
+                <span class="text-sm leading-tight font-medium text-gray-900">{{ notif.msg }}</span>
                 <span class="text-xs text-gray-400 mt-1">{{ notif.date }} · {{ notif.time }}</span>
               </div>
               <div v-if="notif.unread" class="w-2.5 h-2.5 rounded-full bg-blue-600 flex-shrink-0"></div>

@@ -37,7 +37,6 @@ const statusOptions = [
 const typeOptions = [
   { label: 'All Types', value: null },
   { label: 'Document',  value: 'Document' },
-  { label: 'Payment',   value: 'Payment' },
   { label: 'Equipment', value: 'Equipment' },
   { label: 'Feedback',  value: 'Feedback' },
 ]
@@ -109,10 +108,9 @@ function markRowAsRead(row) {
 
 // ── Type meta ─────────────────────────────────────────────────────────────────
 const typeMeta = {
-  Document:  { dot: 'bg-[#D946EF]', badge: 'bg-purple-50 text-purple-700 border-purple-200' },
-  Payment:   { dot: 'bg-[#10B981]', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  Equipment: { dot: 'bg-[#F59E0B]', badge: 'bg-amber-50 text-amber-700 border-amber-200' },
-  Feedback:  { dot: 'bg-[#3B82F6]', badge: 'bg-blue-50 text-blue-700 border-blue-200' },
+  Document:  { dot: 'bg-blue-500', badge: 'bg-blue-50 text-blue-700 border-blue-200' },
+  Equipment: { dot: 'bg-orange-500', badge: 'bg-orange-50 text-orange-700 border-orange-200' },
+  Feedback:  { dot: 'bg-teal-500', badge: 'bg-teal-50 text-teal-700 border-teal-200' },
 }
 
 // ── NDataTable columns ────────────────────────────────────────────────────────
@@ -321,7 +319,7 @@ const columns = computed(() => [
     </div>
 
     <!-- ── Stats strip ─────────────────────────────────────────────────────── -->
-    <div class="flex items-center gap-4 mb-4 justify-end">
+    <div class="flex items-center gap-4 mb-4 h-8 justify-end">
       <span class="text-[12px] text-gray-400">
         {{ filteredNotifications.length }} notification{{ filteredNotifications.length !== 1 ? 's' : '' }}
         <template v-if="selectedCount > 0">

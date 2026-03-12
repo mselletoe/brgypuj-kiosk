@@ -61,7 +61,8 @@ watch([lastNameLetter, firstNameLetter], async ([last, first]) => {
   }
   isFetching.value = true;
   try {
-    residentList.value = await searchResidents(`${last}, ${first}`);
+    const { data } = await searchResidents(`${last}, ${first}`);
+    residentList.value = data;
     selectedResident.value = null;
   } catch {
     residentList.value = [];
@@ -95,7 +96,7 @@ const selectResident = async (r) => {
   showResidentDropdown.value = false;
   isCheckingCard.value = true;
   try {
-    const info = await getReportCardInfo(r.resident_id);
+    const { data: info } = await getReportCardInfo(r.resident_id);
     selectedResident.value = info; // { resident_id, first_name, last_name, rfid_uid, has_rfid }
   } catch {
     selectedResident.value = { ...r, has_rfid: false, rfid_uid: null };
