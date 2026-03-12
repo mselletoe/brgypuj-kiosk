@@ -1,8 +1,8 @@
 from sqlalchemy.orm import Session
 from app.models.notification import Notification
 
-def save_notification(db: Session, type: str, msg: str) -> Notification:
-    notif = Notification(type=type, msg=msg)
+def save_notification(db: Session, type: str, msg: str, event: str = "") -> Notification:
+    notif = Notification(type=type, msg=msg, event=event)
     db.add(notif)
     db.commit()
     db.refresh(notif)

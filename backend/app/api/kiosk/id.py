@@ -122,7 +122,8 @@ async def apply(payload: IDApplicationRequest, db: Session = Depends(get_db)):
     await ws_manager.broadcast_to_admin(
         "new_id_application",
         {
-            "type": "Document",
+            "type": "ID Services",
+            "event": "new_id_application",
             "resident_name": f"Resident #{payload.resident_id}",
             "transaction_no": getattr(result, 'transaction_no', ''),
         },
@@ -172,7 +173,8 @@ async def submit_lost_card_report(payload: ReportLostCardRequest, db: Session = 
     await ws_manager.broadcast_to_admin(
         "new_lost_card_report",
         {
-            "type": "Document",
+            "type": "ID Services",
+            "event": "new_lost_card_report",
             "resident_name": f"Resident #{payload.resident_id}",
         },
         db=db

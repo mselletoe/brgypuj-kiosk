@@ -16,9 +16,9 @@ export const useNotificationStore = defineStore('notification', () => {
       'new_transaction':       'Document',
       'new_equipment_request': 'Equipment',
       'new_feedback':          'Feedback',
-      'new_id_application':    'Document',
-      'new_lost_card_report':  'Document',
-      'new_rfid_linked':       'Document',
+      'new_id_application':    'ID Services',
+      'new_lost_card_report':  'ID Services',
+      'new_rfid_linked':       'ID Services',
     }
     return map[event] || 'Document'
   }
@@ -39,6 +39,7 @@ export const useNotificationStore = defineStore('notification', () => {
     return {
       id:     n.id,
       type:   n.type,
+      event:  n.event || '',           // persisted event name from DB
       msg:    n.msg,
       unread: !n.is_read,
       date:   new Date(n.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
@@ -62,6 +63,7 @@ export const useNotificationStore = defineStore('notification', () => {
     notifications.value.unshift({
       id:     data.db_id,
       type:   mapType(type),
+      event:  type,                    // ws event name for navigation
       msg:    buildMsg(type, data),
       unread: true,
       date:   now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),

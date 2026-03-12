@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, watch, h, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { NDataTable, NCheckbox, NPopover, NSelect, NButton, useMessage } from 'naive-ui'
 import {
   TrashIcon,
@@ -12,6 +13,7 @@ import { useNotificationStore } from '@/stores/notification'
 
 const message = useMessage()
 const notifStore = useNotificationStore()
+const router = useRouter()
 
 const searchQuery       = ref('')
 const showFilterPopover = ref(false)
@@ -35,10 +37,11 @@ const statusOptions = [
 ]
 
 const typeOptions = [
-  { label: 'All Types', value: null },
-  { label: 'Document',  value: 'Document' },
-  { label: 'Equipment', value: 'Equipment' },
-  { label: 'Feedback',  value: 'Feedback' },
+  { label: 'All Types',    value: null },
+  { label: 'Document',     value: 'Document' },
+  { label: 'Equipment',    value: 'Equipment' },
+  { label: 'Feedback',     value: 'Feedback' },
+  { label: 'ID Services',  value: 'ID Services' },
 ]
 
 const hasActiveFilters = computed(() =>
@@ -108,9 +111,36 @@ function markRowAsRead(row) {
 
 // ── Type meta ─────────────────────────────────────────────────────────────────
 const typeMeta = {
-  Document:  { dot: 'bg-blue-500', badge: 'bg-blue-50 text-blue-700 border-blue-200' },
-  Equipment: { dot: 'bg-orange-500', badge: 'bg-orange-50 text-orange-700 border-orange-200' },
-  Feedback:  { dot: 'bg-teal-500', badge: 'bg-teal-50 text-teal-700 border-teal-200' },
+  Document:    { dot: 'bg-blue-500',   badge: 'bg-blue-50 text-blue-700 border-blue-200' },
+  Equipment:   { dot: 'bg-orange-500', badge: 'bg-orange-50 text-orange-700 border-orange-200' },
+  Feedback:    { dot: 'bg-teal-500',   badge: 'bg-teal-50 text-teal-700 border-teal-200' },
+  'ID Services': { dot: 'bg-green-500', badge: 'bg-green-50 text-green-700 border-green-200' },
+}
+
+// ── Row navigation ────────────────────────────────────────────────────────────
+// ws event names that belong to ID Services and go to /feedback-and-reports/reports
+const REPORT_EVENTS = new Set(['new_lost_card_report'])
+
+function navigateToRow(row) {
+  switch (row.type) {
+    case 'Document':
+      router.push('/document-requests')
+      break
+    case 'Equipment':
+      router.push('/equipment-requests')
+      break
+    case 'Feedback':
+      router.push('/feedback-and-reports/feedbacks')
+      break
+    case 'ID Services':
+      // Lost card reports go to the Reports tab; Apply ID goes to document-requests
+      if (REPORT_EVENTS.has(row.event)) {
+        router.push('/feedback-and-reports/reports')
+      } else {
+        router.push('/document-requests')
+      }
+      break
+  }
 }
 
 // ── NDataTable columns ────────────────────────────────────────────────────────
@@ -344,7 +374,7 @@ const columns = computed(() => [
         :bordered="false"
         :row-props="(row) => ({
           class: row.unread ? 'bg-[#f0f7ff] hover:bg-blue-50 cursor-pointer' : 'hover:bg-gray-50 cursor-pointer',
-          onClick: () => markRowAsRead(row),
+          onClick: () => { markRowAsRead(row); navigateToRow(row) },
         })"
       />
       <div v-if="filteredNotifications.length === 0" class="py-16 text-center text-gray-400 text-[13px]">

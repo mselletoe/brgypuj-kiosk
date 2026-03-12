@@ -9,4 +9,5 @@ class Notification(Base):
     type       = Column(String(50), nullable=False)   # Document, Equipment, Feedback, etc.
     msg        = Column(Text, nullable=False)
     is_read    = Column(Boolean, default=False)
+    event = Column(String, nullable=False, default="")
     created_at = Column(DateTime(timezone=True), server_default=func.now())

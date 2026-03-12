@@ -29,12 +29,12 @@ class WebSocketManager:
         if db:
             from app.services.notification_service import save_notification
             type_map = {
-                "new_transaction":    "Document",
+                "new_transaction":       "Document",
                 "new_equipment_request": "Equipment",
-                "new_feedback":       "Feedback",
-                "new_id_application": "Document",
-                "new_lost_card_report": "Document",
-                "new_rfid_linked":    "Document",
+                "new_feedback":          "Feedback",
+                "new_id_application":    "ID Services",
+                "new_lost_card_report":  "ID Services",
+                "new_rfid_linked":       "ID Services",
             }
             msg_map = {
                 "new_transaction":       f"New {data.get('document_type', 'Document')} request submitted by {data.get('resident_name', 'a resident')}",
@@ -48,9 +48,11 @@ class WebSocketManager:
                 db,
                 type=type_map.get(event, "Document"),
                 msg=msg_map.get(event, "New notification"),
+                event=event,
             )
             # Include DB id in the broadcast so frontend can track it
             data["db_id"] = notif.id
+            data["event"] = event
             data["created_at"] = notif.created_at.isoformat()
 
         # ── Broadcast to connected clients ────────────────────────────────────
