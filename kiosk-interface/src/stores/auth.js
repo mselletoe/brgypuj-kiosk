@@ -1,71 +1,57 @@
 /**
- * @file auth.js
- * @description Pinia store for managing Kiosk authentication state.
- * This store handles the transitions between Guest and RFID modes and 
- * ensures session persistence using the browser's LocalStorage.
- * 
- * Authentication Flow:
- * 1. User scans RFID → setTemporaryRFIDData() stores resident info in temp state
- * 2. User completes PIN (setup or verify) → confirmRFIDLogin() promotes temp → permanent state
- * 3. Session persisted to LocalStorage for page refresh survival
+ * @file stores/auth.js
+ * @description Pinia store for kiosk authentication state.
+ * Supports two session modes — guest and RFID — and persists
+ * the active session to localStorage for page-refresh continuity.
  */
 
 import { defineStore } from "pinia"
 
 export const useAuthStore = defineStore("auth", {
-  /**
-   * @state
-   * @property {string|null} mode - Current session type ('guest', 'rfid', or null).
-   * @property {Object|null} resident - Contains basic profile data (id, names) for RFID users.
-   * @property {string|null} rfidUid - The hardware UID of the currently scanned tag.
-   * 
-   * Temporary state (used during the scan → PIN → home transition):
-   * @property {Object|null} tempResident - Resident data held while PIN is being entered.
-   * @property {string|null} tempUid - RFID UID held while PIN is being entered.
-   * @property {boolean} tempHasPin - Whether the resident has a configured PIN or needs setup.
-   */
   state: () => ({
-    // Permanent session state
+    /** Current session mode: 'guest' | 'rfid' | null (unauthenticated) */
     mode: null,
+
+    /** Authenticated resident's profile data, set after RFID login */
     resident: null,
+
+    /** RFID card UID associated with the current session */
     rfidUid: null,
 
-    // Temporary state — bridges scan screen → PIN screen
-    // Cleared after successful PIN entry or on logout
+    /** Resident data held in staging until PIN is verified */
     tempResident: null,
+
+    /** RFID UID held in staging until PIN is verified */
     tempUid: null,
+
+    /** Whether the staged resident has set a custom PIN */
     tempHasPin: false,
   }),
 
-  /**
-   * @getters
-   * Reactive derived state for cleaner component templates.
-   */
   getters: {
+    /** Returns true if the current session is a guest session */
     isGuest: (s) => s.mode === "guest",
+
+    /** Returns true if the current session was authenticated via RFID */
     isRFID: (s) => s.mode === "rfid",
+
+    /** Returns true if any session mode is active */
     isAuthenticated: (s) => !!s.mode,
 
+    /** Returns the authenticated resident's ID, or null for guest sessions */
     residentId: (s) => s.resident?.id || null,
 
-    /**
-     * @returns {string} 
-     * Dynamically determines the greeting name displayed in the UI.
-     */
+    /** Returns the resident's full name for RFID sessions, or 'Guest' otherwise */
     userName: (s) =>
       s.mode === "rfid" && s.resident
         ? `${s.resident.first_name} ${s.resident.last_name}`
         : "Guest"
   },
 
-  /**
-   * @actions
-   * Methods used to mutate state and handle side effects (like API calls or LocalStorage).
-   */
   actions: {
+
     /**
-     * Initializes a Guest session.
-     * Clears any existing resident data and persists the 'guest' mode.
+     * Starts an unauthenticated guest session and persists the state.
      */
     setGuest() {
       this.mode = "guest"
@@ -75,13 +61,13 @@ export const useAuthStore = defineStore("auth", {
     },
 
     /**
-     * Stores resident data temporarily after a successful RFID scan.
-     * Does NOT commit a session yet — the user must still pass PIN verification.
-     * 
-     * @param {Object} payload
-     * @param {Object} payload.resident - Basic resident profile (id, first_name, last_name).
-     * @param {string} payload.uid - The hardware UID from the scanned card.
-     * @param {boolean} payload.has_pin - Whether the resident has a configured PIN.
+     * Stages RFID scan data while awaiting PIN verification.
+     * The session is not confirmed until confirmRFIDLogin() is called.
+     *
+     * @param {Object}  payload          - RFID scan result
+     * @param {Object}  payload.resident - Resident profile from the API
+     * @param {string}  payload.uid      - Scanned RFID card UID
+     * @param {boolean} payload.has_pin  - Whether the resident has a custom PIN set
      */
     setTemporaryRFIDData({ resident, uid, has_pin }) {
       this.tempResident = resident
@@ -90,16 +76,15 @@ export const useAuthStore = defineStore("auth", {
     },
 
     /**
-     * Promotes temporary state to a permanent authenticated session.
-     * Called by AuthPIN.vue after successful PIN verification or setup.
-     * Clears temp state and persists the confirmed session to LocalStorage.
+     * Promotes staged RFID data into the active session after PIN is verified.
+     * Clears all temporary staging fields and persists the confirmed session.
      */
     confirmRFIDLogin() {
       this.mode = "rfid"
       this.resident = this.tempResident
       this.rfidUid = this.tempUid
 
-      // Clean up temp state — no longer needed
+      // Clear staging fields now that the session is confirmed
       this.tempResident = null
       this.tempUid = null
       this.tempHasPin = false
@@ -108,12 +93,11 @@ export const useAuthStore = defineStore("auth", {
     },
 
     /**
-     * Initializes an RFID-authenticated session directly.
-     * @param {Object} resident - The resident profile returned from the backend.
-     * @param {string} uid - The hardware UID scanned from the card.
-     * 
-     * @deprecated Kept for compatibility. Prefer setTemporaryRFIDData() + confirmRFIDLogin()
-     * to enforce PIN verification before granting session access.
+     * Directly sets an RFID session, bypassing the PIN staging flow.
+     * Used when PIN verification is not required.
+     *
+     * @param {Object} resident - Resident profile from the API
+     * @param {string} uid      - Scanned RFID card UID
      */
     setRFID(resident, uid) {
       this.mode = "rfid"
@@ -123,8 +107,7 @@ export const useAuthStore = defineStore("auth", {
     },
 
     /**
-     * Clears the current session.
-     * Resets the store state to defaults and purges the LocalStorage entry.
+     * Clears the session from both the store and localStorage.
      */
     logout() {
       this.$reset()
@@ -132,9 +115,8 @@ export const useAuthStore = defineStore("auth", {
     },
 
     /**
-     * Rehydrates the store state.
-     * Loads the 'kiosk_auth' string from LocalStorage and parses it back into the state.
-     * Usually called in App.vue or main.js on application mount.
+     * Restores a previously persisted session from localStorage.
+     * Should be called once on app startup.
      */
     restore() {
       const stored = localStorage.getItem("kiosk_auth")
@@ -142,8 +124,8 @@ export const useAuthStore = defineStore("auth", {
     },
 
     /**
-     * Synchronizes the permanent Pinia state with the browser's LocalStorage.
-     * Temp state is intentionally excluded — it should not survive a page refresh.
+     * Persists the active session fields to localStorage.
+     * Temporary staging fields are intentionally excluded.
      */
     persist() {
       localStorage.setItem(
@@ -152,7 +134,6 @@ export const useAuthStore = defineStore("auth", {
           mode: this.mode,
           resident: this.resident,
           rfidUid: this.rfidUid
-          // tempResident, tempUid, tempHasPin are deliberately omitted
         })
       )
     }

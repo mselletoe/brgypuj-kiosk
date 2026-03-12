@@ -1,5 +1,5 @@
 /**
- * @file auth.js
+ * @file stores/auth.js
  * @description Pinia store for managing admin authentication state,
  * session persistence via localStorage, and profile hydration.
  */
