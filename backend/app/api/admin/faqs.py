@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status, HTTPException
+from fastapi import APIRouter, Depends, status, HTTPException, Body
 from sqlalchemy.orm import Session
 from app.schemas.faqs import FAQCreate, FAQUpdate, FAQAdminOut
 from app.services.faqs_service import (
@@ -31,7 +31,7 @@ def admin_delete_faq(faq_id: int, db: Session = Depends(get_db)):
     return
 
 @router.post("/bulk-delete")
-def admin_bulk_delete(ids: list[int], db: Session = Depends(get_db)):
+def admin_bulk_delete(ids: list[int] = Body(...), db: Session = Depends(get_db)):
     count = bulk_delete_faqs(db, ids)
     return {"deleted_count": count}
 

@@ -310,7 +310,7 @@ const columns = computed(() => [
 
         <div class="relative group inline-block">
           <button
-            @click="requestBulkDelete"
+            @click="bulkDelete"
             :disabled="selectionState === 'none'"
             class="p-2 border border-red-400 rounded-lg transition-colors"
             :class="
