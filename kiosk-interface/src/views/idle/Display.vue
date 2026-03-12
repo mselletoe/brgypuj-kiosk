@@ -1,17 +1,23 @@
 <script setup>
-import { ref } from 'vue'
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useSystemConfig } from '@/composables/useSystemConfig'
 
 const emit = defineEmits(['see-announcements'])
-const currentLang = ref('FIL')
+const { locale, t } = useI18n()
 const { resolvedLogoUrl } = useSystemConfig()
 
-const toggleLang = () => (currentLang.value = currentLang.value === 'FIL' ? 'ENG' : 'FIL')
+const isFilipino = computed(() => locale.value === 'tl')
+
+const toggleLang = () => {
+  locale.value = locale.value === 'tl' ? 'en' : 'tl'
+  localStorage.setItem('lang', locale.value)
+}
 </script>
 
 <template>
   <div class="display-page flex items-center justify-center text-center relative select-none text-[#0c2d57]">
-    
+
     <div class="absolute top-8 right-10 flex items-center gap-4 z-20">
       <div
         @click.stop="toggleLang"
@@ -28,21 +34,21 @@ const toggleLang = () => (currentLang.value = currentLang.value === 'FIL' ? 'ENG
             transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
           "
           :style="{
-            transform: currentLang === 'ENG' ? 'translateX(calc(100% + 0px))' : 'translateX(0px)'
+            transform: !isFilipino ? 'translateX(calc(100% + 0px))' : 'translateX(0px)'
           }"
         ></div>
 
         <div
           class="flex-1 flex items-center justify-center font-bold rounded-xl"
           style="position: relative; z-index: 1; transition: color 0.3s ease;"
-          :style="{ color: currentLang === 'FIL' ? '#49759B' : 'white' }"
+          :style="{ color: isFilipino ? '#49759B' : 'white' }"
         >
           FIL
         </div>
         <div
           class="flex-1 flex items-center justify-center font-bold rounded-xl"
           style="position: relative; z-index: 1; transition: color 0.3s ease;"
-          :style="{ color: currentLang === 'ENG' ? '#49759B' : 'white' }"
+          :style="{ color: !isFilipino ? '#49759B' : 'white' }"
         >
           ENG
         </div>
@@ -61,7 +67,7 @@ const toggleLang = () => (currentLang.value = currentLang.value === 'FIL' ? 'ENG
         @click.stop="emit('see-announcements')"
         class="mt-8 border-2 border-[#003E71] text-[13px] text-[#003E71] font-bold px-6 py-2 rounded-lg hover:bg-[#003E71] hover:text-white transition-all"
       >
-        See Announcements
+        {{ t('seeAnnouncements') }}
       </button>
 
       <div class="mt-6 text-[22px] text-[#003E71] font-bold">
@@ -70,8 +76,8 @@ const toggleLang = () => (currentLang.value = currentLang.value === 'FIL' ? 'ENG
       </div>
 
       <div class="mt-10 text-[#6399c5] text-xl font-medium animate-pulse">
-        Touch anywhere to start
-      </div>      
+        {{ t('touchToStart') }}
+      </div>
     </div>
 
     <img

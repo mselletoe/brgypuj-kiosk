@@ -1,7 +1,4 @@
 <script setup>
-/**
- * @file KioskHome.vue
- */
 import { onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
@@ -29,14 +26,13 @@ function goTo(path) {
     <div class="flex w-full justify-between">
       <div class="flex flex-col text-left">
         <h2 class="text-[40px] font-normal tracking-[-0.03em] drop-shadow-[3px_3px_5px_rgba(0,0,0,0.3)]">
-          Welcome to
+          {{ $t('welcomeTo') }}
         </h2>
         <h1 class="mb-7 text-[58px] font-bold leading-[0.6] tracking-[-0.03em] text-[#003a6b] drop-shadow-[3px_3px_5px_rgba(0,0,0,0.3)]">
-          Barangay Services
+          {{ $t('barangayServices') }}
         </h1>
         <p class="m-0 text-[16px] font-normal leading-tight">
-          Fast and accessible services for Poblacion I residents.<br />
-          Select a service below to get started.
+          {{ $t('fastAccessible') }}<br />{{ $t('selectService') }}
         </p>
       </div>
       <div class="logo-section">
@@ -54,45 +50,45 @@ function goTo(path) {
         <!-- Document Services -->
         <div v-if="!auth.isGuest" class="flex h-[220px] min-w-[160px] flex-1 cursor-pointer flex-col items-center justify-center rounded-[15px] bg-[#2C67E7] p-[10px] text-center shadow-[4px_4px_8px_rgba(0,0,0,0.25),inset_2px_2px_4px_rgba(255,255,255,0.6),inset_-2px_-2px_6px_rgba(0,0,0,0.15)] transition-all duration-150 active:scale-[0.97]" @click="goTo('document-services')">
           <img src="@/assets/vectors/DocumentServices.svg" alt="Document Services" class="mb-[5px] h-[105px] w-[105px]" />
-          <p class="m-0 mb-[5px] flex h-[40px] items-center justify-center text-[17px] font-bold leading-[20px] text-white">Document<br />Services</p>
-          <p class="m-0 text-[11px] font-normal leading-[12px] text-white">Barangay ID, Clearances,<br />Certificates, and Permits</p>
+          <p class="m-0 mb-[5px] flex h-[40px] items-center justify-center text-[17px] font-bold leading-[20px] text-white" style="white-space: pre-line">{{ $t('documentServices') }}</p>
+          <p class="m-0 text-[11px] font-normal leading-[12px] text-white" style="white-space: pre-line">{{ $t('documentServicesDesc') }}</p>
         </div>
 
         <!-- Equipment Borrowing -->
         <div v-if="!auth.isGuest" class="flex h-[220px] min-w-[160px] flex-1 cursor-pointer flex-col items-center justify-center rounded-[15px] bg-[#F16C14] p-[10px] text-center shadow-[4px_4px_8px_rgba(0,0,0,0.25),inset_2px_2px_4px_rgba(255,255,255,0.6),inset_-2px_-2px_6px_rgba(0,0,0,0.15)] transition-all duration-150 active:scale-[0.97]" @click="goTo('equipment-borrowing')">
           <img src="@/assets/vectors/EquipmentBorrowing.svg" alt="Equipment Borrowing" class="mb-[5px] h-[105px] w-[105px]" />
-          <p class="m-0 mb-[5px] flex h-[40px] items-center justify-center text-[17px] font-bold leading-[20px] text-white">Equipment<br />Borrowing</p>
-          <p class="m-0 text-[11px] font-normal leading-[12px] text-white">Borrow tents, chairs, and<br />other Barangay utilities</p>
+          <p class="m-0 mb-[5px] flex h-[40px] items-center justify-center text-[17px] font-bold leading-[20px] text-white" style="white-space: pre-line">{{ $t('equipmentBorrowing') }}</p>
+          <p class="m-0 text-[11px] font-normal leading-[12px] text-white" style="white-space: pre-line">{{ $t('equipmentBorrowingDesc') }}</p>
         </div>
 
         <!-- RFID Services -->
         <div class="flex h-[220px] min-w-[160px] flex-1 cursor-pointer flex-col items-center justify-center rounded-[15px] bg-[#21C05C] p-[10px] text-center shadow-[4px_4px_8px_rgba(0,0,0,0.25),inset_2px_2px_4px_rgba(255,255,255,0.6),inset_-2px_-2px_6px_rgba(0,0,0,0.15)] transition-all duration-150 active:scale-[0.97]" @click="goTo('id-services')">
           <img src="@/assets/vectors/RFIDServices.svg" alt="RFID Services" class="mb-[5px] h-[105px] w-[105px]" />
-          <p class="m-0 mb-[5px] flex h-[40px] items-center justify-center text-[17px] font-bold leading-[20px] text-white">RFID Services</p>
-          <p class="m-0 text-[11px] font-normal leading-[12px] text-white">Request or Manage<br />your Barangay RFID card.</p>
+          <p class="m-0 mb-[5px] flex h-[40px] items-center justify-center text-[17px] font-bold leading-[20px] text-white">{{ $t('rfidServices') }}</p>
+          <p class="m-0 text-[11px] font-normal leading-[12px] text-white" style="white-space: pre-line">{{ $t('rfidServicesDesc') }}</p>
         </div>
 
         <!-- Help & Support -->
         <div class="flex h-[220px] min-w-[160px] flex-1 cursor-pointer flex-col items-center justify-center rounded-[15px] bg-[#A451F3] p-[10px] text-center shadow-[4px_4px_8px_rgba(0,0,0,0.25),inset_2px_2px_4px_rgba(255,255,255,0.6),inset_-2px_-2px_6px_rgba(0,0,0,0.15)] transition-all duration-150 active:scale-[0.97]" @click="goTo('help-and-support')">
           <img src="@/assets/vectors/HelpSupport.svg" alt="Help & Support" class="mb-[5px] h-[105px] w-[105px]" />
-          <p class="m-0 mb-[5px] flex h-[40px] items-center justify-center text-[17px] font-bold leading-[20px] text-white">Help &<br />Support</p>
-          <p class="m-0 text-[11px] font-normal leading-[12px] text-white">Find answers and<br />get assistance</p>
+          <p class="m-0 mb-[5px] flex h-[40px] items-center justify-center text-[17px] font-bold leading-[20px] text-white" style="white-space: pre-line">{{ $t('helpSupport') }}</p>
+          <p class="m-0 text-[11px] font-normal leading-[12px] text-white" style="white-space: pre-line">{{ $t('helpSupportDesc') }}</p>
         </div>
 
         <!-- Feedback -->
         <div class="flex h-[220px] min-w-[160px] flex-1 cursor-pointer flex-col items-center justify-center rounded-[15px] bg-[#13B3A1] p-[10px] text-center shadow-[4px_4px_8px_rgba(0,0,0,0.25),inset_2px_2px_4px_rgba(255,255,255,0.6),inset_-2px_-2px_6px_rgba(0,0,0,0.15)] transition-all duration-150 active:scale-[0.97]" @click="goTo('feedback')">
           <img src="@/assets/vectors/Feedback.svg" alt="Feedback" class="mb-[5px] h-[105px] w-[105px]" />
-          <p class="m-0 mb-[2px] flex h-[40px] items-center justify-center text-[17px] font-bold leading-[0px] text-white">Feedback</p>
-          <p class="m-0 text-[11px] font-normal leading-[12px] text-white">Help us improve the<br />Barangay Kiosk<br />experience</p>
+          <p class="m-0 mb-[2px] flex h-[40px] items-center justify-center text-[17px] font-bold leading-[0px] text-white">{{ $t('feedback') }}</p>
+          <p class="m-0 text-[11px] font-normal leading-[12px] text-white" style="white-space: pre-line">{{ $t('feedbackDesc') }}</p>
         </div>
       </div>
 
       <div class="mt-4 flex gap-5 w-full">
         <Button v-if="!auth.isGuest" variant="outline" size="md" class="flex-1 shadow-[4px_4px_8px_rgba(0,0,0,0.15)]" @click="goTo('transaction-history')">
-          Transactions
+          {{ $t('transactions') }}
         </Button>
         <Button variant="outline" size="md" class="flex-1 shadow-[4px_4px_8px_rgba(0,0,0,0.15)]" @click="goTo('inannouncements')">
-          Announcements
+          {{ $t('announcements') }}
         </Button>
       </div>
     </div>

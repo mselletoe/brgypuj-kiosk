@@ -14,25 +14,15 @@ const transactions = ref([])
 const isLoading = ref(false)
 const error = ref(null)
 
-/**
- * Maps the backend response shape to the props TransactionHistoryCard expects.
- *
- * Backend sends:
- * { id, transaction_type, transaction_name, transaction_no,
- * rfid_uid, status, created_at }
- *
- * Card expects:
- * { id, type, title, reference, rfidNo, createdAt, status }
- */
 function mapTransaction(entry) {
   return {
     id:        entry.id,
-    type:      entry.transaction_type,               // "document" | "equipment" | "rfid"
-    title:     entry.transaction_name,               // "Barangay Clearance" / "2x Tent, …"
-    reference: entry.transaction_no,                 // "DR-0010" / "EB-1023"
+    type:      entry.transaction_type,
+    title:     entry.transaction_name,
+    reference: entry.transaction_no,
     rfidNo:    entry.rfid_uid ?? null,
     createdAt: formatDate(entry.created_at),
-    status:    entry.status.toLowerCase(),           // "completed" | "rejected"
+    status:    entry.status.toLowerCase(),
   }
 }
 
@@ -45,15 +35,13 @@ function formatDate(isoString) {
 
 async function fetchHistory() {
   if (!auth.residentId) return
-
   isLoading.value = true
   error.value = null
-
   try {
     const data = await getTransactionHistory(auth.residentId)
     transactions.value = data.map(mapTransaction)
   } catch (err) {
-    error.value = 'Failed to load transaction history. Please try again.'
+    error.value = true
   } finally {
     isLoading.value = false
   }
@@ -69,10 +57,10 @@ onMounted(fetchHistory)
       <ArrowBackButton @click="goBack"/>
       <div>
         <h1 class="text-[45px] text-[#03335C] font-bold tracking-tight -mt-2">
-          Transaction History
+          {{ $t('transactionHistory') }}
         </h1>
         <p class="text-[#03335C] -mt-2">
-          See your previous transactions here.
+          {{ $t('transactionHistorySubtitle') }}
         </p>
       </div>
     </div>
@@ -85,15 +73,15 @@ onMounted(fetchHistory)
           <div class="dot"></div>
           <div class="dot"></div>
         </div>
-        <p class="text-[#03335C] text-lg font-semibold">Loading transactions...</p>
+        <p class="text-[#03335C] text-lg font-semibold">{{ $t('loadingTransactions') }}</p>
       </div>
 
       <div v-else-if="error" class="flex justify-center items-center py-16">
-        <p class="text-red-500 text-base font-medium">{{ error }}</p>
+        <p class="text-red-500 text-base font-medium">{{ $t('failedLoadTransactions') }}</p>
       </div>
 
       <div v-else-if="transactions.length === 0" class="flex justify-center items-center py-16">
-        <p class="text-gray-400 text-base font-medium">No transactions found.</p>
+        <p class="text-gray-400 text-base font-medium">{{ $t('noTransactionsFound') }}</p>
       </div>
 
       <div v-else class="flex flex-col gap-4 w-full">
@@ -114,39 +102,9 @@ onMounted(fetchHistory)
 </template>
 
 <style scoped>
-/* Loader Dots CSS */
-.loader-dots {
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  width: 60px; 
-  height: 15px; 
-}
-
-.dot {
-  width: 12px; 
-  height: 12px;
-  background-color: #03335C; 
-  border-radius: 50%;
-  animation: pulse 1.4s infinite ease-in-out both;
-}
-
-.dot:nth-child(1) {
-  animation-delay: -0.32s;
-}
-
-.dot:nth-child(2) {
-  animation-delay: -0.16s;
-}
-
-@keyframes pulse {
-  0%, 80%, 100% { 
-    transform: scale(0); 
-    opacity: 0.3; 
-  }
-  40% { 
-    transform: scale(1); 
-    opacity: 1;
-  }
-}
+.loader-dots { display: flex; justify-content: space-around; align-items: center; width: 60px; height: 15px; }
+.dot { width: 12px; height: 12px; background-color: #03335C; border-radius: 50%; animation: pulse 1.4s infinite ease-in-out both; }
+.dot:nth-child(1) { animation-delay: -0.32s; }
+.dot:nth-child(2) { animation-delay: -0.16s; }
+@keyframes pulse { 0%, 80%, 100% { transform: scale(0); opacity: 0.3; } 40% { transform: scale(1); opacity: 1; } }
 </style>

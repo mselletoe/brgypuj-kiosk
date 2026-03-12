@@ -8,7 +8,7 @@
  */
 import { ref, computed, onMounted } from 'vue'
 import { NButton, NSwitch, NSpin, useMessage } from 'naive-ui'
-import { getSystemConfig, updateSystemConfig } from '@/api/systemconfigService'
+import { getSystemConfig, updateSystemConfig } from '@/api/systemConfigService'
 
 const message = useMessage()
 const loading = ref(true)
