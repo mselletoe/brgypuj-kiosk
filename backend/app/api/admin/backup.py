@@ -30,9 +30,8 @@ from app.core.config import settings
 router = APIRouter(prefix="/backup")
 
 # ── Where scheduled backups are saved on the Pi ───────────────────────────────
-BACKUP_DIR = Path(os.getenv("BACKUP_DIR", "/var/backups/barangay"))
+BACKUP_DIR = Path(settings.BACKUP_DIR)
 BACKUP_DIR.mkdir(parents=True, exist_ok=True)
-
 
 def _parse_db_url(url: str) -> dict:
     """

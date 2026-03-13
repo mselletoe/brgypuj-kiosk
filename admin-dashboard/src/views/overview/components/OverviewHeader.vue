@@ -18,6 +18,7 @@ const adminFirstName = ref("Admin");
 
 const timeInterval = ref(null);
 const currentDate = ref("");
+const currentTime = ref("");
 const greeting = ref("");
 const bannerVisible = ref(false);
 
@@ -33,6 +34,12 @@ const updateClock = () => {
     day: "numeric",
     year: "numeric",
   });
+  currentTime.value = now.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  });
   const hour = now.getHours();
   if (hour < 12) greeting.value = "Good Morning";
   else if (hour < 18) greeting.value = "Good Afternoon";
@@ -45,7 +52,7 @@ watch(
     if (newVal) {
       setTimeout(() => {
         bannerVisible.value = true;
-      }, 600); // slightly delayed so page loads first
+      }, 600);
     } else {
       bannerVisible.value = false;
     }
@@ -55,7 +62,8 @@ watch(
 
 onMounted(async () => {
   updateClock();
-  timeInterval.value = setInterval(updateClock, 60000);
+  // Tick every second so time stays live
+  timeInterval.value = setInterval(updateClock, 1000);
 
   try {
     const data = await getAdminProfile();
@@ -80,7 +88,9 @@ onUnmounted(() => clearInterval(timeInterval.value));
       <p
         class="text-[14px] font-semibold text-gray-400 tracking-wide uppercase"
       >
-        System Overview &bull; {{ currentDate }}
+        {{ currentDate }}
+        <span class="text-gray-300 mx-1">&bull;</span>
+        <span class="tabular-nums normal-case">{{ currentTime }}</span>
       </p>
     </div>
 
@@ -153,7 +163,6 @@ onUnmounted(() => clearInterval(timeInterval.value));
     transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Slides in from the RIGHT */
 .banner-hidden {
   opacity: 0;
   transform: translateX(60px);
