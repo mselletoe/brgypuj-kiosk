@@ -1,12 +1,10 @@
 from datetime import date
 from dateutil.relativedelta import relativedelta
 from faker import Faker
-from passlib.context import CryptContext
 from app.db.session import SessionLocal
 from app.models.resident import Resident
 
 fake = Faker("fil_PH")  # Filipino locale
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # Target count per age group — adjust as needed
 AGE_GROUPS = [
@@ -57,7 +55,7 @@ def generate_residents() -> list[dict]:
                 "birthdate":    random_birthdate(group["min_age"], group["max_age"]),
                 "email":        None if is_child else email,
                 "phone_number": None if is_child else fake.numerify("09#########"),
-                "rfid_pin":     "1234",
+                "rfid_pin":     "0000",  # sentinel — triggers PIN setup on first kiosk use
             })
 
     return residents
@@ -73,12 +71,10 @@ def seed_residents():
         residents = generate_residents()
 
         for r in residents:
-            r_copy = r.copy()
-            r_copy["rfid_pin"] = pwd_context.hash(r["rfid_pin"])
-            db.add(Resident(**r_copy))
+            db.add(Resident(**r))
 
         db.commit()
-        print(f"🌱 {len(residents)} residents seeded (with hashed PINs)")
+        print(f"🌱 {len(residents)} residents seeded (PIN not set — residents must set on first use)")
         for group in AGE_GROUPS:
             print(f"   • {group['label']}: {group['count']}")
 
