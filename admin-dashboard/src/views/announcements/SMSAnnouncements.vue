@@ -1,39 +1,32 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import PageTitle from '@/components/shared/PageTitle.vue'
+import {
+  fetchPuroks,
+  fetchSMSHistory,
+  previewRecipients,
+  sendSMSAnnouncement,
+  RESIDENT_GROUPS,
+} from '@/api/smsService'
 
 // ── State ────────────────────────────────────────────────
 const message       = ref('')
 const isSending     = ref(false)
 const sentSuccess   = ref(false)
+const errorMessage  = ref('')
 const recipientMode = ref('groups')
 
-const groups = ref([
-  { id: 'seniors',  label: 'Senior Citizens',  count: 48,  color: 'cyan'   },
-  { id: 'pwd',      label: 'PWD',              count: 23,  color: 'purple' },
-  { id: 'youth',    label: 'Youth (15–30)',     count: 112, color: 'blue'   },
-  { id: 'parents',  label: 'Parents',           count: 89,  color: 'green'  },
-  { id: 'indigent', label: 'Indigent Families', count: 31,  color: 'amber'  },
-  { id: '4ps',      label: '4Ps Beneficiaries', count: 27,  color: 'rose'   },
-])
+const groups = ref(RESIDENT_GROUPS.map(g => ({ ...g, count: '—' })))
 const selectedGroups = ref([])
 
-const puroks = ref([
-  { id: 1, name: 'Purok 1 – Mapayapa',  count: 54, dot: '#06B6D4' },
-  { id: 2, name: 'Purok 2 – Masagana',  count: 61, dot: '#8B5CF6' },
-  { id: 3, name: 'Purok 3 – Maliwanag', count: 47, dot: '#10B981' },
-  { id: 4, name: 'Purok 4 – Maunlad',   count: 39, dot: '#F59E0B' },
-  { id: 5, name: 'Purok 5 – Matahimik', count: 58, dot: '#F43F5E' },
-])
+const puroks         = ref([])
 const selectedPuroks = ref([])
 
 const specificNumbers = ref('')
+const history         = ref([])
 
-const history = ref([
-  { id: 1, preview: 'Barangay Assembly bukas ng 5PM sa covered court...', recipients: 112, mode: 'Youth', time: '2h ago', dot: '#3B82F6' },
-  { id: 2, preview: 'Water interruption scheduled on Dec 20, 8AM–5PM...', recipients: 54,  mode: 'Purok 1', time: '1d ago', dot: '#06B6D4' },
-  { id: 3, preview: 'Senior citizen ID renewal is now open at the hall...', recipients: 48, mode: 'Senior Citizens', time: '3d ago', dot: '#8B5CF6' },
-])
+const recipientCount   = ref(0)
+const isResolvingCount = ref(false)
 
 const templates = [
   { label: 'Assembly',           accent: 'blue',   text: 'Mahal na mga Residente, may barangay assembly sa [DATE] ng [TIME] sa [LUGAR]. Pakiusap ay dumalo.' },
@@ -53,6 +46,17 @@ const groupColorMap = {
   amber:  { strip: 'bg-gradient-to-r from-white to-[#FFF5D3]', check: 'bg-[#F59E0B] border-[#F59E0B]', border: 'border-amber-400',  bg: 'bg-amber-50',  dot: '#F59E0B' },
   rose:   { strip: 'bg-gradient-to-r from-white to-[#FFD6E0]', check: 'bg-[#F43F5E] border-[#F43F5E]', border: 'border-rose-400',   bg: 'bg-rose-50',   dot: '#F43F5E' },
 }
+
+// Purok color palette — cycles through if there are more puroks than entries
+const purokColorList = [
+  { strip: 'bg-gradient-to-r from-white to-[#CBFCFF]', check: 'bg-[#06B6D4] border-[#06B6D4]', border: 'border-cyan-400',   bg: 'bg-cyan-50',   dot: '#06B6D4' },
+  { strip: 'bg-gradient-to-r from-white to-[#F5D6FF]', check: 'bg-[#8B5CF6] border-[#8B5CF6]', border: 'border-purple-400', bg: 'bg-purple-50', dot: '#8B5CF6' },
+  { strip: 'bg-gradient-to-r from-white to-[#B6FFC2]', check: 'bg-[#10B981] border-[#10B981]', border: 'border-green-400',  bg: 'bg-green-50',  dot: '#10B981' },
+  { strip: 'bg-gradient-to-r from-white to-[#FFF5D3]', check: 'bg-[#F59E0B] border-[#F59E0B]', border: 'border-amber-400',  bg: 'bg-amber-50',  dot: '#F59E0B' },
+  { strip: 'bg-gradient-to-r from-white to-[#FFD6E0]', check: 'bg-[#F43F5E] border-[#F43F5E]', border: 'border-rose-400',   bg: 'bg-rose-50',   dot: '#F43F5E' },
+  { strip: 'bg-gradient-to-r from-white to-[#DBEAFE]', check: 'bg-[#3B82F6] border-[#3B82F6]', border: 'border-blue-400',   bg: 'bg-blue-50',   dot: '#3B82F6' },
+]
+
 const templateAccentMap = {
   blue:   'hover:border-blue-300   hover:bg-blue-50   group-hover:text-blue-600',
   cyan:   'hover:border-cyan-300   hover:bg-cyan-50   group-hover:text-cyan-600',
@@ -69,16 +73,9 @@ const templateLabelMap = {
   amber:  'text-amber-600',
   purple: 'text-purple-600',
 }
+
 const charCount = computed(() => message.value.length)
 const smsPages  = computed(() => Math.ceil(charCount.value / 160) || 1)
-
-const recipientCount = computed(() => {
-  if (recipientMode.value === 'groups')
-    return groups.value.filter(g => selectedGroups.value.includes(g.id)).reduce((s, g) => s + g.count, 0)
-  if (recipientMode.value === 'puroks')
-    return puroks.value.filter(p => selectedPuroks.value.includes(p.id)).reduce((s, p) => s + p.count, 0)
-  return specificNumbers.value.split(',').filter(n => n.trim()).length
-})
 
 const canSend = computed(() => {
   if (!message.value.trim()) return false
@@ -87,6 +84,69 @@ const canSend = computed(() => {
   if (recipientMode.value === 'specific' && !specificNumbers.value.trim()) return false
   return true
 })
+
+// ── Live recipient count ──────────────────────────────────
+let previewTimer = null
+
+const resolveRecipientCount = async () => {
+  const hasSelection =
+    (recipientMode.value === 'groups'   && selectedGroups.value.length)  ||
+    (recipientMode.value === 'puroks'   && selectedPuroks.value.length)  ||
+    (recipientMode.value === 'specific' && specificNumbers.value.trim())
+
+  if (!hasSelection) { recipientCount.value = 0; return }
+
+  isResolvingCount.value = true
+  try {
+    const res = await previewRecipients(
+      recipientMode.value,
+      {
+        groups:       selectedGroups.value,
+        purokIds:     selectedPuroks.value,
+        phoneNumbers: specificNumbers.value,
+      }
+    )
+    recipientCount.value = res.count ?? 0
+  } catch {
+    // silently keep last count on transient failure
+  } finally {
+    isResolvingCount.value = false
+  }
+}
+
+const schedulePreview = () => {
+  clearTimeout(previewTimer)
+  previewTimer = setTimeout(resolveRecipientCount, 400)
+}
+
+watch([selectedGroups, selectedPuroks, specificNumbers, recipientMode], schedulePreview, { deep: true })
+
+// ── Per-card population counts ────────────────────────────
+const resolveGroupCounts = async () => {
+  await Promise.allSettled(
+    groups.value.map(async (g, idx) => {
+      try {
+        const res = await previewRecipients('groups', { groups: [g.id] })
+        groups.value[idx] = { ...groups.value[idx], count: res.count }
+      } catch {
+        groups.value[idx] = { ...groups.value[idx], count: '?' }
+      }
+    })
+  )
+}
+
+const resolvePurokCounts = async () => {
+  await Promise.allSettled(
+    puroks.value.map(async (p, idx) => {
+      try {
+        const res = await previewRecipients('puroks', { purokIds: [p.id] })
+        puroks.value[idx] = { ...puroks.value[idx], count: res.count }
+      } catch {
+        puroks.value[idx] = { ...puroks.value[idx], count: '?' }
+      }
+    })
+  )
+}
 
 // ── Methods ──────────────────────────────────────────────
 const toggleGroup = (id) => {
@@ -97,38 +157,97 @@ const togglePurok = (id) => {
   const i = selectedPuroks.value.indexOf(id)
   i > -1 ? selectedPuroks.value.splice(i, 1) : selectedPuroks.value.push(id)
 }
-const switchMode   = (mode) => { recipientMode.value = mode; selectedGroups.value = []; selectedPuroks.value = [] }
+const switchMode    = (mode) => { recipientMode.value = mode; selectedGroups.value = []; selectedPuroks.value = [] }
 const applyTemplate = (text) => { message.value = text }
 
 const handleSend = async () => {
   if (!canSend.value) return
-  isSending.value = true
-  await new Promise(r => setTimeout(r, 1800))
+  isSending.value    = true
+  errorMessage.value = ''
 
-  const modeLabel =
-    recipientMode.value === 'groups'
-      ? selectedGroups.value.map(id => groups.value.find(g => g.id === id)?.label).join(', ')
-      : recipientMode.value === 'puroks'
-        ? selectedPuroks.value.map(id => puroks.value.find(p => p.id === id)?.name).join(', ')
-        : 'Specific Numbers'
+  try {
+    const res = await sendSMSAnnouncement(
+      recipientMode.value,
+      {
+        groups:       selectedGroups.value,
+        purokIds:     selectedPuroks.value,
+        phoneNumbers: specificNumbers.value,
+      },
+      message.value
+    )
 
-  const dotColors = ['#3B82F6', '#06B6D4', '#8B5CF6', '#10B981', '#F59E0B', '#F43F5E']
-  history.value.unshift({
-    id: Date.now(),
-    preview: message.value.substring(0, 60) + (message.value.length > 60 ? '...' : ''),
-    recipients: recipientCount.value,
-    mode: modeLabel,
-    time: 'Just now',
-    dot: dotColors[history.value.length % dotColors.length],
-  })
+    const modeLabel =
+      recipientMode.value === 'groups'
+        ? selectedGroups.value.map(id => groups.value.find(g => g.id === id)?.label).join(', ')
+        : recipientMode.value === 'puroks'
+          ? selectedPuroks.value.map(id => puroks.value.find(p => p.id === id)?.purok_name).join(', ')
+          : 'Specific Numbers'
 
-  isSending.value       = false
-  sentSuccess.value     = true
-  message.value         = ''
-  selectedGroups.value  = []
-  selectedPuroks.value  = []
-  specificNumbers.value = ''
-  setTimeout(() => (sentSuccess.value = false), 3500)
+    const dotColors = ['#3B82F6', '#06B6D4', '#8B5CF6', '#10B981', '#F59E0B', '#F43F5E']
+    history.value.unshift({
+      id:         res.queued_at ?? Date.now(),
+      preview:    message.value.substring(0, 60) + (message.value.length > 60 ? '...' : ''),
+      recipients: res.recipients ?? recipientCount.value,
+      mode:       modeLabel,
+      time:       'Just now',
+      dot:        dotColors[history.value.length % dotColors.length],
+    })
+
+    sentSuccess.value     = true
+    message.value         = ''
+    selectedGroups.value  = []
+    selectedPuroks.value  = []
+    specificNumbers.value = ''
+    recipientCount.value  = 0
+    setTimeout(() => (sentSuccess.value = false), 3500)
+  } catch (err) {
+    errorMessage.value = err?.response?.data?.detail ?? 'Failed to send SMS. Please try again.'
+  } finally {
+    isSending.value = false
+  }
+}
+
+// ── Bootstrap ────────────────────────────────────────────
+onMounted(async () => {
+  try {
+    const [purokList, historyList] = await Promise.all([
+      fetchPuroks(),
+      fetchSMSHistory(20),
+    ])
+
+    // Assign a color entry from purokColorList by index
+    puroks.value = purokList.map((p, i) => ({
+      ...p,
+      name:  p.purok_name,
+      count: '—',
+      color: i % purokColorList.length,
+    }))
+
+    const histDots = ['#3B82F6', '#06B6D4', '#8B5CF6', '#10B981', '#F59E0B', '#F43F5E']
+    history.value = historyList.map((h, i) => ({
+      id:         h.id,
+      preview:    h.message.substring(0, 60) + (h.message.length > 60 ? '...' : ''),
+      recipients: h.recipients,
+      mode:       h.mode,
+      time:       formatRelativeTime(h.sent_at),
+      dot:        histDots[i % histDots.length],
+    }))
+  } catch (err) {
+    console.error('Failed to load SMS page data:', err)
+  }
+
+  resolveGroupCounts()
+  resolvePurokCounts()
+})
+
+// ── Helpers ──────────────────────────────────────────────
+function formatRelativeTime(isoString) {
+  if (!isoString) return ''
+  const diff = (Date.now() - new Date(isoString).getTime()) / 1000
+  if (diff < 60)    return 'Just now'
+  if (diff < 3600)  return `${Math.floor(diff / 60)}m ago`
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
+  return `${Math.floor(diff / 86400)}d ago`
 }
 </script>
 
@@ -157,7 +276,25 @@ const handleSend = async () => {
       </div>
     </transition>
 
-    <!-- Body: two-column layout matching Overview -->
+    <!-- Error Banner -->
+    <transition name="banner-slide">
+      <div v-if="errorMessage"
+        class="mb-4 flex-shrink-0 bg-red-50 border-l-4 border-red-500 px-5 py-3 rounded-r-xl shadow-sm flex items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <svg class="w-5 h-5 text-red-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+          </svg>
+          <p class="text-sm font-bold text-red-800">{{ errorMessage }}</p>
+        </div>
+        <button @click="errorMessage = ''" class="text-red-400 hover:text-red-600 transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+    </transition>
+
+    <!-- Body -->
     <div class="flex gap-6 flex-1 min-h-0 overflow-hidden">
 
       <!-- LEFT column -->
@@ -174,7 +311,11 @@ const handleSend = async () => {
               'flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[11px] font-bold uppercase tracking-widest transition-all',
               recipientCount > 0 ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-gray-50 border-gray-200 text-gray-400'
             ]">
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg v-if="isResolvingCount" class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+              </svg>
+              <svg v-else class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
               </svg>
@@ -182,7 +323,7 @@ const handleSend = async () => {
             </div>
           </div>
 
-          <!-- Mode tabs — same style as the time-scale select in VolumeChart -->
+          <!-- Mode tabs -->
           <div class="flex gap-2 mb-6">
             <button
               v-for="tab in [
@@ -196,7 +337,7 @@ const handleSend = async () => {
                 'flex-1 py-1.5 px-3 rounded-lg text-[11px] font-bold uppercase tracking-widest border transition-all',
                 recipientMode === tab.id
                   ? 'bg-blue-600 text-white border-blue-600'
-                  : 'text-gray-500 border-gray-200 bg-gray-50 hover:bg-gray-100 hover:text-gray-700'
+                  : 'text-gray-500 border-gray-200 bg-gray-50 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-700'
               ]"
             >{{ tab.label }}</button>
           </div>
@@ -218,10 +359,9 @@ const handleSend = async () => {
                   'relative overflow-hidden flex items-center justify-between p-4 rounded-xl border-2 text-left transition-all group',
                   selectedGroups.includes(g.id)
                     ? groupColorMap[g.color].border + ' ' + groupColorMap[g.color].bg
-                    : 'border-gray-100 bg-white hover:border-gray-200'
+                    : 'border-gray-100 bg-white hover:bg-gray-50'
                 ]"
               >
-                <!-- color strip — same pattern as KpiCards -->
                 <div :class="['absolute right-0 top-0 h-full w-[10px] z-0 transition-all duration-500', groupColorMap[g.color].strip, selectedGroups.includes(g.id) ? 'w-full opacity-30' : '']"></div>
                 <div class="relative z-10">
                   <p class="text-sm font-bold text-gray-700">{{ g.label }}</p>
@@ -239,39 +379,38 @@ const handleSend = async () => {
             </div>
           </div>
 
-          <!-- Puroks -->
+          <!-- Puroks grid -->
           <div v-if="recipientMode === 'puroks'">
-            <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center justify-between mb-3 h-5">
               <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest">Select Puroks</p>
               <button v-if="selectedPuroks.length" @click="selectedPuroks = []"
                 class="text-[11px] font-bold text-blue-600 uppercase tracking-widest hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded-lg transition-colors">
                 Clear
               </button>
             </div>
-            <div class="space-y-2">
+            <div class="grid grid-cols-2 gap-2">
               <button
                 v-for="p in puroks" :key="p.id"
                 @click="togglePurok(p.id)"
                 :class="[
-                  'w-full flex items-center justify-between px-4 py-3 rounded-xl border-2 transition-all',
-                  selectedPuroks.includes(p.id) ? 'border-gray-300 bg-gray-50' : 'border-gray-100 bg-white hover:border-gray-200'
+                  'relative overflow-hidden flex items-center justify-between p-4 rounded-xl border-2 text-left transition-all group',
+                  selectedPuroks.includes(p.id)
+                    ? purokColorList[p.color].border + ' ' + purokColorList[p.color].bg
+                    : 'border-gray-100 bg-white hover:border-gray-200'
                 ]"
               >
-                <div class="flex items-center gap-3">
-                  <!-- colored dot indicator -->
-                  <div class="w-2.5 h-2.5 rounded-full flex-shrink-0" :style="{ backgroundColor: p.dot }"></div>
-                  <span class="text-sm font-bold text-gray-700">{{ p.name }}</span>
+                <div :class="['absolute right-0 top-0 h-full w-[10px] z-0 transition-all duration-500', purokColorList[p.color].strip, selectedPuroks.includes(p.id) ? 'w-full opacity-30' : '']"></div>
+                <div class="relative z-10">
+                  <p class="text-sm font-bold text-gray-700">{{ p.name }}</p>
+                  <p class="text-xs text-gray-400 mt-0.5 italic">{{ p.count }} residents</p>
                 </div>
-                <div class="flex items-center gap-2">
-                  <span class="text-xs font-semibold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{{ p.count }}</span>
-                  <div :class="[
-                    'w-4 h-4 rounded border-2 flex items-center justify-center transition-all',
-                    selectedPuroks.includes(p.id) ? 'border-gray-600 bg-gray-700' : 'border-gray-300'
-                  ]">
-                    <svg v-if="selectedPuroks.includes(p.id)" class="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
-                    </svg>
-                  </div>
+                <div :class="[
+                  'relative z-10 w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all',
+                  selectedPuroks.includes(p.id) ? purokColorList[p.color].check : 'border-gray-300 bg-white'
+                ]">
+                  <svg v-if="selectedPuroks.includes(p.id)" class="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                  </svg>
                 </div>
               </button>
             </div>
@@ -279,7 +418,7 @@ const handleSend = async () => {
 
           <!-- Specific Numbers -->
           <div v-if="recipientMode === 'specific'">
-            <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Phone Numbers</p>
+            <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3 h-5">Phone Numbers</p>
             <textarea
               v-model="specificNumbers"
               placeholder="+639123456789, +639987654321, ..."
@@ -357,7 +496,7 @@ const handleSend = async () => {
 
       </div>
 
-      <!-- RIGHT sidebar — same width/style as AuditLog -->
+      <!-- RIGHT sidebar -->
       <div class="w-72 shrink-0 flex flex-col gap-6 overflow-y-auto">
 
         <!-- Templates Card -->
@@ -378,7 +517,7 @@ const handleSend = async () => {
           </div>
         </div>
 
-        <!-- History Card — mirrors AuditLog layout exactly -->
+        <!-- History Card -->
         <div class="bg-white rounded-xl p-8 shadow-sm border border-gray-200">
           <div class="mb-6">
             <h2 class="text-xl font-bold text-gray-800 tracking-tight">Recent Sends</h2>

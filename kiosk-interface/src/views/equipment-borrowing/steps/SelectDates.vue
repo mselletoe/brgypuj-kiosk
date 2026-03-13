@@ -7,6 +7,7 @@ import { CalendarIcon } from '@heroicons/vue/24/outline'
 import VueDatePicker from '@vuepic/vue-datepicker'
 import '@vuepic/vue-datepicker/dist/main.css'
 import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 
 const props = defineProps({
   selectedEquipment: Array,
@@ -17,6 +18,7 @@ const props = defineProps({
 })
 const emit = defineEmits(['update:selected-dates'])
 const router = useRouter();
+const { t } = useI18n();
 
 const borrowDate = ref(props.selectedDates?.borrow || null)
 const returnDate = ref(props.selectedDates?.return || null)
@@ -107,8 +109,8 @@ const cancelExit = () => {
     <div class="flex items-center mb-6 gap-7 flex-shrink-0">
       <ArrowBackButton @click="handleBackClick" />
       <div>
-        <h1 class="text-[45px] text-[#03335C] font-bold tracking-tight -mt-2">Equipment Borrowing</h1>
-        <p class="text-[#03335C] -mt-2">Select your borrowing dates below.</p>
+        <h1 class="text-[45px] text-[#03335C] font-bold tracking-tight -mt-2">{{ t('equipmentBorrowingTitle') }}</h1>
+        <p class="text-[#03335C] -mt-2">{{ t('selectBorrowingDates') }}</p>
       </div>
     </div>
 
@@ -117,17 +119,17 @@ const cancelExit = () => {
         <div class="col-span-2">
           <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 h-full min-h-[320px]">
             <h3 class="text-[23px] font-bold text-[#013C6D] flex items-center gap-2 whitespace-nowrap">
-              Select Borrowing Dates
+              {{ t('selectBorrowingDatesLabel') }}
             </h3>
             <div class="mt-8 space-y-8">
               <div>
                 <label for="borrow-date" class="block mb-2 font-bold text-[#003A6B]">
-                  Borrow Date <span class="text-red-500">*</span>
+                  {{ t('borrowDate') }} <span class="text-red-500">*</span>
                 </label>
                 <VueDatePicker
                   id="borrow-date"
                   v-model="borrowDate"
-                  placeholder="Borrow Date"
+                  :placeholder="t('borrowDate')"
                   :enable-time-picker="false"
                   auto-apply
                   teleport-center
@@ -142,12 +144,12 @@ const cancelExit = () => {
               </div>
               <div>
                 <label for="return-date" class="block mb-2 font-bold text-[#003A6B]">
-                  Return Date <span class="text-red-500">*</span>
+                  {{ t('returnDate') }} <span class="text-red-500">*</span>
                 </label>
                 <VueDatePicker
                   id="return-date"
                   v-model="returnDate"
-                  placeholder="Return Date"
+                  :placeholder="t('returnDate')"
                   :enable-time-picker="false"
                   auto-apply
                   teleport-center
@@ -166,7 +168,7 @@ const cancelExit = () => {
 
         <div class="col-span-3">
           <div class="bg-[#EBF5FF] rounded-2xl shadow-lg border border-[#B0D7F8] p-6 h-full min-h-[310px] flex flex-col">
-            <h3 class="text-2xl font-bold text-[#013C6D]">Cost Breakdown</h3>
+            <h3 class="text-2xl font-bold text-[#013C6D]">{{ t('costBreakdown') }}</h3>
             <ul class="mt-6 space-y-0 flex-grow">
               <li 
                 v-for="item in costBreakdown"
@@ -174,14 +176,14 @@ const cancelExit = () => {
                 class="flex justify-between text-gray-700 text-lg"
               >
                 <span>
-                  {{ item.name }} ({{ item.quantity }} x {{ numberOfDays }} day{{ numberOfDays > 1 ? 's' : '' }})
+                  {{ item.name }} ({{ item.quantity }} x {{ numberOfDays }} {{ numberOfDays > 1 ? t('days') : t('day') }})
                 </span>
                 <span class="font-bold">{{ formatCurrency(item.cost) }}</span>
               </li>
             </ul>
             <div class="border-t border-gray-300 my-6"></div>
             <div class="flex justify-between text-3xl font-bold text-[#013C6D]">
-              <span>Total Cost:</span>
+              <span>{{ t('totalCost') }}</span>
               <span class="text-[#09AA44]">{{ formatCurrency(totalCost) }}</span>
             </div>
           </div>
@@ -195,7 +197,7 @@ const cancelExit = () => {
           variant="outline"
           size="md"
         >
-          Back to Items
+          {{ t('backToItems') }}
         </Button>
 
         <Button
@@ -204,18 +206,18 @@ const cancelExit = () => {
           :variant="(!borrowDate || !returnDate) ? 'disabled' : 'secondary'"
           size="md"
         >
-          Continue
+          {{ t('continue') }}
         </Button>
     </div>
 
     <Transition name="fade-blur">
       <div v-if="showExitModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-8 modal-backdrop">
         <Modal
-          title="Exit Equipment Request?"
-          message="You have unsaved changes. Are you sure you want to exit? All your progress will be lost."
+          :title="t('exitEquipmentRequest')"
+          :message="t('unsavedChanges')"
           type="warning"
-          primaryButtonText="Exit"
-          secondaryButtonText="Stay"
+          :primaryButtonText="t('exit')"
+          :secondaryButtonText="t('stay')"
           :showPrimaryButton="true"
           :showSecondaryButton="true"
           :showReferenceId="false"

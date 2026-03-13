@@ -1,5 +1,6 @@
 <script setup>
-import { ref, computed, watch, h } from 'vue'
+import { ref, computed, watch, h, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { NDataTable, NCheckbox, NPopover, NSelect, NButton, useMessage } from 'naive-ui'
 import {
   TrashIcon,
@@ -8,12 +9,20 @@ import {
   FunnelIcon,
 } from '@heroicons/vue/24/outline'
 import PageTitle from '@/components/shared/PageTitle.vue'
+import { useNotificationStore } from '@/stores/notification'
 
 const message = useMessage()
+const notifStore = useNotificationStore()
+const router = useRouter()
 
 const searchQuery       = ref('')
 const showFilterPopover = ref(false)
 const selectedIds       = ref([])
+
+// ── Fetch persisted notifications on mount ────────────────────────────────────
+onMounted(() => {
+  notifStore.fetchNotifications()
+})
 
 // ── Filter state ──────────────────────────────────────────────────────────────
 const filterState = ref({
@@ -28,11 +37,11 @@ const statusOptions = [
 ]
 
 const typeOptions = [
-  { label: 'All Types', value: null },
-  { label: 'Document',  value: 'Document' },
-  { label: 'Payment',   value: 'Payment' },
-  { label: 'Equipment', value: 'Equipment' },
-  { label: 'Feedback',  value: 'Feedback' },
+  { label: 'All Types',    value: null },
+  { label: 'Document',     value: 'Document' },
+  { label: 'Equipment',    value: 'Equipment' },
+  { label: 'Feedback',     value: 'Feedback' },
+  { label: 'ID Services',  value: 'ID Services' },
 ]
 
 const hasActiveFilters = computed(() =>
@@ -43,17 +52,8 @@ const handleFilterClear = () => {
   filterState.value = { status: null, type: null }
 }
 
-// ── Data ──────────────────────────────────────────────────────────────────────
-const notifications = ref([
-  { id: 1, type: 'Document',  msg: 'New Document Request submitted by Juan dela Cruz', date: 'Jan 30, 2026', time: '10:55 AM', unread: true },
-  { id: 2, type: 'Document',  msg: 'New Document Request submitted by Maria Santos',   date: 'Jan 30, 2026', time: '10:42 AM', unread: true },
-  { id: 3, type: 'Document',  msg: 'New Document Request submitted by Pedro Reyes',    date: 'Jan 30, 2026', time: '09:30 AM', unread: true },
-  { id: 4, type: 'Payment',   msg: 'Payment of ₱150.00 completed for Clearance',       date: 'Jan 30, 2026', time: '09:10 AM', unread: false },
-  { id: 5, type: 'Equipment', msg: 'Equipment "Sound System" is now overdue',           date: 'Jan 29, 2026', time: '04:00 PM', unread: true },
-  { id: 6, type: 'Feedback',  msg: 'New feedback received from a resident',             date: 'Jan 29, 2026', time: '02:15 PM', unread: false },
-  { id: 7, type: 'Payment',   msg: 'Payment of ₱75.00 received for Indigency',         date: 'Jan 29, 2026', time: '11:00 AM', unread: true },
-  { id: 8, type: 'Feedback',  msg: 'New feedback received — rated 4/5 stars',          date: 'Jan 28, 2026', time: '03:45 PM', unread: false },
-])
+// ── Data — from Pinia store ───────────────────────────────────────────────────
+const notifications = computed(() => notifStore.notifications)
 
 // ── Filtering ─────────────────────────────────────────────────────────────────
 const filteredNotifications = computed(() => {
@@ -92,9 +92,7 @@ watch(searchQuery, () => { selectedIds.value = [] })
 // ── Actions ───────────────────────────────────────────────────────────────────
 function markSelectedAsRead() {
   if (!selectedIds.value.length) return
-  notifications.value.forEach((n) => {
-    if (selectedIds.value.includes(n.id)) n.unread = false
-  })
+  notifStore.markAllRead(selectedIds.value)
   message.success(`${selectedIds.value.length} notification(s) marked as read.`)
   selectedIds.value = []
 }
@@ -102,21 +100,47 @@ function markSelectedAsRead() {
 function deleteSelected() {
   if (!selectedIds.value.length) return
   const count = selectedIds.value.length
-  notifications.value = notifications.value.filter((n) => !selectedIds.value.includes(n.id))
+  notifStore.deleteMany(selectedIds.value)
   selectedIds.value = []
   message.success(`${count} notification(s) deleted.`)
 }
 
 function markRowAsRead(row) {
-  row.unread = false
+  notifStore.markRead(row.id)
 }
 
 // ── Type meta ─────────────────────────────────────────────────────────────────
 const typeMeta = {
-  Document:  { dot: 'bg-[#D946EF]', badge: 'bg-purple-50 text-purple-700 border-purple-200' },
-  Payment:   { dot: 'bg-[#10B981]', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  Equipment: { dot: 'bg-[#F59E0B]', badge: 'bg-amber-50 text-amber-700 border-amber-200' },
-  Feedback:  { dot: 'bg-[#3B82F6]', badge: 'bg-blue-50 text-blue-700 border-blue-200' },
+  Document:    { dot: 'bg-blue-500',   badge: 'bg-blue-50 text-blue-700 border-blue-200' },
+  Equipment:   { dot: 'bg-orange-500', badge: 'bg-orange-50 text-orange-700 border-orange-200' },
+  Feedback:    { dot: 'bg-teal-500',   badge: 'bg-teal-50 text-teal-700 border-teal-200' },
+  'ID Services': { dot: 'bg-green-500', badge: 'bg-green-50 text-green-700 border-green-200' },
+}
+
+// ── Row navigation ────────────────────────────────────────────────────────────
+// ws event names that belong to ID Services and go to /feedback-and-reports/reports
+const REPORT_EVENTS = new Set(['new_lost_card_report'])
+
+function navigateToRow(row) {
+  switch (row.type) {
+    case 'Document':
+      router.push('/document-requests')
+      break
+    case 'Equipment':
+      router.push('/equipment-requests')
+      break
+    case 'Feedback':
+      router.push('/feedback-and-reports/feedbacks')
+      break
+    case 'ID Services':
+      // Lost card reports go to the Reports tab; Apply ID goes to document-requests
+      if (REPORT_EVENTS.has(row.event)) {
+        router.push('/feedback-and-reports/reports')
+      } else {
+        router.push('/document-requests')
+      }
+      break
+  }
 }
 
 // ── NDataTable columns ────────────────────────────────────────────────────────
@@ -325,7 +349,7 @@ const columns = computed(() => [
     </div>
 
     <!-- ── Stats strip ─────────────────────────────────────────────────────── -->
-    <div class="flex items-center gap-4 mb-4 justify-end">
+    <div class="flex items-center gap-4 mb-4 h-8 justify-end">
       <span class="text-[12px] text-gray-400">
         {{ filteredNotifications.length }} notification{{ filteredNotifications.length !== 1 ? 's' : '' }}
         <template v-if="selectedCount > 0">
@@ -350,7 +374,7 @@ const columns = computed(() => [
         :bordered="false"
         :row-props="(row) => ({
           class: row.unread ? 'bg-[#f0f7ff] hover:bg-blue-50 cursor-pointer' : 'hover:bg-gray-50 cursor-pointer',
-          onClick: () => markRowAsRead(row),
+          onClick: () => { markRowAsRead(row); navigateToRow(row) },
         })"
       />
       <div v-if="filteredNotifications.length === 0" class="py-16 text-center text-gray-400 text-[13px]">

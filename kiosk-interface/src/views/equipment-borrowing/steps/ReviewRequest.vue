@@ -5,11 +5,13 @@ import Button from "@/components/shared/Button.vue";
 import Modal from "@/components/shared/Modal.vue";
 import { MagnifyingGlassIcon } from "@heroicons/vue/24/outline";
 import { useRouter } from "vue-router";
+import { useI18n } from "vue-i18n";
 import { createEquipmentRequest } from "@/api/equipmentService";
 import { useAuthStore } from "@/stores/auth";
 
 const authStore = useAuthStore();
 const router = useRouter();
+const { t } = useI18n();
 
 const props = defineProps({
   selectedEquipment: Array,
@@ -120,10 +122,10 @@ const handleNewRequest = () => {
       <ArrowBackButton @click="handleBackClick" />
       <div>
         <h1 class="text-[45px] text-[#03335C] font-bold tracking-tight -mt-2">
-          Equipment Borrowing
+          {{ t('equipmentBorrowingTitle') }}
         </h1>
         <p class="text-[#03335C] -mt-2">
-          Review the details of your equipment request.
+          {{ t('reviewDetails') }}
         </p>
       </div>
     </div>
@@ -135,12 +137,10 @@ const handleNewRequest = () => {
         >
           <h3 class="text-2xl font-bold text-[#013C6D] flex items-center gap-2">
             <MagnifyingGlassIcon class="w-8 h-8" />
-            Review Your Request
+            {{ t('reviewRequest') }}
           </h3>
           <div class="mt-4">
-            <h4 class="text-lg font-bold text-[#013C6D]">
-              Selected Items Summary
-            </h4>
+            <h4 class="text-lg font-bold text-[#013C6D]">{{ t('selectedItemsSummary') }}</h4>
             <ul class="mt-2 space-y-0">
               <li
                 v-for="item in selectedEquipment"
@@ -148,23 +148,23 @@ const handleNewRequest = () => {
                 class="flex justify-between text-base text-gray-700"
               >
                 <span>{{ item.name }}</span>
-                <span class="font-medium">{{ item.quantity }} units</span>
+                <span class="font-medium">{{ item.quantity }} {{ t('units') }}</span>
               </li>
             </ul>
           </div>
           <div class="mt-6">
-            <h4 class="text-lg font-bold text-[#013C6D]">Borrowing Period</h4>
+            <h4 class="text-lg font-bold text-[#013C6D]">{{ t('borrowingPeriod') }}</h4>
             <div
               class="mt-2 flex justify-between text-base text-gray-700 max-w-xs"
             >
               <div>
-                <span class="block text-sm">Borrow Date</span>
+                <span class="block text-sm">{{ t('borrowDate') }}</span>
                 <span class="font-medium">{{
                   formatDisplayDate(selectedDates?.borrow)
                 }}</span>
               </div>
               <div>
-                <span class="block text-sm">Return Date</span>
+                <span class="block text-sm">{{ t('returnDate') }}</span>
                 <span class="font-medium">{{
                   formatDisplayDate(selectedDates?.return)
                 }}</span>
@@ -177,24 +177,22 @@ const handleNewRequest = () => {
           <div
             class="bg-white rounded-2xl shadow-lg border border-gray-200 p-5"
           >
-            <h3 class="text-2xl font-bold text-[#013C6D]">
-              Contact Information
-            </h3>
+            <h3 class="text-2xl font-bold text-[#013C6D]">{{ t('contactInformation') }}</h3>
             <div class="mt-4 space-y-2">
               <div class="flex justify-between text-base">
-                <span class="text-gray-600">Contact Person</span>
+                <span class="text-gray-600">{{ t('contactPerson') }}</span>
                 <span class="font-medium text-right">{{
                   borrowerInfo.contactPerson
                 }}</span>
               </div>
               <div class="flex justify-between text-base">
-                <span class="text-gray-600">Contact Number</span>
+                <span class="text-gray-600">{{ t('contactNumber') }}</span>
                 <span class="font-medium text-right">{{
                   borrowerInfo.contactNumber
                 }}</span>
               </div>
               <div class="flex justify-between text-base">
-                <span class="text-gray-600">Purpose</span>
+                <span class="text-gray-600">{{ t('purpose') }}</span>
                 <span class="font-medium text-right">{{
                   borrowerInfo.purpose
                 }}</span>
@@ -205,12 +203,12 @@ const handleNewRequest = () => {
             class="bg-[#EBF5FF] rounded-2xl shadow-lg border border-[#B0D7F8] p-5"
           >
             <div class="flex justify-between text-2xl font-bold text-[#013C6D]">
-              <span>Total Cost:</span>
+              <span>{{ t('totalCost') }}</span>
               <span>{{ formatCurrency(totalCost) }}</span>
             </div>
           </div>
           <p class="text-center text-base italic text-gray-600 mt-2 mb-1">
-            Please pay the fee at the counter.
+            {{ t('payAtCounter') }}
           </p>
         </div>
       </div>
@@ -225,7 +223,7 @@ const handleNewRequest = () => {
         size="md"
         :disabled="isSubmitting"
       >
-        Back to Form
+        {{ t('backToForm') }}
       </Button>
       <Button
         @click="handleSubmit"
@@ -233,7 +231,7 @@ const handleNewRequest = () => {
         :variant="isSubmitting ? 'disabled' : 'secondary'"
         size="md"
       >
-        {{ isSubmitting ? "Submitting..." : "Submit Request" }}
+        {{ isSubmitting ? t('submitting') : t('submitRequest') }}
       </Button>
     </div>
 
@@ -243,11 +241,11 @@ const handleNewRequest = () => {
         class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-8 modal-backdrop"
       >
         <Modal
-          title="Request Submitted!"
-          :message="`Pay the fee at the counter and you will be contacted for pickup details. Please take note of the Request ID number below for reference.`"
+          :title="t('requestSubmitted')"
+          :message="t('requestSubmittedMsg')"
           :referenceId="transactionNo"
           :showReferenceId="true"
-          primaryButtonText="Done"
+          :primaryButtonText="t('done')"
           :showPrimaryButton="true"
           :showSecondaryButton="false"
           :showNewRequest="true"
@@ -263,11 +261,11 @@ const handleNewRequest = () => {
         class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-8 modal-backdrop"
       >
         <Modal
-          title="Exit Equipment Request?"
-          message="You have unsaved changes. Are you sure you want to exit? All your progress will be lost."
+          :title="t('exitEquipmentRequest')"
+          :message="t('unsavedChanges')"
           type="warning"
-          primaryButtonText="Exit"
-          secondaryButtonText="Stay"
+          :primaryButtonText="t('exit')"
+          :secondaryButtonText="t('stay')"
           :showPrimaryButton="true"
           :showSecondaryButton="true"
           :showReferenceId="false"

@@ -1,16 +1,17 @@
 /**
- * @file authService.js (Admin API Services)
- * @description Administrative authentication and resident management service module.
- * This module provides functions to interact with admin-specific endpoints,
- * including session management and data retrieval for the dashboard.
+ * @file authService.js
+ * @description API service functions for admin authentication and
+ * resident dropdown data used during account registration.
  */
+
 import api from './http'
 
 /**
- * Authenticates an administrator.
- * @param {string} username - The admin username.
- * @param {string} password - The admin password.
- * @returns {Promise<Object>} The authentication response containing the JWT.
+ * Authenticates an admin user with the provided credentials.
+ * Returns the access token and session data on success.
+ *
+ * @param {string} username - The admin's username
+ * @param {string} password - The admin's password
  */
 export const loginAdmin = async (username, password) => {
   const res = await api.post('/admin/auth/login', { username, password })
@@ -18,8 +19,8 @@ export const loginAdmin = async (username, password) => {
 }
 
 /**
- * Retrieves the profile of the currently authenticated administrator.
- * @returns {Promise<Object>} The admin user data.
+ * Fetches the currently authenticated admin's profile.
+ * Requires a valid JWT token to be attached to the request via the HTTP interceptor.
  */
 export const getCurrentAdmin = async () => {
   const res = await api.get('/admin/auth/me')
@@ -27,13 +28,13 @@ export const getCurrentAdmin = async () => {
 }
 
 /**
- * Registers a new administrator account.
- * @param {Object} params - Registration details.
- * @param {number} params.resident_id - The ID of the resident to promote to admin.
- * @param {string} params.email - Admin email address.
- * @param {string} params.password - Secure password for the account.
- * @param {string} [params.role='Admin'] - The administrative role/permissions level.
- * @returns {Promise<Object>} The created admin record.
+ * Registers a new admin account linked to an existing resident record.
+ *
+ * @param {Object} payload                    - Registration payload
+ * @param {string} payload.resident_id        - ID of the resident to link the account to
+ * @param {string} payload.username           - Desired username for the new admin
+ * @param {string} payload.password           - Desired password for the new admin
+ * @param {string} [payload.role='Admin']     - Admin role; defaults to 'Admin' if not provided
  */
 export const registerAdmin = async ({ resident_id, username, password, role = 'Admin' }) => {
   const res = await api.post('/admin/auth/register', { resident_id, username, password, role })
@@ -41,8 +42,8 @@ export const registerAdmin = async ({ resident_id, username, password, role = 'A
 }
 
 /**
- * Fetches the list of all residents for administrative management.
- * @returns {Promise<Array>} List of resident records.
+ * Fetches a lightweight list of residents for use in dropdown/select inputs.
+ * Typically used during admin registration to associate an account with a resident.
  */
 export const fetchResidentsDropdown = async () => {
   const res = await api.get('/admin/residents/dropdown')

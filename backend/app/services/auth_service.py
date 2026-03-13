@@ -1,25 +1,25 @@
 """
-Authentication & Account Settings Service Layer
-------------------------------------------------
-Core business logic for admin authentication and self-service account management.
-All database mutations go through here; the router layer stays thin.
+app/services/auth_service.py
+
+Service layer for admin authentication and profile management.
+Handles password hashing, RFID-based resident login, admin credential
+verification, account creation, profile updates, and photo storage.
 """
+
 from sqlalchemy.orm import Session, joinedload
 from fastapi import HTTPException, status
 from passlib.context import CryptContext
-
+from datetime import date
 from app.models.resident import Resident, ResidentRFID
+from app.models.barangayid import BarangayID
 from app.models.admin import Admin
 
+# bcrypt context for hashing and verifying passwords
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# Sentinel value for residents who have not yet configured a PIN.
+# Default PIN assigned to residents before they set their own
 RFID_PIN_DEFAULT = '0000'
 
-
-# ================================================================
-# HELPERS
-# ================================================================
 
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
@@ -30,10 +30,13 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 
 def _get_admin_or_404(db: Session, admin_id: int) -> Admin:
-    """Shared lookup used by every settings endpoint."""
+    """
+    Fetches an admin by ID with their linked resident eagerly loaded.
+    Raises 404 if no matching admin is found.
+    """
     admin = (
         db.query(Admin)
-        .options(joinedload(Admin.resident))   # eager-load so resident name is always available
+        .options(joinedload(Admin.resident))
         .filter(Admin.id == admin_id)
         .first()
     )
@@ -42,15 +45,13 @@ def _get_admin_or_404(db: Session, admin_id: int) -> Admin:
     return admin
 
 
-# ================================================================
-# RESIDENT / RFID AUTH
-# ================================================================
-
 def rfid_login(db: Session, rfid_uid: str):
     """
-    Validates an RFID UID and retrieves the associated Resident profile.
-    Dynamically attaches `has_pin` to the Resident object for the frontend
-    to decide whether to show the PIN setup or verify screen.
+    Looks up a resident by their active RFID tag UID.
+
+    If the RFID card is expired, deactivates it along with any linked
+    Barangay ID and returns None. Also attaches a convenience `has_pin`
+    flag to indicate whether the resident has set a custom PIN.
     """
     result = (
         db.query(Resident, ResidentRFID)
@@ -66,15 +67,37 @@ def rfid_login(db: Session, rfid_uid: str):
         return None
 
     resident, rfid = result
+
+    # Deactivate expired RFID cards and their linked Barangay IDs
+    if rfid.expiration_date and rfid.expiration_date < date.today():
+        rfid.is_active = False
+
+        linked_brgy_id = (
+            db.query(BarangayID)
+            .filter(
+                BarangayID.rfid_id == rfid.id,
+                BarangayID.is_active.is_(True),
+            )
+            .first()
+        )
+        if linked_brgy_id:
+            linked_brgy_id.is_active = False
+
+        db.commit()
+        return None
+
+    # True if the resident has set a PIN beyond the default
     resident.has_pin = resident.rfid_pin not in (None, RFID_PIN_DEFAULT)
     return resident
 
 
-# ================================================================
-# ADMIN AUTHENTICATION
-# ================================================================
-
 def authenticate_admin(db: Session, username: str, password: str) -> Admin:
+    """
+    Validates admin credentials and returns the authenticated Admin.
+
+    Raises 401 for an unrecognized username or wrong password, and
+    403 if the account exists but has been deactivated.
+    """
     admin = (
         db.query(Admin)
         .options(joinedload(Admin.resident))
@@ -111,6 +134,10 @@ def create_admin_account(
     position: str | None,
     system_role: str,
 ) -> Admin:
+    """
+    Creates and persists a new admin account linked to a resident record.
+    Raises 400 if the username is already taken.
+    """
     if db.query(Admin).filter(Admin.username == username).first():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -131,17 +158,12 @@ def create_admin_account(
     return admin
 
 
-# ================================================================
-# ADMIN ACCOUNT SETTINGS
-# ================================================================
-
 def get_admin_profile(db: Session, admin_id: int) -> Admin:
     """
     Returns the admin's full profile including the linked resident's name.
     The `has_photo` flag is computed here so the response schema stays clean.
     """
     admin = _get_admin_or_404(db, admin_id)
-    # Attach a convenience flag — avoids sending the raw binary to the profile endpoint
     admin.has_photo = admin.photo is not None
     return admin
 
@@ -159,7 +181,6 @@ def update_admin_profile(
     admin = _get_admin_or_404(db, admin_id)
 
     if username is not None:
-        # Guard against another admin already owning that username
         conflict = (
             db.query(Admin)
             .filter(Admin.username == username, Admin.id != admin_id)
@@ -234,7 +255,6 @@ def relink_admin_resident(db: Session, admin_id: int, new_resident_id: int) -> A
     """
     admin = _get_admin_or_404(db, admin_id)
 
-    # Ensure the target resident exists
     resident = db.query(Resident).filter(Resident.id == new_resident_id).first()
     if not resident:
         raise HTTPException(
@@ -242,7 +262,6 @@ def relink_admin_resident(db: Session, admin_id: int, new_resident_id: int) -> A
             detail="Resident not found"
         )
 
-    # Ensure no other admin is already linked to this resident
     conflict = (
         db.query(Admin)
         .filter(Admin.resident_id == new_resident_id, Admin.id != admin_id)
@@ -256,6 +275,4 @@ def relink_admin_resident(db: Session, admin_id: int, new_resident_id: int) -> A
 
     admin.resident_id = new_resident_id
     db.commit()
-
-    # Re-query with eager-loaded resident so the response is fully populated
     return _get_admin_or_404(db, admin_id)

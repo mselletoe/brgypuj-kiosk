@@ -7,7 +7,6 @@ import DocumentRequests from "@/views/requests/document-requests/DocumentRequest
 import DocumentServices from "@/views/document-services/DocumentServices.vue";
 import KioskAnnouncements from "@/views/announcements/KioskAnnouncements.vue";
 import SMSAnnouncements from "@/views/announcements/SMSAnnouncements.vue";
-import Residents from "@/views/Residents.vue";
 import Auth from "@/views/Auth.vue";
 import CreateAccount from "@/views/CreateAccount.vue";
 import EquipmentInventory from "@/views/equipment-inventory/EquipmentInventory.vue";

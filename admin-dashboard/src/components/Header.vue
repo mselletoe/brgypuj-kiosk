@@ -11,11 +11,13 @@ import {
   Cog6ToothIcon,
 } from "@heroicons/vue/24/solid";
 import { useAdminAuthStore } from "@/stores/auth";
+import { useNotificationStore } from "@/stores/notification";          // 👈
 import GlobalSearch from "@/components/global-search/index.vue";
 import { getAdminProfile, getAdminPhotoUrl } from "@/api/accountSettingsService";
 
-const router    = useRouter();
-const adminAuth = useAdminAuthStore();
+const router       = useRouter();
+const adminAuth    = useAdminAuthStore();
+const notifStore   = useNotificationStore();                           // 👈
 
 // ----------------------------------------------------------------
 // Admin profile
@@ -38,7 +40,6 @@ onMounted(async () => {
       photoUrl.value = photoBlobUrl
     }
   } catch {
-    // fallback to store values if profile fetch fails
     adminName.value     = adminAuth.admin?.username || 'Admin'
     adminPosition.value = 'Administrator'
   }
@@ -48,23 +49,32 @@ onUnmounted(() => {
   if (photoBlobUrl) URL.revokeObjectURL(photoBlobUrl)
 })
 
-// First initial for the fallback avatar
 const initial = computed(() => adminName.value?.charAt(0)?.toUpperCase() || '?')
 
 // ----------------------------------------------------------------
-// Notifications
+// Notifications — now from Pinia store
 // ----------------------------------------------------------------
 const showNotifications = ref(false);
 
-const recentNotifications = ref([
-  { id: 1, title: "New Document Request", time: "5 minutes ago", unread: true },
-  { id: 2, title: "Payment Completed",    time: "1 hour ago",    unread: true },
-  { id: 3, title: "Equipment Overdue",    time: "2 hours ago",   unread: true },
-]);
+// Show only the 5 most recent in the dropdown preview
+const recentNotifications = computed(() =>                             // 👈
+  notifStore.notifications.slice(0, 5)
+)
 
-const unreadCount = computed(
-  () => recentNotifications.value.filter((n) => n.unread).length,
-);
+const unreadCount = computed(() =>                                     // 👈
+  notifStore.notifications.filter(n => n.unread).length
+)
+
+function markAllRead() {                                               // 👈
+  const unreadIds = notifStore.notifications
+    .filter(n => n.unread)
+    .map(n => n.id)
+  if (unreadIds.length) notifStore.markAllRead(unreadIds)
+}
+
+function handleNotifClick(notif) {                                     // 👈
+  notifStore.markRead(notif.id)
+}
 
 // ----------------------------------------------------------------
 // Dropdown
@@ -165,7 +175,7 @@ const handleSelect = (key) => {
               v-if="unreadCount > 0"
               class="absolute top-1.5 right-1.5 bg-red-500 text-white text-[9px] font-bold rounded-full border-2 border-[#F4F7FB] min-w-[18px] h-[18px] flex items-center justify-center"
             >
-              {{ unreadCount }}
+              {{ unreadCount > 99 ? '99+' : unreadCount }}
             </span>
           </button>
           <div class="absolute -bottom-6 left-1/2 -translate-x-1/2
@@ -181,27 +191,42 @@ const handleSelect = (key) => {
           v-if="showNotifications"
           class="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-50"
         >
+          <!-- Header -->
           <div class="px-5 py-4 border-b border-gray-50 font-bold text-gray-800 flex justify-between items-center">
             <span>Notifications</span>
-            <span class="text-xs font-semibold text-blue-600 cursor-pointer hover:underline">
+            <span
+              @click="markAllRead"
+              class="text-xs font-semibold text-blue-600 cursor-pointer hover:underline"
+            >
               Mark all read
             </span>
           </div>
+
+          <!-- List -->
           <div class="max-h-[320px] overflow-y-auto">
+            <div
+              v-if="recentNotifications.length === 0"
+              class="px-5 py-8 text-center text-gray-400 text-xs"
+            >
+              No notifications yet
+            </div>
             <div
               v-for="notif in recentNotifications"
               :key="notif.id"
+              @click="handleNotifClick(notif)"
               class="px-5 py-3.5 border-b border-gray-50 hover:bg-gray-50 cursor-pointer flex justify-between items-center transition-colors"
             >
               <div class="flex flex-col pr-4">
-                <span class="text-sm leading-tight font-bold text-gray-900">{{ notif.title }}</span>
-                <span class="text-xs text-gray-400 mt-1">{{ notif.time }}</span>
+                <span class="text-sm leading-tight font-medium text-gray-900">{{ notif.msg }}</span>
+                <span class="text-xs text-gray-400 mt-1">{{ notif.date }} · {{ notif.time }}</span>
               </div>
-              <div v-if="notif.unread" class="w-2.5 h-2.5 rounded-full bg-blue-600"></div>
+              <div v-if="notif.unread" class="w-2.5 h-2.5 rounded-full bg-blue-600 flex-shrink-0"></div>
             </div>
           </div>
+
+          <!-- Footer -->
           <div
-            @click="router.push('/notifications')"
+            @click="router.push('/notifications'); showNotifications = false"
             class="py-3.5 text-center text-blue-600 text-xs hover:bg-blue-50 cursor-pointer bg-white font-bold transition-colors"
           >
             View All Notifications
@@ -240,7 +265,6 @@ const handleSelect = (key) => {
         <button
           class="pl-2 pr-4 py-1.5 rounded-xl hover:bg-white border border-transparent hover:border-gray-200 hover:shadow-sm transition-all flex gap-3 items-center group"
         >
-          <!-- Photo or initial fallback -->
           <div
             class="w-9 h-9 rounded-full flex items-center justify-center overflow-hidden border border-blue-200 group-hover:border-blue-300 transition-colors"
             :class="photoUrl ? '' : 'bg-indigo-100'"

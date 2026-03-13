@@ -9,7 +9,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { NSelect, NInput, NSpin, useMessage, NIcon } from 'naive-ui'
-import logo from '@/assets/logo.svg'
+import logo from '@/assets/logo.png'
 import { CheckmarkCircleOutline, CloseCircleOutline } from '@vicons/ionicons5'
 import { registerAdmin, fetchResidentsDropdown } from '@/api/authService'
 

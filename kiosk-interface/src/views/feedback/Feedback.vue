@@ -1,5 +1,6 @@
 <script setup>
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import ArrowBackButton from '@/components/shared/ArrowBackButton.vue'
 import ServiceQualityIcon from '@/assets/vectors/ServiceQuality.svg'
 import InterfaceDesignIcon from '@/assets/vectors/InterfaceDesign.svg'
@@ -8,14 +9,16 @@ import AccessibilityIcon from '@/assets/vectors/Accessibility.svg'
 import GeneralExperienceIcon from '@/assets/vectors/GeneralExperience.svg'
 
 const router = useRouter()
+const { t } = useI18n()
 
-// Added the specific background colors from KioskHome to each category
+// Category `name` stays English — passed as route query param
+// `labelKey` is used for translated display
 const categories = [
-  { name: 'Service Quality', label: 'Service<br>Quality', icon: ServiceQualityIcon, color: 'bg-[#E74C3C]' },
-  { name: 'Interface Design', label: 'Interface<br>Design', icon: InterfaceDesignIcon, color: 'bg-[#F16C14]' },
-  { name: 'System Speed', label: 'System<br>Speed', icon: SystemSpeedIcon, color: 'bg-[#E69500]' },
-  { name: 'Accessibility', label: 'Accessibility', icon: AccessibilityIcon, color: 'bg-[#13B3A1]' },
-  { name: 'General Experience', label: 'General<br>Experience', icon: GeneralExperienceIcon, color: 'bg-[#2C67E7]' },
+  { name: 'Service Quality',    labelKey: 'serviceQuality',     icon: ServiceQualityIcon,    color: 'bg-[#E74C3C]' },
+  { name: 'Interface Design',   labelKey: 'interfaceDesign',    icon: InterfaceDesignIcon,   color: 'bg-[#F16C14]' },
+  { name: 'System Speed',       labelKey: 'systemSpeed',        icon: SystemSpeedIcon,       color: 'bg-[#E69500]' },
+  { name: 'Accessibility',      labelKey: 'accessibility',      icon: AccessibilityIcon,     color: 'bg-[#13B3A1]' },
+  { name: 'General Experience', labelKey: 'generalExperience',  icon: GeneralExperienceIcon, color: 'bg-[#2C67E7]' },
 ]
 
 const goToRating = (category) => {
@@ -32,15 +35,13 @@ const goBack = () => {
     <div class="flex items-center w-full mb-6 gap-7 flex-shrink-0">
       <ArrowBackButton @click="goBack"/>
       <div class="flex flex-col text-left">
-        <h1 class="text-[45px] text-[#03335C] font-bold tracking-tight -mt-2">Your Feedback Matters</h1>
-        <p class="text-[#03335C] -mt-2">Select the area you'd like to share your thoughts on</p>
+        <h1 class="text-[45px] text-[#03335C] font-bold tracking-tight -mt-2">{{ t('yourFeedbackMatters') }}</h1>
+        <p class="text-[#03335C] -mt-2">{{ t('selectAreaFeedback') }}</p>
       </div>
     </div>
 
     <div class="text-center mt-2 mb-6 w-full">
-      <h2 class="text-[42px] text-[#03335C] font-bold leading-none">
-        What would you like to rate?
-      </h2>
+      <h2 class="text-[42px] text-[#03335C] font-bold leading-none">{{ t('whatWouldYouLikeToRate') }}</h2>
     </div>
 
     <div class="flex flex-col items-center w-full flex-1">
@@ -61,7 +62,7 @@ const goBack = () => {
           />
           <p 
             class="m-0 flex h-[40px] items-center justify-center text-[17px] font-bold leading-[20px] text-white" 
-            v-html="item.label"
+            v-html="t(item.labelKey).replace(' ', '<br>')"
           ></p>
         </div>
       </div>

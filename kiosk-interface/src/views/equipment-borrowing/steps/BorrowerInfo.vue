@@ -8,6 +8,7 @@ import { useAuthStore } from '@/stores/auth';
 import { DocumentTextIcon, ChevronDownIcon } from '@heroicons/vue/24/outline';
 import { getAutofillData } from '@/api/equipmentService';
 import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 
 const useAutofill = ref(false);
 const isLoadingAutofill = ref(false);
@@ -18,6 +19,7 @@ const activeInput = ref(null);
 const showExitModal = ref(false);
 const showPurposeDropdown = ref(false);
 const router = useRouter();
+const { t } = useI18n();
 
 const props = defineProps({
   borrowerInfo: Object,
@@ -159,8 +161,8 @@ const inputClass = "w-full h-[48px] px-4 py-3 border border-gray-300 rounded-xl 
     <div class="flex items-center mb-6 gap-7 flex-shrink-0">
       <ArrowBackButton @click="handleBackClick" />
       <div>
-        <h1 class="text-[45px] text-[#03335C] font-bold tracking-tight -mt-2">Equipment Borrowing</h1>
-        <p class="text-[#03335C] -mt-2">Provide your borrowing information below.</p>
+        <h1 class="text-[45px] text-[#03335C] font-bold tracking-tight -mt-2">{{ t('equipmentBorrowingTitle') }}</h1>
+        <p class="text-[#03335C] -mt-2">{{ t('borrowingInfo') }}</p>
       </div>
     </div>
 
@@ -168,7 +170,7 @@ const inputClass = "w-full h-[48px] px-4 py-3 border border-gray-300 rounded-xl 
       <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-5">
         <h3 class="text-2xl font-bold text-[#013C6D] flex items-center gap-2">
           <DocumentTextIcon class="w-8 h-8" />
-          Borrowing Information
+          {{ t('borrowingInfoTitle') }}
         </h3>
 
         <div class="mt-4 flex items-center gap-3">
@@ -180,14 +182,14 @@ const inputClass = "w-full h-[48px] px-4 py-3 border border-gray-300 rounded-xl 
             :disabled="!residentId"
           />
           <label for="use-autofill" class="text-sm text-gray-700 italic">
-            Autofill using my saved information
+            {{ t('autofillLabel') }}
           </label>
         </div>
 
         <div class="mt-4 grid grid-cols-2 gap-x-6 gap-y-4">
           <div>
             <label for="contact-person" class="block text-base font-bold text-[#003A6B] mb-2">
-              Contact Person <span class="text-red-600">*</span>
+              {{ t('contactPerson') }} <span class="text-red-600">*</span>
             </label>
             <input
               id="contact-person"
@@ -202,7 +204,7 @@ const inputClass = "w-full h-[48px] px-4 py-3 border border-gray-300 rounded-xl 
 
           <div>
             <label for="contact-number" class="block text-base font-bold text-[#003A6B] mb-2">
-              Contact Number <span class="text-red-600">*</span>
+              {{ t('contactNumber') }} <span class="text-red-600">*</span>
             </label>
             <input
               id="contact-number"
@@ -218,7 +220,7 @@ const inputClass = "w-full h-[48px] px-4 py-3 border border-gray-300 rounded-xl 
 
           <div>
             <label class="block text-base font-bold text-[#003A6B] mb-2">
-              Purpose of Borrowing <span class="text-red-600">*</span>
+              {{ t('purposeOfBorrowing') }} <span class="text-red-600">*</span>
             </label>
             <div class="relative">
               <button
@@ -227,7 +229,7 @@ const inputClass = "w-full h-[48px] px-4 py-3 border border-gray-300 rounded-xl 
                 class="w-full h-[48px] px-4 py-3 border border-gray-300 rounded-xl shadow-sm transition-shadow flex items-center justify-between bg-white focus:outline-none focus:ring-2 focus:ring-[#013C6D]"
               >
                 <span :class="localInfo.purpose ? 'text-[#03335C] font-bold text-base' : 'text-gray-400 italic text-sm'">
-                  {{ localInfo.purpose || 'Select' }}
+                  {{ localInfo.purpose || t('select') }}
                 </span>
                 <ChevronDownIcon class="w-5 h-5 text-[#03335C] flex-shrink-0" />
               </button>
@@ -253,7 +255,7 @@ const inputClass = "w-full h-[48px] px-4 py-3 border border-gray-300 rounded-xl 
 
     <div class="flex gap-6 mt-6 justify-between items-center bottom-0 flex-shrink-0">
       <Button @click="handleBack" variant="outline" size="md">
-        Back to Dates
+        {{ t('backToDates') }}
       </Button>
       <Button
         @click="handleNext"
@@ -261,7 +263,7 @@ const inputClass = "w-full h-[48px] px-4 py-3 border border-gray-300 rounded-xl 
         :variant="!isFormValid ? 'disabled' : 'secondary'"
         size="md"
       >
-        Review Request
+        {{ t('reviewRequest') }}
       </Button>
     </div>
   </div>
@@ -281,11 +283,11 @@ const inputClass = "w-full h-[48px] px-4 py-3 border border-gray-300 rounded-xl 
   <Transition name="fade-blur">
     <div v-if="showExitModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-8 modal-backdrop">
       <Modal
-        title="Exit Equipment Request?"
-        message="You have unsaved changes. Are you sure you want to exit? All your progress will be lost."
+        :title="t('exitEquipmentRequest')"
+        :message="t('unsavedChanges')"
         type="warning"
-        primaryButtonText="Exit"
-        secondaryButtonText="Stay"
+        :primaryButtonText="t('exit')"
+        :secondaryButtonText="t('stay')"
         :showPrimaryButton="true"
         :showSecondaryButton="true"
         :showReferenceId="false"

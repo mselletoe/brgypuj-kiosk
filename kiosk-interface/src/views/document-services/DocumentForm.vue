@@ -7,6 +7,7 @@
  * and handles localized field validation.
  */
 import { ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import VueDatePicker from '@vuepic/vue-datepicker'
 import '@vuepic/vue-datepicker/dist/main.css'
 import { CalendarIcon, ChevronDownIcon } from '@heroicons/vue/24/outline'
@@ -34,6 +35,7 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['continue'])
+const { t } = useI18n()
 
 // --- Form & Error States ---
 const formData = ref({})
@@ -156,7 +158,7 @@ const isPreFilled = (fieldName) => {
  */
 const formatPlaceholder = (placeholder, label, isPrefilled) => {
   if (isPrefilled) {
-    return 'Auto-filled from your profile'
+    return t('autoFilledProfile')
   }
   return placeholder || `Enter ${label.toLowerCase()}`
 }
@@ -220,7 +222,7 @@ defineExpose({
           <LockClosedIcon 
             v-if="isPreFilled(field.name)" 
             class="w-4 h-4 text-blue-600" 
-            title="Auto-filled from your profile"
+            :title="t('autoFilledProfile')"
           />
         </label>
 
@@ -287,7 +289,7 @@ defineExpose({
             ]"
           >
             <span :class="formData[field.name] ? 'text-[#03335C] font-bold' : 'text-gray-400'">
-              {{ formData[field.name] || `Select ${field.label}` }}
+              {{ formData[field.name] || `${t('select')} ${field.label}` }}
             </span>
             <LockClosedIcon v-if="isPreFilled(field.name)" class="w-4 h-4 text-blue-600" />
             <ChevronDownIcon v-else class="w-5 h-5 text-[#03335C]" />

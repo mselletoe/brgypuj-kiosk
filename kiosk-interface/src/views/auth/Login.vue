@@ -2,8 +2,9 @@
 /**
  * @file Login.vue
  */
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { disableTouchToStart } from '@/composables/touchToStart'
 import { useSystemConfig } from '@/composables/useSystemConfig'
 import Button from '@/components/shared/Button.vue'
@@ -13,6 +14,7 @@ import { useAuthStore } from '@/stores/auth'
 const router = useRouter()
 const authStore = useAuthStore()
 const { brgyName, brgySubname, resolvedLogoUrl } = useSystemConfig()
+const { locale, t } = useI18n()
 
 const timeLeft = ref(10)
 let timerInterval = null
@@ -58,18 +60,18 @@ onUnmounted(() => { if (timerInterval) clearInterval(timerInterval) })
       <div class="mt-5 flex flex-col gap-y-5">
         <Button @click.stop="handleRfidLogin" class="w-96 h-[80px] font-bold" variant="primary">
           <span class="flex items-center justify-center gap-x-3 text-xl">
-            Use RFID
+            {{ t('useRFID') }}
             <SignalIcon class="h-8 w-8 mt-0" />
           </span>
         </Button>
 
         <Button @click.stop="continueAsGuest()" variant="outline" class="w-96 h-[45px] text-[15px]">
-          Continue as Guest
+          {{ t('continueAsGuest') }}
         </Button>
       </div>
 
       <p class="mt-[20px] text-gray-400 text-xs font-light tracking-wide">
-        Screen will close in {{ timeLeft }} seconds...
+        {{ t('screenCloses', { n: timeLeft }) }}
       </p>
 
     </div>

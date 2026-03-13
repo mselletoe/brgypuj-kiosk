@@ -2,13 +2,11 @@
 /**
  * @file Header.vue
  * @description Global navigation component for the Barangay Kiosk System.
- * Displays real-time clock, branding (dynamic from system config), and user auth status.
- *
- * ADDED: Live inactivity countdown from useAutoLogout — shown beside the user badge.
  */
 
 import { ref, onMounted, onUnmounted, computed } from "vue";
 import { useRouter, useRoute } from "vue-router";
+import { useI18n } from "vue-i18n";
 import { useAuthStore } from "@/stores/auth";
 import { useRfidRegistrationStore } from "@/stores/registration";
 import { useSystemConfig } from "@/composables/useSystemConfig";
@@ -19,26 +17,23 @@ const router       = useRouter();
 const route        = useRoute();
 const authStore    = useAuthStore();
 const rfidRegStore = useRfidRegistrationStore();
+const { t }        = useI18n();
 
-// ── System config (logo + brgy name/subname) ──────────────────────────────────
 const { brgyName, brgySubname, resolvedLogoUrl } = useSystemConfig();
-
-// ── Auto-logout countdown ─────────────────────────────────────────────────────
 const { secondsRemaining } = useAutoLogout();
 
 const countdownDisplay = computed(() => {
-  const s = secondsRemaining.value
-  if (s <= 0) return null
-  if (s < 60) return `Session ends in ${s}s`
-  const m = Math.floor(s / 60)
-  const rem = s % 60
-  return rem > 0 ? `Session ends in ${m}m ${rem}s` : `Session ends in ${m}m`
-})
+  const s = secondsRemaining.value;
+  if (s <= 0) return null;
+  if (s < 60) return t('sessionEndsIn', { time: `${s}s` });
+  const m = Math.floor(s / 60);
+  const rem = s % 60;
+  const time = rem > 0 ? `${m}m ${rem}s` : `${m}m`;
+  return t('sessionEndsIn', { time });
+});
 
-// Turns red when 30 seconds or less remain
-const countdownUrgent = computed(() => secondsRemaining.value > 0 && secondsRemaining.value <= 30)
+const countdownUrgent = computed(() => secondsRemaining.value > 0 && secondsRemaining.value <= 30);
 
-// ── Clock ─────────────────────────────────────────────────────────────────────
 const currentTime = ref("");
 const currentDate = ref("");
 
@@ -56,12 +51,11 @@ let interval;
 onMounted(() => { updateDateTime(); interval = setInterval(updateDateTime, 1000); });
 onUnmounted(() => { if (interval) clearInterval(interval); });
 
-// ── Auth ──────────────────────────────────────────────────────────────────────
 const isAdminRegistration = computed(() => route.path === '/register');
 const isGuest             = computed(() => authStore.isGuest);
 const displayName         = computed(() => authStore.userName);
 const userDetail          = computed(() =>
-  authStore.isRFID ? "Authenticated via RFID" : "Logged in as Guest User"
+  authStore.isRFID ? t('authenticatedViaRFID') : t('loggedInAsGuest')
 );
 
 const logout = () => { authStore.logout(); router.push('/idle'); };
@@ -70,7 +64,7 @@ const logout = () => { authStore.logout(); router.push('/idle'); };
 <template>
   <header class="flex items-center justify-between px-5 py-2 bg-white text-[#003A6B] shadow-md border-b-2 border-[#003A6B]">
 
-    <!-- ── Branding ───────────────────────────────────────────────────────── -->
+    <!-- Branding -->
     <div class="flex items-center gap-2">
       <img v-if="resolvedLogoUrl" :src="resolvedLogoUrl" alt="Barangay Logo" class="w-[40px] h-[40px] min-w-[40px] object-cover rounded-full overflow-hidden" />
       <div class="flex flex-col">
@@ -79,16 +73,15 @@ const logout = () => { authStore.logout(); router.push('/idle'); };
       </div>
     </div>
 
-    <!-- ── Clock ─────────────────────────────────────────────────────────── -->
+    <!-- Clock -->
     <div class="text-center">
       <p class="text-[14px] font-bold leading-none tracking-tight">{{ currentTime }}</p>
       <p class="text-[14px] font-light mt-1 leading-[1] tracking-tight">{{ currentDate }}</p>
     </div>
 
-    <!-- ── User badge + countdown + logout ───────────────────────────────── -->
+    <!-- User badge + countdown + logout -->
     <div class="flex items-center space-x-4">
 
-      <!-- Countdown timer — only shown when a session is active -->
       <div
         v-if="authStore.isAuthenticated && countdownDisplay"
         class="text-[10px] font-medium px-3 py-1 rounded-full border transition-colors duration-300"
@@ -104,8 +97,8 @@ const logout = () => { authStore.logout(); router.push('/idle'); };
         v-if="isAdminRegistration"
         class="flex flex-col items-center justify-center rounded-lg border-2 border-blue-500 bg-blue-50 px-4 py-1 min-w-[160px] leading-tight"
       >
-        <span class="text-[13px] font-black text-blue-700">Admin</span>
-        <span class="text-[9px] italic font-medium text-blue-700">RFID Registration Mode</span>
+        <span class="text-[13px] font-black text-blue-700">{{ $t('admin') }}</span>
+        <span class="text-[9px] italic font-medium text-blue-700">{{ $t('rfidRegistrationMode') }}</span>
       </div>
 
       <!-- Guest Badge -->
@@ -132,7 +125,7 @@ const logout = () => { authStore.logout(); router.push('/idle'); };
                text-white font-light rounded-md transition-colors duration-300 ease-in-out
                flex items-center space-x-2 text-[12px]"
       >
-        <span>Logout</span>
+        <span>{{ $t('logout') }}</span>
         <img src="../assets/vectors/Logout.svg" class="w-6" />
       </button>
     </div>

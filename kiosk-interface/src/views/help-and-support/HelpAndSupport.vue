@@ -1,11 +1,13 @@
 <script setup>
 import { ref } from "vue";
 import { useRouter } from "vue-router";
+import { useI18n } from "vue-i18n";
 import ArrowBackButton from "@/components/shared/ArrowBackButton.vue";
 import FAQs from "./FAQs.vue";
 import Contact from "./Contact.vue";
 
 const router = useRouter();
+const { t } = useI18n();
 const currentTab = ref("faqs");
 
 const setActiveTab = (tabName) => {
@@ -26,12 +28,8 @@ const inactiveTabClass = "bg-white text-gray-600 hover:bg-gray-300";
       <div class="flex items-center gap-7">
         <ArrowBackButton @click="goBackToHome" />
         <div>
-          <h1 class="text-[45px] text-[#03335C] font-bold tracking-tight -mt-2">
-            Help & Support
-          </h1>
-          <p class="text-[#03335C] -mt-2">
-            Get help, find answers, and connect with our support team.
-          </p>
+          <h1 class="text-[45px] text-[#03335C] font-bold tracking-tight -mt-2">{{ t('helpAndSupport') }}</h1>
+          <p class="text-[#03335C] -mt-2">{{ t('helpAndSupportSubtitle') }}</p>
         </div>
       </div>
 
@@ -45,7 +43,7 @@ const inactiveTabClass = "bg-white text-gray-600 hover:bg-gray-300";
             currentTab === 'faqs' ? activeTabClass : inactiveTabClass,
           ]"
         >
-          FAQs
+          {{ t('faqs') }}
         </button>
         <button
           @click="setActiveTab('contact')"
@@ -54,7 +52,7 @@ const inactiveTabClass = "bg-white text-gray-600 hover:bg-gray-300";
             currentTab === 'contact' ? activeTabClass : inactiveTabClass,
           ]"
         >
-          Contact
+          {{ t('contact') }}
         </button>
       </div>
     </div>

@@ -2,6 +2,7 @@
 import { ref, computed, watch } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
+import { useI18n } from "vue-i18n";
 import {
   searchResidents,
   getReportCardInfo,
@@ -20,6 +21,7 @@ import {
 
 const router = useRouter();
 const authStore = useAuthStore();
+const { t } = useI18n();
 
 // Phase
 const currentPhase = ref("selection"); // 'selection' | 'pin'
@@ -61,7 +63,8 @@ watch([lastNameLetter, firstNameLetter], async ([last, first]) => {
   }
   isFetching.value = true;
   try {
-    residentList.value = await searchResidents(`${last}, ${first}`);
+    const { data } = await searchResidents(`${last}, ${first}`);
+    residentList.value = data;
     selectedResident.value = null;
   } catch {
     residentList.value = [];
@@ -95,7 +98,7 @@ const selectResident = async (r) => {
   showResidentDropdown.value = false;
   isCheckingCard.value = true;
   try {
-    const info = await getReportCardInfo(r.resident_id);
+    const { data: info } = await getReportCardInfo(r.resident_id);
     selectedResident.value = info; // { resident_id, first_name, last_name, rfid_uid, has_rfid }
   } catch {
     selectedResident.value = { ...r, has_rfid: false, rfid_uid: null };
@@ -186,7 +189,7 @@ const handleFinalDeactivation = async () => {
     const detail =
       err?.response?.data?.detail || "Something went wrong. Please try again.";
     if (status === 401) {
-      triggerError("Incorrect PIN. Please try again.");
+      triggerError(t('incorrectPIN'));
     } else {
       triggerError(detail);
     }
@@ -204,12 +207,8 @@ const handleModalDone = () => router.push("/id-services");
     <div class="flex items-center mb-6 gap-7 flex-shrink-0">
       <ArrowBackButton @click="goBack" />
       <div>
-        <h1 class="text-[45px] text-[#03335C] font-bold tracking-tight -mt-2">
-          Report Lost Card
-        </h1>
-        <p class="text-[#03335C] -mt-2">
-          Deactivate your RFID card immediately to prevent unauthorized use.
-        </p>
+        <h1 class="text-[45px] text-[#03335C] font-bold tracking-tight -mt-2">{{ t('reportLostCard') }}</h1>
+        <p class="text-[#03335C] -mt-2">{{ t('deactivateCardSubtitle') }}</p>
       </div>
     </div>
 
@@ -229,12 +228,8 @@ const handleModalDone = () => router.push("/id-services");
           class="flex w-full h-full items-center justify-start animate-fadeIn"
         >
           <div class="w-full flex flex-col relative px-2">
-            <h2 class="text-[25px] font-bold text-[#03335C] text-left">
-              Identify Resident
-            </h2>
-            <p class="text-gray-500 italic text-xs mb-6 text-left">
-              Select the resident record associated with the lost RFID card.
-            </p>
+            <h2 class="text-[25px] font-bold text-[#03335C] text-left">{{ t('identifyResident') }}</h2>
+            <p class="text-gray-500 italic text-xs mb-6 text-left">{{ t('selectResidentLostCard') }}</p>
 
             <div class="space-y-4 w-full z-20">
               <div class="flex gap-10 w-full">
@@ -245,13 +240,8 @@ const handleModalDone = () => router.push("/id-services");
                   >
                     <CalendarDaysIcon class="w-5 h-5 text-[#03335C]" />
                     <div class="flex flex-col leading-tight">
-                      <span class="text-[9px] uppercase font-bold text-gray-400"
-                        >First Letter of</span
-                      >
-                      <span
-                        class="text-[#03335C] font-black text-sm uppercase tracking-tight"
-                        >Surname</span
-                      >
+                      <span class="text-[9px] uppercase font-bold text-gray-400">{{ t('firstLetterOf') }}</span>
+                      <span class="text-[#03335C] font-black text-sm uppercase tracking-tight">{{ t('surname') }}</span>
                     </div>
                   </div>
                   <div class="flex-1 relative">
@@ -259,7 +249,7 @@ const handleModalDone = () => router.push("/id-services");
                       @click="toggleDropdown('lastName')"
                       class="w-full h-11 border border-gray-300 rounded-xl px-4 flex items-center justify-between text-[#03335C] font-bold bg-white text-base hover:border-[#03335C] transition-colors"
                     >
-                      {{ lastNameLetter || "Select" }}
+                      {{ lastNameLetter || t('select') }}
                       <ChevronDownIcon class="w-5 h-5 text-[#03335C]" />
                     </button>
                     <div
@@ -285,13 +275,8 @@ const handleModalDone = () => router.push("/id-services");
                   >
                     <CalendarDaysIcon class="w-5 h-5 text-[#03335C]" />
                     <div class="flex flex-col leading-tight">
-                      <span class="text-[9px] uppercase font-bold text-gray-400"
-                        >First Letter of</span
-                      >
-                      <span
-                        class="text-[#03335C] font-black text-sm uppercase tracking-tight"
-                        >First Name</span
-                      >
+                      <span class="text-[9px] uppercase font-bold text-gray-400">{{ t('firstLetterOf') }}</span>
+                      <span class="text-[#03335C] font-black text-sm uppercase tracking-tight">{{ t('firstName') }}</span>
                     </div>
                   </div>
                   <div class="flex-1 relative">
@@ -299,7 +284,7 @@ const handleModalDone = () => router.push("/id-services");
                       @click="toggleDropdown('firstName')"
                       class="w-full h-11 border border-gray-300 rounded-xl px-4 flex items-center justify-between text-[#03335C] font-bold bg-white text-base hover:border-[#03335C] transition-colors"
                     >
-                      {{ firstNameLetter || "Select" }}
+                      {{ firstNameLetter || t('select') }}
                       <ChevronDownIcon class="w-5 h-5 text-[#03335C]" />
                     </button>
                     <div
@@ -325,10 +310,7 @@ const handleModalDone = () => router.push("/id-services");
                   class="flex items-center gap-2 flex-shrink-0 min-w-[140px]"
                 >
                   <UserIcon class="w-5 h-5 text-[#03335C]" />
-                  <span
-                    class="text-[#03335C] font-bold text-[11px] uppercase tracking-tight"
-                    >Resident Name</span
-                  >
+                  <span class="text-[#03335C] font-bold text-[11px] uppercase tracking-tight">{{ t('residentName') }}</span>
                 </div>
                 <div class="flex-1 relative">
                   <button
@@ -341,11 +323,7 @@ const handleModalDone = () => router.push("/id-services");
                     "
                     class="w-full h-11 border border-gray-300 rounded-xl px-4 flex items-center justify-between text-[#03335C] font-bold bg-white text-base hover:border-[#03335C] transition-colors disabled:opacity-50 disabled:bg-gray-50"
                   >
-                    <span
-                      v-if="isFetching || isCheckingCard"
-                      class="text-gray-400 text-sm italic"
-                      >Loading...</span
-                    >
+                    <span v-if="isFetching || isCheckingCard" class="text-gray-400 text-sm italic">{{ t('loading') }}</span>
                     <span
                       v-else-if="selectedResident"
                       class="truncate text-[#03335C]"
@@ -355,8 +333,8 @@ const handleModalDone = () => router.push("/id-services");
                     </span>
                     <span v-else class="text-gray-400 truncate opacity-60">{{
                       !lastNameLetter || !firstNameLetter
-                        ? "Select initials first..."
-                        : "Select Resident..."
+                        ? t('selectInitialsFirst')
+                        : t('selectResident')
                     }}</span>
                     <ChevronDownIcon class="w-5 h-5 text-[#03335C]" />
                   </button>
@@ -364,12 +342,7 @@ const handleModalDone = () => router.push("/id-services");
                     v-if="showResidentDropdown"
                     class="absolute top-full left-0 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-50 p-1 max-h-[150px] overflow-y-auto custom-scroll"
                   >
-                    <div
-                      v-if="residentList.length === 0"
-                      class="p-3 text-center text-gray-400 text-sm"
-                    >
-                      No records found
-                    </div>
+                    <div v-if="residentList.length === 0" class="p-3 text-center text-gray-400 text-sm">{{ t('noRecordsFound') }}</div>
                     <button
                       v-for="r in residentList"
                       :key="r.resident_id"
@@ -397,24 +370,18 @@ const handleModalDone = () => router.push("/id-services");
             >
               <div class="flex-1">
                 <ExclamationTriangleIcon class="w-12 h-12 text-red-600 mb-4" />
-                <h2 class="text-3xl font-bold text-[#03335C] mb-2">
-                  Critical Action
-                </h2>
+                <h2 class="text-3xl font-bold text-[#03335C] mb-2">{{ t('criticalAction') }}</h2>
                 <p class="text-gray-600 text-base leading-snug mb-4">
-                  Reporting the card for
+                  {{ t('reportingCardFor') }}
                   <span class="font-bold text-[#03335C]">
                     {{ selectedResident?.first_name }}
                     {{ selectedResident?.last_name }}
                   </span>
-                  will
-                  <span class="font-bold text-red-600 uppercase"
-                    >permanently disable</span
-                  >
-                  its RFID functions.
+                  {{ t('willAction') }}
+                  <span class="font-bold text-red-600 uppercase">{{ t('permanentlyDisable') }}</span>
+                  {{ t('itsRFIDFunctions') }}
                 </p>
-                <p class="text-gray-500 text-sm leading-snug">
-                  Enter security PIN to authorize this block.
-                </p>
+                <p class="text-gray-500 text-sm leading-snug">{{ t('enterPINToBlock') }}</p>
               </div>
 
               <Button
@@ -422,7 +389,7 @@ const handleModalDone = () => router.push("/id-services");
                 :disabled="pinBuffer.length !== pinLength || isSubmitting"
                 class="w-full py-5 text-xl font-bold shadow-md !bg-red-600 hover:!bg-red-700 disabled:!bg-gray-200 mt-10"
               >
-                {{ isSubmitting ? "Processing..." : "Confirm & Block" }}
+                {{ isSubmitting ? t('processing') : t('confirmAndBlock') }}
               </Button>
             </div>
           </div>
@@ -491,21 +458,14 @@ const handleModalDone = () => router.push("/id-services");
         size="md"
         @click="handleReset"
         :disabled="!lastNameLetter && !firstNameLetter && !selectedResident"
-        >Reset Selection</Button
-      >
+        >{{ t('resetSelection') }}</Button>
       <Button
         :variant="selectedResident ? 'secondary' : 'disabled'"
         size="md"
         :disabled="!selectedResident || isCheckingCard"
         @click="proceedToPin"
       >
-        {{
-          isCheckingCard
-            ? "Checking..."
-            : selectedResident && !selectedResident.has_rfid
-              ? "No RFID Linked"
-              : "Next: Verify PIN"
-        }}
+        {{ isCheckingCard ? t('checking') : selectedResident && !selectedResident.has_rfid ? t('noRFIDLinked') : t('nextVerifyPIN') }}
       </Button>
     </div>
 
@@ -516,10 +476,10 @@ const handleModalDone = () => router.push("/id-services");
         class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-8 modal-backdrop"
       >
         <Modal
-          title="Disable RFID Card?"
-          message="Are you sure you want to permanently disable this card? This action cannot be undone."
-          primary-button-text="Yes, Block Card"
-          secondary-button-text="Cancel"
+          :title="t('disableRFIDCard')"
+          :message="t('disableRFIDCardMsg')"
+          :primary-button-text="t('yesBlockCard')"
+          :secondary-button-text="t('cancel')"
           :show-secondary-button="true"
           @primary-click="handleFinalDeactivation"
           @secondary-click="showConfirmModal = false"
@@ -534,10 +494,10 @@ const handleModalDone = () => router.push("/id-services");
         class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-8 modal-backdrop"
       >
         <Modal
-          title="Card Deactivated"
-          message="The RFID card has been successfully unlinked and blocked for security purposes. Make sure you remember your previous passcode as it will remain the same for your new I.D."
+          :title="t('cardDeactivated')"
+          :message="t('cardDeactivatedMsg')"
           :show-secondary-button="false"
-          primary-button-text="Done"
+          :primary-button-text="t('done')"
           @primary-click="handleModalDone"
         />
       </div>
@@ -550,10 +510,10 @@ const handleModalDone = () => router.push("/id-services");
         class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-8 modal-backdrop"
       >
         <Modal
-          title="No RFID Card Found"
-          message="This resident does not have an active RFID card linked to their account. There is nothing to deactivate."
+          :title="t('noRFIDCardFound')"
+          :message="t('noRFIDCardMsg')"
           :show-secondary-button="false"
-          primary-button-text="Close"
+          :primary-button-text="t('close')"
           @primary-click="showNoRfidModal = false"
         />
       </div>

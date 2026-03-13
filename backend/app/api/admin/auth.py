@@ -1,20 +1,12 @@
 """
-Admin Authentication & Account Settings Router
------------------------------------------------
-All routes are prefixed with /admin/auth via the main app router include.
+app/api/admin/auth.py
 
-Route map:
-  POST   /login                  — get JWT
-  POST   /register               — create admin account (superadmin only in prod)
-  GET    /me                     — get own profile
-  PATCH  /me                     — update username / position
-  PATCH  /me/password            — change password
-  PATCH  /me/resident            — relink to a different resident (superadmin only)
-  PUT    /me/photo               — upload / replace profile photo
-  GET    /me/photo               — serve profile photo as image
-  DELETE /me/photo               — remove profile photo
+Router for admin authentication and profile management.
+Handles login, registration, profile updates, password changes,
+resident re-linking, and photo upload/retrieval/deletion.
 """
-from fastapi import APIRouter, Depends, UploadFile, File
+
+from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
@@ -45,19 +37,17 @@ from app.models.admin import Admin
 
 router = APIRouter(prefix="/auth")
 
-# Max photo size: 5 MB
+# Maximum allowed photo upload size (5 MB)
 MAX_PHOTO_BYTES = 5 * 1024 * 1024
+
+# Accepted MIME types for admin profile photos
 ALLOWED_PHOTO_TYPES = {"image/jpeg", "image/png", "image/webp"}
-
-
-# ================================================================
-# AUTHENTICATION
-# ================================================================
 
 @router.post("/login", response_model=AdminTokenResponse)
 def admin_login(payload: AdminLoginRequest, db: Session = Depends(get_db)):
     admin = authenticate_admin(db, username=payload.username, password=payload.password)
 
+    # Embed the admin's ID and system role into the token payload
     token = create_access_token(
         data={
             "sub": str(admin.id),
@@ -71,11 +61,8 @@ def admin_login(payload: AdminLoginRequest, db: Session = Depends(get_db)):
 @router.post("/register", response_model=AdminProfileResponse, status_code=201)
 def register_admin(payload: AdminCreateRequest, db: Session = Depends(get_db)):
     """
-    Creates a new admin account.
-
-    In production: protect this with `get_current_admin` and add a
-    superadmin role guard so only superadmins can register new accounts.
-    For initial seeding, the seed_admin.py script is used instead.
+    Register a new admin account linked to an existing resident record.
+    Returns the created admin's profile. Photo is not set on creation.
     """
     admin = create_admin_account(
         db=db,
@@ -85,20 +72,20 @@ def register_admin(payload: AdminCreateRequest, db: Session = Depends(get_db)):
         position=payload.position,
         system_role=payload.system_role,
     )
+
+    # New accounts have no photo by default
     admin.has_photo = False
     return admin
 
-
-# ================================================================
-# ACCOUNT SETTINGS — the admin manages their own account
-# ================================================================
 
 @router.get("/me", response_model=AdminProfileResponse)
 def get_my_profile(
     db: Session = Depends(get_db),
     current_admin=Depends(get_current_admin),
 ):
-    """Returns the authenticated admin's full profile including linked resident name."""
+    """
+    Retrieve the authenticated admin's full profile.
+    """
     return get_admin_profile(db, admin_id=current_admin.id)
 
 
@@ -109,8 +96,7 @@ def update_my_profile(
     current_admin=Depends(get_current_admin),
 ):
     """
-    Partially updates username and/or position.
-    Send only the fields you want to change.
+    Update the authenticated admin's username and/or position.
     """
     return update_admin_profile(
         db,
@@ -127,8 +113,8 @@ def change_my_password(
     current_admin=Depends(get_current_admin),
 ):
     """
-    Changes the admin's password after verifying the current one.
-    Returns 401 if current_password is wrong.
+    Change the authenticated admin's password.
+    Requires the current password for verification before updating.
     """
     change_admin_password(
         db,
@@ -146,9 +132,8 @@ def relink_my_resident(
     current_admin: Admin = Depends(require_superadmin),
 ):
     """
-    Superadmin only — re-links this admin account to a different resident record.
-    The target resident must exist and must not be linked to another admin.
-    Returns the updated full profile so the frontend can refresh in one round-trip.
+    Re-link the authenticated superadmin's account to a different resident record.
+    Restricted to superadmins only.
     """
     admin = relink_admin_resident(
         db,
@@ -165,19 +150,12 @@ async def upload_my_photo(
     db: Session = Depends(get_db),
     current_admin=Depends(get_current_admin),
 ):
-    """
-    Uploads or replaces the admin's profile photo.
-    Accepts JPEG, PNG, or WebP up to 5 MB.
-    Returns 204 No Content on success.
-    """
     if photo.content_type not in ALLOWED_PHOTO_TYPES:
-        from fastapi import HTTPException
         raise HTTPException(status_code=415, detail="Photo must be JPEG, PNG, or WebP")
 
     photo_bytes = await photo.read()
 
     if len(photo_bytes) > MAX_PHOTO_BYTES:
-        from fastapi import HTTPException
         raise HTTPException(status_code=413, detail="Photo must be under 5 MB")
 
     update_admin_photo(db, admin_id=current_admin.id, photo_bytes=photo_bytes)
@@ -189,8 +167,7 @@ def get_my_photo(
     current_admin=Depends(get_current_admin),
 ):
     """
-    Streams the admin's profile photo as a raw image response.
-    Returns 404 if no photo has been uploaded yet.
+    Retrieve the authenticated admin's profile photo as a raw JPEG response.
     """
     photo_bytes = get_admin_photo(db, admin_id=current_admin.id)
     return Response(content=photo_bytes, media_type="image/jpeg")
@@ -201,6 +178,10 @@ def delete_my_photo(
     db: Session = Depends(get_db),
     current_admin=Depends(get_current_admin),
 ):
+    """
+    Delete the authenticated admin's profile photo.
+    Sets the photo field to null and commits the change.
+    """
     admin = db.query(Admin).filter(Admin.id == current_admin.id).first()
     if admin:
         admin.photo = None

@@ -17,6 +17,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
+from app.core.websocket_manager import ws_manager
 from app.schemas.registration import (
     RFIDStatusResponse,
     AdminPasscodeRequest,
@@ -93,21 +94,20 @@ def get_approved_applications(db: Session = Depends(get_db)):
 # 4. LINK RFID TO RESIDENT
 # =========================================================
 
-@router.post(
-    "/link",
-    response_model=LinkRFIDResponse,
-    status_code=status.HTTP_201_CREATED,
-    summary="Link a new RFID card to an approved ID application resident",
-    description=(
-        "Finalizes the RFID registration by creating a ResidentRFID record "
-        "and marking the associated ID Application as Completed. "
-        "The resident can immediately use the new card to log in to the kiosk."
-    ),
-)
-def link_rfid(payload: LinkRFIDRequest, db: Session = Depends(get_db)):
-    return link_rfid_to_resident(
+@router.post("/link", response_model=LinkRFIDResponse, status_code=status.HTTP_201_CREATED)
+async def link_rfid(payload: LinkRFIDRequest, db: Session = Depends(get_db)):
+    result = link_rfid_to_resident(
         db,
         rfid_uid=payload.rfid_uid,
         resident_id=payload.resident_id,
         document_request_id=payload.document_request_id,
     )
+    await ws_manager.broadcast_to_admin(
+        "new_rfid_linked",
+        {
+            "type": "Document",
+            "resident_name": f"Resident #{payload.resident_id}",
+        },
+        db=db
+    )
+    return result

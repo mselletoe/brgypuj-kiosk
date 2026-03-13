@@ -7,6 +7,7 @@ and submitting requests via the kiosk interface.
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 from app.api.deps import get_db
+from app.core.websocket_manager import ws_manager
 from app.schemas.document import (
     DocumentRequestCreate,
     DocumentRequestKioskResponse,
@@ -28,14 +29,8 @@ router = APIRouter(prefix="/documents")
 # DOCUMENT TYPES 
 # =========================================================
 
-@router.get(
-    "/types",
-    response_model=list[DocumentTypeKioskOut]
-)
+@router.get("/types", response_model=list[DocumentTypeKioskOut])
 def list_available_document_types(db: Session = Depends(get_db)):
-    """
-    Lists document types available for resident requests at the kiosk.
-    """
     return get_available_document_types(db)
 
 
@@ -43,39 +38,29 @@ def list_available_document_types(db: Session = Depends(get_db)):
 # DOCUMENT REQUESTS 
 # =========================================================
 
-@router.post(
-    "/requests",
-    response_model=DocumentRequestKioskResponse,
-    status_code=status.HTTP_201_CREATED
-)
-def submit_document_request(
+@router.post("/requests", response_model=DocumentRequestKioskResponse, status_code=status.HTTP_201_CREATED)
+async def submit_document_request(
     payload: DocumentRequestCreate,
     db: Session = Depends(get_db)
 ):
-    """
-    Processes a document request submission and returns a unique transaction number.
-    """
-    return create_document_request(db, payload)
+    result = create_document_request(db, payload)
+    await ws_manager.broadcast_to_admin(
+        "new_transaction",
+        {
+            "type": "Document",
+            "resident_name": getattr(payload, 'resident_name', 'A resident'),
+            "document_type": getattr(payload, 'document_type', 'Document'),
+            "transaction_no": getattr(result, 'transaction_no', ''),
+        },
+        db=db 
+    )
+    return result
 
 
-@router.get(
-    "/requests/{resident_id}",
-    response_model=list[DocumentRequestKioskOut]
-)
+@router.get("/requests/{resident_id}", response_model=list[DocumentRequestKioskOut])
 def get_my_document_requests(resident_id: int, db: Session = Depends(get_db)):
-    """
-    Retrieves the request history for a specific resident based on their ID.
-    """
     return get_kiosk_request_history(db, resident_id)
 
-
-@router.get(
-    "/types/{doctype_id}/eligibility",
-    response_model=EligibilityCheckResult,
-)
-def check_eligibility(
-    doctype_id: int,
-    resident_id: int,       # passed as query param: ?resident_id=5
-    db: Session = Depends(get_db)
-):
+@router.get("/types/{doctype_id}/eligibility", response_model=EligibilityCheckResult)
+def check_eligibility(doctype_id: int, resident_id: int, db: Session = Depends(get_db)):
     return check_resident_eligibility(db, resident_id=resident_id, doctype_id=doctype_id)

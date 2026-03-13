@@ -135,17 +135,13 @@ class ResidentRFIDResponse(BaseModel):
 
 
 class ResidentListItem(BaseModel):
-    """
-    Lightweight schema for resident list (table view).
-    Only includes fields needed for the residents table.
-    """
     id: int
     full_name: str
+    gender: Optional[str] = None
     phone_number: Optional[str] = None
     rfid_no: Optional[str] = None
+    purok_id: Optional[int] = None
     current_address: Optional[str] = None
-    
-    model_config = {"from_attributes": True}
 
 
 class ResidentDetailResponse(BaseModel):
@@ -180,6 +176,10 @@ class ResidentDetailResponse(BaseModel):
     
     # RFID Info (active RFID only)
     active_rfid: Optional[ResidentRFIDResponse] = None
+
+    # Barangay ID Info
+    brgy_id_number:          Optional[str] = None
+    brgy_id_expiration_date: Optional[str] = None       # ISO date string "YYYY-MM-DD"
     
     # Timestamps
     registered_at: str

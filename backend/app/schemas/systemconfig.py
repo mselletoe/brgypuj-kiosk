@@ -4,8 +4,6 @@ System Config Schemas
 Pydantic models for reading and updating system configuration.
 All fields in SystemConfigUpdate are optional — PATCH semantics,
 so each tab only sends the fields it manages.
-
-CHANGED: auto_logout_minutes → auto_logout_duration (seconds, min=10)
 """
 
 from pydantic import BaseModel, Field
@@ -17,12 +15,13 @@ class SystemConfigRead(BaseModel):
     id: int
 
     # General
-    brgy_name: Optional[str]
+    brgy_name:    Optional[str]
     brgy_subname: Optional[str]
-    has_logo: bool = False
+    has_logo:     bool = False
 
     # Security
     rfid_expiry_days:    int
+    rfid_reminder_days:  int  
     auto_logout_duration: int
     max_failed_attempts: int
     lockout_minutes:     int
@@ -48,6 +47,7 @@ class SystemConfigUpdate(BaseModel):
 
     # Security
     rfid_expiry_days:     Optional[int] = Field(None, ge=1)
+    rfid_reminder_days:   Optional[int] = Field(None, ge=1) 
     auto_logout_duration: Optional[int] = Field(None, ge=10)
     max_failed_attempts:  Optional[int] = Field(None, ge=1)
     lockout_minutes:      Optional[int] = Field(None, ge=1)
@@ -65,10 +65,12 @@ class KioskSystemConfigRead(BaseModel):
     brgy_name:            Optional[str]
     brgy_subname:         Optional[str]
     has_logo:             bool = False
-    auto_logout_duration: int = 1800
-    max_failed_attempts:  int = 5
-    lockout_minutes:      int = 15
-    maintenance_mode:     bool = False    
-    maintenance_message:  Optional[str] = None 
+    rfid_expiry_days:     int  = 365   # ← exposed so kiosk can enforce expiry
+    rfid_reminder_days:   int  = 30    # ← exposed so kiosk can show reminder banner
+    auto_logout_duration: int  = 1800
+    max_failed_attempts:  int  = 5
+    lockout_minutes:      int  = 15
+    maintenance_mode:     bool = False
+    maintenance_message:  Optional[str] = None
 
     model_config = {"from_attributes": True}

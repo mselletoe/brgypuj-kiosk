@@ -2,6 +2,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
+import { useI18n } from "vue-i18n";
 import ArrowBackButton from "@/components/shared/ArrowBackButton.vue";
 import Modal from "@/components/shared/Modal.vue";
 import Button from "@/components/shared/Button.vue";
@@ -21,6 +22,7 @@ import {
 
 const router = useRouter();
 const authStore = useAuthStore();
+const { t } = useI18n();
 
 // State & Phases
 const currentPhase = ref("selection"); // 'selection' | 'details' | 'camera'
@@ -452,12 +454,8 @@ const selectYear = (y) => {
     <div class="flex items-center mb-6 gap-7 flex-shrink-0">
       <ArrowBackButton @click="goBack" :disabled="isCountingDown" />
       <div>
-        <h1 class="text-[45px] text-[#03335C] font-bold tracking-tight -mt-2">
-          Apply for RFID
-        </h1>
-        <p class="text-[#03335C] -mt-2">
-          Select a resident record to begin the application.
-        </p>
+        <h1 class="text-[45px] text-[#03335C] font-bold tracking-tight -mt-2">{{ t('applyForRFID') }}</h1>
+        <p class="text-[#03335C] -mt-2">{{ t('selectResidentRecord') }}</p>
       </div>
     </div>
 
@@ -473,12 +471,8 @@ const selectYear = (y) => {
           class="flex w-full h-full items-center justify-start animate-fadeIn"
         >
           <div class="w-full flex flex-col relative px-2">
-            <h2 class="text-[25px] font-bold text-[#03335C] text-left">
-              Resident Selection
-            </h2>
-            <p class="text-gray-500 italic text-xs mb-6 text-left">
-              Select the Resident to be linked to the new RFID card
-            </p>
+            <h2 class="text-[25px] font-bold text-[#03335C] text-left">{{ t('residentSelection') }}</h2>
+            <p class="text-gray-500 italic text-xs mb-6 text-left">{{ t('selectResidentToLink') }}</p>
 
             <div class="space-y-4 w-full">
               <div class="flex gap-10 w-full">
@@ -489,13 +483,8 @@ const selectYear = (y) => {
                   >
                     <CalendarDaysIcon class="w-5 h-5 text-[#03335C]" />
                     <div class="flex flex-col leading-tight">
-                      <span class="text-[9px] uppercase font-bold text-gray-400"
-                        >First Letter of</span
-                      >
-                      <span
-                        class="text-[#03335C] font-black text-sm uppercase tracking-tight"
-                        >Surname</span
-                      >
+                      <span class="text-[9px] uppercase font-bold text-gray-400">{{ t('firstLetterOf') }}</span>
+                      <span class="text-[#03335C] font-black text-sm uppercase tracking-tight">{{ t('surname') }}</span>
                     </div>
                   </div>
                   <div class="flex-1 relative">
@@ -503,7 +492,7 @@ const selectYear = (y) => {
                       @click="toggleDropdown('lastName')"
                       class="w-full h-11 border border-gray-300 rounded-xl px-4 flex items-center justify-between text-[#03335C] font-bold bg-white text-base hover:border-[#03335C] transition-colors"
                     >
-                      {{ lastNameLetter || "Select" }}
+                      {{ lastNameLetter || t('select') }}
                       <ChevronDownIcon class="w-5 h-5 text-[#03335C]" />
                     </button>
                     <div
@@ -529,13 +518,8 @@ const selectYear = (y) => {
                   >
                     <CalendarDaysIcon class="w-5 h-5 text-[#03335C]" />
                     <div class="flex flex-col leading-tight">
-                      <span class="text-[9px] uppercase font-bold text-gray-400"
-                        >First Letter of</span
-                      >
-                      <span
-                        class="text-[#03335C] font-black text-sm uppercase tracking-tight"
-                        >First Name</span
-                      >
+                      <span class="text-[9px] uppercase font-bold text-gray-400">{{ t('firstLetterOf') }}</span>
+                      <span class="text-[#03335C] font-black text-sm uppercase tracking-tight">{{ t('firstName') }}</span>
                     </div>
                   </div>
                   <div class="flex-1 relative">
@@ -543,7 +527,7 @@ const selectYear = (y) => {
                       @click="toggleDropdown('firstName')"
                       class="w-full h-11 border border-gray-300 rounded-xl px-4 flex items-center justify-between text-[#03335C] font-bold bg-white text-base hover:border-[#03335C] transition-colors"
                     >
-                      {{ firstNameLetter || "Select" }}
+                      {{ firstNameLetter || t('select') }}
                       <ChevronDownIcon class="w-5 h-5 text-[#03335C]" />
                     </button>
                     <div
@@ -569,10 +553,7 @@ const selectYear = (y) => {
                   class="flex items-center gap-2 flex-shrink-0 min-w-[140px]"
                 >
                   <UserIcon class="w-5 h-5 text-[#03335C]" />
-                  <span
-                    class="text-[#03335C] font-bold text-[11px] uppercase tracking-tight"
-                    >Resident Name</span
-                  >
+                  <span class="text-[#03335C] font-bold text-[11px] uppercase tracking-tight">{{ t('residentName') }}</span>
                 </div>
                 <div class="flex-1 relative">
                   <button
@@ -582,9 +563,7 @@ const selectYear = (y) => {
                     "
                     class="w-full h-11 border border-gray-300 rounded-xl px-4 flex items-center justify-between text-[#03335C] font-bold bg-white text-base hover:border-[#03335C] transition-colors disabled:opacity-50 disabled:bg-gray-50"
                   >
-                    <span v-if="isFetching" class="text-gray-400 text-sm italic"
-                      >Loading...</span
-                    >
+                    <span v-if="isFetching" class="text-gray-400 text-sm italic">{{ t('loading') }}</span>
                     <span
                       v-else-if="selectedResident"
                       class="truncate text-[#03335C]"
@@ -596,8 +575,8 @@ const selectYear = (y) => {
                     </span>
                     <span v-else class="text-gray-400 truncate opacity-60">{{
                       !lastNameLetter || !firstNameLetter
-                        ? "Select initials first..."
-                        : "Select Resident..."
+                        ? t('selectInitialsFirst')
+                        : t('selectResident')
                     }}</span>
                     <ChevronDownIcon class="w-5 h-5 text-[#03335C]" />
                   </button>
@@ -605,12 +584,7 @@ const selectYear = (y) => {
                     v-if="showResidentDropdown"
                     class="absolute top-full left-0 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-50 p-1 max-h-[150px] overflow-y-auto custom-scroll"
                   >
-                    <div
-                      v-if="residentList.length === 0"
-                      class="p-3 text-center text-gray-400 text-sm"
-                    >
-                      No records found
-                    </div>
+                    <div v-if="residentList.length === 0" class="p-3 text-center text-gray-400 text-sm">{{ t('noRecordsFound') }}</div>
                     <button
                       v-for="r in residentList"
                       :key="r.resident_id"
@@ -633,18 +607,13 @@ const selectYear = (y) => {
           class="flex w-full h-full items-start justify-start animate-fadeIn overflow-hidden"
         >
           <div class="w-full h-full flex flex-col px-2">
-            <h2 class="text-2xl font-bold text-[#03335C] flex items-center gap-2 mb-1 flex-shrink-0">
-              <DocumentTextIcon class="w-8 h-8" />
-              ID Card Details
-            </h2>
-            <p class="text-gray-500 italic text-xs mb-6 text-left flex-shrink-0">
-              Review and confirm the information to be printed on the ID card.
-            </p>
+            <h2 class="text-2xl font-bold text-[#03335C] flex items-center gap-2 mb-1 flex-shrink-0"><DocumentTextIcon class="w-8 h-8" />{{ t('idCardDetails') }}</h2>
+            <p class="text-gray-500 italic text-xs mb-6 text-left flex-shrink-0">{{ t('reviewIDInfo') }}</p>
 
             <div class="flex-1 overflow-y-auto pr-1 min-h-0 custom-scroll px-1 pt-1">
               <div v-if="isFetchingAutofill" class="flex items-center gap-3 py-6 text-[#03335C]">
                 <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-[#03335C]"></div>
-                <span class="text-sm font-medium">Loading resident data...</span>
+                <span class="text-sm font-medium">{{ t('loadingResidentData') }}</span>
               </div>
 
               <template v-else>
@@ -656,14 +625,10 @@ const selectYear = (y) => {
                     v-model="useManualEntry"
                     class="h-5 w-5 text-[#013C6D]"
                   />
-                  <label for="manualEntry" class="text-sm text-gray-700 italic cursor-pointer select-none">
-                    Enter information manually instead of using database records
-                  </label>
+                  <label for="manualEntry" class="text-sm text-gray-700 italic cursor-pointer select-none">{{ t('enterManually') }}</label>
                 </div>
 
-                <div v-if="idFields.length === 0" class="text-sm text-gray-400 italic py-4">
-                  No fields have been configured by the admin for this form.
-                </div>
+                <div v-if="idFields.length === 0" class="text-sm text-gray-400 italic py-4">{{ t('noFieldsConfigured') }}</div>
 
                 <div v-else class="grid grid-cols-2 gap-x-6 gap-y-4 pb-2">
                   <div
@@ -741,14 +706,14 @@ const selectYear = (y) => {
                   <div
                     class="bg-black/60 text-white px-5 py-1.5 rounded-full text-sm tracking-widest uppercase font-bold mt-3 animate-pulse backdrop-blur-sm"
                   >
-                    Look at the camera!
+                    {{ t('lookAtCamera') }}
                   </div>
                 </template>
                 <div
                   v-else
                   class="absolute bottom-6 bg-black/60 backdrop-blur-md text-white px-4 py-1.5 rounded-full text-xs font-bold tracking-widest uppercase"
                 >
-                  Align face in center
+                  {{ t('alignFace') }}
                 </div>
               </div>
             </div>
@@ -757,34 +722,22 @@ const selectYear = (y) => {
             class="w-[380px] flex flex-col justify-center h-full flex-shrink-0"
           >
             <div class="flex-1 flex flex-col justify-center">
-              <h2 class="text-3xl font-bold text-[#03335C] mb-1">
-                Capture ID Photo
-              </h2>
-              <p class="text-gray-500 italic text-sm mb-4">
-                Take a clear photo for your new RFID Card.
-              </p>
+              <h2 class="text-3xl font-bold text-[#03335C] mb-1">{{ t('captureIDPhoto') }}</h2>
+              <p class="text-gray-500 italic text-sm mb-4">{{ t('takeClearPhoto') }}</p>
               <div class="bg-[#EAF6FB] rounded-2xl p-6 border border-[#BDE0EF] flex flex-col gap-3">
                 <div>
-                  <p
-                    class="text-[#03335C] text-xs uppercase font-bold tracking-wider opacity-60 mb-1"
-                  >
-                    Applying For:
-                  </p>
+                  <p class="text-[#03335C] text-xs uppercase font-bold tracking-wider opacity-60 mb-1">{{ t('applyingFor') }}</p>
                   <p class="font-black text-[#03335C] text-xl truncate">
                     {{ selectedResident?.first_name }}
                     {{ selectedResident?.last_name }}
                   </p>
                 </div>
                 <div class="border-t border-[#BDE0EF] pt-3">
-                  <p
-                    class="text-[#03335C] text-xs uppercase font-bold tracking-wider opacity-60 mb-1"
-                  >
-                    Barangay ID No.:
-                  </p>
+                  <p class="text-[#03335C] text-xs uppercase font-bold tracking-wider opacity-60 mb-1">{{ t('barangayIDNo') }}</p>
                   <p v-if="brgyIdNumber" class="font-black text-[#03335C] text-xl tracking-widest font-mono">
                     {{ brgyIdNumber }}
                   </p>
-                  <p v-else class="text-gray-400 text-sm italic">Generating...</p>
+                  <p v-else class="text-gray-400 text-sm italic">{{ t('generating') }}</p>
                 </div>
               </div>
             </div>
@@ -799,7 +752,7 @@ const selectYear = (y) => {
                 >
                   <span class="flex items-center justify-center gap-2 w-full"
                     ><CameraIcon v-if="!isCountingDown" class="w-6 h-6" />{{
-                      isCountingDown ? "Get Ready..." : "Capture Photo"
+                      isCountingDown ? t('getReady') : t('capturePhoto')
                     }}</span
                   >
                 </Button>
@@ -811,8 +764,7 @@ const selectYear = (y) => {
                   class="w-full justify-center text-lg py-3"
                   @click="retakePhoto"
                   :disabled="isSubmitting"
-                  >Retake</Button
-                >
+                  >{{ t('retake') }}</Button>
                 <Button
                   :variant="isSubmitting ? 'disabled' : 'secondary'"
                   size="md"
@@ -820,7 +772,7 @@ const selectYear = (y) => {
                   :disabled="isSubmitting"
                   @click="submitApplication"
                   >{{
-                    isSubmitting ? "Processing..." : "Submit"
+                    isSubmitting ? t('processing') : t('submit')
                   }}</Button
                 >
               </template>
@@ -839,28 +791,21 @@ const selectYear = (y) => {
         size="md"
         @click="handleReset"
         :disabled="!lastNameLetter && !firstNameLetter && !selectedResident"
-        >Reset Selection</Button
-      >
+        >{{ t('resetSelection') }}</Button>
       <Button
         :variant="selectedResident ? 'secondary' : 'disabled'"
         size="md"
         :disabled="!selectedResident"
         @click="proceedToCamera"
-        >Next: Take Photo</Button
-      >
+        >{{ t('nextTakePhoto') }}</Button>
     </div>
 
     <div
       v-else-if="currentPhase === 'details'"
       class="flex gap-6 mt-6 justify-between items-center flex-shrink-0"
     >
-      <Button variant="outline" size="md" @click="currentPhase = 'selection'">Back</Button>
-      <Button
-        variant="secondary"
-        size="md"
-        @click="proceedToCameraFromDetails"
-        >Next: Take Photo</Button
-      >
+      <Button variant="outline" size="md" @click="currentPhase = 'selection'">{{ t('back') }}</Button>
+      <Button variant="secondary" size="md" @click="proceedToCameraFromDetails">{{ t('nextTakePhoto') }}</Button>
     </div>
 
     <!-- Requirements Modal -->
@@ -873,20 +818,17 @@ const selectYear = (y) => {
           <!-- Loading state -->
           <div v-if="isCheckingRequirements" class="flex flex-col items-center py-8 gap-4">
             <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-[#03335C]"></div>
-            <p class="text-[#03335C] font-medium">Checking requirements...</p>
+            <p class="text-[#03335C] font-medium">{{ t('checkingRequirements') }}</p>
           </div>
 
           <template v-else>
-            <h2 class="text-2xl font-bold text-[#03335C] mb-1">Application Requirements</h2>
-            <p class="text-gray-500 text-sm mb-6">
-              The following requirements were checked for
-              <strong>{{ selectedResident?.first_name }} {{ selectedResident?.last_name }}</strong>.
-            </p>
+            <h2 class="text-2xl font-bold text-[#03335C] mb-1">{{ t('applicationRequirements') }}</h2>
+            <p class="text-gray-500 text-sm mb-6">{{ t('requirementsCheckedFor') }} <strong>{{ selectedResident?.first_name }} {{ selectedResident?.last_name }}</strong>.</p>
 
             <!-- No requirements configured -->
             <div v-if="requirementsChecks.length === 0" class="flex items-center gap-3 py-4 px-4 bg-blue-50 rounded-2xl mb-6">
               <InformationCircleIcon class="w-6 h-6 text-blue-500 flex-shrink-0" />
-              <p class="text-sm text-blue-700">No specific requirements have been configured for this ID application. You may proceed.</p>
+              <p class="text-sm text-blue-700">{{ t('noRequirementsConfigured') }}</p>
             </div>
 
             <!-- Requirements list -->
@@ -939,7 +881,7 @@ const selectYear = (y) => {
                     'bg-blue-100 text-blue-700': check.type === 'document',
                   }"
                 >
-                  {{ check.passed === true ? 'Passed' : check.passed === false ? 'Failed' : check.type === 'document' ? 'Bring this' : 'Pending' }}
+                  {{ check.passed === true ? t('passed') : check.passed === false ? t('failed') : check.type === 'document' ? t('bringThis') : t('pending') }}
                 </span>
               </div>
             </div>
@@ -947,9 +889,7 @@ const selectYear = (y) => {
             <!-- Ineligible warning -->
             <div v-if="!isEligible" class="flex items-start gap-3 p-4 bg-red-50 rounded-2xl border border-red-200 mb-6">
               <XCircleIcon class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-              <p class="text-sm text-red-700 font-medium">
-                This resident does not meet one or more required criteria. The application cannot be submitted at this time. Please visit the barangay hall for assistance.
-              </p>
+              <p class="text-sm text-red-700 font-medium">{{ t('ineligibleWarning') }}</p>
             </div>
 
             <div class="flex gap-4 mt-2">
@@ -957,19 +897,9 @@ const selectYear = (y) => {
                 variant="outline"
                 class="flex-1"
                 @click="showRequirementsModal = false"
-              >Cancel</Button>
-              <Button
-                v-if="isEligible"
-                variant="secondary"
-                class="flex-1"
-                @click="proceedFromRequirements"
-              >Proceed to Application</Button>
-              <Button
-                v-else
-                variant="disabled"
-                class="flex-1"
-                disabled
-              >Cannot Proceed</Button>
+              >{{ t('cancel') }}</Button>
+              <Button v-if="isEligible" variant="secondary" class="flex-1" @click="proceedFromRequirements">{{ t('proceedToApplication') }}</Button>
+              <Button v-else variant="disabled" class="flex-1" disabled>{{ t('cannotProceed') }}</Button>
             </div>
           </template>
         </div>
@@ -985,30 +915,18 @@ const selectYear = (y) => {
         <div
           class="bg-white rounded-[28px] p-10 max-w-[500px] w-full shadow-2xl relative"
         >
-          <h2 class="text-2xl font-bold text-[#03335C] mb-2">
-            Verify Identity
-          </h2>
-          <p class="text-gray-500 text-sm mb-6">
-            Please enter the birthdate for
-            <strong
-              >{{ selectedResident?.first_name }}
-              {{ selectedResident?.last_name }}</strong
-            >
-            to proceed.
-          </p>
+          <h2 class="text-2xl font-bold text-[#03335C] mb-2">{{ t('verifyIdentity') }}</h2>
+          <p class="text-gray-500 text-sm mb-6">{{ t('enterBirthdateFor') }} <strong>{{ selectedResident?.first_name }} {{ selectedResident?.last_name }}</strong> {{ t('toProceed') }}.</p>
           <div class="flex gap-3 mb-4">
             <!-- Month -->
             <div class="flex-1 relative">
-              <label
-                class="block text-[10px] font-bold text-gray-400 uppercase mb-1"
-                >Month</label
-              >
+              <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">{{ t('month') }}</label>
               <button
                 @click="toggleDropdown('month')"
                 class="w-full h-11 border border-gray-300 rounded-xl px-3 flex items-center justify-between text-[#03335C] font-bold bg-white text-sm hover:border-[#03335C]"
               >
                 {{
-                  months.find((m) => m.value === verifyMonth)?.name || "Select"
+                  months.find((m) => m.value === verifyMonth)?.name || t('select')
                 }}
                 <ChevronDownIcon class="w-4 h-4" />
               </button>
@@ -1028,15 +946,12 @@ const selectYear = (y) => {
             </div>
             <!-- Day -->
             <div class="flex-1 relative">
-              <label
-                class="block text-[10px] font-bold text-gray-400 uppercase mb-1"
-                >Day</label
-              >
+              <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">{{ t('day') }}</label>
               <button
                 @click="toggleDropdown('day')"
                 class="w-full h-11 border border-gray-300 rounded-xl px-3 flex items-center justify-between text-[#03335C] font-bold bg-white text-sm hover:border-[#03335C]"
               >
-                {{ verifyDay || "DD" }}
+                {{ verifyDay || t('dd') }}
                 <ChevronDownIcon class="w-4 h-4" />
               </button>
               <div
@@ -1055,15 +970,12 @@ const selectYear = (y) => {
             </div>
             <!-- Year -->
             <div class="flex-1 relative">
-              <label
-                class="block text-[10px] font-bold text-gray-400 uppercase mb-1"
-                >Year</label
-              >
+              <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">{{ t('year') }}</label>
               <button
                 @click="toggleDropdown('year')"
                 class="w-full h-11 border border-gray-300 rounded-xl px-3 flex items-center justify-between text-[#03335C] font-bold bg-white text-sm hover:border-[#03335C]"
               >
-                {{ verifyYear || "YYYY" }}
+                {{ verifyYear || t('yyyy') }}
                 <ChevronDownIcon class="w-4 h-4" />
               </button>
               <div
@@ -1093,15 +1005,8 @@ const selectYear = (y) => {
               class="flex-1"
               :disabled="isVerifying"
               @click="showVerificationModal = false"
-              >Cancel</Button
-            >
-            <Button
-              :variant="isVerifying ? 'disabled' : 'secondary'"
-              class="flex-1"
-              :disabled="isVerifying"
-              @click="handleVerification"
-              >{{ isVerifying ? "Verifying..." : "Verify & Proceed" }}</Button
-            >
+              >{{ t('cancel') }}</Button>
+            <Button :variant="isVerifying ? 'disabled' : 'secondary'" class="flex-1" :disabled="isVerifying" @click="handleVerification">{{ isVerifying ? t('verifying') : t('verifyAndProceed') }}</Button>
           </div>
         </div>
       </div>
@@ -1114,13 +1019,13 @@ const selectYear = (y) => {
         class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-8 modal-backdrop"
       >
         <Modal
-          title="Application Received!"
-          message="Your application and photo have been logged. Please proceed to Window 2 and present your Reference ID to claim your card."
+          :title="t('applicationReceived')"
+          :message="t('applicationReceivedMsg')"
           :reference-id="referenceId"
           :show-reference-id="true"
           :show-primary-button="true"
           :show-secondary-button="false"
-          primary-button-text="Done"
+          :primary-button-text="t('done')"
           @primary-click="handleModalDone"
         />
       </div>
@@ -1133,12 +1038,12 @@ const selectYear = (y) => {
         class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-8 modal-backdrop"
       >
         <Modal
-          title="Existing RFID Found"
-          message="This resident already has an existing RFID number. You cannot request a new card while an existing one is active. Please disable the current card first."
+          :title="t('existingRFIDFound')"
+          :message="t('existingRFIDMsg')"
           :show-reference-id="false"
           :show-primary-button="true"
           :show-secondary-button="false"
-          primary-button-text="Close"
+          :primary-button-text="t('close')"
           @primary-click="showErrorModal = false"
         />
       </div>
@@ -1151,12 +1056,12 @@ const selectYear = (y) => {
         class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-8 modal-backdrop"
       >
         <Modal
-          title="Application Already Pending"
-          message="This resident already has a pending ID application. You cannot submit another request until the current one has been processed. Please check back later or visit the barangay office."
+          :title="t('applicationAlreadyPending')"
+          :message="t('applicationPendingMsg')"
           :show-reference-id="false"
           :show-primary-button="true"
           :show-secondary-button="false"
-          primary-button-text="Close"
+          :primary-button-text="t('close')"
           @primary-click="showPendingModal = false"
         />
       </div>

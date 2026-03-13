@@ -2,6 +2,7 @@
 import { ref, computed, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
+import { useI18n } from "vue-i18n";
 import { changePin, verifyPin } from "@/api/idService";
 import ArrowBackButton from "@/components/shared/ArrowBackButton.vue";
 import Button from "@/components/shared/Button.vue";
@@ -15,6 +16,7 @@ import {
 
 const router = useRouter();
 const authStore = useAuthStore();
+const { t } = useI18n();
 
 // Step Logic
 const step = ref(1);
@@ -32,19 +34,19 @@ const pinLength = 4;
 const stepInfo = computed(() => {
   if (step.value === 1)
     return {
-      title: "Verify Identity",
-      desc: "Please enter your current 4-digit passcode to authorize this change.",
+      title: t('verifyIdentity'),
+      desc: t('enterCurrentPasscode'),
       icon: LockClosedIcon,
     };
   if (step.value === 2)
     return {
-      title: "New Passcode",
-      desc: "Create a new 4-digit security PIN. Avoid using simple sequences.",
+      title: t('newPasscode'),
+      desc: t('createNewPasscode'),
       icon: KeyIcon,
     };
   return {
-    title: "Confirm PIN",
-    desc: "Enter your new passcode one more time to confirm.",
+    title: t('confirmPIN'),
+    desc: t('enterPasscodeAgain'),
     icon: ShieldCheckIcon,
   };
 });
@@ -91,7 +93,7 @@ const handleNext = async () => {
       const detail = err?.response?.data?.detail || "Something went wrong. Please try again.";
       isShaking.value = true;
       verificationError.value =
-        status === 401 ? "Incorrect passcode. Please try again." : detail;
+        status === 401 ? t('incorrectPasscode') : detail;
       setTimeout(() => {
         isShaking.value = false;
         pinBuffer.value = "";
@@ -106,7 +108,7 @@ const handleNext = async () => {
   } else if (step.value === 3) {
     if (newPin.value !== pinBuffer.value) {
       isShaking.value = true;
-      verificationError.value = "Passcodes do not match!";
+      verificationError.value = t('passcodesDoNotMatch');
       setTimeout(() => {
         isShaking.value = false;
         pinBuffer.value = "";
@@ -138,7 +140,7 @@ const submitChange = async () => {
       newPin.value = "";
       confirmPin.value = "";
       isShaking.value = true;
-      verificationError.value = "Incorrect current passcode.";
+      verificationError.value = t('incorrectCurrentPasscode');
       setTimeout(() => { isShaking.value = false; }, 500);
     } else {
       verificationError.value = detail;
@@ -159,12 +161,8 @@ const handleModalDone = () => router.push("/id-services");
     <div class="flex items-center mb-6 gap-7 flex-shrink-0">
       <ArrowBackButton @click="goBack" />
       <div>
-        <h1 class="text-[45px] text-[#03335C] font-bold tracking-tight -mt-2">
-          Change Passcode
-        </h1>
-        <p class="text-[#03335C] -mt-2">
-          Secure your account by updating your security PIN.
-        </p>
+        <h1 class="text-[45px] text-[#03335C] font-bold tracking-tight -mt-2">{{ t('changePasscode') }}</h1>
+        <p class="text-[#03335C] -mt-2">{{ t('secureAccountSubtitle') }}</p>
       </div>
     </div>
 
@@ -211,10 +209,10 @@ const handleModalDone = () => router.push("/id-services");
           >
             {{
               isSubmitting
-                ? "Processing..."
+                ? t('processing')
                 : step === 3
-                  ? "Confirm Change"
-                  : "Next Step"
+                  ? t('confirmChange')
+                  : t('nextStep')
             }}
           </Button>
         </div>
@@ -281,10 +279,10 @@ const handleModalDone = () => router.push("/id-services");
         class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-8 modal-backdrop"
       >
         <Modal
-          title="Passcode Updated!"
-          message="Your security PIN has been successfully changed."
+          :title="t('passcodeUpdated')"
+          :message="t('passcodeUpdatedMsg')"
           :show-secondary-button="false"
-          primary-button-text="Done"
+          :primary-button-text="t('done')"
           @primary-click="handleModalDone"
         />
       </div>
