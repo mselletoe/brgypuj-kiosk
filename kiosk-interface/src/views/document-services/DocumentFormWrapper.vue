@@ -1,203 +1,548 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import DocumentForm from './DocumentForm.vue'
-import ArrowBackButton from '@/components/shared/ArrowBackButton.vue' 
-import Modal from '@/components/shared/Modal.vue'
-import { fetchRequestTypes } from '@/api/requestTypes'
-import { createRequest } from '@/api/requests'
-import { fetchResidentData } from '@/api/residents'
-import { auth, isRfidUser, getResidentId } from '@/stores/auth'
-import Loading from '@/components/shared/Loading.vue'
+/**
+ * @file DocumentFormWrapper.vue
+ * @description Orchestrates the document application lifecycle.
+ * Manages dynamic form configuration fetching, resident data autofill for RFID users,
+ * and handles the multi-step submission process including loading and success states.
+ */
+import { ref, computed, onMounted } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import { useI18n } from "vue-i18n";
+import DocumentForm from "./DocumentForm.vue";
+import ArrowBackButton from "@/components/shared/ArrowBackButton.vue";
+import Modal from "@/components/shared/Modal.vue";
+import Button from "@/components/shared/Button.vue";
+import { useAuthStore } from "@/stores/auth";
+import {
+  getDocumentTypes,
+  createDocumentRequest,
+  checkEligibility,
+} from "@/api/documentService";
+import { getResidentAutofillData } from "@/api/residentService";
 
-const route = useRoute()
-const router = useRouter()
+// --- Composition Utilities ---
+const auth = useAuthStore();
+const route = useRoute();
+const router = useRouter();
+const { t } = useI18n();
 
-const currentStep = ref('form')
-const formData = ref({})
-const showSuccessModal = ref(false)
-const isFadingOut = ref(false)
+// --- UI & Navigation State ---
+const currentStep = ref("form");
+const formData = ref({});
+const showSuccessModal = ref(false);
+const isFadingOut = ref(false);
+const showErrorModal = ref(false);
+const errorMessage = ref("");
 
-const residentData = ref(null)
-const isLoadingResidentData = ref(false)
-const isSubmitting = ref(false)
+// --- Business Logic State ---
+const residentData = ref(null);
+const isLoadingResidentData = ref(false);
+const isSubmitting = ref(false);
 
-// Placeholder for resident id (RFID or guest)
-const currentResidentId = ref(null)
+// --- Data Fetching State ---
+const documents = ref({});
+const loadingDocuments = ref(true);
+const errorDocuments = ref(null);
+const transactionNo = ref("");
+const documentFormRef = ref(null);
+const eligibilityResult = ref(null);
 
-// ==================================
-// Slugified route param
-// ==================================
+const submitFromWrapper = () => {
+  if (documentFormRef.value) {
+    documentFormRef.value.handleContinue();
+  }
+};
+
+/**
+ * Normalizes a min_residency requirement label from its params.
+ * Guards against legacy data that stored months as a decimal year (e.g. years: 0.6).
+ */
+function formatResidencyLabel(params) {
+  const raw = params?.years ?? 0;
+  // Legacy guard: if years is a float (e.g. 0.6), convert total to whole months
+  const totalMonths = Number.isInteger(raw)
+    ? raw * 12 + (params?.months ?? 0)
+    : Math.round(raw * 12);
+  const years = Math.floor(totalMonths / 12);
+  const months = totalMonths % 12;
+  const parts = [];
+  if (years > 0) parts.push(`${years} year${years !== 1 ? "s" : ""}`);
+  if (months > 0) parts.push(`${months} month${months !== 1 ? "s" : ""}`);
+  return `Minimum ${parts.join(" and ") || "0 months"} of residency`;
+}
+
+/**
+ * Normalizes the URL parameter into a slug format for configuration lookup.
+ */
 const docTypeSlug = computed(() =>
-  route.params.docType?.toLowerCase().replace(/\s+/g, '-')
-)
+  route.params.docType?.toLowerCase().replace(/\s+/g, "-"),
+);
 
-// ==================================
-// Fetch dynamic configs
-// ==================================
-const documentConfigs = ref({})
+/**
+ * Retrieves the specific configuration for the currently selected document.
+ */
+const config = computed(() => documents.value[docTypeSlug.value]);
 
-const fetchConfigs = async () => {
+/**
+ * Dynamically formats the title. Uses the loaded config title if available,
+ * otherwise elegantly formats the URL slug (e.g. "barangay-permit" -> "Barangay Permit").
+ */
+const displayTitle = computed(() => {
+  if (config.value?.title) return config.value.title;
+  if (!docTypeSlug.value) return "";
+  return docTypeSlug.value
+    .split("-")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+});
+
+/**
+ * Checks if the current session belongs to a resident identified via RFID.
+ */
+const isRfidUser = computed(() => {
+  return auth.isAuthenticated && auth.residentId !== null;
+});
+
+/**
+ * Fetches all document templates and maps them by slug for O(1) access.
+ */
+const fetchDocuments = async () => {
+  loadingDocuments.value = true;
+  errorDocuments.value = null;
   try {
-    const types = await fetchRequestTypes()
-    types.forEach(type => {
-      const slug = type.request_type_name.toLowerCase().replace(/\s+/g, '-')
-      documentConfigs.value[slug] = {
-        id: type.id,
-        title: type.request_type_name,
-        fields: type.fields || [],
-        available: type.available ?? true
-      }
-    })
+    const data = await getDocumentTypes();
+    const mapping = {};
+    data.forEach((doc) => {
+      const slug = doc.doctype_name.toLowerCase().replace(/\s+/g, "-");
+      mapping[slug] = {
+        id: doc.id,
+        title: doc.doctype_name,
+        fields: doc.fields || [],
+        requirements: doc.requirements || [],
+        available: true,
+      };
+    });
+    documents.value = mapping;
   } catch (err) {
-    console.error('Failed to fetch request type configs', err)
-  }
-}
-
-// ==================================
-// Fetch resident data for RFID users
-// ==================================
-const loadResidentData = async () => {
-  // Only fetch if user is authenticated via RFID
-  if (!isRfidUser() || !auth.token) {
-    console.log('Guest user or no token - skipping resident data fetch')
-    return
-  }
-
-  isLoadingResidentData.value = true
-  try {
-    const data = await fetchResidentData(auth.token)
-    residentData.value = data
-    console.log('✅ Resident data loaded:', data)
-  } catch (err) {
-    console.error('Failed to fetch resident data:', err)
-    // Don't block the form if data fetch fails
-    residentData.value = null
+    console.error(err);
+    errorDocuments.value = "Failed to load document fields";
   } finally {
-    isLoadingResidentData.value = false
+    loadingDocuments.value = false;
   }
-}
+};
 
-// ==================================
-// Computed current config
-// ==================================
-const config = computed(() => documentConfigs.value[docTypeSlug.value])
+/**
+ * Retrieves resident profile data to facilitate the 'Autofill' feature.
+ * Occurs only for authenticated RFID users.
+ */
+const fetchResidentData = async () => {
+  if (!isRfidUser.value) {
+    residentData.value = null;
+    return;
+  }
 
-// ==================================
-// Navigation
-// ==================================
+  isLoadingResidentData.value = true;
+  try {
+    const data = await getResidentAutofillData(auth.residentId);
+    residentData.value = data.data;
+  } catch (err) {
+    console.error("Failed to fetch resident data for autofill:", err);
+    // Don't block the form - just proceed without autofill
+    residentData.value = null;
+  } finally {
+    isLoadingResidentData.value = false;
+  }
+};
+
+/**
+ * Fetches eligibility check results for authenticated residents.
+ * Only runs if the document type has system_check requirements.
+ */
+const fetchEligibility = async () => {
+  if (!isRfidUser.value || !config.value?.id) return;
+
+  const hasSystemChecks = config.value.requirements?.some(
+    (r) => r.type === "system_check",
+  );
+  if (!hasSystemChecks) return;
+
+  try {
+    eligibilityResult.value = await checkEligibility(
+      config.value.id,
+      auth.residentId,
+    );
+  } catch (err) {
+    console.error("Failed to fetch eligibility:", err);
+    eligibilityResult.value = null;
+  }
+};
+
+/**
+ * Merges static requirements with live eligibility check results.
+ * Document-type requirements show as informational.
+ * System checks show their pass/fail status if available.
+ *
+ * For min_residency, both the label and message are recomputed from params
+ * to guard against legacy data that stored months as a decimal year (e.g. 0.6 years).
+ */
+const mergedRequirements = computed(() => {
+  const reqs = config.value?.requirements || [];
+
+  if (!eligibilityResult.value) {
+    return reqs.map((r) => ({
+      ...r,
+      label: r.id === "min_residency" ? formatResidencyLabel(r.params) : r.label,
+      passed: null,
+      message: null,
+    }));
+  }
+
+  const checksMap = {};
+  for (const check of eligibilityResult.value.checks) {
+    checksMap[check.id] = check;
+  }
+
+  return reqs.map((r) => {
+    const live = checksMap[r.id];
+    const fixedLabel =
+      r.id === "min_residency" ? formatResidencyLabel(r.params) : r.label;
+
+    // For min_residency, override the backend message with the clean label
+    // so legacy float values (e.g. "0.6 years") never reach the UI.
+    const fixedMessage =
+      r.id === "min_residency" && live?.message
+        ? `${fixedLabel} required. ${live.passed ? "Passed." : "Requirement not met."}`
+        : (live?.message ?? null);
+
+    return {
+      ...r,
+      label: fixedLabel,
+      passed: live?.passed ?? null,
+      message: fixedMessage,
+    };
+  });
+});
+
+/**
+ * True if any system_check requirement has explicitly failed.
+ * Used to visually warn the resident before they submit.
+ */
+const hasBlockingFailure = computed(() => {
+  return mergedRequirements.value.some(
+    (r) => r.type === "system_check" && r.passed === false,
+  );
+});
+
+/**
+ * Handles backwards navigation between preview/form steps or exits to the list.
+ */
 const goBack = () => {
-  if (currentStep.value === 'preview') {
-    currentStep.value = 'form'
+  if (currentStep.value === "preview") {
+    currentStep.value = "form";
   } else {
-    router.push('/document-services')
+    router.push("/document-services");
   }
-}
+};
 
-const closeModal = () => {
-  isFadingOut.value = true
-  setTimeout(() => {
-    showSuccessModal.value = false
-    formData.value = {}
-    currentStep.value = 'form'
-    isFadingOut.value = false
-    router.push('/home')
-  }, 500)
-}
+const handleDone = () => {
+  router.push("/home");
+};
 
-// ==================================
-// Form Submission
-// ==================================
+/**
+ * Dismisses the error modal and keeps the resident on the current form
+ * so they can correct their submission or try again without losing context.
+ *
+ * FIX: Previously called handleDone() which silently redirected to /home.
+ */
+const handleErrorDismiss = () => {
+  showErrorModal.value = false;
+};
+
+/**
+ * Submits the finalized form data to the backend.
+ * Captures the transaction number for the user's reference upon success.
+ * FIXED: Properly handles async PDF generation without race conditions.
+ */
 const handleSubmit = async (data) => {
-  if (isSubmitting.value) return
-  isSubmitting.value = true
+  if (isSubmitting.value) return;
+  isSubmitting.value = true;
+
+  if (!config.value?.id) {
+    alert("Invalid document type.");
+    isSubmitting.value = false;
+    return;
+  }
+
+  // Resident ID - can be null for guest mode (RFID requests only)
+  const residentId = auth.residentId || null;
 
   try {
-    if (!config.value?.id) {
-      alert("Invalid document type.")
-      return
-    }
-
-    formData.value = data
-
+    // Construct payload for backend
     const payload = {
-      request_type_id: config.value.id,
-      form_data: data
-    }
+      doctype_id: config.value.id,
+      form_data: data,
+      resident_id: residentId,
+    };
 
-    const res = await createRequest(payload, auth.token)
+    // Call backend (this may take time due to PDF generation)
+    const response = await createDocumentRequest(payload);
 
-    // Optional: ensure backend REALLY returned success
-    if (!res || res.error) {
-      throw new Error("Backend error")
-    }
+    // Store form data
+    formData.value = data;
+    transactionNo.value = response.transaction_no;
 
-    showSuccessModal.value = true
+    // IMPORTANT: Set isSubmitting to false BEFORE showing modal
+    // This ensures the loading overlay is removed first
+    isSubmitting.value = false;
 
+    // Small delay to ensure loading overlay transition completes
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    // Show success modal
+    showSuccessModal.value = true;
   } catch (err) {
-    console.error('Submission failed', err)
-    alert('Failed to submit request.')
-  } finally {
-    isSubmitting.value = false
-  }
-}
+    console.error("Document submission error:", err);
 
-// ==================================
-// Initialize on mount
-// ==================================
+    // Set isSubmitting to false before showing error
+    isSubmitting.value = false;
+
+    // Show user-friendly error message
+    errorMessage.value =
+      err?.response?.data?.detail ||
+      "Failed to submit document request. Please try again.";
+
+    showErrorModal.value = true;
+  }
+};
+
 onMounted(async () => {
-  await fetchConfigs()
-  await loadResidentData()
-})
+  await fetchDocuments();
+  await fetchResidentData();
+  await fetchEligibility();
+});
+
+const handleNewRequest = () => {
+  showSuccessModal.value = false;
+  formData.value = {};
+  router.push("/document-services"); // Brings them back to the selection screen
+};
 </script>
 
 <template>
-  <div class="py-0 p-8">
-    <!-- Header -->
-    <div class="relative flex items-center mb-10">
-      <ArrowBackButton
-        @click="goBack" 
-        class="absolute top-0 left-0 mt-2 mr-6"
-      />
-
-      <!-- Title and Subtext -->
-      <div class="flex justify-between items-center w-full ml-20">
-        <h1 class="text-[40px] font-extrabold text-[#03335C] leading-tight mt-2">
-          {{ config?.title || docTypeSlug?.charAt(0).toUpperCase() + docTypeSlug?.slice(1) }}
+  <div class="flex flex-col w-full h-full">
+    <div class="flex items-center mb-6 gap-7 flex-shrink-0">
+      <ArrowBackButton @click="goBack" />
+      <div>
+        <h1 class="text-[45px] text-[#03335C] font-bold tracking-tight -mt-2">
+          {{ displayTitle }}
         </h1>
-        <p class="text-sm text-[#002B5B] text-right leading-tight mt-4 italic">
-          Kindly fill up the details needed<br />for the said document
+        <p class="text-[#03335C] -mt-2">
+          {{ t('kindlyFillUp') }}
         </p>
       </div>
     </div>
 
-    <!-- Loading indicator -->
-    <div v-if="isLoadingResidentData" class="text-center py-8">
-      <p class="text-gray-600">Loading your information...</p>
+    <div class="flex-1 overflow-y-auto">
+      <div class="grid grid-cols-5 gap-8 items-stretch mb-4">
+        <div class="col-span-3">
+          <div
+            class="bg-white rounded-2xl shadow-lg border border-gray-200 p-8 min-h-[280px]"
+          >
+            <div
+              v-if="loadingDocuments || isLoadingResidentData"
+              class="flex flex-col justify-center items-center py-8"
+            >
+              <div class="loader-dots mb-4">
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+              </div>
+              <p class="text-gray-600 font-semibold">{{ t('loadingDetails') }}</p>
+            </div>
+
+            <DocumentForm
+              ref="documentFormRef"
+              v-else-if="config"
+              :config="config"
+              :initial-data="formData"
+              :resident-data="residentData"
+              :is-rfid-user="isRfidUser"
+              :is-submitting="isSubmitting"
+              @continue="handleSubmit"
+            />
+
+            <div v-else class="text-center py-12">
+              <p class="text-[#003A6B] text-lg">
+                {{ t('documentUnavailable') }}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-span-2">
+          <div
+            class="bg-[#EBF5FF] rounded-2xl shadow-lg border border-[#B0D7F8] p-6 min-h-[280px]"
+          >
+            <h2 class="text-lg font-bold text-[#03335C] mb-2 tracking-tight">{{ t('requirements') }}</h2>
+            <p class="text-sm italic text-[#03335C] mb-4 tracking-tight">
+              {{ t('reviewRequirements') }}
+            </p>
+
+            <div v-if="loadingDocuments" class="flex justify-center py-10">
+              <div class="loader-dots">
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+              </div>
+            </div>
+
+            <div
+              v-else-if="!config?.requirements?.length"
+              class="flex flex-col items-center justify-center py-10 text-center"
+            >
+              <p class="text-sm text-[#5A8DB8]">{{ t('noRequirements') }}</p>
+            </div>
+
+            <div v-else class="space-y-3">
+              <div
+                v-if="hasBlockingFailure"
+                class="bg-red-50 border border-red-200 rounded-xl p-3 flex items-start gap-2"
+              >
+                <svg
+                  class="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fill-rule="evenodd"
+                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                    clip-rule="evenodd"
+                  />
+                </svg>
+                <p class="text-xs text-red-700 font-medium">
+                  {{ t('youMayNotBeEligible') }}
+                </p>
+              </div>
+
+              <div
+                v-for="(req, index) in mergedRequirements"
+                :key="index"
+                class="flex items-start gap-3 bg-white rounded-xl p-3 border"
+                :class="{
+                  'border-red-300 bg-red-50': req.passed === false,
+                  'border-green-300 bg-green-50': req.passed === true,
+                  'border-[#B0D7F8]': req.passed === null,
+                }"
+              >
+                <div class="flex-shrink-0 mt-0.5">
+                  <svg
+                    v-if="req.passed === false"
+                    class="w-5 h-5 text-red-500"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fill-rule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                      clip-rule="evenodd"
+                    />
+                  </svg>
+                  <svg
+                    v-else-if="req.passed === true"
+                    class="w-5 h-5 text-green-500"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fill-rule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                      clip-rule="evenodd"
+                    />
+                  </svg>
+                  <svg
+                    v-else
+                    class="w-5 h-5 text-[#5A8DB8]"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                </div>
+
+                <div class="flex-1 min-w-0">
+                  <p
+                    class="text-sm font-semibold leading-tight"
+                    :class="{
+                      'text-red-700': req.passed === false,
+                      'text-green-700': req.passed === true,
+                      'text-[#03335C]': req.passed === null,
+                    }"
+                  >
+                    {{ req.label }}
+                  </p>
+
+                  <span
+                    class="inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded-full mt-1"
+                    :class="
+                      req.type === 'system_check'
+                        ? 'bg-blue-100 text-blue-600'
+                        : 'bg-amber-100 text-amber-600'
+                    "
+                  >
+                    {{
+                      req.type === "system_check" ? t('systemCheck') : t('document')
+                    }}
+                  </span>
+
+                  <p
+                    v-if="req.message"
+                    class="text-xs mt-1"
+                    :class="{
+                      'text-red-600': req.passed === false,
+                      'text-green-600': req.passed === true,
+                      'text-[#5A8DB8]': req.passed === null,
+                    }"
+                  >
+                    {{ req.message }}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <!-- Form Box -->
-    <div v-else class="border-[2px] border-[#00203C] rounded-2xl p-10 shadow-md bg-white">
-      <DocumentForm
-        v-if="currentStep === 'form' && config?.available"
-        :config="config"
-        :initial-data="formData"
-        :resident-data="residentData"
-        :is-rfid-user="isRfidUser()"
-        :is-submitting="isSubmitting"
-        @continue="handleSubmit"
-      />
+    <div class="flex gap-6 mt-6 justify-between items-center flex-shrink-0">
+      <Button
+        @click="goBack"
+        variant="outline"
+        size="md"
+        :disabled="loadingDocuments || isLoadingResidentData || isSubmitting"
+      >
+        {{ t('cancel') }}
+      </Button>
 
-      <!-- Not found -->
-      <div v-else class="text-center py-12">
-        <p class="text-[#003A6B] text-lg">The type of document you are requesting <br/> is currently unavailable.</p>
-        <button 
-          @click="router.push('/document-services')"
-          class="mt-4 px-6 py-2 bg-[#003A6B] text-white rounded hover:bg-[#001F40]"
-        >
-          Back to Documents
-        </button>
-      </div>
+      <Button
+        @click="submitFromWrapper"
+        :disabled="
+          loadingDocuments || isLoadingResidentData || isSubmitting || !config
+        "
+        :variant="
+          loadingDocuments || isLoadingResidentData || isSubmitting || !config
+            ? 'disabled'
+            : 'secondary'
+        "
+        size="md"
+      >
+        {{ isSubmitting ? t('submittingRequest') : t('submitRequest') }}
+      </Button>
     </div>
 
     <transition name="fade-blur">
@@ -205,10 +550,18 @@ onMounted(async () => {
         v-if="isSubmitting"
         class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
       >
-        <div class="bg-white rounded-2xl p-10 shadow-2xl flex flex-col items-center gap-2 min-w-[400px]">
-          <Loading color="#03335C" size="14px" spacing="70px" />
-          <p class="text-[#003A6B] text-lg font-semibold mt-6">Submitting your request...</p>
-          <p class="text-gray-500 text-sm">Please wait a moment</p>
+        <div
+          class="bg-white rounded-2xl p-10 shadow-2xl flex flex-col items-center gap-2 min-w-[400px]"
+        >
+          <div class="loader-dots mb-4">
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+          </div>
+          <p class="text-[#03335C] text-lg font-semibold mt-2">{{ t('submittingRequest') }}</p>
+          <p class="text-gray-500 text-sm">
+            {{ t('pleaseWaitDoc') }}
+          </p>
         </div>
       </div>
     </transition>
@@ -216,15 +569,43 @@ onMounted(async () => {
     <transition name="fade-blur">
       <div
         v-if="showSuccessModal"
-        class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 transition-opacity duration-500"
-        :class="{ 'opacity-0': isFadingOut, 'opacity-100': !isFadingOut }"
+        class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50"
       >
         <Modal
-          title="Application Submitted!"
-          message="Your request has been successfully submitted. You will be notified once it's processed."
-          doneText="Done"
+          :title="t('applicationSubmitted')"
+          :message="t('applicationSubmittedMsg')"
+          type="success"
+          :referenceId="transactionNo"
+          :showReferenceId="true"
+          :primaryButtonText="t('done')"
+          :showPrimaryButton="true"
+          :showSecondaryButton="false"
+          :showNewRequest="true"
+          @primary-click="handleDone"
+          @new-request="handleNewRequest"
+        />
+      </div>
+    </transition>
+
+    <!-- Error Modal -->
+    <!-- FIX: @primary-click now calls handleErrorDismiss instead of handleDone.
+         This keeps the resident on the form so they can read the error and
+         retry or navigate away intentionally, rather than being silently
+         redirected to /home on any submission failure. -->
+    <transition name="fade-blur">
+      <div
+        v-if="showErrorModal"
+        class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50"
+      >
+        <Modal
+          :title="t('requestCannotBeProcessed')"
+          :message="errorMessage"
+          type="error"
+          :primaryButtonText="t('confirm')"
+          :showPrimaryButton="true"
+          :showSecondaryButton="false"
           :showNewRequest="false"
-          @done="closeModal"
+          @primary-click="handleErrorDismiss"
         />
       </div>
     </transition>
@@ -239,5 +620,43 @@ onMounted(async () => {
 .fade-blur-enter-from,
 .fade-blur-leave-to {
   opacity: 0;
+}
+
+/* Loader Dots CSS */
+.loader-dots {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  width: 60px;
+  height: 15px;
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  background-color: #03335c;
+  border-radius: 50%;
+  animation: pulse 1.4s infinite ease-in-out both;
+}
+
+.dot:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.dot:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+@keyframes pulse {
+  0%,
+  80%,
+  100% {
+    transform: scale(0);
+    opacity: 0.3;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 </style>

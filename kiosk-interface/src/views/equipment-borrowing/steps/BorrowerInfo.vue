@@ -1,18 +1,36 @@
 <script setup>
-import { ref, computed, onMounted, nextTick, watch } from 'vue';
+import { ref, computed, nextTick, watch } from 'vue';
 import ArrowBackButton from '@/components/shared/ArrowBackButton.vue';
-import PrimaryButton from '@/components/shared/PrimaryButton.vue';
+import Button from '@/components/shared/Button.vue';
+import Modal from '@/components/shared/Modal.vue';
 import Keyboard from '@/components/shared/Keyboard.vue';
-import { DocumentTextIcon } from '@heroicons/vue/24/outline';
+import { useAuthStore } from '@/stores/auth';
+import { DocumentTextIcon, ChevronDownIcon } from '@heroicons/vue/24/outline';
+import { getAutofillData } from '@/api/equipmentService';
+import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
+
+const useAutofill = ref(false);
+const isLoadingAutofill = ref(false);
+const authStore = useAuthStore();
+const residentId = computed(() => authStore.residentId);
+const showKeyboard = ref(false);
+const activeInput = ref(null);
+const showExitModal = ref(false);
+const showPurposeDropdown = ref(false);
+const router = useRouter();
+const { t } = useI18n();
 
 const props = defineProps({
   borrowerInfo: Object,
-  authInfo: Object,
   goNext: Function,
   goBack: Function,
+  hasStartedForm: Function,
 });
+
 const emit = defineEmits(['update:borrower-info']);
 
+// localInfo must be declared before the watcher that references it
 const localInfo = ref({
   contactPerson: props.borrowerInfo.contactPerson || '',
   contactNumber: props.borrowerInfo.contactNumber || '',
@@ -28,15 +46,29 @@ watch(() => props.authInfo, (newAuthInfo) => {
   }
 }, { immediate: true, deep: true });
 
-onMounted(() => {
-  // Autofill if user is logged in
-  if (props.authInfo) {
-    localInfo.value.contactPerson = props.authInfo.contactPerson || '';
-    localInfo.value.contactNumber = props.authInfo.contactNumber || '';
+const applyAutofill = async () => {
+  if (!residentId.value) return;
+
+  isLoadingAutofill.value = true;
+  try {
+    const data = await getAutofillData(residentId.value);
+    localInfo.value.contactPerson = data.contact_person || '';
+    localInfo.value.contactNumber = data.contact_number || '';
+  } catch (err) {
+    console.error(err);
+  } finally {
+    isLoadingAutofill.value = false;
+  }
+};
+
+watch(useAutofill, async (enabled) => {
+  if (enabled) {
+    await applyAutofill();
+  } else {
+    localInfo.value.contactPerson = '';
+    localInfo.value.contactNumber = '';
   }
 });
-
-const isUserLoggedIn = computed(() => !!props.authInfo);
 
 const purposeOptions = ref([
   'Barangay Event',
@@ -45,9 +77,6 @@ const purposeOptions = ref([
   'Emergency Use',
   'Other'
 ]);
-
-const showKeyboard = ref(false);
-const activeInput = ref(null);
 
 const isFormValid = computed(() => {
   return localInfo.value.contactPerson &&
@@ -59,27 +88,15 @@ const handleBack = () => {
 };
 
 const handleNext = () => {
-  let authData = {};
-  if (isUserLoggedIn.value) {
-    authData = {
-      resident_id: props.authInfo.resident_id,
-      rfid: props.authInfo.rfid
-    };
-  }
-  const finalInfo = {
-    ...localInfo.value, 
-    ...authData
-  };
-  emit('update:borrower-info', finalInfo);
+  emit('update:borrower-info', {
+    ...localInfo.value,
+    use_autofill: useAutofill.value
+  });
   props.goNext('review');
 };
 
 const focusInput = (elementId, fieldName) => {
-  // Don't allow editing autofilled fields for logged-in users
-  if (isUserLoggedIn.value && (fieldName === 'contactPerson' || fieldName === 'contactNumber')) {
-    return;
-  }
-  
+  showPurposeDropdown.value = false;
   activeInput.value = fieldName;
   showKeyboard.value = true;
 
@@ -91,13 +108,22 @@ const focusInput = (elementId, fieldName) => {
   });
 };
 
+const selectPurpose = (option) => {
+  localInfo.value.purpose = option;
+  showPurposeDropdown.value = false;
+};
+
 const handleKeyboardKeyPress = (char) => {
   if (activeInput.value) {
-    if (['contactPerson', 'contactNumber', 'notes'].includes(activeInput.value)) {
-      localInfo.value[activeInput.value] += char;
+    if (activeInput.value === 'contactNumber') {
+      if (localInfo.value.contactNumber.length < 11) {
+        localInfo.value.contactNumber += char
+      }
+    } else if (['contactPerson', 'notes'].includes(activeInput.value)) {
+      localInfo.value[activeInput.value] += char
     }
   }
-};
+}
 
 const handleKeyboardDelete = () => {
   if (activeInput.value) {
@@ -117,117 +143,135 @@ const handleKeyboardHide = () => {
   activeInput.value = null;
 };
 
-const inputClass = "w-full px-4 py-3 text-base border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#013C6D]";
+const handleBackClick = () => {
+  if (props.hasStartedForm && props.hasStartedForm()) {
+    showExitModal.value = true;
+  } else {
+    router.push('/home');
+  }
+};
+
+const confirmExit = () => {
+  showExitModal.value = false;
+  router.push('/home');
+};
+
+const cancelExit = () => {
+  showExitModal.value = false;
+};
+
+const inputClass = "w-full h-[48px] px-4 py-3 border border-gray-300 rounded-xl shadow-sm transition-shadow focus:outline-none focus:ring-2 focus:ring-[#013C6D]";
 </script>
 
 <template>
-  <div 
-    class="py-0 p-8" 
-    :class="{ 'content-with-keyboard': showKeyboard }"
-  >
-
-    <div class="flex items-center gap-4">
-      <ArrowBackButton @click="handleBack" />
-      <h1 class="text-[40px] font-bold text-[#013C6D]">Equipment Borrowing</h1>
+  <div class="flex flex-col w-full h-full" :class="{ 'content-with-keyboard': showKeyboard }">
+    <div class="flex items-center mb-6 gap-7 flex-shrink-0">
+      <ArrowBackButton @click="handleBackClick" />
+      <div>
+        <h1 class="text-[45px] text-[#03335C] font-bold tracking-tight -mt-2">{{ t('equipmentBorrowingTitle') }}</h1>
+        <p class="text-[#03335C] -mt-2">{{ t('borrowingInfo') }}</p>
+      </div>
     </div>
 
-    <div class="mt-6 bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+    <div class="flex-1 overflow-y-auto">
+      <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-5">
+        <h3 class="text-2xl font-bold text-[#013C6D] flex items-center gap-2">
+          <DocumentTextIcon class="w-8 h-8" />
+          {{ t('borrowingInfoTitle') }}
+        </h3>
 
-      <h3 class="text-2xl font-bold text-[#013C6D] flex items-center gap-2">
-        <DocumentTextIcon class="w-8 h-8" />
-        Borrowing Information
-      </h3>
-
-      <div class="mt-6 grid grid-cols-2 gap-x-6 gap-y-4">
-
-        <div>
-          <label for="contact-person" class="block text-base font-medium text-gray-700 mb-1">
-            Contact Person *
-          </label>
+        <div class="mt-4 flex items-center gap-3">
           <input
-            id="contact-person"
-            v-model="localInfo.contactPerson"
-            type="text"
-            placeholder="Name"
-            :class="[inputClass, { 'bg-gray-100 cursor-not-allowed': isUserLoggedIn }]"
-            @focus="focusInput('contact-person', 'contactPerson')"
-            :readonly="isUserLoggedIn || !showKeyboard" 
+            type="checkbox"
+            id="use-autofill"
+            v-model="useAutofill"
+            class="h-5 w-5 text-[#013C6D]"
+            :disabled="!residentId"
           />
-          <p v-if="isUserLoggedIn" class="text-xs text-gray-500 mt-1">
-            Auto-filled from your account
-          </p>
+          <label for="use-autofill" class="text-sm text-gray-700 italic">
+            {{ t('autofillLabel') }}
+          </label>
         </div>
 
-        <div>
-          <label for="contact-number" class="block text-base font-medium text-gray-700 mb-1">
-            Contact Number
-          </label>
-          <input
-            id="contact-number"
-            v-model="localInfo.contactNumber"
-            type="tel"
-            placeholder="Phone Number (Optional)"
-            :class="[inputClass, { 'bg-gray-100 cursor-not-allowed': isUserLoggedIn }]"
-            @focus="focusInput('contact-number', 'contactNumber')"
-            :readonly="isUserLoggedIn || !showKeyboard" 
-          />
-          <p v-if="isUserLoggedIn" class="text-xs text-gray-500 mt-1">
-            Auto-filled from your account
-          </p>
-        </div>
+        <div class="mt-4 grid grid-cols-2 gap-x-6 gap-y-4">
+          <div>
+            <label for="contact-person" class="block text-base font-bold text-[#003A6B] mb-2">
+              {{ t('contactPerson') }} <span class="text-red-600">*</span>
+            </label>
+            <input
+              id="contact-person"
+              v-model="localInfo.contactPerson"
+              type="text"
+              placeholder="Name"
+              :class="inputClass"
+              @focus="focusInput('contact-person', 'contactPerson')"
+              :readonly="useAutofill"
+            />
+          </div>
 
-        <div>
-          <label for="purpose" class="block text-base font-medium text-gray-700 mb-1">
-            Purpose of Borrowing *
-          </label>
-          <select
-            id="purpose"
-            v-model="localInfo.purpose"
-            :class="[inputClass, { 'text-gray-500': !localInfo.purpose }]"
-          >
-            <option :value="null" disabled>Select</option>
-            <option v-for="option in purposeOptions" :key="option" :value="option">
-              {{ option }}
-            </option>
-          </select>
-        </div>
+          <div>
+            <label for="contact-number" class="block text-base font-bold text-[#003A6B] mb-2">
+              {{ t('contactNumber') }} <span class="text-red-600">*</span>
+            </label>
+            <input
+              id="contact-number"
+              v-model="localInfo.contactNumber"
+              type="tel"
+              placeholder="Phone Number"
+              :class="inputClass"
+              maxlength="11"
+              @focus="focusInput('contact-number', 'contactNumber')"
+              :readonly="useAutofill"
+            />
+          </div>
 
-        <div>
-          <label for="notes" class="block text-base font-medium text-gray-700 mb-1">
-            Additional Notes (Optional)
-          </label>
-          <textarea
-            id="notes"
-            v-model="localInfo.notes"
-            rows="3"
-            placeholder="Any additional notes or special requirements"
-            :class="inputClass"
-            @focus="focusInput('notes', 'notes')"
-            readonly
-          ></textarea>
+          <div>
+            <label class="block text-base font-bold text-[#003A6B] mb-2">
+              {{ t('purposeOfBorrowing') }} <span class="text-red-600">*</span>
+            </label>
+            <div class="relative">
+              <button
+                type="button"
+                @click="showPurposeDropdown = !showPurposeDropdown"
+                class="w-full h-[48px] px-4 py-3 border border-gray-300 rounded-xl shadow-sm transition-shadow flex items-center justify-between bg-white focus:outline-none focus:ring-2 focus:ring-[#013C6D]"
+              >
+                <span :class="localInfo.purpose ? 'text-[#03335C] font-bold text-base' : 'text-gray-400 italic text-sm'">
+                  {{ localInfo.purpose || t('select') }}
+                </span>
+                <ChevronDownIcon class="w-5 h-5 text-[#03335C] flex-shrink-0" />
+              </button>
+              <div
+                v-if="showPurposeDropdown"
+                class="absolute top-full left-0 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-50 p-1 flex flex-col overflow-y-auto custom-scroll"
+              >
+                <button
+                  v-for="option in purposeOptions"
+                  :key="option"
+                  type="button"
+                  @click="selectPurpose(option)"
+                  class="w-full text-left py-2.5 px-4 hover:bg-blue-50 rounded-lg font-bold text-[#03335C] text-sm border-b border-gray-50 last:border-0"
+                >
+                  {{ option }}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
-    <div class="mt-[22px] grid grid-cols-2 gap-8">
-      <PrimaryButton
-        @click="handleBack"
-        bgColor="bg-gray-400"
-        borderColor="border-gray-400"
-        class="py-3 text-lg font-bold"
-      >
-        Back to Dates
-      </PrimaryButton>
-
-      <PrimaryButton
+    <div class="flex gap-6 mt-6 justify-between items-center bottom-0 flex-shrink-0">
+      <Button @click="handleBack" variant="outline" size="md">
+        {{ t('backToDates') }}
+      </Button>
+      <Button
         @click="handleNext"
-        class="py-3 text-lg font-bold"
         :disabled="!isFormValid"
-        :bgColor="!isFormValid ? 'bg-gray-400' : 'bg-[#013C6D]'"
-        :borderColor="!isFormValid ? 'border-gray-400' : 'border-[#013C6D]'"
+        :variant="!isFormValid ? 'disabled' : 'secondary'"
+        size="md"
       >
-        Review Request
-      </PrimaryButton>
+        {{ t('reviewRequest') }}
+      </Button>
     </div>
   </div>
 
@@ -242,26 +286,60 @@ const inputClass = "w-full px-4 py-3 text-base border border-gray-300 rounded-lg
       class="fixed bottom-0 w-full"
     />
   </Transition>
+
+  <Transition name="fade-blur">
+    <div v-if="showExitModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-8 modal-backdrop">
+      <Modal
+        :title="t('exitEquipmentRequest')"
+        :message="t('unsavedChanges')"
+        type="warning"
+        :primaryButtonText="t('exit')"
+        :secondaryButtonText="t('stay')"
+        :showPrimaryButton="true"
+        :showSecondaryButton="true"
+        :showReferenceId="false"
+        @primary-click="confirmExit"
+        @secondary-click="cancelExit"
+      />
+    </div>
+  </Transition>
 </template>
 
 <style scoped>
-select:invalid,
-select[value="null"] {
-  color: #6b7280;
+.content-with-keyboard {
+  padding-bottom: 210px;
+  transition: padding-bottom 0.3s ease-out;
 }
-
 .slide-up-enter-active,
 .slide-up-leave-active {
   transition: transform 0.3s ease-out;
 }
-
 .slide-up-enter-from,
 .slide-up-leave-to {
   transform: translateY(100%);
 }
 
-.content-with-keyboard {
-  padding-bottom: 320px;
-  transition: padding-bottom 0.3s ease-out;
+.modal-backdrop {
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+.fade-blur-enter-active,
+.fade-blur-leave-active {
+  transition:
+    opacity 0.5s ease,
+    -webkit-backdrop-filter 0.5s ease,
+    backdrop-filter 0.5s ease;
+}
+.fade-blur-enter-from,
+.fade-blur-leave-to {
+  opacity: 0;
+  -webkit-backdrop-filter: blur(0px);
+  backdrop-filter: blur(0px);
+}
+.fade-blur-enter-to,
+.fade-blur-leave-from {
+  opacity: 1;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
 }
 </style>

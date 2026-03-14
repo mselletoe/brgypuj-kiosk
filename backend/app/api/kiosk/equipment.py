@@ -1,0 +1,55 @@
+"""
+Equipment Borrowing API - Kiosk Endpoints
+---------------------------
+Public-facing endpoints for residents to browse equipment inventory
+and submit borrowing requests through the kiosk interface.
+"""
+
+from typing import List
+from fastapi import APIRouter, Depends, status
+from sqlalchemy.orm import Session
+from app.api.deps import get_db
+from app.core.websocket_manager import ws_manager
+from app.schemas.equipment import (
+    EquipmentInventoryOut,
+    EquipmentRequestCreate,
+    EquipmentRequestKioskResponse,
+    EquipmentRequestKioskOut,
+    EquipmentAutofillData,
+)
+from app.services import equipment_service
+
+router = APIRouter(prefix="/equipment")
+
+
+@router.get("/inventory", response_model=List[EquipmentInventoryOut])
+def get_available_equipment(db: Session = Depends(get_db)):
+    return equipment_service.get_available_equipment(db)
+
+
+@router.get("/autofill/{resident_id}", response_model=EquipmentAutofillData)
+def get_autofill_data(resident_id: int, db: Session = Depends(get_db)):
+    return equipment_service.get_equipment_autofill_data(db, resident_id)
+
+
+@router.post("/requests", response_model=EquipmentRequestKioskResponse, status_code=status.HTTP_201_CREATED)
+async def create_equipment_request(
+    payload: EquipmentRequestCreate,
+    db: Session = Depends(get_db)
+):
+    result = equipment_service.create_equipment_request(db, payload)
+    await ws_manager.broadcast_to_admin(
+        "new_equipment_request",
+        {
+            "type": "Equipment",
+            "resident_name": getattr(payload, 'contact_person', 'A resident'),
+            "transaction_no": getattr(result, 'transaction_no', ''),
+        },
+        db=db
+    )
+    return result
+
+
+@router.get("/requests/history/{resident_id}", response_model=List[EquipmentRequestKioskOut])
+def get_request_history(resident_id: int, db: Session = Depends(get_db)):
+    return equipment_service.get_kiosk_request_history(db, resident_id)

@@ -3,8 +3,9 @@ fastapi
 uvicorn[standard]
 
 # Database
-sqlalchemy
+sqlalchemy>=2.0
 psycopg2-binary
+alembic
 
 # Environment & Configuration
 python-dotenv
@@ -21,12 +22,11 @@ aiofiles
 # Document Generation
 jinja2
 docxtpl
-pdfkit
 python-docx
-pypandoc
+python-dateutil
 
 # Validation
-email-validator
+pydantic-settings
 pydantic[email]
 
 # HTTP Requests
@@ -34,3 +34,12 @@ requests
 
 # Serial Communication (SIM800L)
 pyserial
+
+apscheduler
+reportlab
+
+# Image Processing
+Pillow
+
+# Database Seeding
+faker

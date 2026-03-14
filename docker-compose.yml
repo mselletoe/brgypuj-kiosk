@@ -1,25 +1,23 @@
-version: "3.9"
-
 services:
-  admin-dashboard:
-    build:
-      context: ./admin-dashboard
-    container_name: admin-dashboard
+  db:
+    image: postgres:16
+    container_name: kiosk-db
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin7890
+      POSTGRES_DB: kioskdb
+    volumes:
+      - pgdata:/var/lib/postgresql/data
     ports:
-      - "8080:80"
+      - "5432:5432"
     restart: unless-stopped
-    depends_on:
-      - backend
-
-  kiosk-interface:
-    build:
-      context: ./kiosk-interface
-    container_name: kiosk-interface
-    ports:
-      - "8081:80"
-    restart: unless-stopped
-    depends_on:
-      - backend
+    networks:
+      - kiosk-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d kioskdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   backend:
     build:
@@ -31,31 +29,41 @@ services:
       - "8000:8000"
     restart: unless-stopped
     depends_on:
-      - db
-    environment:
-      - DATABASE_URL=postgresql://admin:admin7890@db:5432/kioskdb
-      - CORS_ORIGINS=http://localhost:8080,http://localhost:8081
-      - SIM800L_PORT=/dev/ttyACM0
-    devices:
-      - /dev/ttyACM0:/dev/ttyACM0
-    privileged: true
-    # volumes:
-    #   - ./backend:/app
-    #   - ./backend/generated_docs:/app/generated_docs
-
-  db:
-    image: postgres:16
-    container_name: kiosk-db
-    environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: admin7890
-      POSTGRES_DB: kioskdb
+      db:
+        condition: service_healthy
     volumes:
-      - pgdata:/var/lib/postgresql/data
-      - ./db/init:/docker-entrypoint-initdb.d
+      - backend-docs:/app/generated_docs
+    networks:
+      - kiosk-network
+
+  admin-dashboard:
+    build:
+      context: ./admin-dashboard
+    container_name: admin-dashboard
     ports:
-      - "5432:5432"
+      - "8080:80"
     restart: unless-stopped
+    depends_on:
+      - backend
+    networks:
+      - kiosk-network
+
+  kiosk-interface:
+    build:
+      context: ./kiosk-interface
+    container_name: kiosk-interface
+    ports:
+      - "8081:80"
+    restart: unless-stopped
+    depends_on:
+      - backend
+    networks:
+      - kiosk-network
 
 volumes:
   pgdata:
+  backend-docs:
+
+networks:
+  kiosk-network:
+    driver: bridge

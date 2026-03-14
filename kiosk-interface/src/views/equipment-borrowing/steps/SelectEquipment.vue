@@ -1,78 +1,74 @@
 <script setup>
-// 1. IMPORT Keyboard and nextTick
-import { ref, computed, onMounted, nextTick } from 'vue'; 
-import { useRouter } from 'vue-router';
-import ArrowBackButton from '@/components/shared/ArrowBackButton.vue';
-import PrimaryButton from '@/components/shared/PrimaryButton.vue';
-import { PlusIcon, MinusIcon } from '@heroicons/vue/24/solid';
-import { getInventory } from '@/api/equipmentApi';
-import Keyboard from '@/components/shared/Keyboard.vue'; // 1. IMPORT Keyboard
+import { ref, computed, nextTick, onMounted } from "vue";
+import { useRouter } from "vue-router";
+import ArrowBackButton from "@/components/shared/ArrowBackButton.vue";
+import Button from "@/components/shared/Button.vue";
+import Modal from "@/components/shared/Modal.vue";
+import { PlusIcon, MinusIcon } from "@heroicons/vue/24/solid";
+import Keyboard from "@/components/shared/Keyboard.vue";
+import { getAvailableEquipment } from "@/api/equipmentService";
+import { useI18n } from 'vue-i18n';
 
-// --- Props & Emits ---
 const props = defineProps({
   selectedEquipment: Array,
   goNext: Function,
+  hasStartedForm: Function,
 });
-const emit = defineEmits(['update:selected-equipment']);
+const emit = defineEmits(["update:selected-equipment"]);
 const router = useRouter();
-const isLoading = ref(true);
+const { t } = useI18n();
 
-// --- Local State ---
 const allEquipment = ref([]);
+const loading = ref(false);
+const loadError = ref(null);
+const showExitModal = ref(false);
 
-// 2. ADD KEYBOARD STATE
-const showKeyboard = ref(false);
-const activeEquipment = ref(null); // This will store the item being edited
-const quantityWarning = ref(''); // This will hold the warning message
+const fetchEquipment = async () => {
+  loading.value = true;
+  loadError.value = null;
 
-// --- Fetch inventory on mount ---
-onMounted(async () => {
-  isLoading.value = true;
   try {
-    const inventoryData = await getInventory();
-    allEquipment.value = inventoryData.map(item => ({
+    const data = await getAvailableEquipment();
+
+    allEquipment.value = data.map((item) => ({
       id: item.id,
       name: item.name,
-      available: item.available_quantity,
       total: item.total_quantity,
-      rate: parseFloat(item.rate),
-      ratePer: item.rate_per,
+      available: item.available_quantity,
+      rate: Number(item.rate_per_day),
+      ratePer: "day",
     }));
-  } catch (error) {
-    console.error("Failed to fetch equipment:", error);
+  } catch (err) {
+    loadError.value = "Failed to load equipment inventory";
+    console.error(err);
   } finally {
-    isLoading.value = false;
+    loading.value = false;
   }
-});
-
-// --- Computed Properties ---
-const getSelectedItem = (equipment) => {
-  return props.selectedEquipment.find(item => item.id === equipment.id);
 };
+
+const showKeyboard = ref(false);
+const activeEquipment = ref(null);
+const quantityWarning = ref("");
+
+const getSelectedItem = (equipment) =>
+  props.selectedEquipment.find((item) => item.id === equipment.id);
+
 const getItemQuantity = (equipment) => {
   const item = getSelectedItem(equipment);
   return item ? item.quantity : 0;
 };
-const formatCurrency = (value) => {
-  return `₱${parseFloat(value).toLocaleString()}`;
-};
+
+const formatCurrency = (value) => `₱${parseFloat(value).toLocaleString()}`;
+
 const hasSelection = computed(() => props.selectedEquipment.length > 0);
-const summaryItems = computed(() => props.selectedEquipment);
 
-// --- 3. REFACTORED LOGIC ---
-
-// This new function is the single source of truth for updating quantity
 const setQuantity = (equipment, newQuantity) => {
-  // Validate and clamp the quantity
-  if (newQuantity < 0) {
-    newQuantity = 0;
-  }
-  
+  if (newQuantity < 0) newQuantity = 0;
   if (newQuantity > equipment.available) {
     newQuantity = equipment.available;
     quantityWarning.value = `Max available: ${equipment.available}`;
   } else {
-    quantityWarning.value = ''; // Clear warning
+    quantityWarning.value = "";
   }
 
   let newSelection = [...props.selectedEquipment];
@@ -80,183 +76,187 @@ const setQuantity = (equipment, newQuantity) => {
 
   if (newQuantity > 0) {
     if (item) {
-      // Item already in cart, update its quantity
-      const itemInNew = newSelection.find(i => i.id === item.id);
-      itemInNew.quantity = newQuantity;
+      newSelection.find((i) => i.id === item.id).quantity = newQuantity;
     } else {
-      // Item not in cart, add it
       newSelection.push({
         id: equipment.id,
         name: equipment.name,
         rate: equipment.rate,
         ratePer: equipment.ratePer,
-        quantity: newQuantity
+        quantity: newQuantity,
       });
     }
-  } else { // newQuantity is 0
-    if (item) {
-      // Remove item from cart
-      newSelection = newSelection.filter(i => i.id !== equipment.id);
-    }
+  } else if (item) {
+    newSelection = newSelection.filter((i) => i.id !== equipment.id);
   }
-  emit('update:selected-equipment', newSelection);
+
+  emit("update:selected-equipment", newSelection);
 };
 
-// Refactored increment/decrement to use setQuantity
-const increment = (equipment) => {
-  const currentQuantity = getItemQuantity(equipment);
-  setQuantity(equipment, currentQuantity + 1);
-};
+const increment = (equipment) =>
+  setQuantity(equipment, getItemQuantity(equipment) + 1);
+const decrement = (equipment) =>
+  setQuantity(equipment, getItemQuantity(equipment) - 1);
 
-const decrement = (equipment) => {
-  const currentQuantity = getItemQuantity(equipment);
-  setQuantity(equipment, currentQuantity - 1);
-};
-
-// --- 4. NEW KEYBOARD HANDLERS ---
 const openKeyboard = (equipment) => {
   activeEquipment.value = equipment;
   showKeyboard.value = true;
-  quantityWarning.value = ''; // Clear warning when opening
-
-  // Scroll logic
+  quantityWarning.value = "";
   nextTick(() => {
     const el = document.getElementById(`item-${equipment.id}`);
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
   });
 };
 
 const handleKeyboardKeyPress = (char) => {
   if (!activeEquipment.value) return;
-
   const item = activeEquipment.value;
-  const currentQtyString = getItemQuantity(item).toString();
-  
-  // Handle leading zero (e.g., if current is 0, new char 5 becomes "5", not "05")
-  const newQtyString = (currentQtyString === '0' ? '' : currentQtyString) + char;
-  let newQuantity = parseInt(newQtyString, 10);
-
-  if (isNaN(newQuantity)) {
-    newQuantity = 0;
-  }
-
-  // Check for max available
-  if (newQuantity > item.available) {
-    newQuantity = item.available; // Clamp to max
-    quantityWarning.value = `Max available: ${item.available}`;
-  } else {
-    quantityWarning.value = '';
-  }
-
-  setQuantity(item, newQuantity);
+  const newQty =
+    parseInt(getItemQuantity(item).toString().replace(/^0/, "") + char, 10) ||
+    0;
+  setQuantity(item, newQty);
 };
 
 const handleKeyboardDelete = () => {
   if (!activeEquipment.value) return;
-
   const item = activeEquipment.value;
-  let currentQtyString = getItemQuantity(item).toString();
-  
-  // Remove last character
-  let newQtyString = currentQtyString.slice(0, -1);
-  
-  if (newQtyString === '') {
-    newQtyString = '0';
-  }
-
-  const newQuantity = parseInt(newQtyString, 10);
-  quantityWarning.value = ''; // Warning is cleared on delete
-  setQuantity(item, newQuantity);
+  let qtyStr = getItemQuantity(item).toString().slice(0, -1);
+  setQuantity(item, parseInt(qtyStr || "0", 10));
 };
 
 const handleKeyboardHide = () => {
   showKeyboard.value = false;
   activeEquipment.value = null;
-  quantityWarning.value = '';
+  quantityWarning.value = "";
 };
-// --- END KEYBOARD HANDLERS ---
 
-const resetSelection = () => {
-  emit('update:selected-equipment', []);
+const resetSelection = () => emit("update:selected-equipment", []);
+const continueStep = () => props.goNext("dates");
+
+const handleBackClick = () => {
+  if (props.hasStartedForm && props.hasStartedForm()) {
+    showExitModal.value = true;
+  } else {
+    router.push("/home");
+  }
 };
-const continueStep = () => {
-  props.goNext('dates');
+
+const confirmExit = () => {
+  showExitModal.value = false;
+  router.push("/home");
 };
-const goBackToHome = () => {
-  router.push('/home');
+
+const cancelExit = () => {
+  showExitModal.value = false;
 };
+
+onMounted(() => {
+  fetchEquipment();
+});
 </script>
 
 <template>
-  <div class="py-0 p-8" :class="{ 'content-with-keyboard': showKeyboard }">
-    <div class="flex items-start gap-4">
-      <ArrowBackButton @click="goBackToHome" />
+  <div
+    class="flex flex-col w-full h-full"
+    :class="{ 'content-with-keyboard': showKeyboard }"
+  >
+    <div class="flex items-center mb-6 gap-7 flex-shrink-0">
+      <ArrowBackButton @click="handleBackClick" />
       <div>
-        <h1 class="text-[40px] font-bold text-[#013C6D]">Equipment Borrowing</h1>
-        <p class="mt-0 text-lg text-gray-600">Below are list of available equipment:</p>
+        <h1 class="text-[45px] text-[#03335C] font-bold tracking-tight -mt-2">
+          {{ t('equipmentBorrowingTitle') }}
+        </h1>
+        <p class="text-[#03335C] -mt-2">
+          {{ t('belowAvailableEquipment') }}
+        </p>
       </div>
     </div>
 
-    <div v-if="isLoading" class="text-center py-20">
-      <p class="text-lg text-gray-600">Loading Equipment...</p>
-    </div>
+    <div class="flex-1 overflow-y-auto">
+      <div
+        v-if="loading"
+        class="flex flex-col justify-center items-center py-20"
+      >
+        <div class="loader-dots mb-4">
+          <div class="dot"></div>
+          <div class="dot"></div>
+          <div class="dot"></div>
+        </div>
+        <p class="text-[#03335C] text-lg font-semibold">{{ t('loadingEquipment') }}</p>
+      </div>
 
-    <div v-else>
-      <div class="grid grid-cols-4 gap-5 mt-6">
-        <div 
-          v-for="equipment in allEquipment" 
+      <div v-else-if="loadError" class="text-center text-red-500 py-10">
+        {{ loadError }}
+      </div>
+
+      <div
+        v-else-if="allEquipment.length === 0"
+        class="flex justify-center items-center py-20"
+      >
+        <p class="text-gray-400 text-xl font-medium">{{ t('noEquipmentAvailable') }}</p>
+      </div>
+
+      <div v-else class="grid grid-cols-4 gap-5">
+        <div
+          v-for="equipment in allEquipment"
           :key="equipment.id"
-          :id="`item-${equipment.id}`" class="bg-white rounded-2xl shadow-lg border border-gray-200 p-4 flex flex-col justify-between"
+          :id="`item-${equipment.id}`"
+          class="bg-white rounded-2xl shadow-lg border border-gray-200 p-4 flex flex-col justify-between"
         >
-          <div>
-            <h3 class="text-xl font-bold text-[#013C6D] truncate">{{ equipment.name }}</h3>
+          <div class="text-center">
+            <h1 class="text-2xl font-bold text-[#003A6B] truncate">
+              {{ equipment.name }}
+            </h1>
             <div class="mt-2 text-sm">
               <div class="flex justify-between">
-                <span>Available:</span>
-                <span class="font-medium">{{ equipment.available }}/{{ equipment.total }}</span>
+                <span>{{ t('available') }}</span>
+                <span class="font-medium"
+                  >{{ equipment.available }}/{{ equipment.total }}</span
+                >
               </div>
               <div class="flex justify-between mt-1">
-                <span>Rate:</span>
+                <span>{{ t('rate') }}</span>
                 <span class="font-bold text-green-600">
-                  {{ formatCurrency(equipment.rate) }}/{{ equipment.ratePer }}
+                  {{ formatCurrency(equipment.rate) }}/{{ t('day') }}
                 </span>
               </div>
-              <p v-if="activeEquipment?.id === equipment.id && quantityWarning" class="text-red-600 font-medium text-xs mt-1">
+              <p
+                v-if="activeEquipment?.id === equipment.id && quantityWarning"
+                class="text-red-600 font-medium text-xs mt-1"
+              >
                 {{ quantityWarning }}
               </p>
             </div>
           </div>
-          
+
           <div class="mt-4 flex items-center justify-between">
-            <button 
+            <button
               @click="decrement(equipment)"
               :class="[
                 'w-10 h-10 flex items-center justify-center rounded-lg transition-colors',
                 getItemQuantity(equipment) === 0
                   ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                  : 'bg-red-100 text-red-600 hover:bg-red-200'
+                  : 'bg-red-100 text-red-600 hover:bg-red-200',
               ]"
               :disabled="getItemQuantity(equipment) === 0"
             >
               <MinusIcon class="w-6 h-6" />
             </button>
-            
-            <span 
+
+            <span
               class="text-2xl font-bold w-12 text-center cursor-pointer hover:bg-gray-100 rounded-md"
               @click="openKeyboard(equipment)"
             >
               {{ getItemQuantity(equipment) }}
             </span>
-            
-            <button 
+
+            <button
               @click="increment(equipment)"
               :class="[
                 'w-10 h-10 flex items-center justify-center rounded-lg transition-colors',
                 getItemQuantity(equipment) === equipment.available
                   ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                  : 'bg-green-100 text-green-600 hover:bg-green-200'
+                  : 'bg-green-100 text-green-600 hover:bg-green-200',
               ]"
               :disabled="getItemQuantity(equipment) === equipment.available"
             >
@@ -265,71 +265,66 @@ const goBackToHome = () => {
           </div>
         </div>
       </div>
-
-      <div class="flex gap-6 mt-6 items-stretch">
-        <div class="flex-grow bg-white rounded-2xl shadow-lg border border-gray-200 p-4">
-          <h4 class="text-lg font-bold text-[#013C6D]">Selected Items Summary</h4>
-          <div class="mt-2 min-h-24">
-            <p v-if="!hasSelection" class="text-gray-500 italic">
-              No items selected.
-            </p>
-            <ul v-else class="space-y-1 text-sm">
-              <li 
-                v-for="item in summaryItems" 
-                :key="item.id"
-                class="flex justify-between"
-              >
-                <span class="truncate pr-2">{{ item.name }}</span>
-                <span class="font-medium flex-shrink-0">
-                  {{ item.quantity }} x {{ formatCurrency(item.rate) }}/{{ item.ratePer }}
-                </span>
-              </li>
-            </ul>
-          </div>
-        </div>
-        <div class="flex-shrink-0 w-[320px] flex flex-col gap-4">
-          <PrimaryButton
-            :bgColor="hasSelection ? 'bg-red-600' : 'bg-gray-400'"
-            :borderColor="hasSelection ? 'border-red-600' : 'border-gray-400'"
-            :disabled="!hasSelection"
-            @click="resetSelection"
-            class="py-3 text-lg font-bold flex-1"
-          >
-            Reset Selection
-          </PrimaryButton>
-          <PrimaryButton
-            :bgColor="hasSelection ? 'bg-[#013C6D]' : 'bg-gray-400'"
-            :borderColor="hasSelection ? 'border-[#013C6D]' : 'border-gray-400'"
-            :disabled="!hasSelection"
-            @click="continueStep"
-            class="py-3 text-lg font-bold flex-1"
-          >
-            Continue to Dates
-          </PrimaryButton>
-        </div>
-      </div> 
     </div>
-  </div>
 
-  <Transition name="slide-up">
-    <Keyboard
-      v-if="showKeyboard"
-      @key-press="handleKeyboardKeyPress"
-      @delete="handleKeyboardDelete"
-      @enter="handleKeyboardHide" @hide-keyboard="handleKeyboardHide"
-      active-input-type="tel" class="fixed bottom-0 w-full"
-    />
-  </Transition>
+    <div
+      class="flex gap-6 mt-6 justify-between items-center bottom-0 flex-shrink-0"
+    >
+      <Button
+        :variant="hasSelection ? 'outline' : 'disabled'"
+        size="md"
+        :disabled="!hasSelection"
+        @click="resetSelection"
+      >
+        {{ t('resetSelection') }}
+      </Button>
+      <Button
+        :variant="hasSelection ? 'secondary' : 'disabled'"
+        size="md"
+        :disabled="!hasSelection"
+        @click="continueStep"
+      >
+        {{ t('continueToDates') }}
+      </Button>
+    </div>
+
+    <Transition name="slide-up">
+      <Keyboard
+        v-if="showKeyboard"
+        @key-press="handleKeyboardKeyPress"
+        @delete="handleKeyboardDelete"
+        @enter="handleKeyboardHide"
+        @hide-keyboard="handleKeyboardHide"
+        active-input-type="tel"
+        class="fixed bottom-0 w-full"
+      />
+    </Transition>
+
+    <Transition name="fade-blur">
+      <div
+        v-if="showExitModal"
+        class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-8 modal-backdrop"
+      >
+        <Modal
+          :title="t('exitEquipmentRequest')"
+          :message="t('unsavedChanges')"
+          type="warning"
+          :primaryButtonText="t('exit')"
+          :secondaryButtonText="t('stay')"
+          :showPrimaryButton="true"
+          :showSecondaryButton="true"
+          :showReferenceId="false"
+          @primary-click="confirmExit"
+          @secondary-click="cancelExit"
+        />
+      </div>
+    </Transition>
+  </div>
 </template>
 
 <style scoped>
 .content-with-keyboard {
-  /* This value should be the height of your <Keyboard> component.
-    320px is a common height. Adjust it if your keyboard is taller/shorter.
-  */
-  padding-bottom: 320px;
-  
-  /* This makes the padding animate in sync with the keyboard slide */
+  padding-bottom: 210px;
   transition: padding-bottom 0.3s ease-out;
 }
 
@@ -341,5 +336,67 @@ const goBackToHome = () => {
 .slide-up-enter-from,
 .slide-up-leave-to {
   transform: translateY(100%);
+}
+
+.modal-backdrop {
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+.fade-blur-enter-active,
+.fade-blur-leave-active {
+  transition:
+    opacity 0.5s ease,
+    -webkit-backdrop-filter 0.5s ease,
+    backdrop-filter 0.5s ease;
+}
+.fade-blur-enter-from,
+.fade-blur-leave-to {
+  opacity: 0;
+  -webkit-backdrop-filter: blur(0px);
+  backdrop-filter: blur(0px);
+}
+.fade-blur-enter-to,
+.fade-blur-leave-from {
+  opacity: 1;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+/* Loader Dots CSS */
+.loader-dots {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  width: 60px;
+  height: 15px;
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  background-color: #03335c;
+  border-radius: 50%;
+  animation: pulse 1.4s infinite ease-in-out both;
+}
+
+.dot:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.dot:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+@keyframes pulse {
+  0%,
+  80%,
+  100% {
+    transform: scale(0);
+    opacity: 0.3;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 </style>

@@ -1,66 +1,38 @@
-<template>
-  <div class="feedback-layout">
-    <ArrowBackButton 
-      @click="goBack"
-      class="absolute top-10 left-12"
-    />
-    <h1 class="title-text">Your Feedback Matters</h1>
-    <h2 class="new-title-text">Rate our {{ feedbackCategory }}</h2>
-    <p class="subtitle-text">Tap a star to rate your experience</p>
-    <div class="container-wrapper">
-      <div class="feedback-box" @click="handleRatingClick(1, 'Very Poor')">
-        <img src="@/assets/vectors/Star.svg" alt="Very Poor" class="box-logo" />
-        <p class="box-title">Very Poor</p>
-      </div>
-      <div class="feedback-box" @click="handleRatingClick(2, 'Poor')">
-        <img src="@/assets/vectors/Star.svg" alt="Poor" class="box-logo" />
-        <p class="box-title">Poor</p>
-      </div>
-      <div class="feedback-box" @click="handleRatingClick(3, 'Average')">
-        <img src="@/assets/vectors/Star.svg" alt="Average" class="box-logo" />
-        <p class="box-title">Average</p>
-      </div>
-      <div class="feedback-box" @click="handleRatingClick(4, 'Good')">
-        <img src="@/assets/vectors/Star.svg" alt="Good" class="box-logo" />
-        <p class="box-title">Good</p>
-      </div>
-      <div class="feedback-box" @click="handleRatingClick(5, 'Excellent')">
-        <img src="@/assets/vectors/Star.svg" alt="Excellent" class="box-logo" />
-        <p class="box-title">Excellent</p>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import ArrowBackButton from '@/components/shared/ArrowBackButton.vue'
+import StarIcon from '@/assets/vectors/Star.svg'
 
 const route = useRoute()
 const router = useRouter()
+const { t } = useI18n()
 const feedbackCategory = ref('')
 
+// Applied a vibrant, semantic color scale that bridges with your KioskHome palette
+const ratingKeys = ['veryPoor', 'poor', 'average', 'good', 'excellent']
+const ratingColors = ['#E74C3C', '#F16C14', '#E69500', '#13B3A1', '#2C67E7']
+// ratings is computed so text updates reactively on locale change
+const ratings = computed(() =>
+  ratingKeys.map((key, i) => ({
+    stars: i + 1,
+    text: t(key),
+    color: ratingColors[i],
+  }))
+)
+
 onMounted(() => {
-  if (route.query.category) {
-    feedbackCategory.value = route.query.category
-  } else {
-    feedbackCategory.value = 'Experience'
-  }
+  feedbackCategory.value = route.query.category || 'Experience'
 })
 
-/**
- * Handles the click event on a rating box and navigates to the comments page.
- * @param {number} stars - The number of stars (1 to 5).
- * @param {string} text - The rating text (e.g., 'Excellent').
- */
 const handleRatingClick = (stars, text) => {
   router.push({
     path: '/comments',
     query: { 
-      stars: stars,
-      ratingText: text,
-      category: feedbackCategory.value
+      stars, 
+      ratingText: text, 
+      category: feedbackCategory.value 
     }
   })
 }
@@ -70,81 +42,41 @@ const goBack = () => {
 }
 </script>
 
-<style scoped>
-/* --- LAYOUT CHANGES --- */
-.feedback-layout{
-  position:relative;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  width:100%;
-  min-height:100vh; /* Changed from height: 100% */
-  overflow-x:hidden; /* Changed from overflow: hidden */
-  overflow-y:auto; /* Added for scrolling on small screens */
-  background-color:#ffffff;
-  font-family:'Poppins';
-  color:#003a6b;
-  box-sizing:border-box;
-  padding:20px; /* Changed padding */
-}
-.absolute{position:absolute;}
-/* .top-0{top:0;} */ /* Removed top-0 */
-.top-6{top: 1.5rem;} /* Added top-6 */
-.left-6{left:1.5rem;}
+<template>
+  <div class="flex flex-col items-center w-full h-full">
+    <div class="flex items-center w-full mb-6 gap-7 flex-shrink-0">
+      <ArrowBackButton @click="goBack"/>
+      <div class="flex flex-col text-left">
+        <h1 class="text-[45px] text-[#03335C] font-bold tracking-tight -mt-2">{{ t('yourFeedbackMatters') }}</h1>
+        <p class="text-[#03335C] -mt-2">{{ t('tapStarRate') }}</p>
+      </div>
+    </div>
 
-/* --- TITLE ALIGNMENT --- */
-.title-text{
-  font-size:45px;
-  font-weight:700;
-  line-height:50px;
-  letter-spacing:-0.03em;
-  color:#03335C;
-  text-shadow:3px 3px 5px rgba(0,0,0,0.3),-2px -2px 4px rgba(255,255,255,0.6);
-  margin: 1.5rem auto 50px 100px; 
-  text-align:left;
-  width:auto;
-  max-width:100%;
-}
-/* --- END TITLE ALIGNMENT --- */
+    <div class="text-center mt-2 mb-6 w-full">
+      <h2 class="text-[42px] text-[#03335C] font-bold leading-none">
+        {{ t('rateOur', { category: feedbackCategory }) }}
+      </h2>
+    </div>
 
-.new-title-text{font-size:30px;font-weight:700;line-height:35px;letter-spacing:-0.03em;color:#003a6b;text-shadow:3px 3px 5px rgba(0,0,0,0.3),-2px -2px 4px rgba(255,255,255,0.6);margin:5px 0 5px 0;text-align:center;width:100%;}
-.subtitle-text{font-size:13px;text-align:center;margin-bottom:23px;color:#003a6b;font-weight:500;max-width:100%;}
-
-/* --- RESPONSIVE CONTAINER CHANGES --- */
-.container-wrapper{
-  display:flex;
-  gap:10px;
-  justify-content:center; /* Changed from flex-start */
-  flex-wrap:wrap; /* Changed from nowrap */
-  width:100%; /* Changed from 869px */
-  max-width: 869px; /* Added max-width */
-  /* align-self:flex-start; */ /* Removed */
-  margin-top:15px;
-}
-.feedback-box{
-  width:165px;
-  height:220px;
-  border-radius:15px;
-  box-shadow:inset 2px 2px 4px rgba(255,255,255,0.6),inset -2px -2px 6px rgba(0,0,0,0.15),4px 4px 8px rgba(0,0,0,0.25);
-  transition:transform 0.15s ease,box-shadow 0.15s ease;
-  cursor:pointer;
-  /* flex-shrink:0; */ /* Removed to allow wrapping */
-  display:flex;
-  flex-direction:column;
-  justify-content:space-evenly;
-  align-items:center;
-  text-align:center;
-  padding:10px;
-  box-sizing:border-box;
-}
-/* --- END OF RESPONSIVE CHANGES --- */
-
-.container-wrapper .feedback-box:nth-child(1) {background-color: #3F4B55;}
-.container-wrapper .feedback-box:nth-child(2) {background-color: #475F73;}
-.container-wrapper .feedback-box:nth-child(3) {background-color: #246195;}
-.container-wrapper .feedback-box:nth-child(4) {background-color: #1574C3;}
-.container-wrapper .feedback-box:nth-child(5) {background-color: #008AFF;}
-.feedback-box:hover{transform: scale(1.05) translateY(-3px); box-shadow: inset 2px 2px 4px rgba(255, 255, 255, 0.7), inset -2px -2px 6px rgba(0, 0, 0, 0.2), 6px 6px 12px rgba(0, 0, 0, 0.35);}
-.box-logo{width:100px;height:100px;margin-bottom:5px;filter: drop-shadow(4px 4px 5px rgba(0, 0, 0, 0.4));}
-.box-title{font-family:'Poppins';font-weight:700;font-size:20px;line-height:20px;letter-spacing:0;color:#ffffff;margin:0;}
-</style>
+    <div class="flex flex-col items-center w-full flex-1">
+      <div class="mt-[22px] flex w-full flex-wrap justify-between gap-3">
+        <div 
+          v-for="rating in ratings" 
+          :key="rating.stars"
+          @click="handleRatingClick(rating.stars, rating.text)"
+          class="flex h-[220px] min-w-[160px] flex-1 cursor-pointer flex-col items-center justify-center rounded-[15px] p-[10px] text-center shadow-[4px_4px_8px_rgba(0,0,0,0.25),inset_2px_2px_4px_rgba(255,255,255,0.6),inset_-2px_-2px_6px_rgba(0,0,0,0.15)] transition-all duration-150 active:scale-[0.97]"
+          :style="{ backgroundColor: rating.color }"
+        >
+          <img 
+            :src="StarIcon" 
+            :alt="rating.text" 
+            class="mb-[5px] h-[105px] w-[105px] filter drop-shadow-lg" 
+          />
+          <p class="m-0 flex h-[40px] items-center justify-center text-[17px] font-bold leading-[20px] text-white drop-shadow-md">
+            {{ rating.text }}
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>

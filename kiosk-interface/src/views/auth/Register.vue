@@ -1,219 +1,293 @@
 <script setup>
-import { ref, watch, onMounted } from 'vue'
+/**
+ * @file Register.vue
+ * @description Links a newly scanned RFID card to an approved ID Application resident.
+ */
+
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import ArrowBackButton from '@/components/shared/ArrowBackButton.vue'
-import api from '@/api/api'
-import { useRoute, useRouter } from 'vue-router'
+import Button from '@/components/shared/Button.vue'
+import Modal from '@/components/shared/Modal.vue'
+import { useRfidRegistrationStore } from '@/stores/registration'
+import { getApprovedApplications, linkRfidToResident } from '@/api/registrationService'
 
-const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
-
-const route = useRoute()
 const router = useRouter()
+const rfidRegStore = useRfidRegistrationStore()
+const { locale, t } = useI18n()
 
-const lastNameLetter = ref('A')
-const firstNameLetter = ref('A')
+// ---- State ----
+const applications = ref([])
+const selectedApp = ref(null)
+const isLoading = ref(true)
+const isSubmitting = ref(false)
+const errorMessage = ref('')
+const showSuccessModal = ref(false)
+const showErrorModal = ref(false)
+const linkedExpiration = ref('')
 
-const residents = ref([])  
-const selectedResidentId = ref('')
-const residentDetails = ref({})
-const registrationSummary = ref({ idNum: '', name: '' })
+// ---- Computed ----
+const pendingUid = computed(() => rfidRegStore.pendingRfidUid)
 
-const scannedUid = ref(route.query.uid || '')
+const canSubmit = computed(() =>
+  selectedApp.value !== null && pendingUid.value && !isSubmitting.value
+)
 
-const fetchResidents = async () => {
+// ---- Helpers ----
+
+const formatBirthdate = (dateStr) => {
+  if (!dateStr) return '—'
+  const d = new Date(dateStr + 'T00:00:00')
+  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+}
+
+const fullName = (app) => {
+  if (!app) return '—'
+  return [app.first_name, app.middle_name, app.last_name, app.suffix]
+    .filter(Boolean)
+    .join(' ')
+}
+
+// ---- Handlers ----
+
+const loadApplications = async () => {
+  isLoading.value = true
+  errorMessage.value = ''
   try {
-    const res = await api.get('/residents/filter', {
-      params: {
-        last_letter: lastNameLetter.value,
-        first_letter: firstNameLetter.value,
-      },
-    })
-    residents.value = res.data
+    applications.value = await getApprovedApplications()
   } catch (err) {
-    console.error('❌ Failed to fetch residents:', err)
+    errorMessage.value = 'Failed to load applications. Please try again.'
+  } finally {
+    isLoading.value = false
   }
 }
 
-watch([lastNameLetter, firstNameLetter], fetchResidents, { immediate: true })
+const handleSubmit = async () => {
+  if (!canSubmit.value) return
 
-watch(selectedResidentId, (id) => {
-  const res = residents.value.find((r) => r.id === id)
-  if (res) {
-    residentDetails.value = {
-      birthday: res.birthdate || '—',
-      address: res.address || '—',
-    }
-    registrationSummary.value = {
-      idNum: res.id,
-      name: res.name,
-    }
-  } else {
-    residentDetails.value = {}
-    registrationSummary.value = { idNum: '', name: '' }
-  }
-})
-
-// --- Register RFID ---
-const handleRegister = async () => {
-  if (!scannedUid.value) {
-    alert('⚠️ No RFID UID detected. Please scan a card first.')
-    return
-  }
-
-  if (!selectedResidentId.value) {
-    alert('⚠️ Please select a resident first.')
-    return
-  }
-
-  const selectedResident = residents.value.find(r => r.id === selectedResidentId.value)
-  if (selectedResident?.has_rfid) {
-    alert('⚠️ This resident already has a registered RFID.')
-    return
-  }
-
+  isSubmitting.value = true
   try {
-    const res = await api.post('/rfid/register', {
-      resident_id: selectedResidentId.value,
-      rfid_uid: scannedUid.value,
+    const result = await linkRfidToResident({
+      rfid_uid: pendingUid.value,
+      resident_id: selectedApp.value.resident_id,
+      document_request_id: selectedApp.value.document_request_id,
     })
-
-    alert(`✅ RFID successfully linked to ${registrationSummary.value.name}!`)
-
-    setTimeout(() => router.push('/rfid-success'), 500)
-
-  } catch (err) {
-
-    const msg = err.response?.data?.detail || ''
-
-    if (msg.includes('already registered')) {
-      alert('⚠️ This RFID tag is already linked to another resident.')
-    } else if (msg.includes('Resident not found')) {
-      alert('⚠️ Resident not found. Please try again.')
-    } else {
-      alert('❌ An unexpected error occurred while linking RFID.')
+    // Format expiration date for display
+    if (result?.data?.expiration_date) {
+      const d = new Date(result.data.expiration_date + 'T00:00:00')
+      linkedExpiration.value = d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
     }
+    showSuccessModal.value = true
+  } catch (err) {
+    errorMessage.value = err?.response?.data?.detail || 'Failed to link RFID. Please try again.'
+    showErrorModal.value = true
+  } finally {
+    isSubmitting.value = false
   }
 }
 
-const handleReset = () => {
-  lastNameLetter.value = 'A'
-  firstNameLetter.value = 'A'
-  selectedResidentId.value = ''
-  residents.value = []
-  residentDetails.value = {}
-  registrationSummary.value = { idNum: '', name: '' }
+const handleSuccessClose = () => {
+  rfidRegStore.clearAll()
+  router.replace('/login')
 }
 
-const goBackToHome = () => {
-  const stored = localStorage.getItem('auth_user')
-  if (stored) {
-    router.replace('/home')
-  } else {
-    router.push('/login')
-  }
+const handleErrorClose = () => {
+  showErrorModal.value = false
+  errorMessage.value = ''
 }
 
+const handleCancel = () => {
+  rfidRegStore.clearAll()
+  router.replace('/login')
+}
+
+// ---- Lifecycle ----
 onMounted(() => {
-  if (!route.query.uid) {
-    alert('⚠️ No RFID UID detected. Please scan a card first.');
-    router.push('/login');
-    return;
+  if (!rfidRegStore.pendingRfidUid) {
+    router.replace('/login-rfid')
+    return
   }
-  scannedUid.value = route.query.uid;
-});
+  loadApplications()
+})
 </script>
 
 <template>
-  <div class="py-0 p-8">
-    <div class="flex flex-col items-center gap-6">
-      <!-- Header -->
-      <div class="header flex gap-4 w-full items-center mb-4">
-        <ArrowBackButton @click="goBackToHome" />
-        <div class="flex justify-between w-full">
-          <h1 class="text-4xl font-bold text-[#013C6D]">Link RFID to Resident</h1>
-          <h1 class="text-4xl font-light text-[#013C6D]">
-            {{ scannedUid || 'No UID detected' }}
+  <div class="flex flex-col w-full h-full">
+
+    <!-- Header -->
+    <div class="flex items-center mb-6 gap-7 flex-shrink-0">
+      <ArrowBackButton />
+      <div class="flex justify-between items-center w-full">
+        <div>
+          <h1 class="text-[45px] text-[#03335C] font-bold tracking-tight -mt-2">
+            {{ t('registerRFID') }}
           </h1>
+          <p class="text-[#03335C] -mt-2">
+            {{ t('linkNewRFID') }}
+          </p>
         </div>
-      </div>
+        <div class="flex items-center gap-4">
+    
 
-      <div class="flex gap-8 w-full">
-        <!-- Left Panel -->
-        <div class="bg-white rounded-2xl shadow-lg p-8 flex-1 border-2 border-[#C1C1C1] text-[#003A6B]">
-          <!-- Last Name Selection -->
-          <div class="mb-5 flex items-center gap-4">
-            <label class="flex items-center gap-2 font-medium flex-1">
-              Select first letter of your <span class="font-bold">LAST NAME</span>
-            </label>
-            <select
-              v-model="lastNameLetter"
-              class="w-20 px-3 py-1 border-2 border-gray-300 rounded-lg text-center focus:outline-none focus:border-blue-500 text-gray-700"
-            >
-              <option v-for="letter in alphabet" :key="letter" :value="letter">{{ letter }}</option>
-            </select>
-          </div>
-
-          <!-- First Name Selection -->
-          <div class="mb-5 flex items-center gap-4">
-            <label class="flex items-center gap-2 font-medium flex-1">
-              Select first letter of your <span class="font-bold">FIRST NAME</span>
-            </label>
-            <select
-              v-model="firstNameLetter"
-              class="w-20 px-3 py-1 border-2 border-gray-300 rounded-lg text-center focus:outline-none focus:border-blue-500 text-gray-700"
-            >
-              <option v-for="letter in alphabet" :key="letter" :value="letter">{{ letter }}</option>
-            </select>
-          </div>
-
-          <!-- Resident Selection -->
-          <div class="mb-6">
-            <label class="flex items-center gap-2 font-medium mb-2">Select Resident</label>
-            <select
-              v-model="selectedResidentId"
-              class="w-full px-4 py-1 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-gray-700"
-            >
-              <option disabled value="">Select Resident</option>
-              <option v-for="resident in residents" :key="resident.id" :value="resident.id">
-                {{ resident.name }}
-                {{ resident.has_rfid ? '🔒' : '🆕' }}
-              </option>
-            </select>
-          </div>
-
-          <!-- Resident Details -->
-          <div class="bg-gray-50 rounded-lg p-3">
-            <h3 class="font-bold mb-1">Resident Details</h3>
-            <p class="text-sm"><span class="font-medium">Birthday:</span> {{ residentDetails.birthday || '—' }}</p>
-            <p class="text-sm"><span class="font-medium">Address:</span> {{ residentDetails.address || '—' }}</p>
-          </div>
-        </div>
-
-        <!-- Right Panel -->
-        <div class="w-80 flex flex-col gap-4 text-[#003A6B]">
-          <div class="bg-[#E4F5FC] rounded-2xl shadow-lg p-6 border-2 border-[#A3CDDE]">
-            <h2 class="font-bold text-2xl text-center mb-6">Registration Summary</h2>
-            <div class="space-y-3">
-              <p><span class="font-bold">RFID UID:</span> {{ scannedUid }}</p>
-              <p><span class="font-bold">Resident ID:</span> {{ registrationSummary.idNum }}</p>
-              <p><span class="font-bold">Name:</span> {{ registrationSummary.name }}</p>
-            </div>
-          </div>
-
-          <!-- Buttons -->
-          <button
-            @click="handleReset"
-            class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-4 rounded-xl shadow-lg transition-colors"
-          >
-            Reset
-          </button>
-          <button
-            @click="handleRegister"
-            class="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold py-4 rounded-xl shadow-lg transition-colors"
-          >
-            Link RFID
-          </button>
+          <p class="text-[#03335C] font-bold text-[45px]">{{ pendingUid || '—' }}</p>
         </div>
       </div>
     </div>
+
+    <!-- Main content -->
+    <div class="flex flex-1 gap-8 w-full min-h-0">
+
+      <!-- Left Panel: Transaction list -->
+      <div class="bg-white rounded-2xl shadow-lg p-6 flex-1 border border-gray-200 text-[#003A6B] flex flex-col">
+        <p class="font-semibold text-base mb-1">{{ t('selectTransaction') }}</p>
+        <p class="text-xs text-gray-400 mb-6 italic">{{ t('onlyApproved') }}</p>
+
+        <!-- Loading -->
+        <div v-if="isLoading" class="flex-1 flex items-center justify-center text-gray-400">
+          <svg class="animate-spin h-8 w-8 mr-3" viewBox="0 0 24 24" fill="none">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+          </svg>
+          {{ t('loadingApplications') }}
+        </div>
+
+        <!-- Error -->
+        <div v-else-if="errorMessage && !showErrorModal" class="flex-1 flex items-center justify-center text-red-500 text-sm">
+          {{ errorMessage }}
+        </div>
+
+        <!-- Empty state -->
+        <div v-else-if="applications.length === 0" class="flex-1 flex flex-col items-center justify-center text-gray-400 text-sm gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          <p>{{ t('noApprovedApplications') }}</p>
+        </div>
+
+        <!-- Transaction grid -->
+        <div v-else class="grid grid-cols-4 gap-4 overflow-y-auto pr-1">
+          <button
+            v-for="app in applications"
+            :key="app.document_request_id"
+            @click="selectedApp = app"
+            :class="[
+              'rounded-xl shadow-sm px-4 py-3 border-2 text-center font-bold text-xl transition-all',
+              selectedApp?.document_request_id === app.document_request_id
+                ? 'bg-[#013C6D] text-white border-[#013C6D] shadow-md'
+                : 'text-[#B1202A] bg-red-50 border-red-200'
+            ]"
+          >
+            {{ app.transaction_no }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Right Panel: Resident details -->
+      <div class="flex flex-col text-[#003A6B] bg-[#EBF5FF] rounded-2xl shadow-lg p-6 w-[380px] border border-[#B0D7F8]">
+        <h2 class="font-bold text-2xl text-center">{{ t('residentDetails') }}</h2>
+        <p class="italic text-[9px] text-center mb-4">{{ t('verifyBeforeLinking') }}</p>
+
+        <div v-if="!selectedApp" class="flex-1 flex items-center justify-center text-gray-400 text-sm italic text-center">
+          {{ t('selectTransactionFirst') }}
+        </div>
+
+        <div v-else class="flex-1 flex flex-col gap-3 text-sm">
+          <div class="bg-white rounded-xl p-4 border border-[#B0D7F8] space-y-3">
+            <div>
+              <p class="text-xs text-gray-400 uppercase tracking-wide font-medium">{{ t('fullName') }}</p>
+              <p class="font-bold text-base text-[#013C6D]">{{ fullName(selectedApp) }}</p>
+            </div>
+            <div class="border-t border-gray-100 pt-2">
+              <p class="text-xs text-gray-400 uppercase tracking-wide font-medium">{{ t('birthdate') }}</p>
+              <p class="font-semibold text-[#013C6D]">{{ formatBirthdate(selectedApp.birthdate) }}</p>
+            </div>
+            <div class="border-t border-gray-100 pt-2">
+              <p class="text-xs text-gray-400 uppercase tracking-wide font-medium">{{ t('address') }}</p>
+              <p class="font-semibold text-[#013C6D]">{{ selectedApp.address || '—' }}</p>
+            </div>
+            <div class="border-t border-gray-100 pt-2">
+              <p class="text-xs text-gray-400 uppercase tracking-wide font-medium">{{ t('transactionNo') }}</p>
+              <p class="font-bold text-[#013C6D]">{{ selectedApp.transaction_no }}</p>
+            </div>
+          </div>
+
+          <div class="bg-blue-100 rounded-xl p-3 border border-blue-300 text-center">
+            <p class="text-xs text-gray-500 font-medium">{{ t('rfidCardToLink') }}</p>
+            <p class="font-bold font-mono text-[#013C6D] text-base mt-0.5">{{ pendingUid }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer actions -->
+    <div class="flex gap-6 mt-6 justify-between items-center flex-shrink-0">
+      <Button variant="outline" size="md" @click="handleCancel">
+        {{ t('cancel') }}
+      </Button>
+      <Button
+        variant="secondary"
+        size="md"
+        :disabled="!canSubmit"
+        @click="handleSubmit"
+      >
+        {{ isSubmitting ? t('linking') : t('linkRFIDCard') }}
+      </Button>
+    </div>
+
+    <!-- Success Modal -->
+    <transition name="fade-blur">
+      <div
+        v-if="showSuccessModal"
+        class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50"
+      >
+        <Modal
+          :title="t('rfidRegistered')"
+          :message="t('rfidLinkedSuccess', { name: fullName(selectedApp) })"
+          :reference-id="pendingUid"
+          :show-reference-id="true"
+          :primary-button-text="t('done')"
+          :show-primary-button="true"
+          :show-secondary-button="false"
+          @primary-click="handleSuccessClose"
+        >
+          <template #extra>
+            <div v-if="linkedExpiration" class="mt-3 bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 text-sm text-[#013C6D] text-center">
+              <span class="font-medium">{{ t('cardExpiresOn') }}</span>
+              <span class="font-bold ml-1">{{ linkedExpiration }}</span>
+            </div>
+          </template>
+        </Modal>
+      </div>
+    </transition>
+
+    <!-- Error Modal -->
+    <transition name="fade-blur">
+      <div
+        v-if="showErrorModal"
+        class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50"
+      >
+        <Modal
+          :title="t('registrationFailed')"
+          :message="errorMessage"
+          :primary-button-text="t('confirm')"
+          :show-primary-button="true"
+          :show-secondary-button="false"
+          @primary-click="handleErrorClose"
+        />
+      </div>
+    </transition>
+
   </div>
 </template>
+
+<style scoped>
+.fade-blur-enter-active,
+.fade-blur-leave-active {
+  transition: opacity 0.5s ease-in-out;
+}
+.fade-blur-enter-from,
+.fade-blur-leave-to {
+  opacity: 0;
+}
+</style>

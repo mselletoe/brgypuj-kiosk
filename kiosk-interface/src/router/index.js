@@ -1,96 +1,131 @@
-import { createRouter, createWebHistory } from 'vue-router'
-import { auth } from '@/stores/auth'
-import UserLayout from '@/layouts/UserLayout.vue'
+import { createRouter, createWebHistory } from "vue-router";
+import { useAuthStore } from "@/stores/auth";
+import UserLayout from "@/layouts/UserLayout.vue";
 
-// views
-import Display from '@/views/idle/Display.vue'
-import Idle from '@/views/idle/Idle.vue'
-import Announcements from '@/views/idle/Announcements.vue'
-import Login from '@/views/auth/Login.vue'
-import ScanRFID from '@/views/auth/ScanRFID.vue'
-import AuthPIN from '@/views/auth/AuthPIN.vue'
-import Register from '@/views/auth/Register.vue'
-import KioskHome from '@/views/home/KioskHome.vue'
-import DocumentServices from '@/views/document-services/DocumentServices.vue'
-import DocumentFormWrapper from '@/views/document-services/DocumentFormWrapper.vue'
-import EquipmentBorrowing from '@/views/equipment-borrowing/EquipmentBorrowing.vue'
-import HelpAndSupport from '@/views/help-and-support/HelpAndSupport.vue'
-import Feedback from '@/views/feedback/Feedback.vue'
-import Rating from '@/views/feedback/Rating.vue'
-import Comments from '@/views/feedback/Comments.vue'
-import Appointments from '@/views/appointments/Appointments.vue'
+// Views
+import Display from "@/views/idle/Display.vue";
+import Idle from "@/views/idle/Idle.vue";
+import Announcements from "@/views/idle/Announcements.vue";
+import Login from "@/views/auth/Login.vue";
+import ScanRFID from "@/views/auth/ScanRFID.vue";
+import AuthPIN from "@/views/auth/AuthPIN.vue";
+import Register from "@/views/auth/Register.vue";
+import KioskHome from "@/views/home/KioskHome.vue";
+import DocumentServices from "@/views/document-services/DocumentServices.vue";
+import DocumentFormWrapper from "@/views/document-services/DocumentFormWrapper.vue";
+import EquipmentBorrowing from "@/views/equipment-borrowing/EquipmentBorrowing.vue";
+import HelpAndSupport from "@/views/help-and-support/HelpAndSupport.vue";
+import Feedback from "@/views/feedback/Feedback.vue";
+import Rating from "@/views/feedback/Rating.vue";
+import Comments from "@/views/feedback/Comments.vue";
+import ComponentShowcase from "../components/ComponentShowcase.vue";
+import InAnnouncements from "../views/announcements/Announcement.vue";
+import TransactionHistory from "../views/transactions/TransactionHistory.vue";
+
+// ID Services Views
+import IDServices from "../views/id-services/IDServices.vue";
+import ChangePasscode from "../views/id-services/ChangePasscode.vue";
+import ReportLost from "../views/id-services/ReportLost.vue";
+import ApplyID from "../views/id-services/ApplyID.vue";
 
 const routes = [
-  { path: '/', redirect: '/idle' },
-
-  { path: '/display', component: Display},
-  { path: '/idle', component: Idle },
-  { path: '/announcements', component: Announcements },
-  { path: '/login', component: Login },
-  { path: '/login-rfid', component: ScanRFID },
-  { path: '/auth-pin', component: AuthPIN },
-
-  // Authenticated & Inside-layout routes 
+  { path: "/", redirect: "/idle" },
+  { path: "/display", name: "Display", component: Display },
+  { path: "/idle", name: "Idle", component: Idle },
+  { path: "/announcements", name: "Announcements", component: Announcements },
+  { path: "/login", name: "LoginSelection", component: Login },
+  { path: "/login-rfid", name: "ScanRFID", component: ScanRFID },
+  { path: "/auth-pin", name: "VerifyPIN", component: AuthPIN },
   {
-    path: '/',
-    component: UserLayout,
-    children: [
-      { path: 'home', component: KioskHome, meta: { requiresAuth: true } },
-      { path: 'document-services', component: DocumentServices, meta: { requiresAuth: true },
-        children: [
-          { path: ':docType', component: DocumentFormWrapper, meta: { requiresAuth: true } }
-        ]
-      },
-      { path: 'equipment-borrowing', component: EquipmentBorrowing, meta: { requiresAuth: true } },
-      { path: 'help-and-support', component: HelpAndSupport, meta: { requiresAuth: true } },
-      { path: 'feedback', component: Feedback, meta: { requiresAuth: true } },
-      { path: 'rating', component: Rating, meta: { requiresAuth: true } },
-      { path: 'comments', component: Comments, meta: { requiresAuth: true } },
-      { path: 'appointments', component: Appointments, meta: { requiresAuth: true } },
-      { path: 'register', component: Register }
-    ]
+    path: "/inannouncements",
+    name: "InAnnouncements",
+    component: InAnnouncements,
   },
-  { path: '/:pathMatch(.*)*', redirect: '/idle' },
-]
+
+  {
+    path: "/",
+    component: UserLayout,
+    meta: { requiresAuth: true },
+    children: [
+      { path: "home", name: "Home", component: KioskHome },
+      {
+        path: "document-services",
+        name: "DocumentServices",
+        component: DocumentServices,
+        children: [{ path: ":docType", component: DocumentFormWrapper }],
+      },
+      { path: "id-services", name: "IDServices", component: IDServices },
+      {
+        path: "id-services/change-pin",
+        name: "ChangePasscode",
+        component: ChangePasscode,
+      },
+      {
+        path: "id-services/report-lost",
+        name: "ReportLost",
+        component: ReportLost,
+      },
+      {
+        path: "id-services/apply",
+        name: "ApplyID",
+        component: ApplyID,
+        meta: { noBottomPadding: true },
+      },
+      {
+        path: "equipment-borrowing",
+        name: "EquipmentBorrowing",
+        component: EquipmentBorrowing,
+      },
+      { path: "help-and-support", name: "Support", component: HelpAndSupport },
+      { path: "feedback", name: "Feedback", component: Feedback },
+      { path: "rating", name: "Rating", component: Rating },
+      { path: "comments", name: "Comments", component: Comments },
+      {
+        // Register is inside UserLayout so it gets the same shell,
+        // but meta.guestAllowed = true bypasses the requiresAuth guard.
+        path: "register",
+        name: "Register",
+        component: Register,
+        meta: { guestAllowed: true },
+      },
+      {
+        path: "component-showcase",
+        name: "DevShowcase",
+        component: ComponentShowcase,
+      },
+      {
+        path: "transaction-history",
+        name: "TransactionHistory",
+        component: TransactionHistory,
+      },
+    ],
+  },
+
+  { path: "/:pathMatch(.*)*", redirect: "/idle" },
+];
 
 const router = createRouter({
   history: createWebHistory(),
   routes,
-})
+});
 
-
-// Global guard
 router.beforeEach((to, from, next) => {
-  const stored = localStorage.getItem('auth_user')
-  if (stored) {
-    const parsed = JSON.parse(stored)
-    auth.user = parsed.user
-    auth.isGuest = parsed.isGuest
+  const authStore = useAuthStore();
+  if (!authStore.isAuthenticated) authStore.restore();
+
+  // guestAllowed routes (e.g. /register) use UserLayout but skip auth check
+  if (to.meta.guestAllowed) {
+    next();
+  } else if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+    next("/login");
+  } else if (
+    (to.path === "/login" || to.path === "/login-rfid") &&
+    authStore.isAuthenticated
+  ) {
+    next("/home");
+  } else {
+    next();
   }
+});
 
-  const loggedIn = !!auth.user
-  const isGuest = auth.isGuest
-  const loginPaths = ['/login', '/login-rfid']
-  const nonAuthPaths = ['/login', '/login-rfid', '/auth-pin', '/idle', '/display', '/announcements']
-
-  // Guests
-  if (isGuest && loginPaths.includes(to.path)) return next('/home')
-
-  // Logged-in users
-  if (loggedIn && loginPaths.includes(to.path)) return next('/home')
-
-  // Protect routes with requiresAuth
-  if (!loggedIn && !isGuest && to.meta.requiresAuth) {
-    if (to.path === '/register' && to.query.uid) return next()
-    return next('/login-rfid')
-  }
-
-  // Prevent logged-in or guest from going back to non-auth pages
-  if ((loggedIn || isGuest) && nonAuthPaths.includes(to.path)) {
-    return next('/home') // always redirect to home
-  }
-
-  next()
-})
-
-export default router
+export default router;

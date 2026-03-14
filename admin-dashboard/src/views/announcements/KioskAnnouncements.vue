@@ -1,346 +1,367 @@
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useMessage, NInput, NButton, NSpin, NEmpty } from 'naive-ui'
+import { TrashIcon } from '@heroicons/vue/24/outline'
 import PageTitle from '@/components/shared/PageTitle.vue'
-import { 
-  getAnnouncements, 
-  createAnnouncement, 
-  updateAnnouncement,         // ✔ added
-  deleteAnnouncement as deleteAnnouncementApi 
-} from '@/api/announcements.js'
+import KioskAnnouncementCard from '@/views/announcements/KioskAnnouncementCard.vue'
+import ConfirmModal from '@/components/shared/ConfirmationModal.vue'
+import {
+  getAllAnnouncements,
+  getAnnouncementById,
+  createAnnouncement,
+  updateAnnouncement,
+  deleteAnnouncement as deleteAnnouncementApi,
+  bulkDeleteAnnouncements,
+  toggleAnnouncementStatus
+} from '@/api/announcementService'
 
-// Load announcements from localStorage (or start with empty array)
+const message = useMessage()
+
+/* -------------------- STATE -------------------- */
 const announcements = ref([])
+const editingId = ref(null)
+const creatingNew = ref(false)
+const showDeleteModal = ref(false)
+const deleteTargetId = ref(null)
+const loading = ref(false)
+const selectedAnnouncements = ref(new Set())
+const searchQuery = ref('')
+
+/* -------------------- COMPUTED -------------------- */
+const selectedCount = computed(() => selectedAnnouncements.value.size)
+const totalCount = computed(() => announcements.value.length)
+
+const selectionState = computed(() => {
+  const count = selectedCount.value
+  const total = totalCount.value
+  
+  if (count === 0) return 'none'
+  if (count > 0 && count < total) return 'partial'
+  return 'all'
+})
+
+/* -------------------- LOAD DATA -------------------- */
+const loadAnnouncements = async () => {
+  loading.value = true
+  try {
+    const data = await getAllAnnouncements()
+    const detailedAnnouncements = await Promise.all(
+      data.map(announcement => getAnnouncementById(announcement.id))
+    )
+    announcements.value = detailedAnnouncements
+  } catch (err) {
+    console.error('Failed to fetch announcements:', err)
+    message.error('Failed to load announcements. Please try again.')
+  } finally {
+    loading.value = false
+  }
+}
 
 onMounted(() => {
-  const saved = localStorage.getItem('announcements')
-  if (saved) {
-    announcements.value = JSON.parse(saved)
-  }
+  loadAnnouncements()
 })
 
-onMounted(async () => {
+/* -------------------- SELECTION ACTIONS -------------------- */
+const handleMainSelectToggle = () => {
+  if (selectionState.value === 'all' || selectionState.value === 'partial') {
+    deselectAll()
+  } else {
+    selectAll()
+  }
+}
+
+const selectAll = () => {
+  selectedAnnouncements.value = new Set(announcements.value.map(a => a.id))
+}
+
+const deselectAll = () => {
+  selectedAnnouncements.value.clear()
+}
+
+const handleSelectionUpdate = (announcementId, isSelected) => {
+  if (isSelected) {
+    selectedAnnouncements.value.add(announcementId)
+  } else {
+    selectedAnnouncements.value.delete(announcementId)
+  }
+}
+
+/* -------------------- BULK DELETE -------------------- */
+const bulkDelete = () => {
+  if (selectedAnnouncements.value.size === 0) return
+  deleteTargetId.value = 'bulk'
+  showDeleteModal.value = true
+}
+
+const confirmBulkDelete = async () => {
+  loading.value = true
   try {
-    const data = await getAnnouncements()
-    if (data && data.length) {
-      announcements.value = data.map(a => ({
-        id: a.id,
-        title: a.title,
-        date: a.date,
-        start: a.start,
-        end: a.end,
-        location: a.location,
-        image: a.image
-      }))
-    }
+    await bulkDeleteAnnouncements(Array.from(selectedAnnouncements.value))
+    await loadAnnouncements()
+    selectedAnnouncements.value.clear()
+    showDeleteModal.value = false
+    deleteTargetId.value = null
+    message.success(`${selectedCount.value} announcement(s) deleted successfully`)
   } catch (err) {
-    console.error('Error fetching announcements:', err)
-  }
-})
-
-// helper: converts backend binary to base64 image
-const arrayBufferToBase64 = (buffer) => {
-  if (!buffer) return ''
-  let binary = ''
-  const bytes = new Uint8Array(buffer)
-  const len = bytes.byteLength
-  for (let i = 0; i < len; i++) binary += String.fromCharCode(bytes[i])
-  return window.btoa(binary)
-}
-
-// Automatically save announcements to localStorage whenever they change
-watch(announcements, (newVal) => {
-  localStorage.setItem('announcements', JSON.stringify(newVal))
-}, { deep: true })
-
-const showModal = ref(false)
-const editMode = ref(false)
-const editId = ref(null)
-const newAnnouncement = ref({
-  title: '',
-  date: '',
-  start: '',
-  end: '',
-  location: '',
-  image: ''
-})
-const imagePreview = ref(null)
-
-const timeOptions = [
-  '07:00 AM', '07:30 AM', '08:00 AM', '08:30 AM', '09:00 AM', '09:30 AM',
-  '10:00 AM', '10:30 AM', '11:00 AM', '11:30 AM', '12:00 PM', '12:30 PM',
-  '01:00 PM', '01:30 PM', '02:00 PM', '02:30 PM', '03:00 PM', '03:30 PM',
-  '04:00 PM', '04:30 PM', '05:00 PM', '05:30 PM', '06:00 PM', '06:30 PM',
-  '07:00 PM', '07:30 PM', '08:00 PM', '08:30 PM', '09:00 PM'
-]
-
-const handleImageUpload = (event) => {
-  const file = event.target.files[0]
-  if (file) {
-    newAnnouncement.value.image = URL.createObjectURL(file)
-    imagePreview.value = newAnnouncement.value.image
+    console.error('Bulk delete failed:', err)
+    message.error('Failed to delete announcements. Please try again.')
+  } finally {
+    loading.value = false
   }
 }
 
-const openAddModal = () => {
-  editMode.value = false
-  showModal.value = true
-  newAnnouncement.value = { title: '', date: '', start: '', end: '', location: '', image: '' }
-  imagePreview.value = null
+/* -------------------- CRUD ACTIONS -------------------- */
+const startCreate = () => {
+  creatingNew.value = true
+  editingId.value = null
 }
 
-const addAnnouncement = async () => {
-  if (!newAnnouncement.value.title || !newAnnouncement.value.image) {
-    alert('Please fill out all required fields.')
+const startEdit = (announcement) => {
+  editingId.value = announcement.id
+  creatingNew.value = false
+}
+
+const cancelEdit = () => {
+  editingId.value = null
+  creatingNew.value = false
+}
+
+const saveAnnouncement = async ({ formData, imageFile }) => {
+  if (!formData.title?.trim()) {
+    message.warning('Title is required')
+    return
+  }
+  if (!formData.event_date) {
+    message.warning('Event date is required')
+    return
+  }
+  if (!formData.location?.trim()) {
+    message.warning('Location is required')
     return
   }
 
-  if (editMode.value) {
-    const index = announcements.value.findIndex(a => a.id === editId.value)
-    if (index !== -1) {
-      announcements.value[index] = {
-        ...announcements.value[index],
-        ...newAnnouncement.value
-      }
-    }
-  } else {
-    announcements.value.push({
-      id: Date.now(),
-      ...newAnnouncement.value
-    })
-  }
-
-  // Backend sync
+  loading.value = true
   try {
-    const formData = new FormData()
-    formData.append('title', newAnnouncement.value.title)
-    formData.append('event_date', newAnnouncement.value.date)
-    formData.append('event_day', new Date(newAnnouncement.value.date).toLocaleDateString(undefined, { weekday: 'long' }))
-    formData.append('event_time', `${newAnnouncement.value.start} - ${newAnnouncement.value.end}`)
-    formData.append('location', newAnnouncement.value.location)
-
-    const inputEl = document.querySelector('input[type="file"]')
-    if (inputEl && inputEl.files[0]) {
-      formData.append('image', inputEl.files[0])
+    const announcementData = {
+      title: formData.title,
+      description: formData.description || null,
+      event_date: formData.event_date,
+      event_time: formData.event_time || null,
+      location: formData.location,
+      is_active: formData.is_active ?? true
     }
 
-    // ✔ FIXED — update uses correct API call
-    if (editMode.value) {
-      await updateAnnouncement(editId.value, formData)
-      console.log('Announcement updated in backend.')
+    if (creatingNew.value) {
+      await createAnnouncement(announcementData, imageFile)
+      message.success('Announcement created successfully')
     } else {
-      await createAnnouncement(formData)
-      console.log('Announcement created in backend.')
+      await updateAnnouncement(editingId.value, announcementData, imageFile, false)
+      message.success('Announcement updated successfully')
     }
 
-  } catch (error) {
-    console.error('Failed to sync with backend:', error)
+    await loadAnnouncements()
+    cancelEdit()
+  } catch (err) {
+    console.error('Save failed:', err)
+    message.error(err.response?.data?.detail || 'Failed to save announcement. Please try again.')
+  } finally {
+    loading.value = false
+  }
+}
+
+const handleToggleStatus = async (announcement) => {
+  try {
+    await toggleAnnouncementStatus(announcement.id)
+    await loadAnnouncements()
+    message.success(`Announcement ${announcement.is_active ? 'deactivated' : 'activated'} successfully`)
+  } catch (err) {
+    console.error('Toggle status failed:', err)
+    message.error('Failed to toggle announcement status')
+  }
+}
+
+const requestDelete = (id) => {
+  deleteTargetId.value = id
+  showDeleteModal.value = true
+}
+
+const confirmDelete = async () => {
+  if (deleteTargetId.value === 'bulk') {
+    await confirmBulkDelete()
+    return
   }
 
-  showModal.value = false
-  editMode.value = false
-  newAnnouncement.value = { title: '', date: '', start: '', end: '', location: '', image: '' }
-  imagePreview.value = null
-}
-
-const openEditModal = (announcement) => {
-  editMode.value = true
-  editId.value = announcement.id
-  newAnnouncement.value = { ...announcement }
-  imagePreview.value = announcement.image
-  showModal.value = true
-}
-
-const deleteAnnouncement = async (id) => {
-  announcements.value = announcements.value.filter(a => a.id !== id)
+  const id = deleteTargetId.value
+  loading.value = true
+  
   try {
     await deleteAnnouncementApi(id)
-    console.log('Deleted from backend.')
+    await loadAnnouncements()
+    showDeleteModal.value = false
+    deleteTargetId.value = null
+    message.success('Announcement deleted successfully')
   } catch (err) {
-    console.error('Failed to delete from backend:', err)
+    console.error('Delete failed:', err)
+    message.error('Failed to delete announcement. Please try again.')
+  } finally {
+    loading.value = false
   }
 }
+
+const cancelDelete = () => {
+  showDeleteModal.value = false
+  deleteTargetId.value = null
+}
+
+const deleteModalTitle = computed(() => {
+  if (deleteTargetId.value === 'bulk') {
+    return `Delete ${selectedCount.value} announcement(s)?`
+  }
+  return 'Delete this announcement?'
+})
+
+const deleteModalMessage = computed(() => {
+  if (deleteTargetId.value === 'bulk') {
+    return `This action cannot be undone. ${selectedCount.value} announcement(s) will be permanently removed from the system.`
+  }
+  return 'This action cannot be undone. The announcement will be permanently removed from the system.'
+})
 </script>
 
 <template>
-  <div class="p-6 bg-white rounded-md w-full min-h-screen space-y-5">
-    <div class="flex justify-between items-center">
-      <PageTitle title="Announcements" />
-      <button
-        @click="openAddModal"
-        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center gap-1"
-      > Add Announcement
-      </button>
-    </div>
-
-    <!-- Announcements Grid -->
-    <div v-if="announcements.length" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-7">
-      <div
-        v-for="item in announcements"
-        :key="item.id"
-        class="rounded-2xl bg-[#F3F3F3] overflow-hidden flex flex-col"
-      >
-        <img
-          :src="item.image"
-          alt="announcement"
-          class="h-[80px] w-full object-cover"
+  <div class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden">
+    <div class="flex justify-between items-center mb-4">
+      <div>
+        <PageTitle title="Kiosk Announcements" />
+        <p class="text-sm text-gray-500 mt-1">
+          Create and schedule public notices for the community information kiosks.
+        </p>
+      </div>
+      
+      <div class="flex items-center gap-3">
+        <input
+          v-model="searchQuery"
+          type="text"
+          placeholder="Search"
+          class="border border-gray-200 text-gray-700 rounded-md py-2 px-3 w-[250px] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-gray-400"
         />
-        <div class="p-6 flex flex-col justify-between flex-1">
-          <div>
-            <h3 class="text-xl font-bold text-[#4B4B4B]">{{ item.title }}</h3>
 
-            <div class="mt-4 space-y-3 text-sm text-gray-700">
-              <!-- Date & Time side by side -->
-              <div class="grid grid-cols-2 gap-6">
-                <div>
-                  <p class="font-medium text-[#808080]">Date</p>
-                  <p class="font-semibold text-[#535353] mt-1">
-                    {{
-                      new Date(item.date).toLocaleDateString(undefined, {
-                        day: 'numeric',
-                        month: 'long',
-                        year: 'numeric'
-                      })
-                    }}, {{
-                      new Date(item.date).toLocaleDateString(undefined, { weekday: 'long' })
-                    }}
-                  </p>
-                </div>
-                <div>
-                  <p class="font-medium text-[#808080]">Time</p>
-                  <p class="font-semibold text-[#535353] mt-1">{{ item.start }} - {{ item.end }}</p>
-                </div>
-              </div>
+        <button 
+          @click="bulkDelete"
+          :disabled="selectionState === 'none'"
+          :class="[selectionState === 'none' ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-50']"
+          class="p-2 border border-red-400 rounded-lg transition-colors"
+        >
+          <TrashIcon class="w-5 h-5 text-red-500" />
+        </button>
 
-              <!-- Location below -->
-              <div>
-                <p class="mt-6 font-medium text-[#808080]">Location</p>
-                <p class="font-semibold text-[#535353] mt-1">{{ item.location }}</p>
-              </div>
+        <div class="flex items-center border rounded-lg overflow-hidden"
+          :class="selectionState !== 'none' ? 'border-blue-600' : 'border-gray-400'"
+        >
+          <button 
+            @click="handleMainSelectToggle"
+            class="p-2 hover:bg-gray-50 flex items-center"
+          >
+            <div class="w-5 h-5 border rounded flex items-center justify-center" 
+                 :class="selectionState !== 'none' ? 'bg-blue-600 border-blue-600' : 'border-gray-400'">
+              <div v-if="selectionState === 'partial'" class="w-2 h-0.5 bg-white"></div>
+              <svg v-if="selectionState === 'all'" class="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7" />
+              </svg>
             </div>
-          </div>
-
-          <div class="flex justify-between items-center mt-6">
-            <button
-              @click="openEditModal(item)"
-              class="bg-[#BAF9B2] hover:bg-[#216917] text-[#216917] hover:text-white px-10 py-3 rounded-lg font-semibold text-sm"
-            >
-              Edit
-            </button>
-            <button
-              @click="deleteAnnouncement(item.id)"
-              class="bg-red-100 hover:bg-[#FFBABB] text-[#5D0E07] px-6 py-3 rounded-lg font-medium text-sm"
-            >
-              <span class="text-lg">🗑</span>
-            </button>
-          </div>
+          </button>
         </div>
+
+        <button
+          @click="startCreate"
+          :disabled="loading || creatingNew"
+          class="px-4 py-2 bg-blue-600 text-white rounded-md font-medium text-sm hover:bg-blue-700 transition flex items-center gap-2"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-5 w-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M12 4v16m8-8H4" />
+          </svg>
+          Add
+        </button>
       </div>
     </div>
 
-    <div v-else class="text-center text-gray-500 py-10">
-      No announcements yet. Click <strong>"Add Announcement"</strong> to create one.
+    <div v-if="loading && !announcements.length" class="flex-1 flex flex-col items-center justify-center gap-4">
+      <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+      <p class="text-gray-500 font-medium">Loading announcements...</p>
     </div>
 
-    <!-- Modal -->
-    <div
-      v-if="showModal"
-      class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50"
+    <div v-else class="flex-1 overflow-y-auto pr-2 pt-2">
+      <div
+        v-if="announcements.length || creatingNew"
+        class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 pb-6"
+      >
+        <KioskAnnouncementCard
+          v-if="creatingNew"
+          is-new
+          is-editing
+          :announcement="{
+            title: '',
+            description: '',
+            event_date: '',
+            event_time: '',
+            location: '',
+            image_base64: null,
+            is_active: true
+          }"
+          @save="saveAnnouncement"
+          @cancel="cancelEdit"
+        />
+
+        <KioskAnnouncementCard
+          v-for="item in announcements"
+          :key="item.id"
+          :announcement="item"
+          :is-editing="editingId === item.id"
+          :is-selected="selectedAnnouncements.has(item.id)"
+          @edit="startEdit"
+          @save="saveAnnouncement"
+          @cancel="cancelEdit"
+          @delete="requestDelete"
+          @toggle-status="handleToggleStatus"
+          @update:selected="(value) => handleSelectionUpdate(item.id, value)"
+        />
+      </div>
+
+      <div v-else class="h-full flex flex-col items-center justify-center">
+        <NEmpty description="No announcements yet">
+          <template #extra>
+            <NButton type="primary" @click="startCreate">
+              Create Announcement
+            </NButton>
+          </template>
+        </NEmpty>
+      </div>
+    </div>
+
+    <div 
+      v-if="loading && announcements.length" 
+      class="fixed inset-0 bg-black bg-opacity-10 flex items-center justify-center z-50"
     >
-      <div class="bg-white rounded-2xl w-full max-w-2xl p-6 shadow-xl">
-        <!-- Upload Image Section -->
-        <div
-          class="bg-[#D0D0D0] border-2rounded-lg flex flex-col items-center justify-center h-40 mb-6 relative cursor-pointer"
-        >
-          <input
-            type="file"
-            accept="image/*"
-            class="absolute inset-0 opacity-0 cursor-pointer"
-            @change="handleImageUpload"
-          />
-          <template v-if="!imagePreview">
-            <div class="flex flex-col items-center justify-center text-gray-500">
-              <span class="text-3xl mb-1 text-white">+</span>
-              <p class="text-sm font-medium text-white">Upload Image</p>
-            </div>
-          </template>
-          <template v-else>
-            <img
-              :src="imagePreview"
-              class="h-full w-full object-cover rounded-md"
-            />
-          </template>
-        </div>
-
-        <!-- Form Inputs -->
-        <div class="space-y-4">
-          <div>
-            <label class="block text-sm font-semibold mb-1">Title of the Announcement</label>
-            <input
-              v-model="newAnnouncement.title"
-              type="text"
-              class="w-full border bg-[#D0D0D0] rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 "
-            />
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label class="block text-sm font-semibold mb-1">Date</label>
-              <input
-                v-model="newAnnouncement.date"
-                type="date"
-                class="w-full border bg-[#D0D0D0] rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 "
-              />
-            </div>
-
-            <div>
-              <label class="block text-sm font-semibold mb-1">Start</label>
-              <select
-                v-model="newAnnouncement.start"
-                class="w-full border bg-[#D0D0D0] rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option disabled value="">Select start time</option>
-                <option v-for="time in timeOptions" :key="time" :value="time">{{ time }}</option>
-              </select>
-            </div>
-
-            <div>
-              <label class="block text-sm font-semibold mb-1">End</label>
-              <select
-                v-model="newAnnouncement.end"
-                class="w-full border bg-[#D0D0D0] rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 "
-              >
-                <option disabled value="">Select end time</option>
-                <option v-for="time in timeOptions" :key="time" :value="time">{{ time }}</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label class="block text-sm font-semibold mb-1">Location</label>
-            <input
-              v-model="newAnnouncement.location"
-              type="text"
-              class="w-full border bg-[#D0D0D0] rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-        </div>
-
-        <!-- Buttons -->
-        <div class="flex justify-between items-center mt-6">
-          <button
-            @click="showModal = false"
-            class="px-5 py-2 border border-blue-500 text-blue-600 rounded-md text-sm hover:bg-blue-50"
-          >
-            Cancel
-          </button>
-          <button
-            @click="addAnnouncement"
-            class="flex items-center gap-2 px-5 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700"
-          >
-            <span>{{ editMode ? 'Save Changes' : 'Upload' }}</span>
-          </button>
-        </div>
+      <div class="bg-white rounded-lg p-4 shadow-xl">
+        <NSpin size="large" />
       </div>
     </div>
   </div>
+
+  <ConfirmModal
+    :show="showDeleteModal"
+    :title="deleteModalTitle"
+    :message="deleteModalMessage"
+    confirm-text="Delete"
+    cancel-text="Cancel"
+    @confirm="confirmDelete"
+    @cancel="cancelDelete"
+  />
 </template>

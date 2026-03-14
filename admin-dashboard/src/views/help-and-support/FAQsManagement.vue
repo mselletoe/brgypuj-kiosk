@@ -1,0 +1,477 @@
+<script setup>
+/**
+ * @file FAQsManagement.vue
+ * @description Admin interface for managing Frequently Asked Questions (FAQs).
+ * Fully connected to backend: Create, Edit, Delete, Bulk Delete.
+ */
+import { ref, computed, watch, h, onMounted } from "vue";
+import {
+  NDataTable,
+  NInput,
+  NButton,
+  NCheckbox,
+  useMessage,
+  NEmpty,
+} from "naive-ui";
+import {
+  PencilSquareIcon,
+  TrashIcon,
+  XMarkIcon,
+  CheckIcon,
+} from "@heroicons/vue/24/outline";
+import PageTitle from "@/components/shared/PageTitle.vue";
+import ConfirmModal from "@/components/shared/ConfirmationModal.vue";
+import faqService from "@/api/faqService";
+import { useSearchSync } from "@/composables/useSearchSync";
+
+const message = useMessage();
+
+// ======================================
+// State Management
+// ======================================
+const faqs = ref([]);
+const isLoading = ref(true);
+const editingId = ref(null);
+const showAddForm = ref(false);
+const searchQuery = ref("");
+useSearchSync(searchQuery);
+const showDeleteModal = ref(false);
+const deleteTargetId = ref(null);
+const selectedIds = ref([]);
+const isBulkDelete = ref(false);
+
+const newFaq = ref({
+  question: "",
+  answer: "",
+});
+
+// ======================================
+// Fetch FAQs from backend
+// ======================================
+const loadFAQs = async () => {
+  isLoading.value = true;
+  try {
+    faqs.value = await faqService.getAllFAQs();
+  } catch (err) {
+    console.error("Failed to load FAQs:", err);
+    message.error("Failed to load FAQs.");
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+onMounted(() => loadFAQs());
+
+// ======================================
+// CRUD Handlers
+// ======================================
+const addFaq = async () => {
+  if (!newFaq.value.question.trim() || !newFaq.value.answer.trim()) {
+    return message.warning("Please enter both a question and an answer.");
+  }
+
+  try {
+    const created = await faqService.createFAQ(newFaq.value);
+    faqs.value.unshift(created);
+    message.success("FAQ created successfully.");
+    showAddForm.value = false;
+    newFaq.value = { question: "", answer: "" };
+  } catch (err) {
+    console.error(err);
+    message.error("Failed to create FAQ.");
+  }
+};
+
+const updateFaq = async (row) => {
+  if (!row.question.trim() || !row.answer.trim()) {
+    return message.warning("Fields cannot be empty.");
+  }
+
+  try {
+    const updated = await faqService.updateFAQ(row.id, {
+      question: row.question,
+      answer: row.answer,
+    });
+    Object.assign(row, updated);
+    editingId.value = null;
+    message.success("FAQ updated successfully.");
+  } catch (err) {
+    console.error(err);
+    message.error("Failed to update FAQ.");
+  }
+};
+
+// ======================================
+// Delete Logic
+// ======================================
+function requestDelete(id) {
+  deleteTargetId.value = id;
+  isBulkDelete.value = false;
+  showDeleteModal.value = true;
+}
+
+function bulkDelete() {
+  if (!selectedIds.value.length) return;
+  isBulkDelete.value = true;
+  showDeleteModal.value = true;
+}
+
+const confirmDelete = async () => {
+  try {
+    if (isBulkDelete.value) {
+      await faqService.bulkDeleteFAQs(selectedIds.value);
+      faqs.value = faqs.value.filter((f) => !selectedIds.value.includes(f.id));
+      message.success(
+        `${selectedIds.value.length} FAQ(s) deleted successfully.`,
+      );
+      selectedIds.value = [];
+    } else {
+      await faqService.deleteFAQ(deleteTargetId.value);
+      faqs.value = faqs.value.filter((f) => f.id !== deleteTargetId.value);
+      message.success("FAQ deleted successfully.");
+    }
+  } catch (err) {
+    console.error(err);
+    message.error("Failed to delete FAQ.");
+  }
+
+  deleteTargetId.value = null;
+  showDeleteModal.value = false;
+};
+
+function cancelDelete() {
+  showDeleteModal.value = false;
+  deleteTargetId.value = null;
+}
+
+// ======================================
+// Selection & Search
+// ======================================
+const filteredFaqs = computed(() => {
+  const filtered = !searchQuery.value
+    ? faqs.value
+    : faqs.value.filter(
+        (f) =>
+          f.question.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+          f.answer.toLowerCase().includes(searchQuery.value.toLowerCase()),
+      );
+
+  if (editingId.value && !filtered.find((f) => f.id === editingId.value)) {
+    editingId.value = null;
+  }
+
+  return filtered;
+});
+
+const totalCount = computed(() => filteredFaqs.value.length);
+const selectedCount = computed(() => selectedIds.value.length);
+
+const selectionState = computed(() => {
+  if (totalCount.value === 0 || selectedCount.value === 0) return "none";
+  if (selectedCount.value < totalCount.value) return "partial";
+  return "all";
+});
+
+function handleMainSelectToggle() {
+  if (selectionState.value === "all" || selectionState.value === "partial") {
+    selectedIds.value = [];
+  } else {
+    selectedIds.value = filteredFaqs.value.map((f) => f.id);
+  }
+}
+
+watch(searchQuery, () => {
+  selectedIds.value = [];
+});
+
+// ======================================
+// Table Columns
+// ======================================
+const columns = computed(() => [
+  {
+    title: "",
+    key: "select",
+    width: 40,
+    render(row) {
+      return h(NCheckbox, {
+        checked: selectedIds.value.includes(row.id),
+        onUpdateChecked(checked) {
+          if (checked) {
+            if (!selectedIds.value.includes(row.id))
+              selectedIds.value.push(row.id);
+          } else {
+            selectedIds.value = selectedIds.value.filter((id) => id !== row.id);
+          }
+        },
+      });
+    },
+  },
+  {
+    title: "Question",
+    key: "question",
+    width: 300,
+    render(row) {
+      if (editingId.value === row.id) {
+        return h(NInput, {
+          value: row.question,
+          onUpdateValue(v) {
+            row.question = v;
+          },
+        });
+      }
+      return h("span", { class: "font-semibold text-gray-800" }, row.question);
+    },
+  },
+  {
+    title: "Answer",
+    key: "answer",
+    render(row) {
+      if (editingId.value === row.id) {
+        return h(NInput, {
+          value: row.answer,
+          type: "textarea",
+          autosize: { minRows: 2, maxRows: 5 },
+          onUpdateValue(v) {
+            row.answer = v;
+          },
+        });
+      }
+      return h("span", { class: "text-gray-600" }, row.answer);
+    },
+  },
+  {
+    title: "Actions",
+    key: "actions",
+    width: 150,
+    render(row) {
+      if (editingId.value === row.id) {
+        return h("div", { class: "flex gap-2" }, [
+          h(
+            NButton,
+            { type: "success", size: "small", onClick: () => updateFaq(row) },
+            { default: () => "Save" },
+          ),
+          h(
+            NButton,
+            {
+              type: "default",
+              size: "small",
+              onClick: () => (editingId.value = null),
+            },
+            { default: () => "Cancel" },
+          ),
+        ]);
+      }
+
+      return h("div", { class: "flex gap-2 items-center flex-wrap" }, [
+        h(
+          "button",
+          {
+            onClick: () => (editingId.value = row.id),
+            class:
+              "p-1.5 text-orange-500 hover:bg-orange-50 rounded transition",
+          },
+          [h(PencilSquareIcon, { class: "w-5 h-5" })],
+        ),
+        h(
+          "button",
+          {
+            onClick: () => requestDelete(row.id),
+            class: "p-1.5 text-red-500 hover:bg-red-50 rounded transition",
+          },
+          [h(TrashIcon, { class: "w-5 h-5" })],
+        ),
+      ]);
+    },
+  },
+]);
+</script>
+
+<template>
+  <div
+    class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden"
+  >
+    <div class="flex mb-6 items-center justify-between">
+      <div>
+        <PageTitle title="FAQs Management" />
+        <p class="text-sm text-gray-500 mt-1">
+          Create, edit, and manage frequently asked questions displayed on the
+          Kiosk.
+        </p>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <input
+          v-model="searchQuery"
+          type="text"
+          placeholder="Search"
+          class="border border-gray-200 text-gray-700 rounded-md py-2 px-3 w-[250px] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-gray-400"
+        />
+
+        <div class="relative group inline-block">
+          <button
+            @click="bulkDelete"
+            :disabled="selectionState === 'none'"
+            class="p-2 border border-red-400 rounded-lg transition-colors"
+            :class="
+              selectionState === 'none'
+                ? 'opacity-50 cursor-not-allowed'
+                : 'hover:bg-red-50'
+            "
+          >
+            <TrashIcon class="w-5 h-5 text-red-500" />
+          </button>
+          <div
+            class="absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 ease-in-out bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded whitespace-nowrap shadow-md z-50"
+          >
+            Delete
+          </div>
+        </div>
+
+        <div class="relative group inline-block">
+          <div
+            class="flex items-center border rounded-lg overflow-hidden transition-colors"
+            :class="
+              selectionState !== 'none' ? 'border-blue-600' : 'border-gray-400'
+            "
+          >
+            <button
+              @click="handleMainSelectToggle"
+              class="p-2 hover:bg-gray-50 flex items-center"
+            >
+              <div
+                class="w-5 h-5 border rounded flex items-center justify-center transition-colors"
+                :class="
+                  selectionState !== 'none'
+                    ? 'bg-blue-600 border-blue-600'
+                    : 'border-gray-400'
+                "
+              >
+                <div
+                  v-if="selectionState === 'partial'"
+                  class="w-2 h-0.5 bg-white"
+                ></div>
+                <CheckIcon
+                  v-if="selectionState === 'all'"
+                  class="w-3 h-3 text-white"
+                />
+              </div>
+            </button>
+            <div
+              class="absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 ease-in-out bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded whitespace-nowrap shadow-md z-50"
+            >
+              Select All
+            </div>
+          </div>
+        </div>
+
+        <button
+          @click="showAddForm = true"
+          class="px-4 py-2 bg-blue-600 text-white rounded-md font-medium text-sm hover:bg-blue-700 transition flex items-center gap-2"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-5 w-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 4v16m8-8H4"
+            />
+          </svg>
+          Add FAQ
+        </button>
+      </div>
+    </div>
+
+    <div
+      v-if="isLoading"
+      class="flex-1 flex flex-col items-center justify-center gap-4"
+    >
+      <div
+        class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"
+      ></div>
+      <p class="text-gray-500 font-medium">Loading FAQs...</p>
+    </div>
+
+    <template v-else>
+      <div
+        v-if="showAddForm"
+        class="bg-[#F0F5FF] p-6 mb-3 rounded-lg border border-[#0957FF] relative shrink-0"
+      >
+        <button
+          @click="showAddForm = false"
+          class="absolute top-4 right-4 p-1 hover:bg-gray-200 rounded transition"
+        >
+          <XMarkIcon class="w-5 h-5 text-gray-600" />
+        </button>
+
+        <div class="flex flex-col gap-4 max-w-4xl">
+          <div>
+            <label class="block text-sm text-gray-600 mb-1">Question</label>
+            <n-input
+              v-model:value="newFaq.question"
+              placeholder="e.g. What are the office hours?"
+            />
+          </div>
+
+          <div>
+            <label class="block text-sm text-gray-600 mb-1">Answer</label>
+            <n-input
+              v-model:value="newFaq.answer"
+              type="textarea"
+              placeholder="Provide a detailed answer here..."
+              :autosize="{ minRows: 3, maxRows: 6 }"
+            />
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-3 mt-4">
+          <n-button @click="showAddForm = false">Cancel</n-button>
+          <n-button type="primary" @click="addFaq"> Save FAQ </n-button>
+        </div>
+      </div>
+
+      <div
+        v-if="faqs.length > 0 || showAddForm"
+        class="overflow-y-auto bg-white rounded-lg border border-gray-200 flex-1"
+      >
+        <n-data-table
+          :columns="columns"
+          :data="filteredFaqs"
+          :bordered="false"
+        />
+      </div>
+
+      <div
+        v-else
+        class="h-full flex flex-col items-center justify-center flex-1"
+      >
+        <NEmpty description="No FAQs created yet">
+          <template #extra>
+            <NButton type="primary" @click="showAddForm = true">
+              Add FAQ
+            </NButton>
+          </template>
+        </NEmpty>
+      </div>
+    </template>
+
+    <ConfirmModal
+      :show="showDeleteModal"
+      :title="
+        isBulkDelete
+          ? `Delete ${selectedIds.length} FAQ(s)?`
+          : 'Delete this FAQ?'
+      "
+      confirm-text="Delete"
+      cancel-text="Cancel"
+      @confirm="confirmDelete"
+      @cancel="cancelDelete"
+    />
+  </div>
+</template>

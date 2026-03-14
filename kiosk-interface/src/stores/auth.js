@@ -1,112 +1,141 @@
-import { reactive, watch } from "vue";
+/**
+ * @file stores/auth.js
+ * @description Pinia store for kiosk authentication state.
+ * Supports two session modes — guest and RFID — and persists
+ * the active session to localStorage for page-refresh continuity.
+ */
 
-const storedUser = JSON.parse(localStorage.getItem("auth_user"));
+import { defineStore } from "pinia"
 
-export const auth = reactive({
-  user: storedUser?.user || null,
-  isGuest: storedUser?.isGuest || false,
-  token: storedUser?.token || null,           // NEW: JWT token
-  loginMethod: storedUser?.loginMethod || null // NEW: Track login method
-});
+export const useAuthStore = defineStore("auth", {
+  state: () => ({
+    /** Current session mode: 'guest' | 'rfid' | null (unauthenticated) */
+    mode: null,
 
-// Persist changes to localStorage
-watch(
-  () => auth,
-  (newVal) => {
-    localStorage.setItem("auth_user", JSON.stringify(newVal));
+    /** Authenticated resident's profile data, set after RFID login */
+    resident: null,
+
+    /** RFID card UID associated with the current session */
+    rfidUid: null,
+
+    /** Resident data held in staging until PIN is verified */
+    tempResident: null,
+
+    /** RFID UID held in staging until PIN is verified */
+    tempUid: null,
+
+    /** Whether the staged resident has set a custom PIN */
+    tempHasPin: false,
+  }),
+
+  getters: {
+    /** Returns true if the current session is a guest session */
+    isGuest: (s) => s.mode === "guest",
+
+    /** Returns true if the current session was authenticated via RFID */
+    isRFID: (s) => s.mode === "rfid",
+
+    /** Returns true if any session mode is active */
+    isAuthenticated: (s) => !!s.mode,
+
+    /** Returns the authenticated resident's ID, or null for guest sessions */
+    residentId: (s) => s.resident?.id || null,
+
+    /** Returns the resident's full name for RFID sessions, or 'Guest' otherwise */
+    userName: (s) =>
+      s.mode === "rfid" && s.resident
+        ? `${s.resident.first_name} ${s.resident.last_name}`
+        : "Guest"
   },
-  { deep: true }
-);
 
-/**
- * Login with user data and token (from backend response)
- * @param {Object} userData - User info from backend
- * @param {string} token - JWT access token
- */
-export const login = (userData, token = null) => {
-  auth.user = userData;
-  auth.token = token;
-  auth.isGuest = userData.is_guest || false;
-  auth.loginMethod = userData.login_method || 'rfid';
-};
+  actions: {
 
-/**
- * Continue as guest (legacy support)
- * NOTE: Now calls backend to get a proper guest token
- */
-export const continueAsGuest = () => {
-  auth.user = { name: "Guest User", is_guest: true };
-  auth.isGuest = true;
-  auth.token = null; // Will be set by Login.vue after API call
-  auth.loginMethod = 'guest';
-};
+    /**
+     * Starts an unauthenticated guest session and persists the state.
+     */
+    setGuest() {
+      this.mode = "guest"
+      this.resident = null
+      this.rfidUid = null
+      this.persist()
+    },
 
-/**
- * Logout - clear all auth data
- */
-export const logout = () => {
-  auth.user = null;
-  auth.isGuest = false;
-  auth.token = null;
-  auth.loginMethod = null;
-  localStorage.removeItem("auth_user");
-};
+    /**
+     * Stages RFID scan data while awaiting PIN verification.
+     * The session is not confirmed until confirmRFIDLogin() is called.
+     *
+     * @param {Object}  payload          - RFID scan result
+     * @param {Object}  payload.resident - Resident profile from the API
+     * @param {string}  payload.uid      - Scanned RFID card UID
+     * @param {boolean} payload.has_pin  - Whether the resident has a custom PIN set
+     */
+    setTemporaryRFIDData({ resident, uid, has_pin }) {
+      this.tempResident = resident
+      this.tempUid = uid
+      this.tempHasPin = has_pin
+    },
 
-// ==============================================================================
-// NEW HELPER FUNCTIONS
-// ==============================================================================
+    /**
+     * Promotes staged RFID data into the active session after PIN is verified.
+     * Clears all temporary staging fields and persists the confirmed session.
+     */
+    confirmRFIDLogin() {
+      this.mode = "rfid"
+      this.resident = this.tempResident
+      this.rfidUid = this.tempUid
 
-/**
- * Restore authentication from localStorage on app load
- * Call this in main.js
- */
-export const restoreAuth = () => {
-  const stored = localStorage.getItem('auth_user');
-  if (stored) {
-    try {
-      const parsed = JSON.parse(stored);
-      auth.user = parsed.user;
-      auth.token = parsed.token;
-      auth.isGuest = parsed.isGuest || false;
-      auth.loginMethod = parsed.loginMethod || null;
-    } catch (e) {
-      console.error('Failed to restore auth:', e);
-      logout();
+      // Clear staging fields now that the session is confirmed
+      this.tempResident = null
+      this.tempUid = null
+      this.tempHasPin = false
+
+      this.persist()
+    },
+
+    /**
+     * Directly sets an RFID session, bypassing the PIN staging flow.
+     * Used when PIN verification is not required.
+     *
+     * @param {Object} resident - Resident profile from the API
+     * @param {string} uid      - Scanned RFID card UID
+     */
+    setRFID(resident, uid) {
+      this.mode = "rfid"
+      this.resident = resident
+      this.rfidUid = uid
+      this.persist()
+    },
+
+    /**
+     * Clears the session from both the store and localStorage.
+     */
+    logout() {
+      this.$reset()
+      localStorage.removeItem("kiosk_auth")
+    },
+
+    /**
+     * Restores a previously persisted session from localStorage.
+     * Should be called once on app startup.
+     */
+    restore() {
+      const stored = localStorage.getItem("kiosk_auth")
+      if (stored) Object.assign(this, JSON.parse(stored))
+    },
+
+    /**
+     * Persists the active session fields to localStorage.
+     * Temporary staging fields are intentionally excluded.
+     */
+    persist() {
+      localStorage.setItem(
+        "kiosk_auth",
+        JSON.stringify({
+          mode: this.mode,
+          resident: this.resident,
+          rfidUid: this.rfidUid
+        })
+      )
     }
   }
-};
-
-/**
- * Check if user is authenticated (has valid token)
- */
-export const isAuthenticated = () => {
-  return !!auth.token;
-};
-
-/**
- * Check if user logged in via RFID (registered resident)
- */
-export const isRfidUser = () => {
-  return auth.loginMethod === 'rfid' && !auth.isGuest && auth.user?.resident_id;
-};
-
-/**
- * Get resident ID (null for guests)
- */
-export const getResidentId = () => {
-  return auth.user?.resident_id || null;
-};
-
-/**
- * Check if user is admin
- */
-export const isAdmin = () => {
-  return auth.user?.is_admin === true || auth.loginMethod === 'admin';
-};
-
-/**
- * Get user's full name
- */
-export const getUserName = () => {
-  return auth.user?.name || 'Guest';
-};
+})

@@ -1,35 +1,52 @@
 <script setup>
+import PrimaryButton from "@/components/shared/Button.vue";
+
 const props = defineProps({
-  title: { type: String, default: 'Request Submitted!' },
+  title: { type: String, default: "Modal Title" },
   message: {
     type: String,
-    default: 'Your borrowing request has been submitted for approval. Pay the fee at the counter and you will be contacted for pickup details.'
+    default:
+      "Modal message goes here. This is a sample message to demonstrate the modal component.",
   },
-  showNewRequest: { type: Boolean, default: true },
-  newRequestText: { type: String, default: 'New Request' },
-  doneText: { type: String, default: 'Done' }
-})
+  type: { type: String, default: "success" }, // 'success', 'error', or 'warning'
+  referenceId: { type: String, default: "" },
+  showReferenceId: { type: Boolean, default: false },
+  showPrimaryButton: { type: Boolean, default: true },
+  showSecondaryButton: { type: Boolean, default: true },
+  showNewRequest: { type: Boolean, default: false }, // ADDED THIS
+  primaryButtonText: { type: String, default: "Yes" },
+  secondaryButtonText: { type: String, default: "No" },
+  newRequestButtonText: { type: String, default: "New Request" }, // ADDED THIS
+});
 
-const emit = defineEmits(['done', 'newRequest'])
+const emit = defineEmits(["primary-click", "secondary-click", "new-request"]); // ADDED EVENT
 
-const handleDone = () => {
-  emit('done')
-}
+const handlePrimaryClick = () => {
+  emit("primary-click");
+};
+
+const handleSecondaryClick = () => {
+  emit("secondary-click");
+};
 
 const handleNewRequestClick = () => {
-  emit('newRequest')
-}
+  emit("new-request");
+};
 </script>
 
 <template>
   <div class="flex flex-col items-center justify-center h-full">
     <div
-      class="bg-white shadow-lg rounded-2xl p-10 text-center w-[75%]
-              border-[#C1C1C1] border-[2px]"
+      class="bg-white shadow-lg rounded-2xl p-10 text-center w-[75%] min-w-[620px] max-w-[720px]"
     >
       <div class="flex justify-center mb-6">
-        <div class="w-[80px] h-[80px] rounded-full bg-[#E4F5FC] flex items-center justify-center">
-          <div class="w-[65px] h-[65px] rounded-full border-[4px] border-[#1B5886] flex items-center justify-center">
+        <div
+          v-if="type === 'success'"
+          class="w-[80px] h-[80px] rounded-full bg-[#E4F5FC] flex items-center justify-center"
+        >
+          <div
+            class="w-[65px] h-[65px] rounded-full border-[4px] border-[#1B5886] flex items-center justify-center"
+          >
             <svg
               xmlns="http://www.w3.org/2000/svg"
               class="w-10 h-10 text-[#1B5886]"
@@ -38,37 +55,109 @@ const handleNewRequestClick = () => {
               stroke="currentColor"
               stroke-width="2.5"
             >
-              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M5 13l4 4L19 7"
+              />
+            </svg>
+          </div>
+        </div>
+
+        <div
+          v-else-if="type === 'error'"
+          class="w-[80px] h-[80px] rounded-full bg-red-50 flex items-center justify-center"
+        >
+          <div
+            class="w-[65px] h-[65px] rounded-full border-[4px] border-red-500 flex items-center justify-center"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="w-10 h-10 text-red-500"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              stroke-width="2.5"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </div>
+        </div>
+
+        <div
+          v-else-if="type === 'warning'"
+          class="w-[80px] h-[80px] rounded-full bg-amber-50 flex items-center justify-center"
+        >
+          <div
+            class="w-[65px] h-[65px] rounded-full border-[4px] border-amber-500 flex items-center justify-center"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="w-10 h-10 text-amber-500"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              stroke-width="2.5"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+              />
             </svg>
           </div>
         </div>
       </div>
 
-      <h1 class="text-[30px] font-extrabold tracking-tight text-[#1B5886] mb-3">
+      <h1 class="text-[30px] font-extrabold tracking-tight text-[#013C6D] mb-3">
         {{ title }}
       </h1>
 
-      <p class="text-[#003A6B] mb-8">
+      <p class="text-[#003A6B] mb-6 text-[15px]">
         {{ message }}
       </p>
 
-      <div class="flex justify-center gap-4">
-        <button
-          v-if="showNewRequest"
-          @click="handleNewRequestClick"
-          class="px-7 py-3 rounded-xl border-2 border-[#1B5886] text-[#1B5886] font-semibold shadow-md
-                 hover:bg-[#1B5886] hover:text-white transition-colors duration-300 ease-in-out"
+      <div v-if="showReferenceId" class="mb-8 flex justify-center">
+        <div
+          class="border-2 border-dashed bg-[#E4F5FC] border-[#1B5886] rounded-xl px-8 py-4"
         >
-          {{ newRequestText }}
-        </button>
+          <p class="text-[#1B5886] text-2xl font-bold tracking-wide">
+            {{ referenceId }}
+          </p>
+        </div>
+      </div>
 
-        <button
-          @click="handleDone"
-          class="px-12 py-3 rounded-xl bg-[#1B5886] text-white font-semibold shadow-md
-                 hover:opacity-90 transition-opacity duration-300 ease-in-out" 
+      <div class="flex justify-center gap-4">
+        <PrimaryButton
+          v-if="showSecondaryButton"
+          variant="outline"
+          size="md"
+          @click="handleSecondaryClick"
         >
-          {{ doneText }}
-        </button>
+          {{ secondaryButtonText }}
+        </PrimaryButton>
+
+        <PrimaryButton
+          v-if="showNewRequest"
+          variant="outline"
+          size="md"
+          @click="handleNewRequestClick"
+        >
+          {{ newRequestButtonText }}
+        </PrimaryButton>
+
+        <PrimaryButton
+          v-if="showPrimaryButton"
+          variant="secondary"
+          size="md"
+          @click="handlePrimaryClick"
+        >
+          {{ primaryButtonText }}
+        </PrimaryButton>
       </div>
     </div>
   </div>

@@ -1,6 +1,10 @@
 <script setup>
 import { NConfigProvider, NMessageProvider } from 'naive-ui'
 import { blueThemeOverrides } from './assets/theme.js'
+import { useWebSocket } from '@/composables/useWebSocket'
+
+const { connect } = useWebSocket()
+connect() 
 </script>
 
 <template>
