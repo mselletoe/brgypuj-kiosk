@@ -20,7 +20,7 @@
 import { ref, watch, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { getKioskSettings } from '@/api/systemconfigService'
+import { getKioskSettings } from '@/api/systemConfigService'
 
 // Routes where the timer should NOT run
 const EXCLUDED_ROUTES = ['/idle', '/login', '/login-rfid', '/auth-pin']
