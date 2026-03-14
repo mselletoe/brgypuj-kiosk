@@ -518,7 +518,6 @@ const colorStyles = {
   align-items: center;
   gap: 14px;
   margin-bottom: 24px;
-  padding-bottom: 18px;
   border-bottom: 1px solid #f1f5f9;
 }
 .steps-icon-wrap {
@@ -562,7 +561,7 @@ const colorStyles = {
 .step-num {
   font-size: 2.2rem;
   font-weight: 900;
-  color: #dbeafe;
+  color: #7db6ff;
   letter-spacing: -0.04em;
   line-height: 1;
   margin-bottom: 6px;

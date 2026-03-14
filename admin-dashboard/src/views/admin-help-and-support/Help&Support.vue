@@ -26,9 +26,9 @@ const sections = [
 <template>
   <div class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden animate-fade-in">
     <div class="flex-shrink-0 mb-5 section-row" style="animation-delay: 0s">
-      <PageTitle title="Admin Help & Support" />
+      <PageTitle title="System Guide" />
       <p class="text-sm text-gray-500 mt-1">
-        System reference guide for the Barangay Kiosk Admin Dashboard.
+        System reference guide for the Barangay Kiosk System.
       </p>
     </div>
 

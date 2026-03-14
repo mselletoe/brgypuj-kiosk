@@ -37,7 +37,7 @@ import {
             <span class="badge-dot"></span>
             PUP Thesis Project
           </span>
-          <span class="badge badge-outline">March 2026</span>
+          <span class="badge badge-outline">2025-2026</span>
           <span class="badge badge-outline">Poblacion I, Amadeo, Cavite</span>
         </div>
 
@@ -48,13 +48,12 @@ import {
         <p class="hero-sub">with SMS Notification System</p>
 
         <p class="hero-desc">
-          A self-service platform designed to modernize barangay transactions through RFID
-          authentication, automated form handling, and GSM-based SMS notifications —
-          fully offline, no cloud dependency.
+          A self-service platform designed to modernize barangay transactions through RFID authentication,
+          automated form handling, and GSM-based SMS notifications — fully offline, no cloud dependency.
         </p>
 
         <div class="hero-tags">
-          <span v-for="tag in ['Vue.js','Node.js','Raspberry Pi 4 Model B','RFID Reader','GSM Module','Offline-First','Local LAN']"
+          <span v-for="tag in ['Vue.js','FastAPI','Raspberry Pi 4 Model B','RFID Reader','GSM Module','PostgreSQL','Local LAN']"
                 :key="tag" class="hero-tag">{{ tag }}</span>
         </div>
       </div>
@@ -180,7 +179,7 @@ import {
       </div>
 
       <div class="team-footer">
-        BS Computer Engineering &nbsp;·&nbsp; Polytechnic University of the Philippines &nbsp;·&nbsp; 2026
+        BS Computer Engineering &nbsp;·&nbsp; Polytechnic University of the Philippines &nbsp;·&nbsp; 2025-2026
       </div>
     </div>
 
@@ -230,7 +229,7 @@ import {
   overflow: hidden;
   background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 45%, #2563eb 70%, #1e40af 100%);
   border-radius: 20px;
-  padding: 52px 52px 48px;
+  padding: 45px 45px 36px;
   color: #fff;
   isolation: isolate;
 }
@@ -343,7 +342,7 @@ import {
   font-size: 1rem;
   line-height: 1.7;
   color: rgba(255,255,255,0.82);
-  max-width: 680px;
+  max-width: 750px;
   margin-bottom: 28px;
 }
 .hero-tags {
