@@ -132,6 +132,7 @@ const saveSettings = async () => {
       backup_schedule: schedule,
       backup_time:     backupTime.value,
     });
+    await loadConfig();
     message.success("Backup settings saved.");
   } catch {
     message.error("Failed to save backup settings.");

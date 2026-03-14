@@ -229,7 +229,7 @@ const deleteModalMessage = computed(() => {
 </script>
 
 <template>
-  <div class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden animate-fade-in">
+  <div class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden">
     <div class="flex justify-between items-center mb-4">
       <div>
         <PageTitle title="Kiosk Announcements" />
@@ -365,19 +365,3 @@ const deleteModalMessage = computed(() => {
     @cancel="cancelDelete"
   />
 </template>
-
-<style scoped>
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-.animate-fade-in {
-  animation: fadeIn 0.5s ease-out forwards;
-}
-</style>

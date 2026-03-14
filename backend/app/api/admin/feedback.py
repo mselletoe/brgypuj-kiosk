@@ -24,7 +24,7 @@ router = APIRouter(prefix="/feedbacks")
 def _format_feedback_for_admin(feedback):
     """Helper to format feedback with resident data"""
     # Get the active RFID UID if resident exists
-    rfid_display = "Guest"
+    rfid_display = "Guest Mode"
     
     if feedback.resident:
         # Get the active RFID from the relationship

@@ -19,6 +19,7 @@ from app.api.deps import get_db, get_current_admin
 from app.models.admin import Admin
 from app.schemas.systemconfig import SystemConfigRead, SystemConfigUpdate
 from app.services.systemconfig_service import get_config, update_config
+from app.services.backup_service import apply_new_schedule
 
 router = APIRouter(prefix="/settings")
 
@@ -45,12 +46,12 @@ def patch_system_config(
     db: Session = Depends(get_db),
     current_admin: Admin = Depends(get_current_admin),
 ):
-    """
-    Partial update — only the fields you send are changed.
-    Each settings tab sends only the fields it manages.
-    Requires superadmin.
-    """
-    return update_config(db, data)
+    result = update_config(db, data)
+
+    if data.backup_schedule is not None or data.backup_time is not None:
+        apply_new_schedule()
+
+    return result
 
 
 # ── PUT /admin/settings/logo ──────────────────────────────────────────────────
