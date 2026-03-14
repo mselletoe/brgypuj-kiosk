@@ -84,7 +84,7 @@ async function fetchServices() {
   isLoading.value = true;
   try {
     const { data } = await getDocumentTypes();
-    const idType = data.find((d) => d.is_id_application === true);
+    const idType = data.find((d) => !!d.is_id_application);
     if (idType) {
       idDocType.value = {
         id: idType.id,
@@ -95,7 +95,7 @@ async function fetchServices() {
         is_id_application: true,
         fields: idType.fields || [],
         requirements: idType.requirements || [],
-        has_template: idType.has_template || false,
+        has_template: !!idType.has_template,
       };
       idLocalPrice.value = Number(idType.price) ?? 0;
     }
@@ -151,8 +151,10 @@ async function handleIDFileUpload({ file }) {
   try {
     const docType = await ensureIDDocType();
     await uploadDocumentTemplate(docType.id, raw);
+    // Update idDocType directly — GET /admin/documents/types may exclude
+    // is_id_application types so fetchServices() cannot be relied upon here.
+    idDocType.value = { ...idDocType.value, has_template: true };
     message.success("Template uploaded successfully.");
-    await fetchServices();
   } catch (err) {
     console.error(err);
     message.error("Upload failed. Please try again.");
@@ -173,8 +175,8 @@ function handleIDReplaceTemplate() {
     idUploading.value = true;
     try {
       await uploadDocumentTemplate(idDocType.value.id, raw);
+      idDocType.value = { ...idDocType.value, has_template: true };
       message.success("Template replaced successfully.");
-      await fetchServices();
     } catch (err) {
       console.error(err);
       message.error("Replace failed.");

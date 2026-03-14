@@ -40,3 +40,6 @@ reportlab
 
 # Image Processing
 Pillow
+
+# Database Seeding
+faker

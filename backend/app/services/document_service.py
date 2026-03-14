@@ -618,6 +618,7 @@ def create_document_type(db: Session, payload: DocumentTypeCreate,):
         price=payload.price,
         fields=payload.fields,
         is_available=payload.is_available,
+        is_id_application=payload.is_id_application,
     )
 
     db.add(doc_type)
