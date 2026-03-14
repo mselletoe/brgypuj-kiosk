@@ -1,9 +1,5 @@
 <script setup>
-<<<<<<< HEAD
-import { ref, computed, onMounted, nextTick, watch } from 'vue';
-=======
 import { ref, computed, nextTick, watch } from 'vue';
->>>>>>> 4ddb44f52d136f561676a82380d750ae9c428a2a
 import ArrowBackButton from '@/components/shared/ArrowBackButton.vue';
 import Button from '@/components/shared/Button.vue';
 import Modal from '@/components/shared/Modal.vue';
@@ -42,14 +38,6 @@ const localInfo = ref({
   notes: props.borrowerInfo.notes || ''
 });
 
-// Watch for authInfo changes and update local fields
-watch(() => props.authInfo, (newAuthInfo) => {
-  if (newAuthInfo) {
-    localInfo.value.contactPerson = newAuthInfo.contactPerson || '';
-    localInfo.value.contactNumber = newAuthInfo.contactNumber || '';
-  }
-}, { immediate: true, deep: true });
-
 const applyAutofill = async () => {
   if (!residentId.value) return;
 
@@ -74,34 +62,6 @@ watch(useAutofill, async (enabled) => {
   }
 });
 
-const localInfo = ref({
-  contactPerson: props.borrowerInfo.contactPerson || '',
-  contactNumber: props.borrowerInfo.contactNumber || '',
-  purpose: props.borrowerInfo.purpose || null,
-  notes: props.borrowerInfo.notes || ''
-});
-
-<<<<<<< HEAD
-// Watch for authInfo changes and update local fields
-watch(() => props.authInfo, (newAuthInfo) => {
-  if (newAuthInfo) {
-    localInfo.value.contactPerson = newAuthInfo.contactPerson || '';
-    localInfo.value.contactNumber = newAuthInfo.contactNumber || '';
-  }
-}, { immediate: true, deep: true });
-
-onMounted(() => {
-  // Autofill if user is logged in
-  if (props.authInfo) {
-    localInfo.value.contactPerson = props.authInfo.contactPerson || '';
-    localInfo.value.contactNumber = props.authInfo.contactNumber || '';
-  }
-});
-
-const isUserLoggedIn = computed(() => !!props.authInfo);
-
-=======
->>>>>>> 4ddb44f52d136f561676a82380d750ae9c428a2a
 const purposeOptions = ref([
   'Barangay Event',
   'Personal Event (Birthday, Wedding, etc.)',
@@ -112,6 +72,7 @@ const purposeOptions = ref([
 
 const isFormValid = computed(() => {
   return localInfo.value.contactPerson &&
+         localInfo.value.contactNumber &&
          localInfo.value.purpose;
 });
 
@@ -214,38 +175,6 @@ const inputClass = "w-full h-[48px] px-4 py-3 border border-gray-300 rounded-xl 
 
         <div class="mt-4 flex items-center gap-3">
           <input
-<<<<<<< HEAD
-            id="contact-person"
-            v-model="localInfo.contactPerson"
-            type="text"
-            placeholder="Name"
-            :class="[inputClass, { 'bg-gray-100 cursor-not-allowed': isUserLoggedIn }]"
-            @focus="focusInput('contact-person', 'contactPerson')"
-            :readonly="isUserLoggedIn || !showKeyboard" 
-          />
-          <p v-if="isUserLoggedIn" class="text-xs text-gray-500 mt-1">
-            Auto-filled from your account
-          </p>
-        </div>
-
-        <div>
-          <label for="contact-number" class="block text-base font-medium text-gray-700 mb-1">
-            Contact Number
-          </label>
-          <input
-            id="contact-number"
-            v-model="localInfo.contactNumber"
-            type="tel"
-            placeholder="Phone Number (Optional)"
-            :class="[inputClass, { 'bg-gray-100 cursor-not-allowed': isUserLoggedIn }]"
-            @focus="focusInput('contact-number', 'contactNumber')"
-            :readonly="isUserLoggedIn || !showKeyboard" 
-          />
-          <p v-if="isUserLoggedIn" class="text-xs text-gray-500 mt-1">
-            Auto-filled from your account
-          </p>
-        </div>
-=======
             type="checkbox"
             id="use-autofill"
             v-model="useAutofill"
@@ -272,7 +201,6 @@ const inputClass = "w-full h-[48px] px-4 py-3 border border-gray-300 rounded-xl 
               :readonly="useAutofill"
             />
           </div>
->>>>>>> 4ddb44f52d136f561676a82380d750ae9c428a2a
 
           <div>
             <label for="contact-number" class="block text-base font-bold text-[#003A6B] mb-2">
@@ -351,7 +279,23 @@ const inputClass = "w-full h-[48px] px-4 py-3 border border-gray-300 rounded-xl 
       class="fixed bottom-0 w-full"
     />
   </Transition>
-<<<<<<< HEAD
+
+  <Transition name="fade-blur">
+    <div v-if="showExitModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-8 modal-backdrop">
+      <Modal
+        :title="t('exitEquipmentRequest')"
+        :message="t('unsavedChanges')"
+        type="warning"
+        :primaryButtonText="t('exit')"
+        :secondaryButtonText="t('stay')"
+        :showPrimaryButton="true"
+        :showSecondaryButton="true"
+        :showReferenceId="false"
+        @primary-click="confirmExit"
+        @secondary-click="cancelExit"
+      />
+    </div>
+  </Transition>
 </template>
 
 <style scoped>
@@ -392,6 +336,3 @@ const inputClass = "w-full h-[48px] px-4 py-3 border border-gray-300 rounded-xl 
   backdrop-filter: blur(8px);
 }
 </style>
-=======
-</template>
->>>>>>> 4ddb44f52d136f561676a82380d750ae9c428a2a
