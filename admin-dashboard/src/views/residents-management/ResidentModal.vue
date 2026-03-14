@@ -88,7 +88,7 @@ const formData = ref({
   // Address Info
   house_no_street: '',
   purok_id: null,
-  barangay: 'Poblacion Uno',
+  barangay: 'Poblacion I',
   municipality: 'Amadeo',
   province: 'Cavite',
   region: 'Region IV-A',
@@ -333,7 +333,7 @@ async function loadResidentDetails() {
       residency_start_date: data.residency_start_date,
       house_no_street: data.current_address?.house_no_street || '',
       purok_id: data.current_address?.purok_id || null,
-      barangay: data.current_address?.barangay || 'Poblacion Uno',
+      barangay: data.current_address?.barangay || 'Poblacion I',
       municipality: data.current_address?.municipality || 'Amadeo',
       province: data.current_address?.province || 'Cavite',
       region: data.current_address?.region || 'Region IV-A',
@@ -365,7 +365,7 @@ function resetForm() {
     residency_start_date: today.getTime(),
     house_no_street: '',
     purok_id: null,
-    barangay: 'Poblacion Uno',
+    barangay: 'Poblacion I',
     municipality: 'Amadeo',
     province: 'Cavite',
     region: 'Region IV-A',
@@ -400,11 +400,6 @@ async function handleSave() {
       message.error('House/Street and Purok are required')
       return
     }
-    
-    if (!formData.value.rfid_uid) {
-      message.error('RFID No. is required')
-      return
-    }
   }
   
   saving.value = true
@@ -429,10 +424,6 @@ async function handleSave() {
           municipality: formData.value.municipality,
           province: formData.value.province,
           region: formData.value.region
-        },
-        rfid: {
-          rfid_uid: formData.value.rfid_uid,
-          is_active: formData.value.is_active
         }
       }
       
