@@ -8,6 +8,8 @@ class Settings(BaseSettings):
     JWT_EXPIRE_HOURS: int = 12 
     DEBUG: bool = True
 
-    model_config = SettingsConfigDict(env_file=".env")
+    # THIS IS THE MISSING LINE:
+    BACKUP_DIR: str = "./backups/barangay" 
 
+    model_config = SettingsConfigDict(env_file=".env")
 settings = Settings()

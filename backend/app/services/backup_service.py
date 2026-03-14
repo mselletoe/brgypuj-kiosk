@@ -21,7 +21,7 @@ from app.core.config import settings
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-BACKUP_DIR = Path(os.getenv("BACKUP_DIR", "/var/backups/barangay"))
+BACKUP_DIR = Path(settings.BACKUP_DIR)
 BACKUP_DIR.mkdir(parents=True, exist_ok=True)
 
 PH_TIMEZONE = "Asia/Manila"

@@ -170,7 +170,7 @@ onMounted(() => {
 /* Wide screens: 2-column layout with sidebar on the right */
 @media (min-width: 1100px) {
   .overview-grid {
-    grid-template-columns: 1fr 400px;
+    grid-template-columns: 1fr 370px;
     grid-template-rows: auto 380px auto;
   }
 

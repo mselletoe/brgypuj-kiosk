@@ -7,7 +7,7 @@ const props = defineProps({
 });
 
 const router = useRouter();
-const displayedLogs = computed(() => props.auditLogs.slice(0, 5));
+const displayedLogs = computed(() => props.auditLogs.slice(0, 10));
 
 const navigateToLog = (log) => {
   if (log.type === "doc") router.push("/document-requests");
@@ -50,8 +50,11 @@ const viewAllSettings = () => {
       </button>
     </div>
 
-    <!-- min-h-0 is critical: allows flex child to shrink and scroll rather than overflow -->
-    <div class="flex-1 min-h-0 pr-1">
+    <!-- Fixed height shows ~7 items; overflow scrolls the rest -->
+    <div
+      class="flex-1 min-h-0 pr-1 overflow-y-auto audit-scroll"
+      style="max-height: 476px"
+    >
       <div class="ml-2 border-l-2 border-gray-50 space-y-3 pb-2">
         <div
           v-if="displayedLogs.length === 0"
@@ -96,3 +99,19 @@ const viewAllSettings = () => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.audit-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+.audit-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.audit-scroll::-webkit-scrollbar-thumb {
+  background: #e5e7eb;
+  border-radius: 99px;
+}
+.audit-scroll::-webkit-scrollbar-thumb:hover {
+  background: #d1d5db;
+}
+</style>
