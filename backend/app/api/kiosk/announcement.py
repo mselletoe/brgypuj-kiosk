@@ -1,9 +1,10 @@
 """
-Kiosk Announcements API
----------------------------
-Handles resident-facing operations for viewing announcements
-via the kiosk interface.
+app/api/kiosk/announcements.py
+
+Router for kiosk-facing announcement display.
+Exposes only active announcements to the public kiosk interface.
 """
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.api.deps import get_db
@@ -13,18 +14,7 @@ from app.services.announcement_service import get_active_announcements
 router = APIRouter(prefix="/announcements")
 
 
-# =========================================================
-# ANNOUNCEMENT VIEWING
-# =========================================================
-
-@router.get(
-    "",
-    response_model=list[AnnouncementKioskOut]
-)
+@router.get( "", response_model=list[AnnouncementKioskOut] )
 def list_active_announcements(db: Session = Depends(get_db)):
-    """
-    Retrieves all active announcements for kiosk display.
-    Returns announcements ordered by event date (soonest first).
-    Includes image data as base64 encoded strings.
-    """
+    """Returns all currently active announcements for kiosk display."""
     return get_active_announcements(db)
