@@ -11,12 +11,15 @@ import {
   useMessage,
   NEmpty,
   NPopover,
+  NTag,
 } from "naive-ui";
 import {
   FunnelIcon,
   TrashIcon,
   CheckIcon,
   XMarkIcon,
+  CheckCircleIcon,
+  ArrowPathIcon,
 } from "@heroicons/vue/24/outline";
 import PageTitle from "@/components/shared/PageTitle.vue";
 import ConfirmModal from "@/components/shared/ConfirmationModal.vue";
@@ -26,15 +29,13 @@ import {
   updateBlotter,
   deleteBlotter,
   bulkDeleteBlotters,
+  resolveBlotter,
+  reopenBlotter,
 } from "@/api/blotterService";
 import { fetchResidents } from "@/api/residentService";
 import { useSearchSync } from "@/composables/useSearchSync";
 
 const message = useMessage();
-
-// ======================================
-// State Management
-// ======================================
 const blotters = ref([]);
 const loading = ref(false);
 const searchQuery = ref("");
@@ -47,30 +48,31 @@ const currentBlotter = ref(null);
 const modalMode = ref("add");
 const saving = ref(false);
 const formData = ref({});
-
-// Residents for the selector dropdowns
 const residents = ref([]);
+const showResolveModal = ref(false);
+const showReopenModal = ref(false);
+const pendingActionId = ref(null);
+const actionLoading = ref(false);
 
-// ======================================
-// Filter State
-// ======================================
 const filterState = ref({
   incidentType: null,
-  incidentDateRange: null, // [startTs, endTs] from date-range picker
+  incidentDateRange: null,
+  status: null,
 });
 
 const hasActiveFilters = computed(
   () =>
-    !!(filterState.value.incidentType || filterState.value.incidentDateRange),
+    !!(
+      filterState.value.incidentType ||
+      filterState.value.incidentDateRange ||
+      filterState.value.status
+    ),
 );
 
 function handleFilterClear() {
-  filterState.value = { incidentType: null, incidentDateRange: null };
+  filterState.value = { incidentType: null, incidentDateRange: null, status: null };
 }
 
-// ======================================
-// Data Loading
-// ======================================
 async function loadBlotters() {
   loading.value = true;
   try {
@@ -97,9 +99,6 @@ onMounted(() => {
   loadResidents();
 });
 
-// ======================================
-// Resident Selector Options
-// ======================================
 const residentOptions = computed(() =>
   residents.value.map((r) => ({
     label:
@@ -145,9 +144,6 @@ function handleRespondentSelect(residentId) {
   formData.value.respondent_address = r.address ?? "";
 }
 
-// ======================================
-// Data Normalization
-// ======================================
 function normalizeRecord(record) {
   return {
     ...record,
@@ -172,6 +168,7 @@ function toApiPayload(form) {
     "id",
     "blotter_no",
     "created_at",
+    "status",
     "complainant_resident_name",
     "complainant_resident_first_name",
     "complainant_resident_middle_name",
@@ -187,9 +184,6 @@ function toApiPayload(form) {
   return payload;
 }
 
-// ======================================
-// Selection + Filtering Logic
-// ======================================
 const filteredBlotters = computed(() => {
   let list = blotters.value;
 
@@ -216,6 +210,10 @@ const filteredBlotters = computed(() => {
     );
   }
 
+  if (filterState.value.status) {
+    list = list.filter((b) => b.status === filterState.value.status);
+  }
+
   return list;
 });
 
@@ -240,9 +238,6 @@ watch(searchQuery, () => {
   selectedIds.value = [];
 });
 
-// ======================================
-// Format Helpers
-// ======================================
 function formatDate(timestamp) {
   if (!timestamp) return "N/A";
   return new Date(timestamp).toLocaleDateString("en-PH", {
@@ -252,9 +247,6 @@ function formatDate(timestamp) {
   });
 }
 
-// ======================================
-// CRUD Operations
-// ======================================
 function openAddModal() {
   modalMode.value = "add";
   currentBlotter.value = null;
@@ -272,9 +264,50 @@ function handleModalClose() {
   currentBlotter.value = null;
 }
 
-// ======================================
-// Delete Operations
-// ======================================
+function requestResolve(id) {
+  pendingActionId.value = id;
+  showResolveModal.value = true;
+}
+
+function requestReopen(id) {
+  pendingActionId.value = id;
+  showReopenModal.value = true;
+}
+
+async function confirmResolve() {
+  actionLoading.value = true;
+  try {
+    const updated = await resolveBlotter(pendingActionId.value);
+    const idx = blotters.value.findIndex((b) => b.id === pendingActionId.value);
+    if (idx !== -1) blotters.value[idx] = normalizeRecord(updated);
+    message.success("Blotter record marked as resolved. Respondent's clean record has been restored.");
+  } catch (err) {
+    const detail = err?.response?.data?.detail;
+    message.error(detail || "Failed to resolve blotter record");
+  } finally {
+    actionLoading.value = false;
+    showResolveModal.value = false;
+    pendingActionId.value = null;
+  }
+}
+
+async function confirmReopen() {
+  actionLoading.value = true;
+  try {
+    const updated = await reopenBlotter(pendingActionId.value);
+    const idx = blotters.value.findIndex((b) => b.id === pendingActionId.value);
+    if (idx !== -1) blotters.value[idx] = normalizeRecord(updated);
+    message.success("Blotter record re-opened.");
+  } catch (err) {
+    const detail = err?.response?.data?.detail;
+    message.error(detail || "Failed to re-open blotter record");
+  } finally {
+    actionLoading.value = false;
+    showReopenModal.value = false;
+    pendingActionId.value = null;
+  }
+}
+
 function requestBulkDelete() {
   if (selectedIds.value.length === 0) {
     message.warning("Please select records to delete");
@@ -309,9 +342,6 @@ async function handleDeleteSingle(id) {
   }
 }
 
-// ======================================
-// Table Columns
-// ======================================
 const columns = computed(() => [
   {
     title: "",
@@ -359,38 +389,75 @@ const columns = computed(() => [
   {
     title: "Type of Incident",
     key: "incident_type",
-    minWidth: 180,
+    minWidth: 160,
     render(row) {
       return row.incident_type || "N/A";
     },
   },
   {
+    title: "Status",
+    key: "status",
+    width: 120,
+    render(row) {
+      const isResolved = row.status === "resolved";
+      return h(
+        NTag,
+        {
+          type: isResolved ? "success" : "warning",
+          size: "small",
+          round: true,
+        },
+        { default: () => (isResolved ? "Resolved" : "Unresolved") },
+      );
+    },
+  },
+  {
     title: "Actions",
     key: "actions",
-    width: 130,
+    width: 170,
     render(row) {
-      return h("div", { class: "flex gap-2 items-center" }, [
+      const isResolved = row.status === "resolved";
+      return h("div", { class: "flex gap-1.5 items-center" }, [
         h(
           NButton,
           { type: "info", size: "small", onClick: () => openViewModal(row) },
           { default: () => "View" },
         ),
+        isResolved
+          ? h(
+              "button",
+              {
+                title: "Re-open record",
+                onClick: () => requestReopen(row.id),
+                class:
+                  "p-1.5 text-amber-500 hover:bg-amber-50 rounded transition",
+              },
+              [h(ArrowPathIcon, { class: "w-4 h-4" })],
+            )
+          : h(
+              "button",
+              {
+                title: "Mark as resolved",
+                onClick: () => requestResolve(row.id),
+                class:
+                  "p-1.5 text-green-600 hover:bg-green-50 rounded transition",
+              },
+              [h(CheckCircleIcon, { class: "w-4 h-4" })],
+            ),
+        // Delete button
         h(
           "button",
           {
             onClick: () => handleDeleteSingle(row.id),
             class: "p-1.5 text-red-500 hover:bg-red-50 rounded transition",
           },
-          [h(TrashIcon, { class: "w-5 h-5" })],
+          [h(TrashIcon, { class: "w-4 h-4" })],
         ),
       ]);
     },
   },
 ]);
 
-// ======================================
-// Modal Form State
-// ======================================
 const incidentTypeOptions = [
   {
     label: "Physical Altercation (Pananakit o Pisikal na Pag-aaway)",
@@ -439,11 +506,16 @@ const incidentTypeOptions = [
   { label: "Other", value: "Other" },
 ];
 
-// Reuse same list for filter but add "All Types" at top
 const incidentTypeFilterOptions = computed(() => [
   { label: "All Incident Types", value: null },
   ...incidentTypeOptions,
 ]);
+
+const statusFilterOptions = [
+  { label: "All Statuses", value: null },
+  { label: "Active", value: "active" },
+  { label: "Resolved", value: "resolved" },
+];
 
 function emptyForm() {
   return {
@@ -537,7 +609,6 @@ const modalTitle = computed(() => {
           class="border border-gray-200 text-gray-700 rounded-md py-2 px-3 w-[250px] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-gray-400"
         />
 
-        <!-- Filter Popover -->
         <NPopover
           v-model:show="showFilterPopover"
           trigger="click"
@@ -585,6 +656,17 @@ const modalTitle = computed(() => {
 
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2"
+                  >Status</label
+                >
+                <NSelect
+                  v-model:value="filterState.status"
+                  :options="statusFilterOptions"
+                  placeholder="All Statuses"
+                />
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2"
                   >Incident Date Range</label
                 >
                 <NDatePicker
@@ -606,7 +688,6 @@ const modalTitle = computed(() => {
           </div>
         </NPopover>
 
-        <!-- Delete -->
         <div class="relative group inline-block">
           <button
             @click="requestBulkDelete"
@@ -627,7 +708,6 @@ const modalTitle = computed(() => {
           </div>
         </div>
 
-        <!-- Select All -->
         <div class="relative group inline-block">
           <div
             class="flex items-center border rounded-lg overflow-hidden transition-colors"
@@ -735,7 +815,17 @@ const modalTitle = computed(() => {
         <div
           class="flex items-center justify-between px-6 py-4 border-b bg-gray-50"
         >
-          <h2 class="text-lg font-semibold text-gray-800">{{ modalTitle }}</h2>
+          <div class="flex items-center gap-3">
+            <h2 class="text-lg font-semibold text-gray-800">{{ modalTitle }}</h2>
+            <NTag
+              v-if="modalMode === 'view' && formData.status"
+              :type="formData.status === 'resolved' ? 'success' : 'warning'"
+              size="small"
+              round
+            >
+              {{ formData.status === "resolved" ? "Resolved" : "Active" }}
+            </NTag>
+          </div>
           <button
             @click="handleModalClose"
             class="p-1 rounded hover:bg-gray-200 transition"
@@ -979,5 +1069,42 @@ const modalTitle = computed(() => {
       @confirm="confirmDelete"
       @cancel="showDeleteModal = false"
     />
+
+    <ConfirmModal
+      :show="showResolveModal"
+      title="Mark as Resolved?"
+      confirm-text="Resolve"
+      cancel-text="Cancel"
+      @confirm="confirmResolve"
+      @cancel="showResolveModal = false"
+    >
+      <template #default>
+        <p class="text-sm text-gray-600">
+          Resolving this record will restore the respondent resident's
+          <span class="font-semibold text-green-700">clean record</span> status,
+          provided they have no other active blotter records as respondent.
+        </p>
+        <p class="text-sm text-gray-500 mt-2">
+          You can re-open this record at any time if needed.
+        </p>
+      </template>
+    </ConfirmModal>
+
+    <ConfirmModal
+      :show="showReopenModal"
+      title="Re-open this record?"
+      confirm-text="Re-open"
+      cancel-text="Cancel"
+      @confirm="confirmReopen"
+      @cancel="showReopenModal = false"
+    >
+      <template #default>
+        <p class="text-sm text-gray-600">
+          Re-opening this record will flag the respondent as having an
+          <span class="font-semibold text-amber-600">active blotter record</span>,
+          which may affect their eligibility for clean-record documents.
+        </p>
+      </template>
+    </ConfirmModal>
   </div>
 </template>

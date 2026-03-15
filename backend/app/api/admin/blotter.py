@@ -19,6 +19,8 @@ from app.services.blotter_service import (
     get_blotter_records_by_resident,
     create_blotter_record,
     update_blotter_record,
+    resolve_blotter_record,
+    reopen_blotter_record,
     delete_blotter_record,
     bulk_delete_blotter_records,
 )
@@ -26,12 +28,7 @@ from app.services.blotter_service import (
 router = APIRouter(prefix="/blotter")
 
 
-# -------------------------------------------------
-# Helpers
-# -------------------------------------------------
-
 def _resolve_party(resident) -> dict:
-    """Extracts resolved fields from a linked resident ORM object."""
     if not resident:
         return {
             "first_name": None,
@@ -55,10 +52,6 @@ def _resolve_party(resident) -> dict:
 
 
 def _format_record(record) -> dict:
-    """
-    Formats a BlotterRecord ORM object into a dict suitable for response schemas.
-    Resolves linked resident details for both complainant and respondent.
-    """
     complainant = _resolve_party(record.complainant)
     respondent = _resolve_party(record.respondent)
 
@@ -93,36 +86,24 @@ def _format_record(record) -> dict:
         "narrative": record.narrative,
         "recorded_by": record.recorded_by,
         "contact_no": record.contact_no,
+        "status": record.status,
         "created_at": record.created_at,
     }
 
 
-# =========================================================
-# BLOTTER RECORDS
-# =========================================================
-
 @router.get("", response_model=list[BlotterRecordOut])
 def list_blotter_records(db: Session = Depends(get_db)):
-    """
-    Retrieves all blotter records ordered by most recently filed.
-    """
     records = get_all_blotter_records(db)
     return [_format_record(r) for r in records]
 
 
 @router.get("/resident/{resident_id}", response_model=list[BlotterRecordOut])
 def list_blotter_records_by_resident(resident_id: int, db: Session = Depends(get_db)):
-    """
-    Retrieves all blotter records where the given resident is involved
-    as either complainant or respondent. Each record includes a `role`
-    field indicating the resident's involvement. Ordered by most recent first.
-    """
     records = get_blotter_records_by_resident(db, resident_id)
 
     result = []
     for r in records:
         formatted = _format_record(r)
-        # Annotate which role this resident played in each record
         if r.complainant_id == resident_id:
             formatted["role"] = "Complainant"
         elif r.respondent_id == resident_id:
@@ -136,19 +117,12 @@ def list_blotter_records_by_resident(resident_id: int, db: Session = Depends(get
 
 @router.post("", response_model=BlotterRecordOut, status_code=status.HTTP_201_CREATED)
 def create_record(payload: BlotterRecordCreate, db: Session = Depends(get_db)):
-    """
-    Files a new blotter record. Automatically generates a unique blotter number.
-    Optionally links complainant and/or respondent to registered residents.
-    """
     record = create_blotter_record(db, payload)
     return _format_record(record)
 
 
 @router.get("/{blotter_id}", response_model=BlotterRecordDetail)
 def get_record(blotter_id: int, db: Session = Depends(get_db)):
-    """
-    Fetches the full details of a specific blotter record.
-    """
     record = get_blotter_record_by_id(db, blotter_id)
     if not record:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Blotter record not found")
@@ -157,10 +131,23 @@ def get_record(blotter_id: int, db: Session = Depends(get_db)):
 
 @router.put("/{blotter_id}", response_model=BlotterRecordOut)
 def update_record(blotter_id: int, payload: BlotterRecordUpdate, db: Session = Depends(get_db)):
-    """
-    Updates an existing blotter record. All fields are optional.
-    """
     record = update_blotter_record(db, blotter_id, payload)
+    if not record:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Blotter record not found")
+    return _format_record(record)
+
+
+@router.post("/{blotter_id}/resolve", response_model=BlotterRecordOut)
+def resolve_record(blotter_id: int, db: Session = Depends(get_db)):
+    record = resolve_blotter_record(db, blotter_id)
+    if not record:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Blotter record not found")
+    return _format_record(record)
+
+
+@router.post("/{blotter_id}/reopen", response_model=BlotterRecordOut)
+def reopen_record(blotter_id: int, db: Session = Depends(get_db)):
+    record = reopen_blotter_record(db, blotter_id)
     if not record:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Blotter record not found")
     return _format_record(record)
@@ -168,9 +155,6 @@ def update_record(blotter_id: int, payload: BlotterRecordUpdate, db: Session = D
 
 @router.delete("/{blotter_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_record(blotter_id: int, db: Session = Depends(get_db)):
-    """
-    Permanently removes a blotter record from the system.
-    """
     deleted = delete_blotter_record(db, blotter_id)
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Blotter record not found")
@@ -178,8 +162,5 @@ def delete_record(blotter_id: int, db: Session = Depends(get_db)):
 
 @router.post("/bulk-delete")
 def bulk_delete_records(ids: list[int] = Body(...), db: Session = Depends(get_db)):
-    """
-    Deletes multiple blotter records in a single operation.
-    """
     deleted_count = bulk_delete_blotter_records(db, ids)
     return {"detail": f"{deleted_count} blotter records deleted"}
