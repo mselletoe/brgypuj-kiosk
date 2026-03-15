@@ -1,8 +1,15 @@
+/**
+ * @file admin-dashboard/src/api/documentService.js
+ * @description API service functions for admin document management.
+ * Covers document type configuration, template handling, request lifecycle,
+ * eligibility checks, notes, and PDF viewing.
+ */
+
 import api from './http'
 
-// ──────────────────────────────────────────────────────────────
+// =================================================================================
 // DOCUMENT TYPES
-// ──────────────────────────────────────────────────────────────
+// =================================================================================
 
 export function getDocumentTypes() {
   return api.get('/admin/documents/types')
@@ -19,6 +26,10 @@ export function updateDocumentType(id, payload) {
 export function deleteDocumentType(id) {
   return api.delete(`/admin/documents/types/${id}`)
 }
+
+// =================================================================================
+// DOCUMENT TEMPLATES
+// =================================================================================
 
 export function uploadDocumentTemplate(id, file) {
   const form = new FormData()
@@ -40,7 +51,6 @@ export function downloadDocumentTemplate(id, filename = 'template') {
     document.body.appendChild(link)
     link.click()
 
-    // Cleanup
     link.remove()
     window.URL.revokeObjectURL(url)
 
@@ -49,31 +59,19 @@ export function downloadDocumentTemplate(id, filename = 'template') {
 }
 
 
-// ──────────────────────────────────────────────────────────────
-// DOCUMENT REQUESTS
-// NOTE: The list returned by getDocumentRequests() now includes
-//       I.D Application rows (doctype_id === null).
-//       Use isIDApplication(row) to detect them and apply the
-//       correct card styling / action routing in the UI.
-// ──────────────────────────────────────────────────────────────
+// =================================================================================
+// ID APPLICATION
+// =================================================================================
 
-/**
- * Returns true when a request row is an I.D Application.
- * These rows have doctype_id === null and doctype_name === "I.D Application".
- * The frontend should render them with the RFID (red) card variant.
- *
- * @param {{ doctype_id: number | null }} request
- * @returns {boolean}
- */
 export function isIDApplication(request) {
   return request.doctype_id === null || request.doctype_id == null
 }
 
-/**
- * Fetch all document requests including I.D Applications.
- * I.D Application rows have doctype_id = null and doctype_name = "I.D Application".
- * @returns {Promise}
- */
+
+// =================================================================================
+// DOCUMENT REQUESTS
+// =================================================================================
+
 export function getDocumentRequests() {
   return api.get('/admin/documents/requests')
 }
@@ -129,23 +127,15 @@ export function updateNotes(requestId, notes) {
   return api.put(`/admin/documents/requests/${requestId}/notes`, { notes })
 }
 
-/**
- * Check if a resident meets all requirements for a document type.
- * Used by admin to inspect eligibility before or during processing.
- * @param {number} residentId
- * @param {number} doctypeId
- * @returns {Promise<EligibilityCheckResult>}
- */
+
+// =================================================================================
+// ELIGIBILITY CHECK
+// =================================================================================
+
 export function checkResidentEligibility(residentId, doctypeId) {
   return api.get(`/admin/documents/${residentId}/eligibility/${doctypeId}`)
 }
 
-/**
- * Update the requirements list for a document type.
- * @param {number} id - document type ID
- * @param {Array} requirements - array of requirement objects
- * @returns {Promise}
- */
 export function updateDocumentRequirements(id, requirements) {
   return api.put(`/admin/documents/types/${id}`, { requirements })
 }

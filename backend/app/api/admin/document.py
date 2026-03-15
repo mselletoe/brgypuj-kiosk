@@ -1,12 +1,13 @@
 """
-Document Administration API
----------------------------
-Provides management endpoints for document type templates and resident 
-request monitoring within the administrative dashboard.
+app/api/admin/documents.py
+
+Router for admin document management.
+Handles document type configuration, template uploads, request lifecycle
+(approve, reject, release, payment, undo), PDF generation, and notes.
 """
+
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Body
 from fastapi.responses import StreamingResponse, FileResponse
-import os
 from pathlib import Path
 from io import BytesIO
 from sqlalchemy.orm import Session
@@ -17,7 +18,6 @@ from app.schemas.document import (
     DocumentTypeUpdate,
     DocumentRequestAdminOut,
     DocumentRequestAdminDetail,
-    DocumentTypeProcessingOut,
     EligibilityCheckResult
 )
 from app.services.document_service import (
@@ -49,155 +49,14 @@ from app.services.document_service import PDF_STORAGE_DIR
 router = APIRouter(prefix="/documents")
 
 
-# =========================================================
-# DOCUMENT TYPES 
-# =========================================================
-
-@router.get(
-    "/types",
-    response_model=list[DocumentTypeAdminOut],
-)
-def list_document_types(db: Session = Depends(get_db),):
-    """
-    Retrieves a comprehensive list of all document types, including 
-    those currently marked as unavailable.
-    """
-    return get_all_document_types(db)
-
-
-@router.post(
-    "/types",
-    response_model=DocumentTypeAdminOut,
-    status_code=status.HTTP_201_CREATED,
-)
-def create_type(payload: DocumentTypeCreate, db: Session = Depends(get_db),):
-    """
-    Configures a new document type template with dynamic field definitions.
-    """
-    return create_document_type(db, payload)
-
-
-@router.put(
-    "/types/{doctype_id}",
-    response_model=DocumentTypeAdminOut,
-)
-def update_type(
-    doctype_id: int,
-    payload: DocumentTypeUpdate,
-    db: Session = Depends(get_db),
-):
-    """
-    Updates configuration, pricing, or field requirements for an existing document type.
-    """
-    updated = update_document_type(db, doctype_id, payload)
-    if not updated:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Document type not found",
-        )
-    return updated
-
-
-@router.delete(
-    "/types/{doctype_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
-)
-def delete_type(doctype_id: int, db: Session = Depends(get_db)):
-    deleted = delete_document_type(db, doctype_id)
-    if not deleted:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Document type not found",
-        )
-
-
-@router.get(
-    "/types/{doctype_id}/file",
-)
-def download_document_type_file(
-    doctype_id: int,
-    db: Session = Depends(get_db),
-):
-    """
-    Downloads the document template file for a specific document type.
-    """
-    doc = get_document_type_with_file(db, doctype_id)
-
-    if not doc or not doc.file:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Document file not found",
-        )
-
-    return StreamingResponse(
-        BytesIO(doc.file),
-        media_type="application/octet-stream",
-        headers={
-            "Content-Disposition": f'attachment; filename="{doc.doctype_name}.docx"'
-        },
-    )
-
-
-@router.post(
-    "/types/{doctype_id}/file",
-    status_code=status.HTTP_204_NO_CONTENT,
-)
-def upload_document_type_template(
-    doctype_id: int,
-    file: UploadFile = File(...),
-    db: Session = Depends(get_db),
-):
-    """
-    Uploads or replaces the document template file for a document type.
-    """
-    if not file.filename.endswith((".docx", ".pdf")):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only .docx or .pdf files are allowed",
-        )
-
-    success = upload_document_type_file(
-        db=db,
-        doctype_id=doctype_id,
-        file_bytes=file.file.read(),
-    )
-
-    if not success:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Document type not found",
-        )
-
-
-@router.get("/{resident_id}/blotter-summary")
-def get_blotter_summary(resident_id: int, db: Session = Depends(get_db)):
-    return get_resident_blotter_summary(db, resident_id)
-
-
-@router.get(
-    "/{resident_id}/eligibility/{doctype_id}",
-    response_model=EligibilityCheckResult
-)
-def admin_check_eligibility(resident_id: int, doctype_id: int, db: Session = Depends(get_db)):
-    return check_resident_eligibility(db, resident_id=resident_id, doctype_id=doctype_id)
-
-
-# =========================================================
-# DOCUMENT REQUESTS 
-# =========================================================
+# =================================================================================
+# INTERNAL HELPERS
+# =================================================================================
 
 def _format_request_for_admin(request):
-    """Helper to format request with resident data.
-
-    ID Applications have doctype_id = NULL and no doctype relationship.
-    In that case we hardcode the type as 'I.D Application' and use the
-    session_rfid stored in form_data as the display UID.
-    """
     is_id_application = request.doctype_id is None
 
-    # ── Resolve RFID display ─────────────────────────────────────────────
     if is_id_application:
-        # ID Applications store the session RFID (or "Guest Mode") in form_data
         rfid_display = (request.form_data or {}).get("session_rfid", "Guest Mode")
         phone_number = request.resident.phone_number if request.resident else None
     else:
@@ -211,7 +70,6 @@ def _format_request_for_admin(request):
             rfid_display = active_rfid if active_rfid else "No RFID"
             phone_number = request.resident.phone_number
 
-    # ── Resolve doctype fields ───────────────────────────────────────────
     doctype_id   = request.doctype_id if not is_id_application else None
     doctype_name = "I.D Application" if is_id_application else (
         request.doctype.doctype_name if request.doctype else "Unknown"
@@ -238,27 +96,119 @@ def _format_request_for_admin(request):
     }
 
 
-@router.get(
-    "/requests",
-    response_model=list[DocumentRequestAdminOut],
+# =================================================================================
+# DOCUMENT TYPES
+# =================================================================================
+@router.get( "/types", response_model=list[DocumentTypeAdminOut], )
+def list_document_types(db: Session = Depends(get_db),):
+    return get_all_document_types(db)
+
+
+@router.post(
+    "/types",
+    response_model=DocumentTypeAdminOut,
+    status_code=status.HTTP_201_CREATED,
 )
+def create_type(payload: DocumentTypeCreate, db: Session = Depends(get_db),):
+    return create_document_type(db, payload)
+
+
+@router.put( "/types/{doctype_id}", response_model=DocumentTypeAdminOut, )
+def update_type(
+    doctype_id: int,
+    payload: DocumentTypeUpdate,
+    db: Session = Depends(get_db),
+):
+    updated = update_document_type(db, doctype_id, payload)
+    if not updated:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document type not found",
+        )
+    return updated
+
+
+@router.delete( "/types/{doctype_id}", status_code=status.HTTP_204_NO_CONTENT, )
+def delete_type(doctype_id: int, db: Session = Depends(get_db)):
+    deleted = delete_document_type(db, doctype_id)
+    if not deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document type not found",
+        )
+
+
+@router.get( "/types/{doctype_id}/file" )
+def download_document_type_file(
+    doctype_id: int,
+    db: Session = Depends(get_db),
+):
+    doc = get_document_type_with_file(db, doctype_id)
+
+    if not doc or not doc.file:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document file not found",
+        )
+
+    return StreamingResponse(
+        BytesIO(doc.file),
+        media_type="application/octet-stream",
+        headers={
+            "Content-Disposition": f'attachment; filename="{doc.doctype_name}.docx"'
+        },
+    )
+
+
+@router.post( "/types/{doctype_id}/file", status_code=status.HTTP_204_NO_CONTENT, )
+def upload_document_type_template(
+    doctype_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+):
+    if not file.filename.endswith((".docx", ".pdf")):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only .docx or .pdf files are allowed",
+        )
+
+    success = upload_document_type_file(
+        db=db,
+        doctype_id=doctype_id,
+        file_bytes=file.file.read(),
+    )
+
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document type not found",
+        )
+
+
+# =================================================================================
+# RESIDENT ELIGIBILITY
+# =================================================================================
+@router.get("/{resident_id}/blotter-summary")
+def get_blotter_summary(resident_id: int, db: Session = Depends(get_db)):
+    return get_resident_blotter_summary(db, resident_id)
+
+
+@router.get( "/{resident_id}/eligibility/{doctype_id}", response_model=EligibilityCheckResult )
+def admin_check_eligibility(resident_id: int, doctype_id: int, db: Session = Depends(get_db)):
+    return check_resident_eligibility(db, resident_id=resident_id, doctype_id=doctype_id)
+
+
+# =================================================================================
+# DOCUMENT REQUESTS
+# =================================================================================
+@router.get( "/requests", response_model=list[DocumentRequestAdminOut], )
 def list_document_requests(db: Session = Depends(get_db),):
-    """
-    Lists all document requests submitted by residents for administrative review.
-    Includes both regular document requests and RFID requests.
-    """
     requests = get_all_document_requests(db)
     return [_format_request_for_admin(req) for req in requests]
 
 
-@router.get(
-    "/requests/{request_id}",
-    response_model=DocumentRequestAdminDetail,
-)
+@router.get( "/requests/{request_id}", response_model=DocumentRequestAdminDetail, )
 def get_document_request(request_id: int, db: Session = Depends(get_db),):
-    """
-    Fetches the complete details of a specific request, including submitted form data.
-    """
     request = get_document_request_by_id(db, request_id)
     if not request:
         raise HTTPException(
@@ -281,7 +231,6 @@ def view_request_pdf(request_id: int, db: Session = Depends(get_db)):
     if not request.request_file_path:
         raise HTTPException(status_code=404, detail="No PDF generated yet")
 
-    # Resolve absolute path based on service's PDF_STORAGE_DIR
     absolute_path = PDF_STORAGE_DIR / Path(request.request_file_path).relative_to("storage/documents")
 
     print("Absolute path being checked:", absolute_path)
@@ -299,10 +248,6 @@ def view_request_pdf(request_id: int, db: Session = Depends(get_db)):
 
 @router.post("/requests/{request_id}/regenerate-pdf")
 def regenerate_pdf(request_id: int, db: Session = Depends(get_db)):
-    """
-    Manually regenerates the PDF for a request.
-    Useful if auto-generation failed or template was updated.
-    """
     success = regenerate_request_pdf(db, request_id)
     if not success:
         raise HTTPException(status_code=404, detail="Request not found")
@@ -351,12 +296,6 @@ def mark_request_as_unpaid(request_id: int, db: Session = Depends(get_db)):
 
 @router.post("/requests/{request_id}/undo")
 def undo_document_request(request_id: int, db: Session = Depends(get_db)):
-    """
-    Reverts a request to its previous status in the workflow:
-    - Approved → Pending
-    - Released → Approved  
-    - Rejected → Pending
-    """
     try:
         success = undo_request(db, request_id)
         if not success:
@@ -368,10 +307,6 @@ def undo_document_request(request_id: int, db: Session = Depends(get_db)):
 
 @router.post("/requests/bulk-undo")
 def bulk_undo_document_requests(ids: list[int] = Body(...), db: Session = Depends(get_db)):
-    """
-    Bulk undo operation for multiple requests.
-    Returns count of successfully reverted requests.
-    """
     updated_count = bulk_undo_requests(db, ids)
     return {"detail": f"{updated_count} requests reverted"}
 
@@ -390,6 +325,9 @@ def bulk_delete_document_requests(ids: list[int] = Body(...), db: Session = Depe
     return {"detail": f"{deleted_count} requests deleted"}
 
 
+# =================================================================================
+# NOTES
+# =================================================================================
 @router.get("/requests/{request_id}/notes")
 def get_notes(request_id: int, db: Session = Depends(get_db)):
     notes = get_request_notes(db, request_id)
