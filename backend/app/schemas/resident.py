@@ -60,7 +60,8 @@ class ResidentCreate(ResidentBase):
 
 
 class ResidentUpdate(BaseModel):
-    """Schema for updating resident information (all fields optional)"""
+    model_config = {"populate_by_name": True}
+    
     first_name: Optional[str] = Field(None, min_length=1, max_length=128)
     middle_name: Optional[str] = Field(None, max_length=128)
     last_name: Optional[str] = Field(None, min_length=1, max_length=128)

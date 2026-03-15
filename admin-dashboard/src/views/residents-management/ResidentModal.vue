@@ -327,10 +327,10 @@ async function loadResidentDetails() {
       last_name: data.last_name,
       suffix: data.suffix || '',
       gender: data.gender,
-      birthdate: data.birthdate, // Already formatted as MM/DD/YYYY
+      birthdate: data.birthdate ? new Date(data.birthdate).getTime() : null,
+      residency_start_date: data.residency_start_date ? new Date(data.residency_start_date).getTime() : null,
       phone_number: data.phone_number || '',
       email: data.email || '',
-      residency_start_date: data.residency_start_date,
       house_no_street: data.current_address?.house_no_street || '',
       purok_id: data.current_address?.purok_id || null,
       barangay: data.current_address?.barangay || 'Poblacion I',
@@ -376,11 +376,14 @@ function resetForm() {
   originalFormData.value = JSON.parse(JSON.stringify(formData.value))
 }
 
-// Convert timestamp to YYYY-MM-DD format
+// Convert timestamp to YYYY-MM-DD format using local time (avoids UTC timezone shift)
 function formatDateForAPI(timestamp) {
   if (!timestamp) return null
   const date = new Date(timestamp)
-  return date.toISOString().split('T')[0]
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 async function handleSave() {
@@ -430,17 +433,22 @@ async function handleSave() {
       await createResident(payload)
       message.success('Resident registered successfully')
     } else {
-      // Update existing resident
-      // Update basic info
-      await updateResident(props.residentId, {
+      // Update existing resident — build payload and log for debugging
+      const updatePayload = {
         first_name: formData.value.first_name,
         middle_name: formData.value.middle_name || null,
         last_name: formData.value.last_name,
         suffix: formData.value.suffix || null,
         gender: formData.value.gender,
+        birthdate: formatDateForAPI(formData.value.birthdate),
+        residency_start_date: formatDateForAPI(formData.value.residency_start_date),
         email: formData.value.email || null,
         phone_number: formData.value.phone_number || null
-      })
+      }
+
+      console.log('[DEBUG] UPDATE PAYLOAD:', JSON.stringify(updatePayload))
+
+      await updateResident(props.residentId, updatePayload)
       
       // Update address if changed
       if (formData.value.house_no_street || formData.value.purok_id) {
