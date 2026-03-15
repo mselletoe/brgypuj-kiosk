@@ -43,7 +43,6 @@ const AUTOFILL_MAP = {
   birthdate: "birthdate",
   address: "full_address",
   phone_number: "phone_number",
-  full_name: "full_name",
 };
 
 // Fetch the admin-configured ID fields on mount
@@ -68,15 +67,6 @@ function buildEmptyForm() {
 }
 
 function applyAutofill(autofill) {
-  // Derive full_name if API doesn't return one
-  // Format: LASTNAME, Firstname Middlename
-  if (!autofill.full_name && autofill.last_name) {
-    const parts = [];
-    if (autofill.first_name) parts.push(autofill.first_name);
-    if (autofill.middle_name) parts.push(autofill.middle_name);
-    autofill.full_name = `${autofill.last_name}, ${parts.join(" ")}`;
-  }
-
   for (const field of idFields.value) {
     const autofillKey = AUTOFILL_MAP[field.name];
     if (autofillKey) {
@@ -797,7 +787,7 @@ const selectYear = (y) => {
         size="md"
         :disabled="!selectedResident"
         @click="proceedToCamera"
-        >{{ t('nextTakePhoto') }}</Button>
+        >{{ t('continueToForm') }}</Button>
     </div>
 
     <div
