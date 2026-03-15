@@ -22,7 +22,7 @@ class AddressCreate(BaseModel):
     """Schema for creating a new address"""
     house_no_street: str = Field(..., min_length=1, max_length=255)
     purok_id: int = Field(..., gt=0)
-    barangay: str = Field(default="Poblacion Uno", max_length=64)
+    barangay: str = Field(default="Poblacion I", max_length=64)
     municipality: str = Field(default="Amadeo", max_length=16)
     province: str = Field(default="Cavite", max_length=16)
     region: str = Field(default="Region IV-A", max_length=64)
@@ -41,7 +41,7 @@ class ResidentCreate(ResidentBase):
     
     # Nested objects
     address: AddressCreate
-    rfid: ResidentRFIDCreate
+    rfid: Optional[ResidentRFIDCreate] = None
     photo: Optional[bytes] = None
     
     @field_validator('residency_start_date')
@@ -60,7 +60,8 @@ class ResidentCreate(ResidentBase):
 
 
 class ResidentUpdate(BaseModel):
-    """Schema for updating resident information (all fields optional)"""
+    model_config = {"populate_by_name": True}
+    
     first_name: Optional[str] = Field(None, min_length=1, max_length=128)
     middle_name: Optional[str] = Field(None, max_length=128)
     last_name: Optional[str] = Field(None, min_length=1, max_length=128)

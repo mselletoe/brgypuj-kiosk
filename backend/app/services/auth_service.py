@@ -21,6 +21,9 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 RFID_PIN_DEFAULT = '0000'
 
 
+# =================================================================================
+# UTILITIES
+# =================================================================================
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
 
@@ -45,6 +48,9 @@ def _get_admin_or_404(db: Session, admin_id: int) -> Admin:
     return admin
 
 
+# =================================================================================
+# KIOSK AUTH
+# =================================================================================
 def rfid_login(db: Session, rfid_uid: str):
     """
     Looks up a resident by their active RFID tag UID.
@@ -91,6 +97,9 @@ def rfid_login(db: Session, rfid_uid: str):
     return resident
 
 
+# =================================================================================
+# ADMIN AUTH
+# =================================================================================
 def authenticate_admin(db: Session, username: str, password: str) -> Admin:
     """
     Validates admin credentials and returns the authenticated Admin.
@@ -158,6 +167,9 @@ def create_admin_account(
     return admin
 
 
+# =================================================================================
+# ADMIN PROFILE
+# =================================================================================
 def get_admin_profile(db: Session, admin_id: int) -> Admin:
     """
     Returns the admin's full profile including the linked resident's name.
@@ -224,27 +236,6 @@ def change_admin_password(
     db.commit()
 
 
-def update_admin_photo(db: Session, admin_id: int, photo_bytes: bytes) -> None:
-    """Stores the raw photo bytes directly on the admin row."""
-    admin = _get_admin_or_404(db, admin_id)
-    admin.photo = photo_bytes
-    db.commit()
-
-
-def get_admin_photo(db: Session, admin_id: int) -> bytes:
-    """
-    Returns the raw photo bytes for streaming back as an image response.
-    Raises 404 if no photo has been uploaded yet.
-    """
-    admin = _get_admin_or_404(db, admin_id)
-    if not admin.photo:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No photo uploaded for this account"
-        )
-    return admin.photo
-
-
 def relink_admin_resident(db: Session, admin_id: int, new_resident_id: int) -> Admin:
     """
     Superadmin-only: re-links the admin account to a different resident record.
@@ -276,3 +267,27 @@ def relink_admin_resident(db: Session, admin_id: int, new_resident_id: int) -> A
     admin.resident_id = new_resident_id
     db.commit()
     return _get_admin_or_404(db, admin_id)
+
+
+# =================================================================================
+# ADMIN PHOTO
+# =================================================================================
+def update_admin_photo(db: Session, admin_id: int, photo_bytes: bytes) -> None:
+    """Stores the raw photo bytes directly on the admin row."""
+    admin = _get_admin_or_404(db, admin_id)
+    admin.photo = photo_bytes
+    db.commit()
+
+
+def get_admin_photo(db: Session, admin_id: int) -> bytes:
+    """
+    Returns the raw photo bytes for streaming back as an image response.
+    Raises 404 if no photo has been uploaded yet.
+    """
+    admin = _get_admin_or_404(db, admin_id)
+    if not admin.photo:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No photo uploaded for this account"
+        )
+    return admin.photo

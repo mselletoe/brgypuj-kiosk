@@ -1,5 +1,7 @@
 from datetime import date
 import base64
+import secrets
+from passlib.context import CryptContext
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException, status
@@ -12,6 +14,8 @@ from app.schemas.resident import (
     ResidentRFIDUpdate
 )
 from typing import List, Optional, Dict
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 # ============================================================================
@@ -32,7 +36,11 @@ def calculate_residency_duration(residency_start_date: date) -> dict:
     if (today.month, today.day) < (residency_start_date.month, residency_start_date.day):
         years -= 1
     years = max(0, years)
-    start_after_years = residency_start_date.replace(year=residency_start_date.year + years)
+    target_year = residency_start_date.year + years
+    try:
+        start_after_years = residency_start_date.replace(year=target_year)
+    except ValueError:
+        start_after_years = residency_start_date.replace(year=target_year, day=28)
     months = (today.year - start_after_years.year) * 12 + (today.month - start_after_years.month)
     if today.day < start_after_years.day:
         months = max(0, months - 1)
@@ -316,14 +324,15 @@ def create_resident(db: Session, resident_data: ResidentCreate) -> Resident:
             detail=f"Purok with ID {resident_data.address.purok_id} not found"
         )
 
-    existing_rfid = db.query(ResidentRFID).filter(
-        ResidentRFID.rfid_uid == resident_data.rfid.rfid_uid
-    ).first()
-    if existing_rfid:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"RFID UID '{resident_data.rfid.rfid_uid}' is already registered"
-        )
+    if resident_data.rfid:
+        existing_rfid = db.query(ResidentRFID).filter(
+            ResidentRFID.rfid_uid == resident_data.rfid.rfid_uid
+        ).first()
+        if existing_rfid:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"RFID UID '{resident_data.rfid.rfid_uid}' is already registered"
+            )
 
     if resident_data.email:
         existing_email = db.query(Resident).filter(
@@ -336,6 +345,10 @@ def create_resident(db: Session, resident_data: ResidentCreate) -> Resident:
             )
 
     try:
+        # Generate a random 6-digit PIN and hash it; can be changed later via profile
+        random_pin = str(secrets.randbelow(900000) + 100000)  # always 6 digits
+        hashed_pin = pwd_context.hash(random_pin)
+
         new_resident = Resident(
             first_name=resident_data.first_name,
             middle_name=resident_data.middle_name,
@@ -345,7 +358,8 @@ def create_resident(db: Session, resident_data: ResidentCreate) -> Resident:
             birthdate=resident_data.birthdate,
             residency_start_date=residency_start_date,
             email=resident_data.email,
-            phone_number=resident_data.phone_number
+            phone_number=resident_data.phone_number,
+            rfid_pin=hashed_pin
         )
         db.add(new_resident)
         db.flush()
@@ -362,12 +376,13 @@ def create_resident(db: Session, resident_data: ResidentCreate) -> Resident:
         )
         db.add(new_address)
 
-        new_rfid = ResidentRFID(
-            resident_id=new_resident.id,
-            rfid_uid=resident_data.rfid.rfid_uid,
-            is_active=resident_data.rfid.is_active
-        )
-        db.add(new_rfid)
+        if resident_data.rfid:
+            new_rfid = ResidentRFID(
+                resident_id=new_resident.id,
+                rfid_uid=resident_data.rfid.rfid_uid,
+                is_active=resident_data.rfid.is_active
+            )
+            db.add(new_rfid)
 
         db.commit()
         db.refresh(new_resident)
@@ -400,7 +415,7 @@ def update_resident(db: Session, resident_id: int, resident_data: ResidentUpdate
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                                 detail=f"Email '{resident_data.email}' is already in use")
 
-    update_data = resident_data.model_dump(exclude_unset=True)
+    update_data = resident_data.model_dump(exclude_unset=True, exclude_none=False)
     for field, value in update_data.items():
         setattr(resident, field, value)
 

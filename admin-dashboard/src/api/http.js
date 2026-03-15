@@ -19,7 +19,7 @@ import { useAdminAuthStore } from '@/stores/auth'
 const api = axios.create({
   // Priority 1: Environment variable from .env file (VITE_API_URL)
   // Priority 2: Hardcoded fallback for local development
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000',
+  baseURL: import.meta.env.VITE_API_URL || `http://${window.location.hostname}:8000`,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json'

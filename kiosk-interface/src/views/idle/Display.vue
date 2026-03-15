@@ -34,23 +34,23 @@ const toggleLang = () => {
             transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
           "
           :style="{
-            transform: !isFilipino ? 'translateX(calc(100% + 0px))' : 'translateX(0px)'
+            transform: isFilipino ? 'translateX(calc(100% + 0px))' : 'translateX(0px)'
           }"
         ></div>
 
         <div
           class="flex-1 flex items-center justify-center font-bold rounded-xl"
           style="position: relative; z-index: 1; transition: color 0.3s ease;"
-          :style="{ color: isFilipino ? '#49759B' : 'white' }"
+          :style="{ color: !isFilipino ? '#49759B' : 'white' }"
         >
-          FIL
+          ENG
         </div>
         <div
           class="flex-1 flex items-center justify-center font-bold rounded-xl"
           style="position: relative; z-index: 1; transition: color 0.3s ease;"
-          :style="{ color: !isFilipino ? '#49759B' : 'white' }"
+          :style="{ color: isFilipino ? '#49759B' : 'white' }"
         >
-          ENG
+          FIL
         </div>
       </div>
     </div>

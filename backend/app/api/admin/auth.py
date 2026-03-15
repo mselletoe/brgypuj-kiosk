@@ -43,6 +43,11 @@ MAX_PHOTO_BYTES = 5 * 1024 * 1024
 # Accepted MIME types for admin profile photos
 ALLOWED_PHOTO_TYPES = {"image/jpeg", "image/png", "image/webp"}
 
+
+# =================================================================================
+# ADMIN AUTHENTICATION
+# =================================================================================
+
 @router.post("/login", response_model=AdminTokenResponse)
 def admin_login(payload: AdminLoginRequest, db: Session = Depends(get_db)):
     admin = authenticate_admin(db, username=payload.username, password=payload.password)
@@ -77,6 +82,10 @@ def register_admin(payload: AdminCreateRequest, db: Session = Depends(get_db)):
     admin.has_photo = False
     return admin
 
+
+# =================================================================================
+# ADMIN ACCOUNT SETTINGS
+# =================================================================================
 
 @router.get("/me", response_model=AdminProfileResponse)
 def get_my_profile(
@@ -125,6 +134,10 @@ def change_my_password(
     return {"detail": "Password updated successfully"}
 
 
+# =================================================================================
+# SUPERADMIN ACCOUNT SETTINGS
+# =================================================================================
+
 @router.patch("/me/resident", response_model=AdminProfileResponse)
 def relink_my_resident(
     payload: AdminRelinkResidentRequest,
@@ -144,12 +157,22 @@ def relink_my_resident(
     return admin
 
 
+# =================================================================================
+# ACCOUNT SETTINGS PROFILE PHOTO
+# =================================================================================
+
 @router.put("/me/photo", status_code=204)
 async def upload_my_photo(
     photo: UploadFile = File(...),
     db: Session = Depends(get_db),
     current_admin=Depends(get_current_admin),
 ):
+    """
+    Upload or replace the authenticated admin's profile photo.
+    Validates MIME type and file size before storing.
+    Accepts JPEG, PNG, or WebP up to 5 MB.
+    """
+
     if photo.content_type not in ALLOWED_PHOTO_TYPES:
         raise HTTPException(status_code=415, detail="Photo must be JPEG, PNG, or WebP")
 

@@ -11,13 +11,13 @@ import {
   Cog6ToothIcon,
 } from "@heroicons/vue/24/solid";
 import { useAdminAuthStore } from "@/stores/auth";
-import { useNotificationStore } from "@/stores/notification";          // 👈
-import GlobalSearch from "@/components/global-search/index.vue";
+import { useNotificationStore } from "@/stores/notification";
+import GlobalSearch from "@/components/global-search/Index.vue";
 import { getAdminProfile, getAdminPhotoUrl } from "@/api/accountSettingsService";
 
 const router       = useRouter();
 const adminAuth    = useAdminAuthStore();
-const notifStore   = useNotificationStore();                           // 👈
+const notifStore   = useNotificationStore();
 
 // ----------------------------------------------------------------
 // Admin profile

@@ -1,10 +1,14 @@
+import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
 from app.api.admin.routes import router as admin_router
 from app.api.kiosk.routes import router as kiosk_router
 from app.api.websocket import router as ws_router
 from app.services.backup_service import start_scheduler, stop_scheduler
+
+load_dotenv()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -14,16 +18,19 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Barangay Kiosk Backend", lifespan=lifespan)
 
-origins = [
-    "http://localhost:8080",
-    "http://127.0.0.1:8080",
-    "http://localhost:5173",
-]
+CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*")
+
+if CORS_ORIGINS == "*":
+    allow_origins = ["*"]
+    allow_credentials = False
+else:
+    allow_origins = [origin.strip() for origin in CORS_ORIGINS.split(",")]
+    allow_credentials = True
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
+    allow_origins=allow_origins,
+    allow_credentials=allow_credentials,
     allow_methods=["*"],
     allow_headers=["*"],
 )

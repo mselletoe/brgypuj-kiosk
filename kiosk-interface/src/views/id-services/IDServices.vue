@@ -33,7 +33,7 @@ const goBack = () => router.push("/home");
 
 <template>
   <div class="flex flex-col w-full h-full">
-    <div class="flex items-center mb-4 gap-7 flex-shrink-0">
+    <div class="flex items-center mb-5 gap-7 flex-shrink-0">
       <ArrowBackButton @click="goBack" />
       <div>
         <h1 class="text-[45px] text-[#03335C] font-bold tracking-tight -mt-2">
@@ -43,7 +43,7 @@ const goBack = () => router.push("/home");
       </div>
     </div>
 
-    <div class="flex flex-row items-stretch justify-center gap-6 px-0.5 pt-2 pb-8 flex-1">
+    <div class="flex flex-row items-stretch justify-center gap-6 pb-6 flex-1">
       <div class="flex-1">
         <!-- Logged In User -->
         <div v-if="!isGuest" class="relative h-full bg-gradient-to-br from-[#003A6B] to-[#005B96] rounded-3xl shadow-lg overflow-hidden text-white p-8 flex flex-col justify-between transform transition-transform active:scale-[0.99] duration-300 border border-white/10">
@@ -97,8 +97,8 @@ const goBack = () => router.push("/home");
             <div class="w-24 h-24 bg-white/10 rounded-full flex items-center justify-center mb-6 backdrop-blur-sm border border-white/20">
               <IdentificationIcon class="w-12 h-12 text-white" />
             </div>
-            <h2 class="text-4xl font-bold mb-3 tracking-tight">{{ $t('noActiveID') }}</h2>
-            <p class="text-lg text-blue-100 max-w-md leading-relaxed">{{ $t('guestModeMsg') }}</p>
+            <h2 class="text-3xl font-bold mb-3 tracking-tight">{{ $t('noActiveID') }}</h2>
+            <p class="text-md text-blue-100 max-w-md leading-relaxed">{{ $t('guestModeMsg') }}</p>
             <div class="mt-8 flex gap-2 items-center bg-white/10 px-6 py-2 rounded-full border border-white/20">
               <div class="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
               <span class="text-sm font-bold tracking-widest uppercase">{{ $t('applicationOpen') }}</span>

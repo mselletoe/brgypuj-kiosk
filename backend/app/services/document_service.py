@@ -1,9 +1,11 @@
 """
-Document Service Layer
----------------------------
-Handles the business logic for document management, including administrative 
-configuration of document types and resident-facing request processing.
+app/services/document_service.py
+
+Service layer for document type configuration and document request management.
+Handles PDF generation via LibreOffice, eligibility checks, request lifecycle
+(approve, reject, release, payment, undo), and blotter summaries.
 """
+
 import random
 import subprocess
 import tempfile
@@ -32,25 +34,18 @@ BASE_DIR = Path(__file__).resolve().parents[2]
 PDF_STORAGE_DIR = BASE_DIR / "storage" / "documents"
 
 
-# -------------------------------------------------
-# PDF Generation Helper
-# -------------------------------------------------
+# =================================================================================
+# PDF GENERATION
+# =================================================================================
 
 def _convert_docx_to_pdf(docx_bytes: bytes) -> bytes:
-    """
-    Convert DOCX bytes to PDF bytes using LibreOffice.
-    Works on both Windows and Linux (Raspberry Pi).
-    """
     with tempfile.TemporaryDirectory() as temp_dir:
-        # Save DOCX to temp file
         docx_path = os.path.join(temp_dir, "document.docx")
         with open(docx_path, "wb") as f:
             f.write(docx_bytes)
         
-        # Determine LibreOffice command based on platform
         system = platform.system()
         if system == "Windows":
-            # Common LibreOffice paths on Windows
             libreoffice_paths = [
                 r"C:\Program Files\LibreOffice\program\soffice.exe",
                 r"C:\Program Files (x86)\LibreOffice\program\soffice.exe",
@@ -62,10 +57,9 @@ def _convert_docx_to_pdf(docx_bytes: bytes) -> bytes:
                     break
             if not soffice_cmd:
                 raise Exception("LibreOffice not found on Windows. Please install it.")
-        else:  # Linux (Raspberry Pi)
+        else:
             soffice_cmd = "soffice"
         
-        # Convert DOCX to PDF using LibreOffice
         try:
             subprocess.run(
                 [
@@ -85,7 +79,6 @@ def _convert_docx_to_pdf(docx_bytes: bytes) -> bytes:
         except FileNotFoundError:
             raise Exception("LibreOffice not found. Install with: sudo apt-get install libreoffice")
         
-        # Read the generated PDF
         pdf_path = os.path.join(temp_dir, "document.pdf")
         if not os.path.exists(pdf_path):
             raise Exception("PDF file was not generated")
@@ -97,18 +90,8 @@ def _convert_docx_to_pdf(docx_bytes: bytes) -> bytes:
 
 
 def _prepare_template_data(form_data: dict) -> dict:
-    """
-    Prepares template data by auto-filling date-related placeholders.
-    
-    Automatically detects and fills:
-    - {{ date_today }} - Full date (e.g., "January 4, 2026")
-    - {{ day }} - Day with ordinal suffix (e.g., "4th")
-    - {{ month }} - Full month name (e.g., "January")
-    - {{ year }} - Full year (e.g., "2026")
-    """
     now = datetime.now()
     
-    # Helper function to get ordinal suffix
     def get_ordinal_suffix(day: int) -> str:
         if 10 <= day % 100 <= 20:
             suffix = 'th'
@@ -116,15 +99,13 @@ def _prepare_template_data(form_data: dict) -> dict:
             suffix = {1: 'st', 2: 'nd', 3: 'rd'}.get(day % 10, 'th')
         return f"{day}{suffix}"
     
-    # Create a copy of form_data to avoid modifying original
     template_data = form_data.copy()
     
-    # Auto-fill date placeholders
     template_data.update({
-        'date_today': now.strftime("%B %d, %Y"),  # January 04, 2026
-        'day': get_ordinal_suffix(now.day),        # 4th
-        'month': now.strftime("%B"),               # January
-        'year': str(now.year),                     # 2026
+        'date_today': now.strftime("%B %d, %Y"),
+        'day': get_ordinal_suffix(now.day),
+        'month': now.strftime("%B"),
+        'year': str(now.year),
     })
     
     return template_data
@@ -134,28 +115,13 @@ def _generate_pdf_from_template(
     template_bytes: bytes,
     form_data: dict
 ) -> bytes:
-    """
-    Generates a PDF from a DOCX template by:
-    1. Auto-filling date placeholders
-    2. Rendering the template with form data
-    3. Converting DOCX to PDF using LibreOffice
-    """
     try:
-        # Load template
         tpl = DocxTemplate(BytesIO(template_bytes))
-        
-        # Prepare data with auto-filled dates
         template_data = _prepare_template_data(form_data)
-        
-        # Render template
         tpl.render(template_data)
-        
-        # Save rendered DOCX to bytes
         docx_stream = BytesIO()
         tpl.save(docx_stream)
         docx_bytes = docx_stream.getvalue()
-        
-        # Convert to PDF
         pdf_bytes = _convert_docx_to_pdf(docx_bytes)
         
         return pdf_bytes
@@ -176,18 +142,14 @@ def _save_request_pdf(transaction_no: str, pdf_bytes: bytes) -> str:
     with open(file_path, "wb") as f:
         f.write(pdf_bytes)
 
-    # store RELATIVE POSIX path in DB
     return str(file_path.relative_to(BASE_DIR).as_posix())
 
 
-# -------------------------------------------------
-# Internal Helpers
-# -------------------------------------------------
+# =================================================================================
+# INTERNAL VALIDATION HELPERS
+# =================================================================================
 
 def _validate_document_type(db: Session, doctype_id: int) -> DocumentType:
-    """
-    Verifies the existence and availability of a specific document type.
-    """
     doc_type = (
         db.query(DocumentType)
         .filter(
@@ -207,9 +169,6 @@ def _validate_document_type(db: Session, doctype_id: int) -> DocumentType:
 
 
 def _validate_resident(db: Session, resident_id: int) -> Resident:
-    """
-    Ensures the resident exists in the database.
-    """
     resident = db.query(Resident).filter(Resident.id == resident_id).first()
 
     if not resident:
@@ -222,11 +181,6 @@ def _validate_resident(db: Session, resident_id: int) -> Resident:
 
 
 def _validate_dynamic_fields(required_fields: list, submitted_data: dict):
-    """
-    Cross-references submitted form data against the required fields 
-    defined in the document type template.
-    """
-
     for field in required_fields:
         if field.get("required") is True:
             field_name = field.get("name")
@@ -238,11 +192,6 @@ def _validate_dynamic_fields(required_fields: list, submitted_data: dict):
 
 
 def _check_existing_pending_request(db: Session, resident_id: int, doctype_id: int):
-    """
-    Prevents duplicate pending requests for the same document type.
-    Scoped to (resident_id + doctype_id) so a resident can request
-    different document types concurrently.
-    """
     exists = (
         db.query(DocumentRequest)
         .filter(
@@ -262,9 +211,6 @@ def _check_existing_pending_request(db: Session, resident_id: int, doctype_id: i
 
 
 def _generate_transaction_no(db: Session) -> str:
-    """
-    Generates a unique transaction number in the format DR-XXXX
-    """
     while True:
         number = random.randint(1000, 9999)
         transaction_no = f"DR-{number}"
@@ -273,16 +219,11 @@ def _generate_transaction_no(db: Session) -> str:
             return transaction_no
 
 
-# -------------------------------------------------
-# System Requirements Validation
-# -------------------------------------------------
+# =================================================================================
+# ELIGIBILITY CHECKS
+# =================================================================================
 
 def _check_clean_blotter(db: Session, resident_id: int) -> bool:
-    """
-    Returns True if the resident has NO blotter records as a respondent.
-    Complainants (the reporting/victim party) are NOT penalized —
-    only respondents (the accused) are considered to have a non-clean record.
-    """
     record = db.query(BlotterRecord).filter(
         BlotterRecord.respondent_id == resident_id
     ).first()
@@ -290,16 +231,10 @@ def _check_clean_blotter(db: Session, resident_id: int) -> bool:
 
 
 def _check_min_residency(resident: Resident, years: int = 0, months: int = 0) -> bool:
-    """
-    Returns True if the resident has lived here for at least `years` years
-    and `months` additional months (e.g. years=1, months=6 → 18 months total).
-    Uses residency_start_date from the Resident model.
-    """
     from datetime import date
     if not resident.residency_start_date:
         return False
     today = date.today()
-    # Total months of residency
     total_months = (
         (today.year - resident.residency_start_date.year) * 12
         + (today.month - resident.residency_start_date.month)
@@ -329,7 +264,6 @@ def _validate_system_requirements(db: Session, resident: Resident, requirements:
             years = params.get("years", 0)
             months = params.get("months", 0)
             if not _check_min_residency(resident, years, months):
-                # Build a readable label e.g. "1 year, 6 months" or "6 months"
                 parts = []
                 if years:
                     parts.append(f"{years} year{'s' if years != 1 else ''}")
@@ -345,7 +279,6 @@ def _validate_system_requirements(db: Session, resident: Resident, requirements:
 def check_resident_eligibility(
     db, resident_id: int, doctype_id: int
 ) -> dict:
-    # --- Fetch document type ---
     doc_type = db.query(DocumentType).filter(DocumentType.id == doctype_id).first()
     if not doc_type:
         return {
@@ -361,7 +294,6 @@ def check_resident_eligibility(
             }]
         }
 
-    # --- Fetch resident ---
     resident = db.query(Resident).filter(Resident.id == resident_id).first()
     if not resident:
         return {
@@ -388,27 +320,22 @@ def check_resident_eligibility(
         params = req.get("params") or {}
 
         if req_type == "document":
-            # Document requirements are informational — the system can't auto-verify
-            # whether a resident physically has the paper. Mark as informational.
             checks.append({
                 "id": req_id,
                 "label": req_label,
                 "type": "document",
-                "passed": None,  # Cannot auto-check
+                "passed": None,
                 "message": "Must be presented at the barangay hall."
             })
 
         elif req_type == "system_check":
 
             if req_id == "clean_blotter":
-                # Only check if resident appears as a RESPONDENT (the accused).
-                # Complainants (the reporting/victim party) are NOT penalized.
                 blotter_records = db.query(BlotterRecord).filter(
                     BlotterRecord.respondent_id == resident_id
                 ).all()
 
                 if blotter_records:
-                    # Build a readable summary of the blotter records
                     record_nos = ", ".join(r.blotter_no for r in blotter_records)
                     checks.append({
                         "id": req_id,
@@ -434,7 +361,6 @@ def check_resident_eligibility(
                 years_required = params.get("years", 0)
                 months_required = params.get("months", 0)
                 passed = _check_min_residency(resident, years_required, months_required)
-                # Build human-readable duration string
                 parts = []
                 if years_required:
                     parts.append(f"{years_required} year{'s' if years_required != 1 else ''}")
@@ -455,7 +381,6 @@ def check_resident_eligibility(
                     all_passed = False
 
             else:
-                # Unknown system_check — log it as informational
                 checks.append({
                     "id": req_id,
                     "label": req_label,
@@ -472,14 +397,11 @@ def check_resident_eligibility(
     }
 
 
-# -------------------------------------------------
-# Kiosk Service Functions
-# -------------------------------------------------
+# =================================================================================
+# KIOSK
+# =================================================================================
 
 def get_available_document_types(db: Session):
-    """
-    Retrieves all document types currently marked as available for the kiosk.
-    """
     return (
         db.query(DocumentType)
         .filter(
@@ -492,45 +414,23 @@ def get_available_document_types(db: Session):
 
 
 def create_document_request(db: Session, payload: DocumentRequestCreate) -> DocumentRequestKioskResponse:
-    """
-    Processes a new document request from the kiosk. Executes comprehensive 
-    validation of the resident, document availability, and dynamic field data.
-    
-    Special handling for RFID requests:
-    - RFID requests can be made in guest mode (resident_id = None)
-    - All other document types require a valid resident_id
-    
-    Auto-generates PDF from template with form data.
-    """
-
-    # 1. Validate document availability
     doc_type = _validate_document_type(db, payload.doctype_id)
 
-    # 2. Check if this is an RFID request
     is_rfid_request = doc_type.doctype_name.upper() == "RFID"
 
-    # 3. Validate resident based on document type
     if payload.resident_id is not None:
         resident = _validate_resident(db, payload.resident_id)
-        # FIX: Pass doctype_id so the check is scoped to this document type only,
-        # allowing the resident to have pending requests for other document types.
         _check_existing_pending_request(db, payload.resident_id, payload.doctype_id)
     elif not is_rfid_request:
-        # If resident_id is None and it's NOT an RFID request, reject
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Guest mode is only allowed for RFID requests"
         )
-    # If resident_id is None and it IS an RFID request, allow (guest mode)
-
-    # 4. Validate submitted dynamic fields against admin-defined requirements
     _validate_dynamic_fields(
         required_fields=doc_type.fields or [],
         submitted_data=payload.form_data
     )
 
-    # 5. Validate system-check requirements (e.g. clean blotter)
-    #    Only runs when a resident_id is present — guest/RFID requests are exempt.
     if payload.resident_id is not None:
         _validate_system_requirements(
             db=db,
@@ -538,7 +438,6 @@ def create_document_request(db: Session, payload: DocumentRequestCreate) -> Docu
             requirements=doc_type.requirements or []
         )
 
-    # 6. Persist the request
     request = DocumentRequest(
         resident_id=payload.resident_id,
         doctype_id=payload.doctype_id,
@@ -551,7 +450,6 @@ def create_document_request(db: Session, payload: DocumentRequestCreate) -> Docu
     db.commit()
     db.refresh(request)
 
-    # 7. Auto-generate PDF if template exists
     if doc_type.file:
         try:
             pdf_bytes = _generate_pdf_from_template(
@@ -559,7 +457,6 @@ def create_document_request(db: Session, payload: DocumentRequestCreate) -> Docu
                 form_data=payload.form_data
             )
             
-            # Save PDF to request
             relative_path = _save_request_pdf(
                 request.transaction_no,
                 pdf_bytes
@@ -572,8 +469,6 @@ def create_document_request(db: Session, payload: DocumentRequestCreate) -> Docu
             
         except Exception as e:
             print(f"❌ PDF generation failed for request {request.transaction_no}: {str(e)}")
-            # Don't fail the request if PDF generation fails
-            # Admin can regenerate manually if needed
 
     return DocumentRequestKioskResponse(
         transaction_no=request.transaction_no
@@ -581,9 +476,6 @@ def create_document_request(db: Session, payload: DocumentRequestCreate) -> Docu
 
 
 def get_kiosk_request_history(db: Session, resident_id: int):
-    """
-    Retrieves the request history for a specific resident to display on the kiosk.
-    """
     return (
         db.query(DocumentRequest)
         .join(DocumentType)
@@ -593,14 +485,11 @@ def get_kiosk_request_history(db: Session, resident_id: int):
     )
 
 
-# -------------------------------------------------
-# Administrative Functions
-# -------------------------------------------------
+# =================================================================================
+# ADMIN — DOCUMENT TYPES
+# =================================================================================
 
 def get_all_document_types(db: Session):
-    """
-    Admin: Lists all document types regardless of availability.
-    """
     return (
         db.query(DocumentType)
         .order_by(DocumentType.doctype_name.asc())
@@ -609,15 +498,13 @@ def get_all_document_types(db: Session):
 
 
 def create_document_type(db: Session, payload: DocumentTypeCreate,):
-    """
-    Admin: Configures a new document type template.
-    """
     doc_type = DocumentType(
         doctype_name=payload.doctype_name,
         description=payload.description,
         price=payload.price,
         fields=payload.fields,
         is_available=payload.is_available,
+        is_id_application=payload.is_id_application,
     )
 
     db.add(doc_type)
@@ -628,9 +515,6 @@ def create_document_type(db: Session, payload: DocumentTypeCreate,):
 
 
 def update_document_type( db: Session, doctype_id: int, payload: DocumentTypeUpdate,):
-    """
-    Admin: Updates an existing document type template.
-    """
     doc_type = db.query(DocumentType).filter(DocumentType.id == doctype_id).first()
 
     if not doc_type:
@@ -646,9 +530,6 @@ def update_document_type( db: Session, doctype_id: int, payload: DocumentTypeUpd
 
 
 def delete_document_type(db: Session, doctype_id: int):
-    """
-    Admin: Actually deletes a document type from the database.
-    """
     doc_type = db.query(DocumentType).filter(DocumentType.id == doctype_id).first()
 
     if not doc_type:
@@ -672,6 +553,10 @@ def delete_document_type(db: Session, doctype_id: int):
     return True
 
 
+# =================================================================================
+# ADMIN — DOCUMENT REQUESTS
+# =================================================================================
+
 def _get_request(db: Session, request_id: int):
     return (
         db.query(DocumentRequest)
@@ -682,10 +567,6 @@ def _get_request(db: Session, request_id: int):
 
 
 def get_all_document_requests(db: Session):
-    """
-    Admin: Monitors all incoming document requests with resident information.
-    Includes both regular document requests AND ID Applications (doctype_id IS NULL).
-    """
     from sqlalchemy.orm import joinedload
 
     return (
@@ -700,9 +581,6 @@ def get_all_document_requests(db: Session):
 
 
 def get_document_request_by_id(db: Session, request_id: int,):
-    """
-    Admin: Fetches detailed information for a specific document request.
-    """
     from sqlalchemy.orm import joinedload
     
     return (
@@ -756,7 +634,6 @@ def get_resident_blotter_summary(db, resident_id: int) -> dict:
             "created_at": r.created_at.isoformat()
         })
 
-    # Sort by most recent first
     combined.sort(key=lambda x: x["created_at"], reverse=True)
 
     return {
@@ -782,6 +659,10 @@ def upload_document_type_file(
     db.commit()
     return True
 
+
+# =================================================================================
+# ADMIN — REQUEST LIFECYCLE
+# =================================================================================
 
 def approve_request(db: Session, request_id: int):
     req = _get_request(db, request_id)
@@ -833,42 +714,28 @@ def mark_request_unpaid(db: Session, request_id: int):
 
 
 def undo_request(db: Session, request_id: int):
-    """
-    Moves a request back to its previous status based on current status:
-    - Approved → Pending
-    - Released → Approved
-    - Rejected → Pending
-    - Pending → No change (undo disabled)
-    """
     req = _get_request(db, request_id)
     if not req:
         return False
     
-    # Define status transitions for undo
     status_undo_map = {
         "Approved": "Pending",
         "Released": "Approved",
         "Rejected": "Pending",
     }
     
-    # Check if undo is allowed for current status
     if req.status not in status_undo_map:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Undo is not available for status: {req.status}"
         )
     
-    # Update to previous status
     req.status = status_undo_map[req.status]
     db.commit()
     return True
 
 
 def bulk_undo_requests(db: Session, ids: list[int]):
-    """
-    Bulk undo operation for multiple requests.
-    Only processes requests that are in undoable states.
-    """
     requests = db.query(DocumentRequest).filter(DocumentRequest.id.in_(ids)).all()
     
     status_undo_map = {
@@ -920,10 +787,6 @@ def update_request_notes(db: Session, request_id: int, notes: str) -> str:
 
 
 def regenerate_request_pdf(db: Session, request_id: int) -> bool:
-    """
-    Admin: Manually regenerate PDF for a specific request.
-    Useful if auto-generation failed or template was updated.
-    """
     req = _get_request(db, request_id)
     if not req:
         return False

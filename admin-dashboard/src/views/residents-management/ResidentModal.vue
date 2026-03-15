@@ -88,7 +88,7 @@ const formData = ref({
   // Address Info
   house_no_street: '',
   purok_id: null,
-  barangay: 'Poblacion Uno',
+  barangay: 'Poblacion I',
   municipality: 'Amadeo',
   province: 'Cavite',
   region: 'Region IV-A',
@@ -327,13 +327,13 @@ async function loadResidentDetails() {
       last_name: data.last_name,
       suffix: data.suffix || '',
       gender: data.gender,
-      birthdate: data.birthdate, // Already formatted as MM/DD/YYYY
+      birthdate: data.birthdate ? new Date(data.birthdate).getTime() : null,
+      residency_start_date: data.residency_start_date ? new Date(data.residency_start_date).getTime() : null,
       phone_number: data.phone_number || '',
       email: data.email || '',
-      residency_start_date: data.residency_start_date,
       house_no_street: data.current_address?.house_no_street || '',
       purok_id: data.current_address?.purok_id || null,
-      barangay: data.current_address?.barangay || 'Poblacion Uno',
+      barangay: data.current_address?.barangay || 'Poblacion I',
       municipality: data.current_address?.municipality || 'Amadeo',
       province: data.current_address?.province || 'Cavite',
       region: data.current_address?.region || 'Region IV-A',
@@ -365,7 +365,7 @@ function resetForm() {
     residency_start_date: today.getTime(),
     house_no_street: '',
     purok_id: null,
-    barangay: 'Poblacion Uno',
+    barangay: 'Poblacion I',
     municipality: 'Amadeo',
     province: 'Cavite',
     region: 'Region IV-A',
@@ -376,11 +376,14 @@ function resetForm() {
   originalFormData.value = JSON.parse(JSON.stringify(formData.value))
 }
 
-// Convert timestamp to YYYY-MM-DD format
+// Convert timestamp to YYYY-MM-DD format using local time (avoids UTC timezone shift)
 function formatDateForAPI(timestamp) {
   if (!timestamp) return null
   const date = new Date(timestamp)
-  return date.toISOString().split('T')[0]
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 async function handleSave() {
@@ -398,11 +401,6 @@ async function handleSave() {
   if (props.mode === 'add') {
     if (!formData.value.house_no_street || !formData.value.purok_id) {
       message.error('House/Street and Purok are required')
-      return
-    }
-    
-    if (!formData.value.rfid_uid) {
-      message.error('RFID No. is required')
       return
     }
   }
@@ -429,27 +427,28 @@ async function handleSave() {
           municipality: formData.value.municipality,
           province: formData.value.province,
           region: formData.value.region
-        },
-        rfid: {
-          rfid_uid: formData.value.rfid_uid,
-          is_active: formData.value.is_active
         }
       }
       
       await createResident(payload)
       message.success('Resident registered successfully')
     } else {
-      // Update existing resident
-      // Update basic info
-      await updateResident(props.residentId, {
+      // Update existing resident — build payload and log for debugging
+      const updatePayload = {
         first_name: formData.value.first_name,
         middle_name: formData.value.middle_name || null,
         last_name: formData.value.last_name,
         suffix: formData.value.suffix || null,
         gender: formData.value.gender,
+        birthdate: formatDateForAPI(formData.value.birthdate),
+        residency_start_date: formatDateForAPI(formData.value.residency_start_date),
         email: formData.value.email || null,
         phone_number: formData.value.phone_number || null
-      })
+      }
+
+      console.log('[DEBUG] UPDATE PAYLOAD:', JSON.stringify(updatePayload))
+
+      await updateResident(props.residentId, updatePayload)
       
       // Update address if changed
       if (formData.value.house_no_street || formData.value.purok_id) {

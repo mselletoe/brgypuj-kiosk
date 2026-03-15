@@ -1,9 +1,12 @@
 """
-Kiosk Document Services API
----------------------------
-Handles resident-facing operations for browsing available document types 
-and submitting requests via the kiosk interface.
+app/api/kiosk/documents.py
+
+Router for kiosk-facing document services.
+Handles document type listing, request submission, request history,
+and resident eligibility checks. Broadcasts new transactions to
+connected admin clients via WebSocket on submission.
 """
+
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 from app.api.deps import get_db
@@ -25,19 +28,22 @@ from app.services.document_service import (
 router = APIRouter(prefix="/documents")
 
 
-# =========================================================
-# DOCUMENT TYPES 
-# =========================================================
-
+# =================================================================================
+# DOCUMENT TYPES
+# =================================================================================
 @router.get("/types", response_model=list[DocumentTypeKioskOut])
 def list_available_document_types(db: Session = Depends(get_db)):
     return get_available_document_types(db)
 
 
-# =========================================================
-# DOCUMENT REQUESTS 
-# =========================================================
+@router.get("/types/{doctype_id}/eligibility", response_model=EligibilityCheckResult)
+def check_eligibility(doctype_id: int, resident_id: int, db: Session = Depends(get_db)):
+    return check_resident_eligibility(db, resident_id=resident_id, doctype_id=doctype_id)
 
+
+# =================================================================================
+# DOCUMENT REQUESTS
+# =================================================================================
 @router.post("/requests", response_model=DocumentRequestKioskResponse, status_code=status.HTTP_201_CREATED)
 async def submit_document_request(
     payload: DocumentRequestCreate,
@@ -60,7 +66,3 @@ async def submit_document_request(
 @router.get("/requests/{resident_id}", response_model=list[DocumentRequestKioskOut])
 def get_my_document_requests(resident_id: int, db: Session = Depends(get_db)):
     return get_kiosk_request_history(db, resident_id)
-
-@router.get("/types/{doctype_id}/eligibility", response_model=EligibilityCheckResult)
-def check_eligibility(doctype_id: int, resident_id: int, db: Session = Depends(get_db)):
-    return check_resident_eligibility(db, resident_id=resident_id, doctype_id=doctype_id)

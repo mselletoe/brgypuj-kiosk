@@ -1,9 +1,15 @@
+/**
+ * @file admin-interface/api/announcementService.js
+ * @description API service functions for admin announcement management.
+ * Covers fetching, creating, updating, status toggling, and deletion.
+ */
+
 import api from './http'
 
-/**
- * Fetch all announcements for admin dashboard
- * @returns {Promise<Array>} array of announcement records
- */
+
+// =================================================================================
+// GET ANNOUNCEMENTS
+// =================================================================================
 export const getAllAnnouncements = async () => {
   try {
     const response = await api.get('/admin/announcements')
@@ -14,11 +20,6 @@ export const getAllAnnouncements = async () => {
   }
 }
 
-/**
- * Fetch a single announcement by ID with full details
- * @param {number} announcementId
- * @returns {Promise<Object>} announcement details including image
- */
 export const getAnnouncementById = async (announcementId) => {
   try {
     const response = await api.get(`/admin/announcements/${announcementId}`)
@@ -29,17 +30,13 @@ export const getAnnouncementById = async (announcementId) => {
   }
 }
 
-/**
- * Create a new announcement
- * @param {Object} announcementData - announcement fields
- * @param {File} imageFile - optional image file
- * @returns {Promise<Object>} created announcement
- */
+// =================================================================================
+// CREATE/UPDATE ANNOUNCEMENTS
+// =================================================================================
 export const createAnnouncement = async (announcementData, imageFile = null) => {
   try {
     const formData = new FormData()
     
-    // Append announcement fields
     formData.append('title', announcementData.title)
     if (announcementData.description) {
       formData.append('description', announcementData.description)
@@ -51,7 +48,6 @@ export const createAnnouncement = async (announcementData, imageFile = null) => 
     formData.append('location', announcementData.location)
     formData.append('is_active', announcementData.is_active ?? true)
     
-    // Append image if provided
     if (imageFile) {
       formData.append('image', imageFile)
     }
@@ -68,14 +64,6 @@ export const createAnnouncement = async (announcementData, imageFile = null) => 
   }
 }
 
-/**
- * Update an existing announcement
- * @param {number} announcementId
- * @param {Object} announcementData - fields to update
- * @param {File} imageFile - optional new image file
- * @param {boolean} removeImage - whether to remove existing image
- * @returns {Promise<Object>} updated announcement
- */
 export const updateAnnouncement = async (
   announcementId,
   announcementData,
@@ -85,7 +73,6 @@ export const updateAnnouncement = async (
   try {
     const formData = new FormData()
     
-    // Append only provided fields
     if (announcementData.title !== undefined) {
       formData.append('title', announcementData.title)
     }
@@ -105,7 +92,6 @@ export const updateAnnouncement = async (
       formData.append('is_active', announcementData.is_active)
     }
     
-    // Handle image operations
     if (removeImage) {
       formData.append('remove_image', 'true')
     } else if (imageFile) {
@@ -124,11 +110,9 @@ export const updateAnnouncement = async (
   }
 }
 
-/**
- * Toggle the active status of an announcement
- * @param {number} announcementId
- * @returns {Promise<Object>} updated announcement
- */
+// =================================================================================
+// ANNOUNCEMENTS STATUS
+// =================================================================================
 export const toggleAnnouncementStatus = async (announcementId) => {
   try {
     const response = await api.patch(`/admin/announcements/${announcementId}/toggle-status`)
@@ -139,11 +123,9 @@ export const toggleAnnouncementStatus = async (announcementId) => {
   }
 }
 
-/**
- * Delete a specific announcement record
- * @param {number} announcementId
- * @returns {Promise<Object>} deletion confirmation
- */
+// =================================================================================
+// DELETE ANNOUNCEMENTS
+// =================================================================================
 export const deleteAnnouncement = async (announcementId) => {
   try {
     const response = await api.delete(`/admin/announcements/${announcementId}`)
@@ -154,11 +136,6 @@ export const deleteAnnouncement = async (announcementId) => {
   }
 }
 
-/**
- * Bulk delete announcement records
- * @param {Array<number>} ids - array of announcement IDs to delete
- * @returns {Promise<Object>} deletion count confirmation
- */
 export const bulkDeleteAnnouncements = async (ids) => {
   try {
     const response = await api.post('/admin/announcements/bulk-delete', ids)

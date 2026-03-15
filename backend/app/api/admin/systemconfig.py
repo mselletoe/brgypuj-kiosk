@@ -14,11 +14,12 @@ PATCH and logo mutation routes require superadmin.
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, status
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
-
+from app.core.websocket_manager import ws_manager
 from app.api.deps import get_db, get_current_admin
 from app.models.admin import Admin
 from app.schemas.systemconfig import SystemConfigRead, SystemConfigUpdate
 from app.services.systemconfig_service import get_config, update_config
+from app.services.backup_service import apply_new_schedule
 
 router = APIRouter(prefix="/settings")
 
@@ -40,51 +41,47 @@ def get_system_config(
 # ── PATCH /admin/settings ─────────────────────────────────────────────────────
 
 @router.patch("", response_model=SystemConfigRead)
-def patch_system_config(
+async def patch_system_config(          # ← make async
     data: SystemConfigUpdate,
     db: Session = Depends(get_db),
     current_admin: Admin = Depends(get_current_admin),
 ):
-    """
-    Partial update — only the fields you send are changed.
-    Each settings tab sends only the fields it manages.
-    Requires superadmin.
-    """
-    return update_config(db, data)
+    result = update_config(db, data)
+
+    if data.backup_schedule is not None or data.backup_time is not None:
+        apply_new_schedule()
+
+    await ws_manager.broadcast_to_kiosk("config_updated", {
+        "brgy_name":           result.brgy_name,
+        "brgy_subname":        result.brgy_subname,
+        "has_logo":            result.has_logo,
+        "maintenance_mode":    result.maintenance_mode,
+        "maintenance_message": result.maintenance_message,
+    })
+    return result
 
 
 # ── PUT /admin/settings/logo ──────────────────────────────────────────────────
 
 @router.put("/logo", status_code=204)
-async def upload_brgy_logo(
+async def upload_brgy_logo(  
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
     current_admin: Admin = Depends(get_current_admin),
 ):
-    """
-    Upload or replace the barangay logo.
-    Accepts PNG, JPEG, WebP, or SVG. Max 2 MB.
-    Stores raw bytes directly in the DB — no folder created.
-    Returns 204 No Content on success.
-    """
     if file.content_type not in ALLOWED_IMAGE_TYPES:
-        raise HTTPException(
-            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-            detail="Unsupported file type. Allowed: PNG, JPEG, WebP, SVG",
-        )
+        raise HTTPException(status_code=415, detail="Unsupported file type. Allowed: PNG, JPEG, WebP, SVG")
 
     contents = await file.read()
-    size_mb = len(contents) / (1024 * 1024)
-    if size_mb > MAX_LOGO_SIZE_MB:
-        raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail=f"File too large. Max size is {MAX_LOGO_SIZE_MB} MB.",
-        )
+    if len(contents) / (1024 * 1024) > MAX_LOGO_SIZE_MB:
+        raise HTTPException(status_code=413, detail=f"File too large. Max size is {MAX_LOGO_SIZE_MB} MB.")
 
     config = get_config(db)
     config.brgy_logo = contents
     config.brgy_logo_content_type = file.content_type
     db.commit()
+
+    await ws_manager.broadcast_to_kiosk("config_updated", {"has_logo": True})
 
 
 # ── GET /admin/settings/logo ──────────────────────────────────────────────────
@@ -108,12 +105,13 @@ def get_brgy_logo(
 # ── DELETE /admin/settings/logo ───────────────────────────────────────────────
 
 @router.delete("/logo", status_code=204)
-def delete_brgy_logo(
+async def delete_brgy_logo(      
     db: Session = Depends(get_db),
     current_admin: Admin = Depends(get_current_admin),
 ):
-    """Removes the barangay logo."""
     config = get_config(db)
     config.brgy_logo = None
     config.brgy_logo_content_type = None
     db.commit()
+
+    await ws_manager.broadcast_to_kiosk("config_updated", {"has_logo": False})
