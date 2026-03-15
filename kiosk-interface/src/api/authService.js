@@ -1,16 +1,15 @@
+/**
+ * @file kiosk-interface/api/authService.js
+ * @description API service functions for kiosk authentication.
+ * Covers RFID scanning, PIN setup, and PIN verification.
+ */
+
 import api from './http'
 
-// =========================================================
-// KIOSK AUTHENTICATION SERVICE
-// =========================================================
 
-/**
- * Authenticate a resident by RFID UID.
- * Returns resident profile and whether they have a configured PIN.
- *
- * @param {string} rfidUid - The hardware UID from the scanned card.
- * @returns {Promise<{ mode: string, resident_id: number, first_name: string, middle_name: string|null, last_name: string, address: string|null, has_pin: boolean }>}
- */
+// =================================================================================
+// RFID LOGIN
+// =================================================================================
 export const loginByRfid = async (rfidUid) => {
   try {
     const response = await api.post('/kiosk/auth/rfid', { rfid_uid: rfidUid })
@@ -21,16 +20,9 @@ export const loginByRfid = async (rfidUid) => {
   }
 }
 
-/**
- * Set a new 4-digit PIN for a resident (first-time setup).
- * Called when has_pin is false after RFID scan.
- *
- * @param {Object} payload
- * @param {number} payload.resident_id
- * @param {string} payload.pin      - The new 4-digit PIN chosen by the resident.
- * @param {string} payload.rfid_uid - The UID of the card being set up.
- * @returns {Promise<void>}
- */
+// =================================================================================
+// SETUP PIN
+// =================================================================================
 export const setupPin = async (payload) => {
   try {
     const response = await api.post('/kiosk/auth/set-pin', payload)
@@ -41,14 +33,6 @@ export const setupPin = async (payload) => {
   }
 }
 
-/**
- * Verify a resident's existing 4-digit PIN during standard login.
- *
- * @param {Object} payload
- * @param {number} payload.resident_id
- * @param {string} payload.pin - The PIN entered by the resident.
- * @returns {Promise<{ valid: boolean }>}
- */
 export const verifyPin = async (payload) => {
   try {
     const response = await api.post('/kiosk/auth/verify-pin', payload)

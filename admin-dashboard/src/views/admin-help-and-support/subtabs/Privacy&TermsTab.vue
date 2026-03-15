@@ -22,7 +22,7 @@ const stats = [
   { value: "8",        label: "Privacy Clauses"  },
   { value: "7",        label: "Terms Clauses"    },
   { value: "RA 10173", label: "Data Privacy Act" },
-  { value: "10 yrs",    label: "Data Retention"   },
+  { value: "5 yrs",    label: "Data Retention"   },
 ];
 
 const privacySections = [
@@ -292,7 +292,7 @@ const termsSections = [
           <p>
             Developed in partial fulfillment of the requirements for the degree of
             Bachelor of Science in Computer Engineering ·
-            Polytechnic University of the Philippines · 2025
+            Polytechnic University of the Philippines · 2025-2026
           </p>
         </div>
       </div>

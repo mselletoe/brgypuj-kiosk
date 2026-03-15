@@ -1,9 +1,14 @@
+/**
+ * @file kiosk-interface/src/api/documentService.js
+ * @description API service functions for kiosk document requests.
+ * Covers document type listing, eligibility checks, and request submission.
+ */
+
 import api from './http'
 
-/**
- * Fetch all available document types for kiosk
- * @returns {Promise<Array>} array of document types
- */
+// =================================================================================
+// DOCUMENT TYPES
+// =================================================================================
 export const getDocumentTypes = async () => {
   try {
     const response = await api.get('/kiosk/documents/types')
@@ -14,11 +19,9 @@ export const getDocumentTypes = async () => {
   }
 }
 
-/**
- * Submit a document request for the kiosk
- * @param {Object} payload { doctype_id, form_data, resident_id }
- * @returns {Promise<Object>} transaction number
- */
+// =================================================================================
+// DOCUMENT REQUEST
+// =================================================================================
 export const createDocumentRequest = async (payload) => {
   try {
     const response = await api.post('/kiosk/documents/requests', payload)
@@ -29,13 +32,9 @@ export const createDocumentRequest = async (payload) => {
   }
 }
 
-/**
- * Check if a resident is eligible to request a specific document type.
- * Returns a breakdown of each requirement (passed/failed/informational).
- * @param {number} doctypeId
- * @param {number} residentId
- * @returns {Promise<Object>} { eligible, resident_id, doctype_id, checks[] }
- */
+// =================================================================================
+// ELIGIBILITY CHECK
+// =================================================================================
 export const checkEligibility = async (doctypeId, residentId) => {
   try {
     const response = await api.get(`/kiosk/documents/types/${doctypeId}/eligibility`, {
