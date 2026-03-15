@@ -81,10 +81,12 @@ import {
 
       <!-- Project Background -->
       <div class="card card-bg">
-        <div class="card-icon-wrap icon-blue">
-          <InformationCircleIcon class="card-icon" />
+        <div class="card-header-row">
+          <div class="card-icon-wrap icon-blue">
+            <InformationCircleIcon class="card-icon" />
+          </div>
+          <h3 class="card-title">Project Background</h3>
         </div>
-        <h3 class="card-title">Project Background</h3>
         <p class="card-body">
           Barangay service delivery has long relied on manual processes — paper forms,
           manual encoding, and verbal announcements. This system addresses those
@@ -97,10 +99,12 @@ import {
 
       <!-- Key Features -->
       <div class="card card-feat">
-        <div class="card-icon-wrap icon-amber">
-          <LightBulbIcon class="card-icon" />
+        <div class="card-header-row">
+          <div class="card-icon-wrap icon-amber">
+            <LightBulbIcon class="card-icon" />
+          </div>
+          <h3 class="card-title">Key Features</h3>
         </div>
-        <h3 class="card-title">Key Features</h3>
         <ul class="feature-list">
           <li v-for="f in [
             'RFID-based resident authentication with auto-fill forms',
@@ -157,17 +161,19 @@ import {
          RESEARCH TEAM
     ═══════════════════════════════════════════════════════ -->
     <div class="card card-team section-row" style="animation-delay:0.3s">
-      <div class="card-icon-wrap icon-green">
-        <UserGroupIcon class="card-icon" />
+      <div class="card-header-row mb-6">
+        <div class="card-icon-wrap icon-green">
+          <UserGroupIcon class="card-icon" />
+        </div>
+        <h3 class="card-title">Research Team</h3>
       </div>
-      <h3 class="card-title mb-6">Research Team</h3>
 
       <div class="team-grid">
         <div v-for="(m, i) in [
-          { name:'Keanno Brennel A. Macatangay',         role:'Project Manager & Lead Writer'       },
-          { name:'Eloissa S. Francisco',        role:'Lead Full-Stack Developer & Database Administrator'       },
-          { name:'Alleah Marie G. Bayas',   role:'Communication & Client Liaison'   },
-          { name:'Justine Mae L. Convicto',           role:'UI/UX & Quality Assurance (QA) Lead'       },
+          { name:'Keanno Brennel A. Macatangay',   role:'Project Manager & Lead Writer'                    },
+          { name:'Eloissa S. Francisco',           role:'Lead Full-Stack Developer & Database Administrator'},
+          { name:'Alleah Marie G. Bayas',          role:'Communication & Client Liaison'                   },
+          { name:'Justine Mae L. Convicto',        role:'UI/UX & Quality Assurance (QA) Lead'              },
         ]" :key="m.name" class="member-card" :style="`animation-delay:${0.33+i*0.06}s`">
           <div class="member-avatar">
             <span>{{ m.name.charAt(0) }}{{ m.name.split(' ').at(-1).charAt(0) }}</span>
@@ -205,7 +211,6 @@ import {
   display: flex;
   flex-direction: column;
   gap: 20px;
-  /* pull left & right to fill the full content area */
   margin-left:  calc(-1 * var(--page-px, 2rem));
   margin-right: calc(-1 * var(--page-px, 2rem));
   padding-left:  var(--page-px, 2rem);
@@ -237,7 +242,6 @@ import {
   .hero-banner { padding: 36px 28px 32px; }
 }
 
-/* Rings */
 .hero-rings {
   position: absolute;
   inset: 0;
@@ -266,8 +270,6 @@ import {
   border-radius: 50%;
   transform: translate(40%, -40%);
 }
-
-/* Grid overlay */
 .hero-grid {
   position: absolute;
   inset: 0;
@@ -345,11 +347,7 @@ import {
   max-width: 750px;
   margin-bottom: 28px;
 }
-.hero-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
+.hero-tags { display: flex; flex-wrap: wrap; gap: 8px; }
 .hero-tag {
   background: rgba(0,0,0,0.2);
   border: 1px solid rgba(255,255,255,0.2);
@@ -419,6 +417,25 @@ import {
   .card { padding: 24px 22px; }
 }
 
+/* ── ONLY CHANGE: icon + title side-by-side ── */
+.card-header-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.card-header-row .card-icon-wrap {
+  margin-bottom: 0;   /* override the standalone bottom margin */
+  flex-shrink: 0;
+}
+.card-header-row .card-title {
+  margin: 0;          /* override the standalone bottom margin */
+}
+/* mb-6 used on Research Team header-row */
+.card-header-row.mb-6 {
+  margin-bottom: 24px;
+}
+
 .card-icon-wrap {
   width: 44px; height: 44px;
   border-radius: 12px;
@@ -431,9 +448,7 @@ import {
 .icon-purple { background:#f5f3ff; }
 .icon-green  { background:#ecfdf5; }
 
-.card-icon {
-  width: 24px; height: 24px;
-}
+.card-icon { width: 24px; height: 24px; }
 .icon-blue   .card-icon { color:#2563eb; }
 .icon-amber  .card-icon { color:#d97706; }
 .icon-purple .card-icon { color:#7c3aed; }
@@ -541,27 +556,15 @@ import {
   opacity: 0.35;
   color: #0f172a;
 }
-.comp-icon {
-  width: 28px; height: 28px;
-  margin-bottom: 12px;
-}
+.comp-icon { width: 28px; height: 28px; margin-bottom: 12px; }
 .comp-card--blue    .comp-icon { color:#2563eb; }
 .comp-card--violet  .comp-icon { color:#7c3aed; }
 .comp-card--emerald .comp-icon { color:#059669; }
 .comp-card--amber   .comp-icon { color:#d97706; }
 
-.comp-name {
-  font-size: 0.95rem;
-  font-weight: 800;
-  color: #0f172a;
-  margin-bottom: 5px;
-}
-.comp-sub {
-  font-size: 0.78rem;
-  color: #475569;
-  font-weight: 500;
-  line-height: 1.4;
-}
+.comp-name { font-size: 0.95rem; font-weight: 800; color: #0f172a; margin-bottom: 5px; }
+.comp-sub  { font-size: 0.78rem; color: #475569; font-weight: 500; line-height: 1.4; }
+
 .comp-bar {
   position: absolute;
   bottom: 0; left: 0; right: 0;
