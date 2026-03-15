@@ -1,9 +1,8 @@
 """
-Document Services Schemas
----------------------------
-Pydantic models defining the data structures for Document Types and Requests.
-These schemas handle data validation for Kiosk submissions and serialization for 
-Admin Dashboard management.
+app/schemas/document.py
+
+Pydantic schemas for document type configuration and document request management.
+Shared across the admin and kiosk document routers.
 """
 
 from datetime import datetime
@@ -12,15 +11,11 @@ from typing import Any, Dict, List, Literal, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 
-# =========================================================
-# DOCUMENT TYPES (Managed by Admin, Consumed by Kiosk)
-# =========================================================
+# =================================================================================
+# SHARED
+# =================================================================================
 
 class DocumentTypeBase(BaseModel):
-    """
-    Base attributes for a document template.
-    @property fields: List of JSON objects defining dynamic form requirements 
-    """
     doctype_name: str
     description: Optional[str] = None
     price: Decimal
@@ -32,37 +27,29 @@ class RequirementItem(BaseModel):
     type: Literal["document", "system_check"]
     params: Optional[Dict[str, Any]] = None
     
-# ---------- ADMIN INPUT ----------
 
+# =================================================================================
+# DOCUMENT TYPES — CREATE / UPDATE
+# =================================================================================
 class DocumentTypeCreate(DocumentTypeBase):
-    """
-    Schema for creating a new document template via Admin Dashboard.
-    """
     is_available: bool = True
-    is_id_application: bool = False   # marks this type as the special ID Application
+    is_id_application: bool = False
 
 
 class DocumentTypeUpdate(BaseModel):
-    """
-    Schema for updating existing templates. All fields are optional 
-    to support partial updates (PATCH requests).
-    """
     doctype_name: Optional[str] = None
     description: Optional[str] = None
     price: Optional[Decimal] = None
     fields: Optional[List[Dict[str, Any]]] = None
     is_available: Optional[bool] = None
-    is_id_application: Optional[bool] = None   # allow toggling via PATCH
+    is_id_application: Optional[bool] = None
     requirements: Optional[List[Dict[str, Any]]] = None
 
 
-# ---------- OUTPUT SCHEMAS ----------
-
+# =================================================================================
+# DOCUMENT TYPES — RESPONSES
+# =================================================================================
 class DocumentTypeKioskOut(DocumentTypeBase):
-    """
-    Public-facing document info shown on the Kiosk selection screen.
-    Includes the ID for referencing in requests.
-    """
     id: int
     requirements: List[Dict[str, Any]] = []
 
@@ -70,10 +57,6 @@ class DocumentTypeKioskOut(DocumentTypeBase):
 
 
 class DocumentTypeAdminOut(DocumentTypeKioskOut):
-    """
-    Internal-facing document info for Admin tables.
-    Includes availability status and ID Application flag.
-    """
     is_available: bool
     is_id_application: bool = False
     has_template: bool
@@ -82,11 +65,6 @@ class DocumentTypeAdminOut(DocumentTypeKioskOut):
 
 
 class DocumentTypeProcessingOut(BaseModel):
-    """
-    Heavy schema used ONLY by the backend worker or admin during 
-    document generation/autofilling.
-    @property file: The raw BYTEA/blob template for the document.
-    """
     id: int
     doctype_name: str
     price: Decimal
@@ -96,60 +74,45 @@ class DocumentTypeProcessingOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+# =================================================================================
+# ELIGIBILITY
+# =================================================================================
 class RequirementCheckResult(BaseModel):
-    """Result for a single requirement check."""
     id: str
     label: str
-    type: str           # "system_check" or "document"
-    passed: Optional[bool] = None   # None = not applicable / not checkable
-    message: Optional[str] = None   # Human-readable detail
+    type: str 
+    passed: Optional[bool] = None 
+    message: Optional[str] = None 
 
 
 class EligibilityCheckResult(BaseModel):
-    """
-    Returned by GET /kiosk/documents/types/{doctype_id}/eligibility?resident_id=X
-    and GET /admin/residents/{resident_id}/blotter-summary
-    """
     eligible: bool
     resident_id: int
     doctype_id: int
     checks: List[RequirementCheckResult]
 
 
-# =========================================================
-# DOCUMENT REQUESTS (Submitted by Residents, Processed by Admin)
-# =========================================================
+# =================================================================================
+# DOCUMENT REQUESTS — CREATE
+# =================================================================================
 
 class DocumentRequestBase(BaseModel):
-    """
-    Common fields for all document requests.
-    @property form_data: Key-value pairs containing responses to the dynamic 'fields'.
-    """
     doctype_id: int
     form_data: Dict[str, Any]
 
 
 class DocumentRequestCreate(DocumentRequestBase):
-    """
-    Validation schema for incoming Kiosk submissions.
-    Includes the resident_id linked to the authenticated RFID session.
-    """
     resident_id: int
 
 
+# =================================================================================
+# DOCUMENT REQUESTS — RESPONSES
+# =================================================================================
 class DocumentRequestKioskResponse(BaseModel):
-    """
-    Immediate feedback for the Kiosk user.
-    Returns the unique transaction_no for manual tracking.
-    """
     transaction_no: str
 
 
 class DocumentRequestKioskOut(BaseModel):
-    """
-    Schema for Kiosk transaction history or 'Track My Request' views.
-    Filters out internal processing details (like admin IDs).
-    """
     transaction_no: str
     status: str
     price: Decimal
@@ -163,10 +126,6 @@ class DocumentRequestKioskOut(BaseModel):
 
 
 class DocumentRequestAdminOut(BaseModel):
-    """
-    High-level request data for Admin Dashboard list views (Tables).
-    Includes identifiers for the resident and the document type.
-    """
     id: int
     transaction_no: str
 
@@ -194,10 +153,6 @@ class DocumentRequestAdminOut(BaseModel):
 
 
 class DocumentRequestAdminDetail(DocumentRequestAdminOut):
-    """
-    Comprehensive request data for the Admin Detail/Processing view.
-    Includes the resident's full name and path to generated files.
-    """
     resident_name: str
     price: Decimal
     request_file_path: Optional[str] = None

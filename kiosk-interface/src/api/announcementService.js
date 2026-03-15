@@ -1,9 +1,13 @@
+/**
+ * @file kiosk-interface/api/announcementService.js
+ * @description API service functions for fetching announcements on the kiosk.
+ */
+
 import api from './http'
 
-/**
- * Fetch all active announcements for kiosk display
- * @returns {Promise<Array>} array of active announcement records with base64 images
- */
+// =================================================================================
+// GET ANNOUNCEMENTS
+// =================================================================================
 export const getActiveAnnouncements = async () => {
   try {
     const response = await api.get('/kiosk/announcements')
