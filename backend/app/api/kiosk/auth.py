@@ -1,21 +1,12 @@
 """
-Auth Router for Kiosk Operations
--------------------------------
-Handles authentication logic for the Barangay Kiosk including:
-1. Anonymous Guest sessions.
-2. RFID-based resident identification.
-3. PIN setup for first-time / default residents.
-4. PIN verification for returning residents — with failed-attempt lockout.
+app/api/kiosk/auth.py
 
-ADDED:
-- verify_pin now enforces lockout using resident.failed_pin_attempts
-  and resident.locked_until, driven by SystemConfig settings.
-- 423 Locked is returned when the resident is currently locked out,
-  with `locked_until` (ISO string) and `lockout_seconds_remaining` in the body.
+Router for kiosk-facing authentication. Supports guest sessions,
+RFID card scanning, and PIN management (set and verify).
+Includes lockout enforcement for repeated failed PIN attempts.
 """
 
-from datetime import datetime, timezone
-
+from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
@@ -34,42 +25,42 @@ from app.models.resident import Resident, Address, Purok
 
 router = APIRouter(prefix="/auth")
 
+# bcrypt context for hashing and verifying resident PINs
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# Sentinel value assigned during the NOT NULL migration.
+# Sentinel value indicating a resident has not yet set a custom PIN
 RFID_PIN_DEFAULT = "0000"
 
 
-# ── /guest ────────────────────────────────────────────────────────────────────
+# =================================================================================
+# GUEST AUTHENTICATION
+# =================================================================================
 
 @router.post("/guest")
 def guest_login():
-    """Initializes a guest session."""
+    """Starts an unauthenticated guest session on the kiosk."""
     return {"mode": "guest"}
 
 
-# ── /rfid ─────────────────────────────────────────────────────────────────────
+# =================================================================================
+# RFID AUTHENTICATION
+# =================================================================================
 
 @router.post("/rfid", response_model=RFIDLoginResponse)
 def rfid_auth(payload: RFIDLoginRequest, db: Session = Depends(get_db)):
     """
-    Identifies a resident via their RFID UID.
+    Authenticates a resident by their RFID card UID.
 
-    Raises:
-        HTTPException 401: RFID not found or inactive.
-        HTTPException 423: Resident is currently locked out due to too many
-                           failed PIN attempts. Body includes locked_until and
-                           lockout_seconds_remaining so the frontend can show
-                           a countdown without making extra requests.
+    Validates the RFID tag, checks for an active lockout, then returns
+    the resident's profile and their current formatted address.
+    Raises 401 for invalid or inactive cards, and 423 if the account is locked.
     """
     resident = rfid_login(db, payload.rfid_uid)
 
     if not resident:
         raise HTTPException(status_code=401, detail="Invalid or inactive RFID")
 
-    # ── Lockout check ─────────────────────────────────────────────────────────
-    # Surface lockout here (at scan time) so the user gets immediate feedback
-    # rather than reaching the PIN screen only to be rejected.
+    # Reject login if the resident is within an active lockout window
     if resident.locked_until and resident.locked_until > datetime.now(timezone.utc):
         remaining = int((resident.locked_until - datetime.now(timezone.utc)).total_seconds())
         raise HTTPException(
@@ -81,7 +72,7 @@ def rfid_auth(payload: RFIDLoginRequest, db: Session = Depends(get_db)):
             },
         )
 
-    # ── Build formatted address ───────────────────────────────────────────────
+    # Fetch the resident's current address with its associated purok
     current_address = (
         db.query(Address)
         .filter(
@@ -92,6 +83,7 @@ def rfid_auth(payload: RFIDLoginRequest, db: Session = Depends(get_db)):
         .first()
     )
 
+    # Format address into a single readable string if available
     formatted_address = None
     if current_address:
         formatted_address = (
@@ -113,19 +105,23 @@ def rfid_auth(payload: RFIDLoginRequest, db: Session = Depends(get_db)):
     }
 
 
-# ── /set-pin ──────────────────────────────────────────────────────────────────
+# =================================================================================
+# FIRST TIME SET PIN
+# =================================================================================
 
 @router.post("/set-pin", status_code=status.HTTP_200_OK)
 def set_pin(payload: SetPinRequest, db: Session = Depends(get_db)):
     """
-    Sets a new PIN for a resident who has the default '0000' sentinel PIN.
-    Also clears any stale lockout state from a previous card.
+    Sets a PIN for a resident who has not yet configured one.
+    Rejects the request if a custom PIN is already in place — use /verify-pin instead.
+    Resets any prior failed attempt counters and lockout on success.
     """
     resident = db.query(Resident).filter(Resident.id == payload.resident_id).first()
 
     if not resident:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resident not found")
 
+    # Only allow set-pin if the resident is still on the default PIN
     if resident.rfid_pin not in (None, RFID_PIN_DEFAULT):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -133,7 +129,6 @@ def set_pin(payload: SetPinRequest, db: Session = Depends(get_db)):
         )
 
     resident.rfid_pin = pwd_context.hash(payload.pin)
-    # Clear any stale lockout data
     resident.failed_pin_attempts = 0
     resident.locked_until = None
     db.commit()
@@ -141,41 +136,32 @@ def set_pin(payload: SetPinRequest, db: Session = Depends(get_db)):
     return {"message": "PIN set successfully"}
 
 
-# ── /verify-pin ───────────────────────────────────────────────────────────────
+# =================================================================================
+# VERIFY PIN
+# =================================================================================
 
 @router.post("/verify-pin", response_model=VerifyPinResponse)
 def verify_pin(payload: VerifyPinRequest, db: Session = Depends(get_db)):
     """
-    Verifies a resident's PIN against the stored bcrypt hash.
+    Verifies a resident's PIN after an RFID scan.
 
-    Lockout behaviour (driven by SystemConfig):
-    - On wrong PIN: increment failed_pin_attempts.
-    - When failed_pin_attempts >= max_failed_attempts: set locked_until to
-      now + lockout_minutes, return 423 Locked.
-    - On correct PIN: reset failed_pin_attempts and locked_until, return valid=true.
-
-    Returns:
-        VerifyPinResponse: { valid: true/false }
-        OR 423 if currently locked out.
-
-    Raises:
-        HTTPException 404: Resident not found.
-        HTTPException 400: No PIN configured yet.
-        HTTPException 423: Locked out — body contains locked_until and
-                           lockout_seconds_remaining.
+    Tracks failed attempts and enforces a lockout once the configured
+    maximum is reached. Returns remaining attempts on failure, or resets the counter on success.
+    Raises 423 if the resident is currently locked out.
     """
     resident = db.query(Resident).filter(Resident.id == payload.resident_id).first()
 
     if not resident:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resident not found")
 
+    # Cannot verify a PIN that hasn't been set yet
     if resident.rfid_pin in (None, RFID_PIN_DEFAULT):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="No PIN configured. Please set a PIN first.",
         )
 
-    # ── Already locked? ───────────────────────────────────────────────────────
+    # Reject immediately if still within a lockout window
     now = datetime.now(timezone.utc)
     if resident.locked_until and resident.locked_until > now:
         remaining = int((resident.locked_until - now).total_seconds())
@@ -188,22 +174,19 @@ def verify_pin(payload: VerifyPinRequest, db: Session = Depends(get_db)):
             },
         )
 
-    # ── Verify PIN ────────────────────────────────────────────────────────────
     is_valid = pwd_context.verify(payload.pin, resident.rfid_pin)
 
     if is_valid:
-        # Reset lockout counters on success
+        # Reset failure tracking on a successful verification
         resident.failed_pin_attempts = 0
         resident.locked_until = None
         db.commit()
         return {"valid": True}
 
-    # ── Wrong PIN — increment counter ─────────────────────────────────────────
     config = get_config(db)
     resident.failed_pin_attempts = (resident.failed_pin_attempts or 0) + 1
 
     if resident.failed_pin_attempts >= config.max_failed_attempts:
-        from datetime import timedelta
         resident.locked_until = now + timedelta(minutes=config.lockout_minutes)
         db.commit()
 
