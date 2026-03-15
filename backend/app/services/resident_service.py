@@ -36,7 +36,11 @@ def calculate_residency_duration(residency_start_date: date) -> dict:
     if (today.month, today.day) < (residency_start_date.month, residency_start_date.day):
         years -= 1
     years = max(0, years)
-    start_after_years = residency_start_date.replace(year=residency_start_date.year + years)
+    target_year = residency_start_date.year + years
+    try:
+        start_after_years = residency_start_date.replace(year=target_year)
+    except ValueError:
+        start_after_years = residency_start_date.replace(year=target_year, day=28)
     months = (today.year - start_after_years.year) * 12 + (today.month - start_after_years.month)
     if today.day < start_after_years.day:
         months = max(0, months - 1)
@@ -411,7 +415,7 @@ def update_resident(db: Session, resident_id: int, resident_data: ResidentUpdate
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                                 detail=f"Email '{resident_data.email}' is already in use")
 
-    update_data = resident_data.model_dump(exclude_unset=True)
+    update_data = resident_data.model_dump(exclude_unset=True, exclude_none=False)
     for field, value in update_data.items():
         setattr(resident, field, value)
 
