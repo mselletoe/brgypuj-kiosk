@@ -736,7 +736,7 @@ const messages = {
     incorrectPINMsg: 'Maling PIN. Paki-try ulit.',
 
     // ── Transaction History ────────────────────────────────────────────────
-    transactionHistory: 'Kasaysayan ng Transaksyon',
+    transactionHistory: 'Mga Nakaraang Transaksyon',
     transactionHistorySubtitle: 'Tingnan ang iyong mga nakaraang transaksyon dito.',
     loadingTransactions: 'Naglo-load ng mga transaksyon...',
     noTransactionsFound: 'Walang nahanap na transaksyon.',
