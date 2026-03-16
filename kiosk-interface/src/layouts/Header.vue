@@ -84,10 +84,8 @@ const exitKiosk = () => { showExitModal.value = true; };
 const cancelExit = () => { showExitModal.value = false; showExitBtn.value = false; };
 const confirmExit = async () => {
   try {
-    // Calls your backend to kill Chromium on the Raspberry Pi
-    await fetch('http://localhost:8000/kiosk/system/exit-kiosk', { method: 'POST' });
+    await fetch('http://host.docker.internal:8000/kiosk/system/exit-kiosk', { method: 'POST' });
   } catch {
-    // Fallback: just close the window
     window.close();
   }
 };
