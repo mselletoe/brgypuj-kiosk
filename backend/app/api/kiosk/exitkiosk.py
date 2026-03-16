@@ -1,10 +1,3 @@
-"""
-Exit Kiosk Module
------------------
-Provides a system-level endpoint to gracefully exit Chromium kiosk mode
-on the Raspberry Pi by killing the browser process.
-"""
-
 import subprocess
 from fastapi import APIRouter
 
@@ -22,7 +15,7 @@ async def exit_kiosk():
         dict: A status message confirming the exit command was sent.
     """
     try:
-        subprocess.Popen(["pkill", "chromium-browser"])
+        subprocess.run(["pkill", "-f", "chromium"], capture_output=True)
         return {"status": "ok", "message": "Kiosk exiting"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
