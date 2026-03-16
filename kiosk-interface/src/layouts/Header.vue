@@ -84,7 +84,7 @@ const exitKiosk = () => { showExitModal.value = true; };
 const cancelExit = () => { showExitModal.value = false; showExitBtn.value = false; };
 const confirmExit = async () => {
   try {
-    await fetch('http://host.docker.internal:8000/kiosk/system/exit-kiosk', { method: 'POST' });
+    await fetch('http://localhost:9999/exit', { method: 'POST' });
   } catch {
     window.close();
   }
