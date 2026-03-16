@@ -211,20 +211,26 @@ let countdownInterval = null;
 
 const startCamera = async () => {
   try {
-    stream.value = await navigator.mediaDevices.getUserMedia({ video: true });
-    if (videoRef.value) videoRef.value.srcObject = stream.value;
+    stream.value = await navigator.mediaDevices.getUserMedia({
+      video: {
+        width: { ideal: 640 },
+        height: { ideal: 480 },
+        facingMode: "user"
+      }
+    });
+    if (videoRef.value) {
+      videoRef.value.srcObject = stream.value;
+      await videoRef.value.play();
+    }
   } catch (err) {
     console.error("Camera access denied:", err);
-  }
-  if (videoRef.value) {
-    videoRef.value.src = "http://" + window.location.hostname + ":8090/?action=stream";
   }
 };
 
 const stopCamera = () => {
-  if (videoRef.value) {
-    videoRef.value.src = "";
-    videoRef.value.pause();
+  if (stream.value) {
+    stream.value.getTracks().forEach((track) => track.stop());
+    stream.value = null;
   }
   if (countdownInterval) clearInterval(countdownInterval);
   isCountingDown.value = false;
@@ -693,7 +699,10 @@ const selectYear = (y) => {
                 ref="videoRef"
                 autoplay
                 playsinline
-                class="w-full h-full object-cover transform scale-x-[-1]"
+                muted
+                width="480"
+                height="480"
+                class="w-full h-full object-cover"
               ></video>
               <img
                 v-show="photoData"
