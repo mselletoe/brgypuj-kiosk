@@ -15,7 +15,7 @@ import EquipmentRequests from "@/views/requests/equipment-requests/EquipmentRequ
 import FeedbackAndReports from "@/views/feedback-and-reports/FeedbackAndReports.vue";
 import ComponentShowcase from "@/components/ComponentShowcase.vue";
 import AccountSettings from "@/views/settings/AccountSettings.vue";
-import HelpAndSupport from "@/views/admin-help-and-support/Help&Support.vue";
+import SystemGuide from "@/views/admin-help-and-support/SystemGuide.vue";
 import FAQsManagement from "@/views/help-and-support/FAQsManagement.vue";
 import ContactInformation from "@/views/help-and-support/ContactInformation.vue";
 import ResidentsManagement from "@/views/residents-management/ResidentsManagement.vue";
@@ -71,7 +71,7 @@ const routes = [
       { path: "component-showcase", component: ComponentShowcase },
       { path: "account-settings", component: AccountSettings },
       { path: "notifications", component: Notification },
-      { path: "help-and-support", component: HelpAndSupport },
+      { path: "system-guide", component: SystemGuide },
       { path: "faqs-management", component: FAQsManagement },
       { path: "contact-information", component: ContactInformation },
       { path: "blotter-kp-logs", component: BlotterAndKPLogs },

@@ -1,20 +1,10 @@
-"""
-Blotter Service Layer
----------------------------
-Handles the business logic for blotter record management within
-the Admin Dashboard. Includes creation, retrieval, update, and 
-deletion of blotter records.
-"""
 from sqlalchemy.orm import Session, joinedload
+from datetime import datetime, date
 from fastapi import HTTPException, status
 from app.models.blotter import BlotterRecord
-from app.models.resident import Resident
+from app.models.resident import Resident, Address
 from app.schemas.blotter import BlotterRecordCreate, BlotterRecordUpdate
 
-
-# -------------------------------------------------
-# Internal Helpers
-# -------------------------------------------------
 
 def _get_record(db: Session, blotter_id: int) -> BlotterRecord | None:
     return (
@@ -29,12 +19,6 @@ def _get_record(db: Session, blotter_id: int) -> BlotterRecord | None:
 
 
 def _generate_blotter_no(db: Session) -> str:
-    """
-    Generates a unique blotter number in the format YYYY-XXXXX.
-    Example: 2025-00001, 2025-00042
-    """
-    from datetime import datetime
-
     year = datetime.now().year
     year_prefix = f"{year}-"
     count = (
@@ -75,10 +59,8 @@ def _get_full_name(resident) -> str:
 
 
 def _calculate_age(birthdate) -> int | None:
-    """Calculates age from a birthdate."""
     if not birthdate:
         return None
-    from datetime import date
     today = date.today()
     return today.year - birthdate.year - (
         (today.month, today.day) < (birthdate.month, birthdate.day)
@@ -86,11 +68,6 @@ def _calculate_age(birthdate) -> int | None:
 
 
 def _get_resident_address(db: Session, resident_id: int) -> str | None:
-    """
-    Fetches the primary address of a resident.
-    Adjust the model/fields to match your Address model.
-    """
-    from app.models.resident import Address
     address = (
         db.query(Address)
         .filter(Address.resident_id == resident_id)
@@ -111,9 +88,6 @@ def _get_resident_address(db: Session, resident_id: int) -> str | None:
 # -------------------------------------------------
 
 def get_all_blotter_records(db: Session) -> list[BlotterRecord]:
-    """
-    Admin: Retrieves all blotter records ordered by most recent first.
-    """
     return (
         db.query(BlotterRecord)
         .options(
@@ -126,17 +100,10 @@ def get_all_blotter_records(db: Session) -> list[BlotterRecord]:
 
 
 def get_blotter_record_by_id(db: Session, blotter_id: int) -> BlotterRecord | None:
-    """
-    Admin: Fetches a single blotter record with full party details.
-    """
     return _get_record(db, blotter_id)
 
 
 def get_blotter_records_by_resident(db: Session, resident_id: int) -> list[BlotterRecord]:
-    """
-    Admin: Retrieves all blotter records where the given resident appears
-    as either the complainant or the respondent. Ordered by most recent first.
-    """
     return (
         db.query(BlotterRecord)
         .options(
@@ -153,41 +120,67 @@ def get_blotter_records_by_resident(db: Session, resident_id: int) -> list[Blott
 
 
 def has_blotter_record_as_respondent(db: Session, resident_id: int) -> bool:
-    """
-    Document Services: Returns True if the resident appears as a respondent
-    in any blotter record, meaning they do NOT have a clean record.
-
-    Complainants (the reporting/victim party) are NOT affected — only
-    respondents (the accused) are considered to have a non-clean record.
-
-    Usage in document_service.py:
-        from app.services.blotter_service import has_blotter_record_as_respondent
-
-        is_clean = not has_blotter_record_as_respondent(db, resident_id)
-    """
     return (
         db.query(BlotterRecord)
-        .filter(BlotterRecord.respondent_id == resident_id)
+        .filter(
+            BlotterRecord.respondent_id == resident_id,
+            BlotterRecord.status == "active",
+        )
         .first()
     ) is not None
 
 
+def resolve_blotter_record(db: Session, blotter_id: int) -> BlotterRecord | None:
+    from datetime import datetime
+
+    record = _get_record(db, blotter_id)
+    if not record:
+        return None
+
+    if record.status == "resolved":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Blotter record is already resolved",
+        )
+
+    record.status = "resolved"
+    record.resolved_at = datetime.utcnow()
+
+    db.commit()
+    db.refresh(record)
+
+    return record
+
+
+def reopen_blotter_record(db: Session, blotter_id: int) -> BlotterRecord | None:
+    record = _get_record(db, blotter_id)
+    if not record:
+        return None
+
+    if record.status == "active":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Blotter record is already active",
+        )
+
+    record.status = "active"
+    record.resolved_at = None
+
+    db.commit()
+    db.refresh(record)
+
+    return record
+
+
 def create_blotter_record(db: Session, payload: BlotterRecordCreate) -> BlotterRecord:
-    """
-    Admin: Creates a new blotter record with an auto-generated blotter number.
-    When a resident is selected as complainant or respondent, their name and
-    address are auto-filled from their resident profile.
-    """
     data = payload.model_dump()
 
-    # Auto-fill complainant details from resident profile if linked
     if payload.complainant_id:
         resident = _validate_resident(db, payload.complainant_id)
         data['complainant_name'] = _get_full_name(resident)
         data['complainant_age'] = _calculate_age(resident.birthdate)
         data['complainant_address'] = _get_resident_address(db, resident.id)
 
-    # Auto-fill respondent details from resident profile if linked
     if payload.respondent_id:
         resident = _validate_resident(db, payload.respondent_id)
         data['respondent_name'] = _get_full_name(resident)
@@ -204,27 +197,19 @@ def create_blotter_record(db: Session, payload: BlotterRecordCreate) -> BlotterR
     return record
 
 
-def update_blotter_record(
-    db: Session, blotter_id: int, payload: BlotterRecordUpdate
-) -> BlotterRecord | None:
-    """
-    Admin: Updates fields of an existing blotter record.
-    Re-resolves resident data if complainant_id or respondent_id changes.
-    """
+def update_blotter_record( db: Session, blotter_id: int, payload: BlotterRecordUpdate ) -> BlotterRecord | None:
     record = _get_record(db, blotter_id)
     if not record:
         return None
 
     data = payload.model_dump(exclude_unset=True)
 
-    # Re-resolve complainant if resident link is being changed
     if data.get('complainant_id'):
         resident = _validate_resident(db, data['complainant_id'])
         data['complainant_name'] = _get_full_name(resident)
         data['complainant_age'] = _calculate_age(resident.birthdate)
         data['complainant_address'] = _get_resident_address(db, resident.id)
 
-    # Re-resolve respondent if resident link is being changed
     if data.get('respondent_id'):
         resident = _validate_resident(db, data['respondent_id'])
         data['respondent_name'] = _get_full_name(resident)
@@ -241,9 +226,6 @@ def update_blotter_record(
 
 
 def delete_blotter_record(db: Session, blotter_id: int) -> bool:
-    """
-    Admin: Permanently deletes a blotter record.
-    """
     record = db.query(BlotterRecord).filter(BlotterRecord.id == blotter_id).first()
     if not record:
         return False
@@ -253,10 +235,6 @@ def delete_blotter_record(db: Session, blotter_id: int) -> bool:
 
 
 def bulk_delete_blotter_records(db: Session, ids: list[int]) -> int:
-    """
-    Admin: Deletes multiple blotter records in a single operation.
-    Returns the count of deleted records.
-    """
     count = (
         db.query(BlotterRecord)
         .filter(BlotterRecord.id.in_(ids))

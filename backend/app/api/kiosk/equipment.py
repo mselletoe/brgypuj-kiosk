@@ -1,10 +1,3 @@
-"""
-Equipment Borrowing API - Kiosk Endpoints
----------------------------
-Public-facing endpoints for residents to browse equipment inventory
-and submit borrowing requests through the kiosk interface.
-"""
-
 from typing import List
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
@@ -38,11 +31,19 @@ async def create_equipment_request(
     db: Session = Depends(get_db)
 ):
     result = equipment_service.create_equipment_request(db, payload)
+
+    resident_name = None
+    if payload.resident_id:
+        from app.models.resident import Resident
+        resident = db.query(Resident).filter(Resident.id == payload.resident_id).first()
+        if resident:
+            resident_name = " ".join(filter(None, [resident.first_name, resident.last_name]))
+
     await ws_manager.broadcast_to_admin(
         "new_equipment_request",
         {
             "type": "Equipment",
-            "resident_name": getattr(payload, 'contact_person', 'A resident'),
+            "resident_name": resident_name,
             "transaction_no": getattr(result, 'transaction_no', ''),
         },
         db=db

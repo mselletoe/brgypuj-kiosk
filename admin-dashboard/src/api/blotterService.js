@@ -43,6 +43,29 @@ export const updateBlotter = async (blotterId, updateData) => {
 }
 
 // ============================================================================
+// RESOLVE / REOPEN Operations
+// ============================================================================
+
+/**
+ * Marks a blotter record as resolved.
+ * The respondent resident regains clean-record eligibility once all their
+ * records as respondent are resolved (or they have none remaining).
+ */
+export const resolveBlotter = async (blotterId) => {
+  const res = await api.post(`/admin/blotter/${blotterId}/resolve`)
+  return res.data
+}
+
+/**
+ * Re-opens a previously resolved blotter record.
+ * The respondent will once again be flagged as having an active blotter record.
+ */
+export const reopenBlotter = async (blotterId) => {
+  const res = await api.post(`/admin/blotter/${blotterId}/reopen`)
+  return res.data
+}
+
+// ============================================================================
 // DELETE Operations
 // ============================================================================
 

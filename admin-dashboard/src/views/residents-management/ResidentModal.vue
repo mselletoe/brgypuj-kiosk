@@ -168,6 +168,17 @@ async function loadTransactionHistory() {
   }
 }
 
+function parseDateToTimestamp(str) {
+  if (!str) return null
+  // Handle "MM/DD/YYYY" format from backend
+  const [month, day, year] = str.split('/')
+  if (month && day && year) {
+    return new Date(Number(year), Number(month) - 1, Number(day)).getTime()
+  }
+  // Fallback for ISO "YYYY-MM-DD" format
+  return new Date(str).getTime()
+}
+
 // Blotter records (only loaded in view mode)
 const blotterRecords = ref([])
 const blotterLoading = ref(false)
@@ -327,8 +338,8 @@ async function loadResidentDetails() {
       last_name: data.last_name,
       suffix: data.suffix || '',
       gender: data.gender,
-      birthdate: data.birthdate ? new Date(data.birthdate).getTime() : null,
-      residency_start_date: data.residency_start_date ? new Date(data.residency_start_date).getTime() : null,
+      birthdate: parseDateToTimestamp(data.birthdate),
+      residency_start_date: parseDateToTimestamp(data.residency_start_date),
       phone_number: data.phone_number || '',
       email: data.email || '',
       house_no_street: data.current_address?.house_no_street || '',

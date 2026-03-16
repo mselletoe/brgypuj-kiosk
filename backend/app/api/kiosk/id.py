@@ -1,22 +1,3 @@
-"""
-ID Services Router
-------------------
-Exposes the three ID Service workflows as REST endpoints consumed
-by the Barangay Kiosk and Admin Dashboard.
-
-Kiosk-facing (guest + RFID sessions):
-  POST /id-services/residents/search             — name search for resident selection
-  POST /id-services/apply/verify-birthdate       — identity check before applying
-  GET  /id-services/apply/requirements-check/{resident_id}
-                                                 — check if resident meets ID requirements
-  POST /id-services/apply                        — submit ID application
-  GET  /id-services/report-lost/info/{rid}       — check if resident has an active card
-  POST /id-services/report-lost                  — confirm & submit lost card report
-
-Authenticated kiosk (RFID session only):
-  POST /id-services/change-pin                   — change security PIN
-"""
-
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -52,10 +33,6 @@ from app.services.id_service import (
 router = APIRouter(prefix="/id-services")
 
 
-# =========================================================
-# SHARED — RESIDENT SEARCH
-# =========================================================
-
 @router.get(
     "/residents/search",
     response_model=list[ResidentSearchResult],
@@ -69,10 +46,6 @@ def search_residents(query: str, db: Session = Depends(get_db)):
         )
     return search_residents_by_name(db, query.strip())
 
-
-# =========================================================
-# APPLY FOR ID
-# =========================================================
 
 @router.get(
     "/apply/fields",
@@ -119,22 +92,26 @@ async def apply(payload: IDApplicationRequest, db: Session = Depends(get_db)):
         use_manual_data=payload.use_manual_data,
         field_values=payload.field_values,
     )
+
+    resident_name = None
+    if payload.resident_id:
+        from app.models.resident import Resident
+        resident = db.query(Resident).filter(Resident.id == payload.resident_id).first()
+        if resident:
+            resident_name = " ".join(filter(None, [resident.first_name, resident.last_name]))
+
     await ws_manager.broadcast_to_admin(
         "new_id_application",
         {
             "type": "ID Services",
             "event": "new_id_application",
-            "resident_name": f"Resident #{payload.resident_id}",
+            "resident_name": resident_name,
             "transaction_no": getattr(result, 'transaction_no', ''),
         },
-        db=db 
+        db=db
     )
     return result
 
-
-# =========================================================
-# CHANGE PASSCODE / PIN  (authenticated sessions only)
-# =========================================================
 
 @router.post(
     "/verify-pin",
@@ -154,10 +131,6 @@ def update_pin(payload: ChangePinRequest, db: Session = Depends(get_db)):
     return change_pin(db, payload.resident_id, payload.current_pin, payload.new_pin)
 
 
-# =========================================================
-# REPORT LOST CARD
-# =========================================================
-
 @router.get(
     "/report-lost/info/{resident_id}",
     response_model=ReportLostCardVerifyResponse,
@@ -170,12 +143,20 @@ def get_report_card_info(resident_id: int, db: Session = Depends(get_db)):
 @router.post("/report-lost", response_model=ReportLostCardResponse, status_code=status.HTTP_201_CREATED)
 async def submit_lost_card_report(payload: ReportLostCardRequest, db: Session = Depends(get_db)):
     result = report_lost_card(db, payload.resident_id, payload.pin, payload.rfid_uid)
+
+    resident_name = None
+    if payload.resident_id:
+        from app.models.resident import Resident
+        resident = db.query(Resident).filter(Resident.id == payload.resident_id).first()
+        if resident:
+            resident_name = " ".join(filter(None, [resident.first_name, resident.last_name]))
+
     await ws_manager.broadcast_to_admin(
         "new_lost_card_report",
         {
             "type": "ID Services",
             "event": "new_lost_card_report",
-            "resident_name": f"Resident #{payload.resident_id}",
+            "resident_name": resident_name,
         },
         db=db
     )

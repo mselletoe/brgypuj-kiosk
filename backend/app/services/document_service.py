@@ -225,7 +225,8 @@ def _generate_transaction_no(db: Session) -> str:
 
 def _check_clean_blotter(db: Session, resident_id: int) -> bool:
     record = db.query(BlotterRecord).filter(
-        BlotterRecord.respondent_id == resident_id
+        BlotterRecord.respondent_id == resident_id,
+        BlotterRecord.status == "active",
     ).first()
     return record is None
 
@@ -332,7 +333,8 @@ def check_resident_eligibility(
 
             if req_id == "clean_blotter":
                 blotter_records = db.query(BlotterRecord).filter(
-                    BlotterRecord.respondent_id == resident_id
+                    BlotterRecord.respondent_id == resident_id,
+                    BlotterRecord.status == "active",
                 ).all()
 
                 if blotter_records:

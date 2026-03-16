@@ -1,7 +1,6 @@
 from datetime import date
 import base64
-import secrets
-from passlib.context import CryptContext
+
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException, status
@@ -14,8 +13,6 @@ from app.schemas.resident import (
     ResidentRFIDUpdate
 )
 from typing import List, Optional, Dict
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 # ============================================================================
@@ -345,10 +342,6 @@ def create_resident(db: Session, resident_data: ResidentCreate) -> Resident:
             )
 
     try:
-        # Generate a random 6-digit PIN and hash it; can be changed later via profile
-        random_pin = str(secrets.randbelow(900000) + 100000)  # always 6 digits
-        hashed_pin = pwd_context.hash(random_pin)
-
         new_resident = Resident(
             first_name=resident_data.first_name,
             middle_name=resident_data.middle_name,
@@ -359,7 +352,7 @@ def create_resident(db: Session, resident_data: ResidentCreate) -> Resident:
             residency_start_date=residency_start_date,
             email=resident_data.email,
             phone_number=resident_data.phone_number,
-            rfid_pin=hashed_pin
+            rfid_pin="0000"
         )
         db.add(new_resident)
         db.flush()

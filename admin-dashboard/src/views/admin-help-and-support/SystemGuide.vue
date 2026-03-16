@@ -24,7 +24,7 @@ const sections = [
 </script>
 
 <template>
-  <div class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden animate-fade-in">
+  <div class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden">
     <div class="flex-shrink-0 mb-5 section-row" style="animation-delay: 0s">
       <PageTitle title="System Guide" />
       <p class="text-sm text-gray-500 mt-1">
@@ -59,7 +59,7 @@ const sections = [
     </div>
   </div>
 </template>
-
+<!-- 
 <style scoped>
 /* Uniform animations adopted from Overview.vue */
 .section-row {
@@ -92,4 +92,4 @@ const sections = [
 .animate-fade-in {
   animation: fadeIn 0.5s ease-out forwards;
 }
-</style>
+</style> -->

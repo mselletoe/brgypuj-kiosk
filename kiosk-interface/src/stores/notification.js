@@ -9,32 +9,34 @@ export const useNotificationStore = defineStore('notification', () => {
     const date = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     const time = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
 
+    const name = data.resident_name || 'Guest User'
+
     const eventMap = {
       'new_transaction': {
         type: 'Document',
-        msg:  `New ${data.document_type || 'Document'} request submitted by ${data.resident_name}`,
+        msg:  `New ${data.document_type || 'Document'} request submitted by ${name}`,
       },
       'new_equipment_request': {
         type: 'Equipment',
-        msg:  `New Equipment request submitted by ${data.resident_name}`,
+        msg:  `New Equipment request submitted by ${name}`,
       },
       'new_feedback': {
         type: 'Feedback',
         msg:  data.rating
                 ? `New feedback received — rated ${data.rating}/5 stars`
-                : 'New feedback received from a resident',
+                : `New feedback received from ${name}`,
       },
       'new_id_application': {
         type: 'Document',
-        msg:  `New ID Application submitted by ${data.resident_name}`,
+        msg:  `New ID Application submitted by ${name}`,
       },
       'new_lost_card_report': {
         type: 'Document',
-        msg:  `Lost card reported by ${data.resident_name}`,
+        msg:  `Lost card reported by ${name}`,
       },
       'new_rfid_linked': {
         type: 'Document',
-        msg:  `New RFID card linked for ${data.resident_name}`,
+        msg:  `New RFID card linked for ${name}`,
       },
     }
 

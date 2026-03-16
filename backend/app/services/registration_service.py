@@ -197,7 +197,6 @@ def link_rfid_to_resident(
     updated_form_data["rfid_uid"] = rfid_uid
     updated_form_data["linked_at"] = datetime.now().isoformat()
     doc_request.form_data = updated_form_data
-    doc_request.status = "Completed"
 
     db.commit()
     db.refresh(new_rfid)
