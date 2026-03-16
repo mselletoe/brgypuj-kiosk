@@ -22,10 +22,7 @@ class WebSocketManager:
         if websocket in self.kiosk_connections:
             self.kiosk_connections.remove(websocket)
 
-    async def broadcast_to_admin(self, event: str, data: dict, db: Session = None):  # 👈 db added
-        """Save to DB first, then broadcast to all connected admin clients."""
-
-        # ── Persist to database ───────────────────────────────────────────────
+    async def broadcast_to_admin(self, event: str, data: dict, db: Session = None):
         if db:
             from app.services.notification_service import save_notification
             type_map = {
@@ -36,13 +33,14 @@ class WebSocketManager:
                 "new_lost_card_report":  "ID Services",
                 "new_rfid_linked":       "ID Services",
             }
+            name = data.get('resident_name') or 'Guest User'
             msg_map = {
-                "new_transaction":       f"New {data.get('document_type', 'Document')} request submitted by {data.get('resident_name', 'a resident')}",
-                "new_equipment_request": f"New Equipment request submitted by {data.get('resident_name', 'a resident')}",
-                "new_feedback":          f"New feedback received — rated {data.get('rating', '?')}/5 stars" if data.get('rating') else "New feedback received from a resident",
-                "new_id_application":    f"New ID Application submitted by {data.get('resident_name', 'a resident')}",
-                "new_lost_card_report":  f"Lost card reported by {data.get('resident_name', 'a resident')}",
-                "new_rfid_linked":       f"New RFID card linked for {data.get('resident_name', 'a resident')}",
+                "new_transaction":       f"New {data.get('document_type', 'Document')} request submitted by {name}",
+                "new_equipment_request": f"New Equipment request submitted by {name}",
+                "new_feedback":          f"New feedback received — rated {data.get('rating', '?')}/5 stars" if data.get('rating') else f"New feedback received from {name}",
+                "new_id_application":    f"New ID Application submitted by {name}",
+                "new_lost_card_report":  f"Lost card reported by {name}",
+                "new_rfid_linked":       f"New RFID card linked for {name}",
             }
             notif = save_notification(
                 db,
