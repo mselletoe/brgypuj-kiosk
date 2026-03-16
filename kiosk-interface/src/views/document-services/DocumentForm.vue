@@ -80,21 +80,14 @@ const fieldMapping = {
   rfid_uid: ['rfid_uid', 'rfid', 'card_number', 'rfid_number'],
 }
 
-// Tracks fields that were automatically populated from the resident profile
 const preFilledFields = ref(new Set())
 
-/**
- * Initializes form values. 
- * Combines initial state with profile-based autofill logic.
- */
 const initializeFormData = () => {
   props.config.fields.forEach((field) => {
     let value = props.initialData[field.name] || ''
     let isPrefilled = false
 
-    // Attempt to autofill if user is authenticated and resident data is available
     if (props.isRfidUser && props.residentData) {
-      // Look through all possible mappings for this field
       for (const [residentField, formFieldVariants] of Object.entries(fieldMapping)) {
         if (formFieldVariants.includes(field.name)) {
           const residentValue = props.residentData[residentField]
@@ -116,16 +109,10 @@ const initializeFormData = () => {
 
 initializeFormData()
 
-/**
- * Watcher: Resident Data Sync
- * Reacts to async resident data loading. Populates empty fields if data 
- * arrives after the component has already mounted.
- */
 watch(() => props.residentData, (newData) => {
   if (!newData || !props.isRfidUser) return
   
   props.config.fields.forEach((field) => {
-    // Only autofill if field is currently empty
     if (formData.value[field.name]) return
     
     for (const [residentField, formFieldVariants] of Object.entries(fieldMapping)) {
@@ -142,20 +129,10 @@ watch(() => props.residentData, (newData) => {
   })
 }, { immediate: true, deep: true })
 
-// ==============================================
-// Helpers
-// ==============================================
-
-/**
- * Identifies if a field is locked based on RFID authentication.
- */
 const isPreFilled = (fieldName) => {
   return props.isRfidUser && preFilledFields.value.has(fieldName)
 }
 
-/**
- * Dynamically adjusts placeholders based on field status.
- */
 const formatPlaceholder = (placeholder, label, isPrefilled) => {
   if (isPrefilled) {
     return t('autoFilledProfile')
@@ -163,10 +140,6 @@ const formatPlaceholder = (placeholder, label, isPrefilled) => {
   return placeholder || `Enter ${label.toLowerCase()}`
 }
 
-/**
- * Validates required fields before allowing submission.
- * @returns {boolean} True if all required fields are populated.
- */
 const validate = () => {
   let isValid = true
   props.config.fields.forEach((field) => {
@@ -183,9 +156,6 @@ const validate = () => {
   return isValid
 }
 
-/**
- * Emits the 'continue' event with valid form data to the parent wrapper.
- */
 const handleContinue = () => {
   if (props.isSubmitting) return
   if (validate()) {
@@ -193,7 +163,6 @@ const handleContinue = () => {
   }
 }
 
-// Tracks which custom select dropdown is currently open
 const openDropdown = ref(null)
 
 const toggleSelectDropdown = (fieldName) => {
@@ -250,10 +219,7 @@ defineExpose({
           format="MM/dd/yyyy"
           :max-date="new Date()"
           :placeholder="formatPlaceholder(field.placeholder, field.label, isPreFilled(field.name))"
-          :input-class-name="[
-            'w-full h-[48px] pl-10 pr-3 py-3 border border-gray-300 rounded-xl shadow-sm transition-shadow focus:outline-none focus:ring-2 focus:ring-[#013C6D]',
-            isPreFilled(field.name) ? 'bg-gray-100 cursor-not-allowed' : ''
-          ].join(' ')"
+          :ui="{ input: ['dp-field', isPreFilled(field.name) ? 'dp-field--prefilled' : ''] }"
         >
           <template #input-icon>
             <LockClosedIcon v-if="isPreFilled(field.name)" class="w-5 h-5 text-blue-600 ml-3"/>
@@ -317,3 +283,32 @@ defineExpose({
     </div>
   </div>
 </template>
+
+<style>
+.dp-field.dp__input {
+  height: 48px !important;
+  border-radius: 0.75rem !important;
+  border-color: #d1d5db !important;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05) !important;
+  padding-top: 0.75rem !important;
+  padding-bottom: 0.75rem !important;
+  font-size: 1rem !important;
+}
+
+.dp-field.dp__input:focus {
+  border-color: #013C6D !important;
+  box-shadow: 0 0 0 2px #013C6D !important;
+}
+
+.dp-field--prefilled.dp__input {
+  background-color: #f3f4f6 !important;
+  color: #374151 !important;
+  cursor: not-allowed !important;
+}
+
+/* Remove the outer wrapper's own border so only .dp__input shows */
+.dp__input_wrap {
+  border: none !important;
+  box-shadow: none !important;
+}
+</style>

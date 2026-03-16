@@ -3,6 +3,8 @@ import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useI18n } from "vue-i18n";
+import VueDatePicker from '@vuepic/vue-datepicker'
+import '@vuepic/vue-datepicker/dist/main.css'
 import ArrowBackButton from "@/components/shared/ArrowBackButton.vue";
 import Modal from "@/components/shared/Modal.vue";
 import Button from "@/components/shared/Button.vue";
@@ -641,11 +643,24 @@ const selectYear = (y) => {
                       rows="2"
                     ></textarea>
 
+                    <VueDatePicker
+                      v-if="field.type === 'date'"
+                      v-model="detailsForm[field.name]"
+                      :enable-time-picker="false"
+                      :disabled="(!useManualEntry && !!AUTOFILL_MAP[field.name]) || isSubmitting"
+                      auto-apply
+                      teleport-center
+                      format="MM/dd/yyyy"
+                      :max-date="new Date()"
+                      :placeholder="field.label"
+                      :ui="{ input: 'dp-match-input' }"
+                    />
+
                     <input
                       v-else
                       v-model="detailsForm[field.name]"
                       :disabled="!useManualEntry && !!AUTOFILL_MAP[field.name]"
-                      :type="field.type === 'date' ? 'date' : field.type === 'number' ? 'number' : 'text'"
+                      :type="field.type === 'number' ? 'number' : 'text'"
                       :placeholder="field.label"
                       class="w-full h-[48px] px-4 py-3 border border-gray-300 rounded-xl shadow-sm transition-shadow focus:outline-none focus:ring-2 focus:ring-[#013C6D] disabled:bg-gray-50 disabled:text-gray-400"
                     />
@@ -1130,5 +1145,31 @@ const selectYear = (y) => {
   60% {
     transform: translate3d(4px, 0, 0);
   }
+}
+</style>
+
+<style>
+.dp-match-input.dp__input {
+  height: 48px !important;
+  border-radius: 0.75rem !important;
+  border: 1px solid #d1d5db !important;
+  padding: 0.75rem 1rem 0.75rem 2.5rem !important;
+  font-size: 1rem !important;
+  color: #111827 !important;
+  background-color: #ffffff !important;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05) !important;
+  line-height: normal !important;
+}
+
+.dp-match-input.dp__input:focus {
+  border-color: #013C6D !important;
+  box-shadow: 0 0 0 2px #013C6D !important;
+}
+
+.dp-match-input.dp__input_readonly,
+.dp-match-input.dp__input:disabled {
+  background-color: #f3f4f6 !important;
+  color: #374151 !important;
+  cursor: not-allowed !important;
 }
 </style>
