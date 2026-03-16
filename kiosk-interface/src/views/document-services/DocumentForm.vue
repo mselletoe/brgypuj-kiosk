@@ -74,7 +74,7 @@ const fieldMapping = {
   
   // Residency info
   years_residency: ['yr_res', 'years_residency', 'years_of_residency', 'residency_years', 'year_residency'],
-  residency_start_date: ['residency_start_date', 'date_started_residency'],
+  residency_start_date: ['rds', 'residency_start_date', 'date_started_residency'],
   
   // RFID info
   rfid_uid: ['rfid_uid', 'rfid', 'card_number', 'rfid_number'],

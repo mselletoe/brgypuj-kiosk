@@ -136,7 +136,7 @@ import {
       <div class="components-grid">
         <div v-for="(c, i) in [
           { name:'Kiosk Unit',      sub:'Raspberry Pi 4 Model B + Touchscreen',   icon:'computer', color:'blue'   },
-          { name:'RFID Reader',     sub:'13.56 MHz / 125 kHz Contactless', icon:'wifi',     color:'violet' },
+          { name:'RFID Reader',     sub:'13.56 MHz Contactless', icon:'wifi',     color:'violet' },
           { name:'GSM Module',      sub:'SIM800L — SMS dispatch',          icon:'phone',    color:'emerald'},
           { name:'Admin Dashboard', sub:'This interface · LAN-connected',  icon:'desktop',  color:'amber'  },
         ]" :key="c.name" class="comp-card" :class="'comp-card--'+c.color" :style="`animation-delay:${0.25+i*0.07}s`">

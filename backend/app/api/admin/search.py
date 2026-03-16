@@ -26,7 +26,7 @@ STATIC_PAGES = [
     { "label": "Document Services",    "subtitle": "Page", "route": "/document-services",    "type": "page" },
     { "label": "Feedback & Reports",   "subtitle": "Page", "route": "/feedback-and-reports", "type": "page" },
     { "label": "Account Settings",     "subtitle": "Page", "route": "/account-settings",     "type": "page" },
-    { "label": "Help & Support",       "subtitle": "Page", "route": "/help-and-support",     "type": "page" },
+    { "label": "Help & Support",       "subtitle": "Page", "route": "/system-guide",     "type": "page" },
 ]
 
 
