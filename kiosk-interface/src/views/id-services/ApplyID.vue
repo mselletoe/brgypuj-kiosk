@@ -235,19 +235,18 @@ const toggleDropdown = (menu) => {
 const videoRef = ref(null);
 const canvasRef = ref(null);
 const stream = ref(null);
+const streamSrc = ref("");
 const photoData = ref(null);
 const countdown = ref(0);
 const isCountingDown = ref(false);
 let countdownInterval = null;
 
-const startCamera = async () => {
-  if (videoRef.value) {
-    videoRef.value.src = "http://" + window.location.hostname + ":8085/?action=stream";
-  }
+const startCamera = () => {
+  streamSrc.value = "http://" + window.location.hostname + ":8085/?action=stream";
 };
 
 const stopCamera = () => {
-  if (videoRef.value) { videoRef.value.src = ""; videoRef.value.pause(); }
+  streamSrc.value = "";
   if (countdownInterval) clearInterval(countdownInterval);
   isCountingDown.value = false;
 };
@@ -263,15 +262,13 @@ const startCountdown = () => {
 };
 
 const executeCapture = () => {
-  if (!videoRef.value || !canvasRef.value) return;
-  const video = videoRef.value;
+  if (!canvasRef.value) return;
+  const img = videoRef.value;
   const canvas = canvasRef.value;
-  const size = Math.min(video.videoWidth, video.videoHeight);
-  const startX = (video.videoWidth - size) / 2;
-  const startY = (video.videoHeight - size) / 2;
-  canvas.width = size; canvas.height = size;
+  canvas.width = img.naturalWidth || 640;
+  canvas.height = img.naturalHeight || 480;
   const ctx = canvas.getContext("2d");
-  ctx.drawImage(video, startX, startY, size, size, 0, 0, size, size);
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
   photoData.value = canvas.toDataURL("image/png");
 };
 
@@ -576,7 +573,13 @@ const selectYear = (y) => { verifyYear.value = y; showYearDropdown.value = false
         >
           <div class="flex-shrink-0 h-full relative">
             <div class="h-full aspect-square bg-black rounded-3xl overflow-hidden relative flex items-center justify-center">
-              <video v-show="!photoData" ref="videoRef" autoplay playsinline class="w-full h-full object-cover transform scale-x-[-1]"></video>
+              <img 
+                v-show="!photoData" 
+                ref="videoRef" 
+                :src="streamSrc"
+                alt="Live stream"
+                class="w-full h-full object-cover transform scale-x-[-1]"
+              />
               <img v-show="photoData" :src="photoData" alt="Captured ID" class="w-full h-full object-cover transform scale-x-[-1]" />
               <canvas ref="canvasRef" class="hidden"></canvas>
               <div v-if="!photoData" class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
