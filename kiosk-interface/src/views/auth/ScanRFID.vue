@@ -55,6 +55,10 @@ function startLockoutCountdown(seconds) {
   }, 1000)
 }
 
+// ── Dev mode ───────────────────────────────────────────────────────────────
+const isDevMode  = import.meta.env.VITE_ENABLE_DEV_LOGIN === 'true'
+const manualUID  = ref('')
+
 let inputBuffer = ''
 let timeout     = null
 
@@ -178,6 +182,13 @@ onUnmounted(() => {
           <h2 class="text-3xl font-semibold text-[#295B83] mt-8">{{ t('processing') }}</h2>
           <p class="text-lg text-gray-500 mt-2">{{ t('keepCard') }}</p>
         </div>
+      </div>
+
+      <!-- Dev mode -->
+      <div v-if="isDevMode && !isProcessing && !isLocked" class="mt-6 w-80">
+        <p class="text-sm text-gray-400 text-center mb-2">{{ t('devMode') }}</p>
+        <input v-model="manualUID" type="text" :placeholder="t('enterRFIDUID')" class="border border-gray-300 p-2 w-full rounded text-center" />
+        <button @click="handleManualLogin" class="mt-2 w-full bg-[#1B5886] text-white py-2 rounded hover:bg-[#164a70]">{{ t('login') }}</button>
       </div>
 
       <input ref="hiddenInput" v-model="scannedUID" type="text" class="absolute opacity-0 pointer-events-none" />
