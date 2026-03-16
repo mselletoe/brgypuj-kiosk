@@ -21,10 +21,10 @@ import {
     <div class="hero-banner section-row" style="animation-delay:0s">
       <!-- Animated rings -->
       <div class="hero-rings" aria-hidden="true">
-        <span class="ring ring-1"></span>
-        <span class="ring ring-2"></span>
-        <span class="ring ring-3"></span>
-        <span class="ring ring-4"></span>
+        <span class="ring-1"></span>
+        <span class="ring-2"></span>
+        <span class="ring-3"></span>
+        <span class="ring-4"></span>
         <span class="glow-dot"></span>
       </div>
 
@@ -247,7 +247,8 @@ import {
   inset: 0;
   pointer-events: none;
 }
-.ring {
+
+.ring-1, .ring-2, .ring-3, .ring-4 {
   position: absolute;
   border-radius: 50%;
   border: 1.5px solid rgba(255,255,255,0.12);
@@ -258,6 +259,7 @@ import {
 .ring-2 { width:360px; height:360px; animation-delay:0.8s;  }
 .ring-3 { width:500px; height:500px; animation-delay:1.6s;  }
 .ring-4 { width:640px; height:640px; animation-delay:2.4s;  }
+
 @keyframes ringPulse {
   0%,100% { opacity:0.12; }
   50%      { opacity:0.28; }
