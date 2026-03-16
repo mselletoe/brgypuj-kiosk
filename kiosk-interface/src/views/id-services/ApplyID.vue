@@ -241,11 +241,9 @@ const isCountingDown = ref(false);
 let countdownInterval = null;
 
 const startCamera = async () => {
-  try {
-    stream.value = await navigator.mediaDevices.getUserMedia({ video: true });
-    if (videoRef.value) videoRef.value.srcObject = stream.value;
-  } catch (err) { console.error("Camera access denied:", err); }
-  if (videoRef.value) videoRef.value.src = "http://" + window.location.hostname + ":8090/?action=stream";
+  if (videoRef.value) {
+    videoRef.value.src = "http://" + window.location.hostname + ":8085/?action=stream";
+  }
 };
 
 const stopCamera = () => {
