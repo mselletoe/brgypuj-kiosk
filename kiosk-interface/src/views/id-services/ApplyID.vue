@@ -261,14 +261,50 @@ const startCountdown = () => {
   }, 1000);
 };
 
-const executeCapture = () => {
+const executeCapture = async () => {
   if (!canvasRef.value) return;
-  const img = videoRef.value;
+
   const canvas = canvasRef.value;
-  canvas.width = img.naturalWidth || 640;
-  canvas.height = img.naturalHeight || 480;
+  canvas.width = 640;
+  canvas.height = 480;
   const ctx = canvas.getContext("2d");
-  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+  try {
+    const snapshotUrl = "http://" + window.location.hostname + ":8085/?action=snapshot";
+    const response = await fetch(snapshotUrl);
+    const blob = await response.blob();
+    const bitmap = await createImageBitmap(blob);
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(bitmap, 0, 0);
+  } catch {
+    // Camera unavailable — draw a placeholder
+    ctx.fillStyle = "#1a2e44";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Silhouette circle (head)
+    ctx.fillStyle = "#4a6fa5";
+    ctx.beginPath();
+    ctx.arc(320, 170, 90, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Silhouette body
+    ctx.beginPath();
+    ctx.ellipse(320, 420, 150, 120, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Label
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 18px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("📷 Camera Unavailable", 320, 460);
+    ctx.font = "14px sans-serif";
+    ctx.fillStyle = "#aac4e0";
+    ctx.fillText("Placeholder photo — for testing only", 320, 485);
+  }
+
   photoData.value = canvas.toDataURL("image/png");
 };
 
