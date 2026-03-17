@@ -231,11 +231,11 @@ const toggleDropdown = (menu) => {
   showYearDropdown.value      = menu === "year"      ? !showYearDropdown.value      : false;
 };
 
-// --- CAMERA LOGIC ---
-const videoRef = ref(null);
+// --- CAMERA LOGIC (Raspi) ---
+const videoRef = ref(null);   // keep for the <img> ref if needed
 const canvasRef = ref(null);
 const stream = ref(null);
-const streamSrc = ref("");
+const streamSrc = ref("");    // ADD this
 const photoData = ref(null);
 const countdown = ref(0);
 const isCountingDown = ref(false);
@@ -251,24 +251,12 @@ const stopCamera = () => {
   isCountingDown.value = false;
 };
 
-const startCountdown = () => {
-  if (isCountingDown.value) return;
-  isCountingDown.value = true;
-  countdown.value = 5;
-  countdownInterval = setInterval(() => {
-    countdown.value -= 1;
-    if (countdown.value === 0) { clearInterval(countdownInterval); isCountingDown.value = false; executeCapture(); }
-  }, 1000);
-};
-
 const executeCapture = async () => {
   try {
-    const response = await fetch("/admin/camera/snapshot");
+    const response = await fetch("/kiosk/camera/snapshot");
     const blob = await response.blob();
     const reader = new FileReader();
-    reader.onloadend = () => {
-      photoData.value = reader.result;
-    };
+    reader.onloadend = () => { photoData.value = reader.result; };
     reader.readAsDataURL(blob);
   } catch (err) {
     console.error("Snapshot failed:", err);
@@ -577,8 +565,7 @@ const selectYear = (y) => { verifyYear.value = y; showYearDropdown.value = false
           <div class="flex-shrink-0 h-full relative">
             <div class="h-full aspect-square bg-black rounded-3xl overflow-hidden relative flex items-center justify-center">
               <img 
-                v-show="!photoData" 
-                ref="videoRef" 
+                v-show="!photoData"
                 :src="streamSrc"
                 alt="Live stream"
                 class="w-full h-full object-cover transform scale-x-[-1]"
