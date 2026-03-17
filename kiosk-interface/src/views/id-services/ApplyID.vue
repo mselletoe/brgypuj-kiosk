@@ -261,15 +261,18 @@ const startCountdown = () => {
   }, 1000);
 };
 
-const executeCapture = () => {
-  if (!canvasRef.value) return;
-  const img = videoRef.value;
-  const canvas = canvasRef.value;
-  canvas.width = img.naturalWidth || 640;
-  canvas.height = img.naturalHeight || 480;
-  const ctx = canvas.getContext("2d");
-  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-  photoData.value = canvas.toDataURL("image/png");
+const executeCapture = async () => {
+  try {
+    const response = await fetch("/admin/camera/snapshot");
+    const blob = await response.blob();
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      photoData.value = reader.result;
+    };
+    reader.readAsDataURL(blob);
+  } catch (err) {
+    console.error("Snapshot failed:", err);
+  }
 };
 
 const retakePhoto = () => { photoData.value = null; };
