@@ -1,7 +1,4 @@
 <script setup>
-/**
- * @file Login.vue
- */
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
@@ -14,8 +11,7 @@ import { useAuthStore } from '@/stores/auth'
 const router = useRouter()
 const authStore = useAuthStore()
 const { brgyName, brgySubname, resolvedLogoUrl } = useSystemConfig()
-const { locale, t } = useI18n()
-
+const { t } = useI18n()
 const timeLeft = ref(10)
 let timerInterval = null
 let mountTime = 0
