@@ -31,6 +31,7 @@ pydantic[email]
 
 # HTTP Requests
 requests
+httpx
 
 # Serial Communication (SIM800L)
 pyserial
