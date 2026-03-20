@@ -1,5 +1,13 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+/**
+ * @file views/auth/Login.vue
+ * @description Kiosk login selection screen. Presented after the idle/touch-to-start
+ * screen. Allows the user to authenticate via RFID or continue as a guest.
+ * Auto-returns to the idle screen after a 10-second inactivity countdown.
+ * Any click on the screen resets the countdown.
+ */
+
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { disableTouchToStart } from '@/composables/touchToStart'
@@ -12,10 +20,14 @@ const router = useRouter()
 const authStore = useAuthStore()
 const { brgyName, brgySubname, resolvedLogoUrl } = useSystemConfig()
 const { t } = useI18n()
+
 const timeLeft = ref(10)
 let timerInterval = null
 let mountTime = 0
 
+// =============================================================================
+// ACTIONS
+// =============================================================================
 const handleRfidLogin = () => {
   if (Date.now() - mountTime < 500) return
   disableTouchToStart()
@@ -27,6 +39,9 @@ const continueAsGuest = () => {
   router.replace('/home')
 }
 
+// =============================================================================
+// INACTIVITY COUNTDOWN
+// =============================================================================
 const startCountdown = () => {
   if (timerInterval) clearInterval(timerInterval)
   timeLeft.value = 10
@@ -38,6 +53,9 @@ const startCountdown = () => {
 
 const resetTimer = () => startCountdown()
 
+// =============================================================================
+// LIFECYCLE
+// =============================================================================
 onMounted(() => { mountTime = Date.now(); startCountdown() })
 onUnmounted(() => { if (timerInterval) clearInterval(timerInterval) })
 </script>
