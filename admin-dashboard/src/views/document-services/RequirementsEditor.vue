@@ -27,8 +27,6 @@ const emit = defineEmits(['close', 'saved'])
 
 const editingRequirements = ref([])
 
-// Regular doc types: clean_blotter + min_residency
-// ID application: min_age + min_residency + recent_id_request (no clean_blotter)
 const regularSystemCheckOptions = [
   { label: 'Clean Blotter Record', value: 'clean_blotter' },
   { label: 'Minimum Years of Residency', value: 'min_residency' }
@@ -44,7 +42,6 @@ const systemCheckOptions = computed(() =>
   props.isIdApplication ? idSystemCheckOptions : regularSystemCheckOptions
 )
 
-// Sync local copy when modal opens
 watch(() => props.show, (val) => {
   if (val) {
     editingRequirements.value = JSON.parse(JSON.stringify(props.requirementsData || []))
@@ -134,7 +131,6 @@ function handleClose() {
   <NModal :show="show" @update:show="handleClose" :mask-closable="false">
     <div class="w-[640px] max-h-[80vh] overflow-hidden bg-white rounded-xl shadow-lg flex flex-col">
 
-      <!-- Header -->
       <div class="flex items-center justify-between px-6 py-4 border-b bg-gray-50">
         <div>
           <h2 class="text-base font-semibold text-gray-800">Edit Requirements</h2>
@@ -146,22 +142,18 @@ function handleClose() {
           <XMarkIcon class="w-5 h-5 text-gray-500" />
         </button>
       </div>
-
-      <!-- Body -->
+      
       <div class="px-6 py-4 overflow-y-auto space-y-3 flex-1">
 
-        <!-- Empty state -->
         <p v-if="editingRequirements.length === 0" class="text-sm text-gray-400 text-center py-6">
           No requirements set. Add one below.
         </p>
 
-        <!-- Requirement rows -->
         <div
           v-for="(req, index) in editingRequirements"
           :key="index"
           class="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200"
         >
-          <!-- Type badge -->
           <div class="pt-1">
             <span
               class="text-xs font-semibold px-2 py-0.5 rounded-full"
@@ -171,9 +163,7 @@ function handleClose() {
             </span>
           </div>
 
-          <!-- Fields -->
           <div class="flex-1 space-y-2">
-            <!-- System check: select which check -->
             <NSelect
               v-if="req.type === 'system_check'"
               :value="req.id"
@@ -182,14 +172,12 @@ function handleClose() {
               @update:value="(v) => onSystemCheckSelect(index, v)"
             />
 
-            <!-- Label -->
             <n-input
               v-model:value="req.label"
               :placeholder="req.type === 'document' ? 'e.g. Valid Government-Issued ID' : 'Display label (auto-filled)'"
               size="small"
             />
 
-            <!-- min_residency params: years + months -->
             <div v-if="req.id === 'min_residency'" class="flex items-center gap-3 flex-wrap">
               <div class="flex items-center gap-1.5">
                 <span class="text-xs text-gray-500">Years:</span>
@@ -216,7 +204,6 @@ function handleClose() {
               </span>
             </div>
 
-            <!-- min_age params -->
             <div v-if="req.id === 'min_age'" class="flex items-center gap-3">
               <div class="flex items-center gap-1.5">
                 <span class="text-xs text-gray-500">Minimum age (years):</span>
@@ -230,19 +217,16 @@ function handleClose() {
               </div>
             </div>
 
-            <!-- recent_id_request note -->
             <p v-if="req.id === 'recent_id_request'" class="text-xs text-amber-600 italic">
               ⚠ Automatic checking is not yet available. Staff will verify manually during release.
             </p>
           </div>
 
-          <!-- Remove -->
           <button @click="removeRequirement(index)" class="pt-1 text-red-400 hover:text-red-600 transition">
             <XMarkIcon class="w-4 h-4" />
           </button>
         </div>
 
-        <!-- Add buttons -->
         <div class="flex gap-2 pt-2">
           <button
             @click="addRequirement('system_check')"
@@ -261,7 +245,6 @@ function handleClose() {
         </div>
       </div>
 
-      <!-- Footer -->
       <div class="flex justify-end gap-3 px-6 py-4 border-t">
         <NButton @click="handleClose">Cancel</NButton>
         <NButton type="primary" @click="handleSave">Save Requirements</NButton>
