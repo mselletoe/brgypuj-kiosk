@@ -1,6 +1,6 @@
 <script setup>
 /**
- * @file views/announcements/Announcements.vue
+ * @file views/announcements/Announcement.vue
  * @description Kiosk announcements view. Displays active barangay announcements
  * in an animated carousel with prev/next navigation and dot indicators.
  * Polls for new announcements every 5 minutes and auto-retries on error.
