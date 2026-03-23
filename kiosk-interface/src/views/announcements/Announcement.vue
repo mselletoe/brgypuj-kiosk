@@ -1,4 +1,12 @@
 <script setup>
+/**
+ * @file views/announcements/Announcements.vue
+ * @description Kiosk announcements view. Displays active barangay announcements
+ * in an animated carousel with prev/next navigation and dot indicators.
+ * Polls for new announcements every 5 minutes and auto-retries on error.
+ * Includes a language toggle between English and Filipino.
+ */
+
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
@@ -10,11 +18,11 @@ const router = useRouter()
 const { locale, t } = useI18n()
 const { brgyName, brgySubname, resolvedLogoUrl } = useSystemConfig()
 
-const announcements = ref([])
-const loading = ref(true)
-const error = ref(null)
 const goBack = () => router.push('/home')
 
+// =============================================================================
+// LANGUAGE TOGGLE
+// =============================================================================
 const isFilipino = computed(() => locale.value === 'tl')
 
 const toggleLang = () => {
@@ -22,10 +30,12 @@ const toggleLang = () => {
   localStorage.setItem('lang', locale.value)
 }
 
-const getImageUrl = (base64) => { if (!base64) return null; return `data:image/jpeg;base64,${base64}` }
-const formatDate = (date) => { if (!date) return ''; return new Date(date + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) }
-const formatDay  = (date) => { if (!date) return ''; return new Date(date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long' }) }
-const formatTime = (timeStr) => { if (!timeStr) return ''; const [h, m] = timeStr.split(':').map(Number); const period = h >= 12 ? 'PM' : 'AM'; const hour = h % 12 || 12; return `${hour}:${String(m).padStart(2, '0')} ${period}` }
+// =============================================================================
+// ANNOUNCEMENTS DATA
+// =============================================================================
+const announcements = ref([])
+const loading = ref(true)
+const error = ref(null)
 
 const fetchAnnouncements = async () => {
   try {
@@ -39,9 +49,38 @@ const fetchAnnouncements = async () => {
 }
 
 let pollInterval = null
-onMounted(() => { fetchAnnouncements(); pollInterval = setInterval(fetchAnnouncements, 300000) })
-onBeforeUnmount(() => { if (pollInterval) clearInterval(pollInterval) })
 
+// =============================================================================
+// DATE / TIME FORMATTERS
+// =============================================================================
+const getImageUrl = (base64) => {
+  if (!base64) return null
+  return `data:image/jpeg;base64,${base64}`
+}
+
+const formatDate = (date) => {
+  if (!date) return ''
+  return new Date(date + 'T00:00:00').toLocaleDateString('en-US', {
+    month: 'long', day: 'numeric', year: 'numeric',
+  })
+}
+
+const formatDay = (date) => {
+  if (!date) return ''
+  return new Date(date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long' })
+}
+
+const formatTime = (timeStr) => {
+  if (!timeStr) return ''
+  const [h, m] = timeStr.split(':').map(Number)
+  const period = h >= 12 ? 'PM' : 'AM'
+  const hour   = h % 12 || 12
+  return `${hour}:${String(m).padStart(2, '0')} ${period}`
+}
+
+// =============================================================================
+// CAROUSEL STATE
+// =============================================================================
 const activeIndex = ref(0)
 const displayIndex = ref(0)
 const isAnimating = ref(false)
@@ -73,13 +112,31 @@ const animateTo = (direction) => {
 
 const nextSlide = () => animateTo(1)
 const prevSlide = () => animateTo(-1)
-const setSlide = (index) => { if (isAnimating.value || index === displayIndex.value) return; animateTo(index > displayIndex.value ? 1 : -1) }
+
+const setSlide = (index) => {
+  if (isAnimating.value || index === displayIndex.value) return
+  animateTo(index > displayIndex.value ? 1 : -1)
+}
+
+// =============================================================================
+// LIFECYCLE
+// =============================================================================
+onMounted(() => {
+  fetchAnnouncements()
+  pollInterval = setInterval(fetchAnnouncements, 300000)
+})
+
+onBeforeUnmount(() => {
+  if (pollInterval) clearInterval(pollInterval)
+})
 </script>
 
 <template>
   <div class="announcement-page w-full min-h-screen px-10 py-6 flex flex-col">
 
+    <!-- ─ HEADER ─────────────────────────────────────────────── -->
     <header class="flex items-center justify-between mb-6">
+      <!-- ─ BARANGAY NAME AND LOGO ───────────────────────────── -->
       <div class="flex items-center gap-4 text-[#013C6D]">
         <img v-if="resolvedLogoUrl" :src="resolvedLogoUrl" class="w-[60px] h-[60px] min-w-[60px] object-cover rounded-full" />
         <div>
@@ -88,6 +145,7 @@ const setSlide = (index) => { if (isAnimating.value || index === displayIndex.va
         </div>
       </div>
 
+      <!-- ─ LANGUAGE TOGGLE ──────────────────────────────────── -->
       <div class="flex items-center gap-5">
         <div
           @click="toggleLang"
@@ -126,6 +184,7 @@ const setSlide = (index) => { if (isAnimating.value || index === displayIndex.va
     </header>
 
     <main class="flex flex-col flex-1">
+      <!-- ─ BACK BUTTON AND PAGE TITLE ─────────────────────────────────────────────── -->
       <div class="flex items-center justify-between mb-6">
         <ArrowBackButton @click="goBack" />
         <h1 class="text-[45px] font-bold text-center leading-[0.95] bg-gradient-to-r from-[#03335C] to-[#3291E3] bg-clip-text text-transparent">
@@ -134,6 +193,7 @@ const setSlide = (index) => { if (isAnimating.value || index === displayIndex.va
         <div style="visibility: hidden; pointer-events: none;"><ArrowBackButton /></div>
       </div>
 
+      <!-- ─ LOADING STATE ─────────────────────────────────────────────── -->
       <div v-if="loading" class="flex-1 flex items-center justify-center">
         <div class="text-center flex flex-col items-center">
           <div class="loader-dots mb-4"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
@@ -141,6 +201,7 @@ const setSlide = (index) => { if (isAnimating.value || index === displayIndex.va
         </div>
       </div>
 
+      <!-- ─ ERROR STATE ─────────────────────────────────────────────── -->
       <div v-else-if="error" class="flex-1 flex items-center justify-center">
         <div class="text-center px-6">
           <svg class="w-16 h-16 text-red-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
@@ -150,6 +211,7 @@ const setSlide = (index) => { if (isAnimating.value || index === displayIndex.va
         </div>
       </div>
 
+      <!-- ─ EMPTY STATE ─────────────────────────────────────────────── -->
       <div v-else-if="announcements.length === 0" class="flex-1 flex items-center justify-center">
         <div class="text-center">
           <p class="text-[#03335C] text-2xl font-semibold opacity-70">{{ t('noAnnouncementsAvailable') }}</p>
@@ -157,12 +219,15 @@ const setSlide = (index) => { if (isAnimating.value || index === displayIndex.va
         </div>
       </div>
 
+      <!-- ─ CAROUSEL ─────────────────────────────────────────────── -->
       <template v-else>
         <div class="flex flex-1 items-center justify-center gap-4">
+          <!-- ─ PREVIOUS BUTTON ─────────────────────────────────────────────── -->
           <button v-if="announcements.length > 1" @click.stop.prevent="prevSlide" class="text-[#03335C] transition-opacity duration-300 hover:opacity-100 opacity-70 flex-shrink-0">
             <svg class="w-16 h-16" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
           </button>
 
+          <!-- ─ SLIDING CARD WINDOW ─────────────────────────────────────────────── -->
           <div class="flex-1 overflow-hidden" style="mask-image: linear-gradient(to right, transparent 0%, black 15%, black 85%, transparent 100%); -webkit-mask-image: linear-gradient(to right, transparent 0%, black 15%, black 85%, transparent 100%);">
             <div class="flex items-center justify-center">
               <div class="flex flex-shrink-0" :style="{ gap: `${GAP}px`, transform: `translateX(${translateX}px)`, transition: isAnimating ? 'transform 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94)' : 'none' }">
@@ -183,11 +248,13 @@ const setSlide = (index) => { if (isAnimating.value || index === displayIndex.va
             </div>
           </div>
 
+          <!-- ─ NEXT BUTTON ─────────────────────────────────────────────── -->
           <button v-if="announcements.length > 1" @click.stop.prevent="nextSlide" class="text-[#03335C] transition-opacity duration-300 hover:opacity-100 opacity-70 flex-shrink-0">
             <svg class="w-16 h-16" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg>
           </button>
         </div>
 
+        <!-- ─ DOT INDICATORS ─────────────────────────────────────────────── -->
         <div class="flex justify-center gap-2 mt-6">
           <button
             v-for="(item, index) in announcements"
@@ -204,9 +271,25 @@ const setSlide = (index) => { if (isAnimating.value || index === displayIndex.va
 
 <style scoped>
 .announcement-page { background: radial-gradient(circle at top left, #3291E3 0%, #ffffff 44%); }
-.loader-dots { display: flex; justify-content: space-around; align-items: center; width: 60px; height: 15px; }
-.dot { width: 12px; height: 12px; background-color: #03335C; border-radius: 50%; animation: pulse 1.4s infinite ease-in-out both; }
+
+.loader-dots { 
+  display: flex; 
+  justify-content: space-around; 
+  align-items: center; 
+  width: 60px; 
+  height: 15px; 
+}
+
+.dot { 
+  width: 12px; 
+  height: 12px; 
+  background-color: #03335C; 
+  border-radius: 50%; 
+  animation: pulse 1.4s infinite ease-in-out both; 
+}
+
 .dot:nth-child(1) { animation-delay: -0.32s; }
 .dot:nth-child(2) { animation-delay: -0.16s; }
+
 @keyframes pulse { 0%, 80%, 100% { transform: scale(0); opacity: 0.3; } 40% { transform: scale(1); opacity: 1; } }
 </style>
