@@ -1,4 +1,13 @@
 <script setup>
+/**
+ * @file views/requests/equipment-requests/EquipmentRequests.vue
+ * @description Admin view for managing equipment borrowing requests.
+ * Organizes requests into status-based tabs (Pending, Approved, Picked-Up,
+ * Returned, Rejected) driven by the route param. Provides shared toolbar
+ * actions (search, filter, undo, delete, select all) that delegate to the
+ * active tab component via a template ref.
+ */
+
 import { ref, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {
@@ -6,7 +15,6 @@ import {
   NTabPane,
   NPopover,
   NDatePicker,
-  NInput,
   NSelect,
   NButton,
 } from "naive-ui";
@@ -31,48 +39,10 @@ const searchQuery = ref("");
 useSearchSync(searchQuery);
 
 const tabRef = ref(null);
-const showFilterPopover = ref(false);
 
-// Filter state
-const filterState = ref({
-  requestedDate: null,
-  borrowingPeriodStart: null,
-  borrowingPeriodEnd: null,
-  paymentStatus: null,
-});
-
-const paymentStatusOptions = [
-  { label: "All Status", value: null },
-  { label: "Paid", value: "paid" },
-  { label: "Unpaid", value: "unpaid" },
-];
-
-const isPendingTab = computed(() => activeTab.value === "pending");
-
-const triggerUndo = () => {
-  if (isPendingTab.value) return;
-  tabRef.value?.bulkUndo();
-};
-
-const selectionState = computed(() => {
-  const count = tabRef.value?.selectedCount || 0;
-  const total = tabRef.value?.totalCount || 0;
-
-  if (count === 0) return "none";
-  if (count > 0 && count < total) return "partial";
-  return "all";
-});
-
-const handleMainSelectToggle = () => {
-  if (selectionState.value === "all" || selectionState.value === "partial") {
-    tabRef.value?.deselectAll();
-  } else {
-    tabRef.value?.selectAll();
-  }
-};
-
-const triggerDelete = () => tabRef.value?.bulkDelete();
-
+// =============================================================================
+// TAB ROUTING
+// =============================================================================
 const tabMap = {
   pending: PendingTab,
   approved: ApprovedTab,
@@ -92,6 +62,26 @@ const currentTabComponent = computed(() => {
   return tabMap[activeTab.value] || PendingTab;
 });
 
+const isPendingTab = computed(() => activeTab.value === "pending");
+
+// =============================================================================
+// FILTER STATE
+// =============================================================================
+const showFilterPopover = ref(false);
+
+const filterState = ref({
+  requestedDate: null,
+  borrowingPeriodStart: null,
+  borrowingPeriodEnd: null,
+  paymentStatus: null,
+});
+
+const paymentStatusOptions = [
+  { label: "All Status", value: null },
+  { label: "Paid", value: "paid" },
+  { label: "Unpaid", value: "unpaid" },
+];
+
 const handleFilterClear = () => {
   filterState.value = {
     requestedDate: null,
@@ -109,12 +99,42 @@ const hasActiveFilters = computed(() => {
     filterState.value.paymentStatus
   );
 });
+
+// =============================================================================
+// SELECTION STATE
+// =============================================================================
+const selectionState = computed(() => {
+  const count = tabRef.value?.selectedCount || 0;
+  const total = tabRef.value?.totalCount || 0;
+
+  if (count === 0) return "none";
+  if (count > 0 && count < total) return "partial";
+  return "all";
+});
+
+const handleMainSelectToggle = () => {
+  if (selectionState.value === "all" || selectionState.value === "partial") {
+    tabRef.value?.deselectAll();
+  } else {
+    tabRef.value?.selectAll();
+  }
+};
+
+// =============================================================================
+// TOOLBAR ACTIONS
+// =============================================================================
+const triggerUndo = () => {
+  if (isPendingTab.value) return;
+  tabRef.value?.bulkUndo();
+};
+
+const triggerDelete = () => tabRef.value?.bulkDelete();
 </script>
 
 <template>
-  <div
-    class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden"
-  >
+  <div class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden">
+
+    <!-- ─ HEADER ─────────────────────────────────────────────── -->
     <div class="flex justify-between items-center mb-4">
       <div>
         <PageTitle title="Equipment Requests" />
@@ -124,6 +144,7 @@ const hasActiveFilters = computed(() => {
       </div>
 
       <div class="flex items-center gap-3">
+        <!-- Search -->
         <input
           v-model="searchQuery"
           type="text"
@@ -131,6 +152,7 @@ const hasActiveFilters = computed(() => {
           class="border border-gray-200 text-gray-700 rounded-md py-2 px-3 w-[250px] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-gray-400"
         />
 
+        <!-- Filters -->
         <n-popover
           v-model:show="showFilterPopover"
           trigger="click"
@@ -225,6 +247,7 @@ const hasActiveFilters = computed(() => {
           </div>
         </n-popover>
 
+        <!-- Undo -->
         <div class="relative group inline-block">
           <button
             @click="triggerUndo"
@@ -245,6 +268,7 @@ const hasActiveFilters = computed(() => {
           </div>
         </div>
 
+        <!-- Delete -->
         <div class="relative group inline-block">
           <button
             @click="triggerDelete"
@@ -265,6 +289,7 @@ const hasActiveFilters = computed(() => {
           </div>
         </div>
 
+        <!-- Select -->
         <div class="relative group inline-block">
           <div
             class="flex items-center border rounded-lg"
@@ -314,6 +339,7 @@ const hasActiveFilters = computed(() => {
       </div>
     </div>
 
+    <!-- Tabs -->
     <div class="flex items-center border-b border-gray-200">
       <n-tabs v-model:value="activeTab" type="line" animated class="flex-grow">
         <n-tab-pane name="pending" tab="Pending" />
@@ -331,6 +357,7 @@ const hasActiveFilters = computed(() => {
       </router-link>
     </div>
 
+    <!-- ─ ACTIVE TAB ─────────────────────────────────────────────── -->
     <div class="overflow-y-auto h-[calc(100vh-260px)] pr-2 pt-2">
       <keep-alive>
         <component
