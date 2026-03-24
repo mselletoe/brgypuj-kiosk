@@ -59,13 +59,43 @@ const userDetail          = computed(() =>
 );
 
 const logout = () => { authStore.logout(); router.push('/idle'); };
+
+// --- Exit Kiosk Logic ---
+const logoTapCount  = ref(0);
+const showExitBtn   = ref(false);
+const showExitModal = ref(false);
+let tapTimer = null;
+
+const handleLogoTap = () => {
+  logoTapCount.value++;
+  // Reset tap count after 3 seconds of inactivity
+  clearTimeout(tapTimer);
+  tapTimer = setTimeout(() => { logoTapCount.value = 0; }, 3000);
+
+  if (logoTapCount.value >= 5) {
+    showExitBtn.value = true;
+    logoTapCount.value = 0;
+    // Auto-hide exit button after 10 seconds
+    setTimeout(() => { showExitBtn.value = false; }, 10000);
+  }
+};
+
+const exitKiosk = () => { showExitModal.value = true; };
+const cancelExit = () => { showExitModal.value = false; showExitBtn.value = false; };
+const confirmExit = async () => {
+  try {
+    await fetch('http://localhost:9999/exit', { method: 'POST' });
+  } catch {
+    window.close();
+  }
+};
 </script>
 
 <template>
   <header class="flex items-center justify-between px-5 py-2 bg-white text-[#003A6B] shadow-md border-b-2 border-[#003A6B]">
 
-    <!-- Branding -->
-    <div class="flex items-center gap-2">
+    <!-- Branding (tap 5x to reveal exit) -->
+    <div class="flex items-center gap-2 select-none" @click="handleLogoTap">
       <img v-if="resolvedLogoUrl" :src="resolvedLogoUrl" alt="Barangay Logo" class="w-[40px] h-[40px] min-w-[40px] object-cover rounded-full overflow-hidden" />
       <div class="flex flex-col">
         <h1 class="text-[14px] font-bold leading-[1] tracking-tight">{{ brgyName }}</h1><br />
@@ -79,7 +109,7 @@ const logout = () => { authStore.logout(); router.push('/idle'); };
       <p class="text-[14px] font-light mt-1 leading-[1] tracking-tight">{{ currentDate }}</p>
     </div>
 
-    <!-- User badge + countdown + logout -->
+    <!-- User badge + countdown + logout + exit -->
     <div class="flex items-center space-x-4">
 
       <div
@@ -119,6 +149,17 @@ const logout = () => { authStore.logout(); router.push('/idle'); };
         <span class="text-[9px] italic font-medium text-[#003A6B]">{{ userDetail }}</span>
       </div>
 
+      <!-- Hidden Exit Button (appears after 5 taps on logo) -->
+      <button
+        v-if="showExitBtn"
+        @click="exitKiosk"
+        class="px-4 py-2 bg-gray-700 border-2 border-gray-700 hover:bg-gray-900
+               text-white font-light rounded-md transition-colors duration-300 ease-in-out
+               flex items-center space-x-2 text-[12px]"
+      >
+        <span>Exit Kiosk</span>
+      </button>
+
       <button
         @click="logout"
         class="px-4 py-2 bg-[#FF2B3A] border-2 border-[#FF2B3A] hover:bg-[#CD000E]
@@ -131,6 +172,32 @@ const logout = () => { authStore.logout(); router.push('/idle'); };
     </div>
 
   </header>
+
+  <!-- Exit Confirmation Modal -->
+  <div
+    v-if="showExitModal"
+    class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50"
+  >
+    <div class="bg-white rounded-2xl shadow-2xl p-8 w-[320px] text-center">
+      <h2 class="text-[18px] font-bold text-[#003A6B] mb-2">Exit Kiosk Mode?</h2>
+      <p class="text-[13px] text-gray-500 mb-6">This will close the kiosk and return to the desktop.</p>
+      <div class="flex gap-3 justify-center">
+        <button
+          @click="cancelExit"
+          class="px-5 py-2 rounded-lg border-2 border-gray-300 text-gray-600 text-[13px] hover:bg-gray-100"
+        >
+          Cancel
+        </button>
+        <button
+          @click="confirmExit"
+          class="px-5 py-2 rounded-lg bg-gray-700 text-white text-[13px] hover:bg-gray-900"
+        >
+          Yes, Exit
+        </button>
+      </div>
+    </div>
+  </div>
+
 </template>
 
 <style scoped>

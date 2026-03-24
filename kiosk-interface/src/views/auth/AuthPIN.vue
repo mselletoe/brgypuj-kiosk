@@ -1,12 +1,13 @@
 <script setup>
 /**
- * @file AuthPIN.vue
- *
- * ADDED:
- * - Handles HTTP 423 (Locked) response from /verify-pin.
- *   Shows a live countdown and prevents further input until the lockout expires.
- * - Shows remaining attempts warning when attempts_left <= 2.
+ * @file views/auth/AuthPIN.vue
+ * @description Kiosk PIN entry view. Handles three modes:
+ * - Admin passcode verification for privileged registration access
+ * - First-time PIN setup for residents without a configured PIN
+ * - PIN verification for returning residents
+ * Includes lockout enforcement with a countdown timer on repeated failures.
  */
+
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
@@ -20,38 +21,49 @@ import { useRfidRegistrationStore } from '@/stores/registration'
 import { setupPin, verifyPin } from '@/api/authService'
 import { verifyAdminPasscode } from '@/api/registrationService'
 
-const router      = useRouter()
-const authStore   = useAuthStore()
+const router = useRouter()
+const authStore = useAuthStore()
 const rfidRegStore = useRfidRegistrationStore()
 const { brgyName, brgySubname, resolvedLogoUrl } = useSystemConfig()
-const { locale, t } = useI18n()
+const { t } = useI18n()
 
-// ── Toast ──────────────────────────────────────────────────────────────────
-const showToast    = ref(false)
+
+// =============================================================================
+// TOAST
+// =============================================================================
+const showToast = ref(false)
 const toastMessage = ref('')
-const isSuccess    = ref(false)
+const isSuccess = ref(false)
 
+/**
+ * Displays a temporary toast notification.
+ * Auto-dismisses after 2 seconds.
+ */
 const triggerToast = (message, success = false) => {
   toastMessage.value = message
-  isSuccess.value    = success
-  showToast.value    = true
+  isSuccess.value = success
+  showToast.value = true
   setTimeout(() => { showToast.value = false }, 2000)
 }
 
-// ── PIN state ──────────────────────────────────────────────────────────────
-const pin        = ref('')
+// =============================================================================
+// PIN STATE
+// =============================================================================
+const pin = ref('')
 const confirmPin = ref('')
 const PIN_LENGTH = 4
-const showPin    = ref(false)
+const showPin = ref(false)
 
-// ── Lockout state ──────────────────────────────────────────────────────────
-const isLocked            = ref(false)
-const lockoutSecondsLeft  = ref(0)
-const attemptsLeft        = ref(null)   // null until first wrong attempt
-let lockoutInterval       = null
+// =============================================================================
+// LOCKOUT STATE
+// =============================================================================
+const isLocked = ref(false)
+const lockoutSecondsLeft = ref(0)
+const attemptsLeft = ref(null)
+let lockoutInterval = null
 
 function startLockoutCountdown(seconds) {
-  isLocked.value           = true
+  isLocked.value = true
   lockoutSecondsLeft.value = seconds
   clearInterval(lockoutInterval)
 
@@ -59,10 +71,10 @@ function startLockoutCountdown(seconds) {
     lockoutSecondsLeft.value -= 1
     if (lockoutSecondsLeft.value <= 0) {
       clearInterval(lockoutInterval)
-      isLocked.value    = false
+      isLocked.value = false
       attemptsLeft.value = null
-      pin.value          = ''
-      confirmPin.value   = ''
+      pin.value = ''
+      confirmPin.value = ''
     }
   }, 1000)
 }
@@ -75,47 +87,61 @@ const lockoutDisplay = computed(() => {
     : `${s}s`
 })
 
-// ── Computed ───────────────────────────────────────────────────────────────
-const isAdminMode      = computed(() => rfidRegStore.isAdminMode)
-const title            = computed(() => {
+// =============================================================================
+// COMPUTED UI STATE
+// =============================================================================
+const isAdminMode = computed(() => rfidRegStore.isAdminMode)
+
+const title = computed(() => {
   if (isAdminMode.value) return t('adminAccessRequired')
   return t('welcome', { name: authStore.tempResident?.first_name || 'Resident' })
 })
-const subtitle         = computed(() => {
-  if (isAdminMode.value)       return t('enterAdminPasscode')
-  if (!authStore.tempHasPin)   return t('setYourPIN')
+
+const subtitle = computed(() => {
+  if (isAdminMode.value) return t('enterAdminPasscode')
+  if (!authStore.tempHasPin) return t('setYourPIN')
   return t('enterYourPIN')
 })
-const inputLabel       = computed(() => {
-  if (isAdminMode.value)       return t('enterAdminPasscodeLabel')
-  if (!authStore.tempHasPin)   return t('enterNewPIN')
+
+const inputLabel = computed(() => {
+  if (isAdminMode.value) return t('enterAdminPasscodeLabel')
+  if (!authStore.tempHasPin) return t('enterNewPIN')
   return t('enter4PIN')
 })
-const buttonLabel      = computed(() => isAdminMode.value ? t('confirm') : t('authenticate'))
-const pinDisplay       = computed(() => {
+
+const buttonLabel = computed(() => isAdminMode.value ? t('confirm') : t('authenticate'))
+
+const pinDisplay = computed(() => {
   if (!pin.value.length) return ''
   return showPin.value ? pin.value : '• '.repeat(pin.value.length).trim()
 })
+
 const confirmPinDisplay = computed(() => {
   if (!confirmPin.value.length) return ''
   return showPin.value ? confirmPin.value : '• '.repeat(confirmPin.value.length).trim()
 })
-const showConfirmField  = computed(() => !isAdminMode.value && !authStore.tempHasPin)
-const isPinComplete     = computed(() => {
+
+const showConfirmField = computed(() => !isAdminMode.value && !authStore.tempHasPin)
+
+const isPinComplete = computed(() => {
   if (isLocked.value) return false
-  if (isAdminMode.value)     return pin.value.length === PIN_LENGTH
+  if (isAdminMode.value) return pin.value.length === PIN_LENGTH
   if (!authStore.tempHasPin) return pin.value.length === PIN_LENGTH && confirmPin.value.length === PIN_LENGTH
   return pin.value.length === PIN_LENGTH
 })
 
-// ── Keypad handlers ────────────────────────────────────────────────────────
+// =============================================================================
+// KEYPAD HANDLERS
+// =============================================================================
 const onKeypress  = (key) => {
   if (isLocked.value) return
   const useConfirm = showConfirmField.value && pin.value.length === PIN_LENGTH
   const target     = useConfirm ? confirmPin : pin
   if (target.value.length < PIN_LENGTH) target.value += key
 }
+
 const onClear     = () => { pin.value = ''; confirmPin.value = '' }
+
 const onBackspace = () => {
   if (showConfirmField.value && confirmPin.value.length > 0) {
     confirmPin.value = confirmPin.value.slice(0, -1)
@@ -124,12 +150,19 @@ const onBackspace = () => {
   }
 }
 
-// ── Submit ─────────────────────────────────────────────────────────────────
+// =============================================================================
+// SUBMIT
+// =============================================================================
+/**
+ * Handles PIN submission for all three modes:
+ * - Admin mode: verifies the passcode and grants access to registration
+ * - PIN setup: validates match and sets a new PIN for the resident
+ * - PIN verify: authenticates the resident and confirms the RFID session
+ */
 const submitPin = async () => {
   if (!isPinComplete.value || isLocked.value) return
 
   try {
-    // ── Admin passcode flow ───────────────────────────────────────────────
     if (isAdminMode.value) {
       const { valid } = await verifyAdminPasscode(pin.value)
       if (!valid) { triggerToast(t('incorrectPasscode')); onClear(); return }
@@ -139,7 +172,6 @@ const submitPin = async () => {
       return
     }
 
-    // ── First-time PIN setup ──────────────────────────────────────────────
     if (!authStore.tempHasPin) {
       if (pin.value !== confirmPin.value) { triggerToast(t('pinsDoNotMatch')); onClear(); return }
       await setupPin({ resident_id: authStore.tempResident.id, pin: pin.value, rfid_uid: authStore.tempUid })
@@ -149,7 +181,6 @@ const submitPin = async () => {
       return
     }
 
-    // ── Standard PIN verify ───────────────────────────────────────────────
     const response = await verifyPin({ resident_id: authStore.tempResident.id, pin: pin.value })
 
     if (response.valid) {
@@ -160,7 +191,6 @@ const submitPin = async () => {
       return
     }
 
-    // Wrong PIN — show remaining attempts
     onClear()
     attemptsLeft.value = response.attempts_left ?? null
     if (attemptsLeft.value !== null && attemptsLeft.value <= 2) {
@@ -172,7 +202,6 @@ const submitPin = async () => {
   } catch (err) {
     onClear()
 
-    // ── 423 Locked ────────────────────────────────────────────────────────
     if (err?.response?.status === 423) {
       const detail = err.response.data?.detail || {}
       const secs   = detail.lockout_seconds_remaining ?? 60
@@ -184,12 +213,18 @@ const submitPin = async () => {
   }
 }
 
+// =============================================================================
+// NAVIGATION
+// =============================================================================
 const goBack = () => {
   clearInterval(lockoutInterval)
   if (isAdminMode.value) rfidRegStore.clearAll()
   router.push('/login-rfid')
 }
 
+// =============================================================================
+// LIFECYCLE
+// =============================================================================
 onMounted(() => {
   if (rfidRegStore.isAdminMode) {
     if (!rfidRegStore.pendingRfidUid) { triggerToast(t('noRFIDFound')); setTimeout(() => router.push('/login-rfid'), 1500) }
@@ -198,6 +233,7 @@ onMounted(() => {
   if (!authStore.tempResident || !authStore.tempUid) { triggerToast(t('noSessionFound')); setTimeout(() => router.push('/login-rfid'), 1500) }
 })
 
+// Clear the lockout interval when the component is destroyed
 onUnmounted(() => clearInterval(lockoutInterval))
 </script>
 
@@ -207,7 +243,6 @@ onUnmounted(() => clearInterval(lockoutInterval))
 
       <!-- Left panel -->
       <div class="flex-1 flex flex-col text-[#013C6D] pr-12">
-  
 
         <div class="flex items-center gap-3 mb-10">
           <img v-if="resolvedLogoUrl" :src="resolvedLogoUrl" alt="Barangay Logo" class="w-14 h-14 min-w-[56px] object-cover rounded-full">
@@ -234,7 +269,7 @@ onUnmounted(() => clearInterval(lockoutInterval))
       <!-- Right panel -->
       <div class="flex flex-1 flex-col items-center justify-center pl-12 border-l border-gray-200 relative">
 
-        <!-- ── LOCKOUT STATE ─────────────────────────────────────────────── -->
+        <!-- ─ LOCKOUT STATE ─────────────────────────────────────────────── -->
         <div v-if="isLocked" class="flex flex-col items-center gap-6 text-center">
           <div class="relative w-32 h-32">
             <svg class="w-full h-full -rotate-90" viewBox="0 0 100 100">

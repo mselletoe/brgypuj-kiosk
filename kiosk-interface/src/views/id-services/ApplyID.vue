@@ -216,12 +216,15 @@ const startCamera = async () => {
   } catch (err) {
     console.error("Camera access denied:", err);
   }
+  if (videoRef.value) {
+    videoRef.value.src = "http://" + window.location.hostname + ":8090/?action=stream";
+  }
 };
 
 const stopCamera = () => {
-  if (stream.value) {
-    stream.value.getTracks().forEach((track) => track.stop());
-    stream.value = null;
+  if (videoRef.value) {
+    videoRef.value.src = "";
+    videoRef.value.pause();
   }
   if (countdownInterval) clearInterval(countdownInterval);
   isCountingDown.value = false;

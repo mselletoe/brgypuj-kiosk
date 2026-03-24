@@ -1,10 +1,8 @@
 <script setup>
   /**
- * @file CreateAccount.vue
- * @description Administrative Account Registration Interface.
- * This component facilitates the promotion of an existing resident to an 
- * administrative role. It includes real-time password strength validation, 
- * credential matching, and dynamic resident fetching from the database.
+ * @file views/auth/CreateAccount.vue
+ * @description Admin account registration view. Promotes an existing resident
+ * to an admin role with real-time password validation and resident dropdown.
  */
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
@@ -15,22 +13,17 @@ import { registerAdmin, fetchResidentsDropdown } from '@/api/authService'
 
 const router = useRouter()
 const message = useMessage()
-
-// --- Form State ---
 const selectedResident = ref(null)
 const username = ref('')
 const password = ref('')
 const confirmPassword = ref('')
 const loadingSubmit = ref(false)
-
-// --- Data Fetching State ---
 const residents = ref([])
 const loadingResidents = ref(true)
 
-/**
- * Initial component setup.
- * Fetches the list of residents to populate the "Staff Name" selection dropdown.
- */
+// =================================================================================
+// Fetch residents on mount to populate the staff name dropdown.
+// =================================================================================
 onMounted(async () => {
   try {
     const res = await fetchResidentsDropdown()
@@ -46,10 +39,9 @@ onMounted(async () => {
   }
 })
 
-/**
- * Reactive password strength validation object.
- * Evaluates the current password string against organizational security requirements.
- */
+// =================================================================================
+// Evaluates the current password against complexity requirements.
+// =================================================================================
 const passValidation = computed(() => {
   return {
     minLength: password.value.length >= 8,
@@ -59,33 +51,29 @@ const passValidation = computed(() => {
   }
 })
 
-/**
- * Validates that the password and confirmation strings are identical.
- */
 const passwordsMatch = computed(() => {
   return password.value === confirmPassword.value && password.value.length > 0
 })
 
-/**
- * Handles the administrative registration submission.
- * Validates requirements and invokes the remote registration service.
- */
+// =================================================================================
+// Handles the registration form submission.
+// =================================================================================
 const handleRegister = async () => {
   const { minLength, hasNumber, hasUpper, hasLower } = passValidation.value
 
-  // 1. Check for empty fields
+  // Guard: ensure all fields are filled before proceeding
   if (!selectedResident.value || !username.value || !password.value || !confirmPassword.value) {
     message.error('Please fill out all fields.')
     return
   }
 
-  // 2. Enforce complexity requirements
+  // Guard: enforce password complexity requirements
   if (!minLength || !hasNumber || !hasUpper || !hasLower) {
     message.error('Password does not meet requirements.')
     return
   }
 
-  // 3. Verify credential matching
+  // Guard: confirm both password fields are identical
   if (!passwordsMatch.value) {
     message.error('Passwords do not match.')
     return
@@ -94,7 +82,6 @@ const handleRegister = async () => {
   loadingSubmit.value = true
 
   try {
-    // 4. Submit to Backend Service
     await registerAdmin({
       resident_id: selectedResident.value,
       username: username.value,
@@ -103,7 +90,6 @@ const handleRegister = async () => {
     })
 
     message.success('Account created successfully!')
-    // 5. Navigate to Dashboard Overview
     router.push('/overview')
   } catch (err) {
     const errorMsg = err.response?.data?.detail || 'Failed to create account'
@@ -115,14 +101,14 @@ const handleRegister = async () => {
 </script>
 
 <template>
-  <div
-    class="h-screen w-screen bg-[linear-gradient(to_bottom_right,_#3291E3,_#FFFFFF,_#C3EAFF)]
-           flex items-center justify-center"
-  >
-    <div
-      class="backdrop-blur-md bg-white/20 p-10 rounded-2xl shadow-2xl w-[30rem]
-             text-center flex flex-col items-center justify-center"
-    >
+  <div class="h-screen w-screen bg-[linear-gradient(to_bottom_right,_#3291E3,_#FFFFFF,_#C3EAFF)]
+           flex items-center justify-center">
+
+    <!-- Glassmorphism card -->
+    <div class="backdrop-blur-md bg-white/20 p-10 rounded-2xl shadow-2xl w-[30rem]
+             text-center flex flex-col items-center justify-center">
+
+      <!-- Header: title, login link, and brand logo -->
       <div class="flex justify-between mb-7 w-full">
         <div class="text-[#013C6D] text-start">
           <h2 class="text-2xl font-bold">Create Account</h2>
@@ -139,7 +125,10 @@ const handleRegister = async () => {
         <img :src="logo" alt="Logo" class="w-[80px]" />
       </div>
 
+      <!-- Registration form -->
       <form @submit.prevent="handleRegister" class="space-y-5 w-full">
+
+        <!-- Resident dropdown — filterable, loads async from API -->
         <NSelect
           v-model:value="selectedResident"
           :options="residents"
@@ -150,6 +139,7 @@ const handleRegister = async () => {
           class="text-left shadow-[4px_4px_10px_rgba(128,128,128,0.15)]"
         />
 
+        <!-- Credential fields -->
         <NInput
           v-model:value="username"
           type="text"
@@ -167,7 +157,7 @@ const handleRegister = async () => {
           class="text-left shadow-[4px_4px_10px_rgba(128,128,128,0.15)]"
         />
 
-        <!-- Password rules -->
+        <!-- Password strength rules — shown only while typing -->
         <div v-if="password.length > 0" class="text-left pl-3 bg-white/50 rounded-md space-y-1">
           <div v-for="(valid, key) in passValidation" :key="key" class="flex items-center py-1">
             <NIcon size="16" :color="valid ? '#22c55e' : '#ef4444'">
@@ -187,6 +177,7 @@ const handleRegister = async () => {
           </div>
         </div>
 
+        <!-- Confirm password field -->
         <NInput
           v-model:value="confirmPassword"
           type="password"
@@ -196,6 +187,7 @@ const handleRegister = async () => {
           class="text-left shadow-[4px_4px_10px_rgba(128,128,128,0.15)]"
         />
 
+        <!-- Confirm password match indicator — shown only while typing -->
         <div v-if="confirmPassword.length > 0" class="text-left pl-3">
           <div class="flex items-center">
             <NIcon size="16" :color="passwordsMatch ? '#22c55e' : '#ef4444'">
@@ -210,6 +202,7 @@ const handleRegister = async () => {
           </div>
         </div>
 
+        <!-- Submit button — shows spinner during request -->
         <div class="pt-3">
           <button
             type="submit"
