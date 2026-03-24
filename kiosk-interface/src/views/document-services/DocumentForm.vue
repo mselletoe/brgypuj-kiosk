@@ -1,11 +1,12 @@
 <script setup>
 /**
- * @file DocumentForm.vue
- * @description Dynamic Form Renderer for Document Requests.
- * This component builds a form based on administrative configuration, 
- * automatically maps and pre-fills resident data for authenticated RFID users, 
- * and handles localized field validation.
+ * @file views/document-services/DocumentForm.vue
+ * @description Renders a dynamic form based on a document type's configured field definitions.
+ * Supports text, email, tel, number, textarea, date, and select field types.
+ * For authenticated RFID users, known fields are auto-filled and locked from editing
+ * using a field mapping that matches resident profile data to form field names.
  */
+
 import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import VueDatePicker from '@vuepic/vue-datepicker'
@@ -13,21 +14,28 @@ import '@vuepic/vue-datepicker/dist/main.css'
 import { CalendarIcon, ChevronDownIcon } from '@heroicons/vue/24/outline'
 import { LockClosedIcon } from '@heroicons/vue/24/solid'
 
-// --- Props Configuration ---
 const props = defineProps({
   config: Object,
+
+  /** Pre-existing form values to restore (e.g. when navigating back) */
   initialData: {
     type: Object,
     default: () => ({})
   },
+
+  /** Authenticated resident's profile data used for auto-fill */
   residentData: {
     type: Object,
     default: () => null
   },
+
+  /** When true, enables auto-fill from residentData and locks matched fields */
   isRfidUser: {
     type: Boolean,
     default: false
   },
+
+  /** Disables all inputs while the form submission is in progress */
   isSubmitting: {
     type: Boolean,
     default: false
@@ -37,33 +45,26 @@ const props = defineProps({
 const emit = defineEmits(['continue'])
 const { t } = useI18n()
 
-// --- Form & Error States ---
 const formData = ref({})
 const errors = ref({})
 
-/**
- * Field Mapping Dictionary
- * Maps standardized database keys (keys) to various potential form field 
- * naming conventions (values) set by the admin in the dashboard.
- */
+// =============================================================================
+// FIELD MAPPING - PLACEHOLDERS
+// =============================================================================
 const fieldMapping = {
-  // Name fields
   full_name: ['full_name', 'name', 'resident_name', 'applicant_name'],
   first_name: ['first_name', 'fname'],
   middle_name: ['middle_name', 'mname'],
   last_name: ['last_name', 'lname', 'surname'],
   suffix: ['suffix', 'name_suffix'],
   
-  // Personal info
   gender: ['gender', 'sex'],
   birthdate: ['birthdate', 'date_of_birth', 'birth_date', 'dob'],
   age: ['age'],
   
-  // Contact info
   email: ['email', 'email_address'],
   phone_number: ['phone_number', 'contact_number', 'mobile_number', 'phone', 'contact'],
   
-  // Address fields
   unit_blk_street: ['unit_blk_street', 'street', 'house_number', 'house_no'],
   purok_name: ['purok_name', 'purok', 'sitio'],
   barangay: ['barangay', 'brgy'],
@@ -72,14 +73,15 @@ const fieldMapping = {
   region: ['region'],
   full_address: ['full_address', 'address', 'complete_address'],
   
-  // Residency info
   years_residency: ['yr_res', 'years_residency', 'years_of_residency', 'residency_years', 'year_residency'],
   residency_start_date: ['rds', 'residency_start_date', 'date_started_residency'],
   
-  // RFID info
   rfid_uid: ['rfid_uid', 'rfid', 'card_number', 'rfid_number'],
 }
 
+// =============================================================================
+// FORM INITIALIZATION
+// =============================================================================
 const preFilledFields = ref(new Set())
 
 const initializeFormData = () => {
@@ -129,6 +131,11 @@ watch(() => props.residentData, (newData) => {
   })
 }, { immediate: true, deep: true })
 
+
+// =============================================================================
+// FIELD HELPERS
+// =============================================================================
+
 const isPreFilled = (fieldName) => {
   return props.isRfidUser && preFilledFields.value.has(fieldName)
 }
@@ -140,6 +147,10 @@ const formatPlaceholder = (placeholder, label, isPrefilled) => {
   return placeholder || `Enter ${label.toLowerCase()}`
 }
 
+
+// =============================================================================
+// VALIDATION
+// =============================================================================
 const validate = () => {
   let isValid = true
   props.config.fields.forEach((field) => {
@@ -163,6 +174,13 @@ const handleContinue = () => {
   }
 }
 
+defineExpose({
+  handleContinue
+})
+
+// =============================================================================
+// SELECT DROPDOWN
+// =============================================================================
 const openDropdown = ref(null)
 
 const toggleSelectDropdown = (fieldName) => {
@@ -174,10 +192,6 @@ const selectOption = (fieldName, option) => {
   openDropdown.value = null
   errors.value[fieldName] = ''
 }
-
-defineExpose({
-  handleContinue
-})
 </script>
 
 <template>
@@ -306,7 +320,6 @@ defineExpose({
   cursor: not-allowed !important;
 }
 
-/* Remove the outer wrapper's own border so only .dp__input shows */
 .dp__input_wrap {
   border: none !important;
   box-shadow: none !important;

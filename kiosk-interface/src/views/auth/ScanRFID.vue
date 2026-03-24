@@ -1,11 +1,10 @@
 <script setup>
 /**
- * @file ScanRFID.vue
- *
- * ADDED:
- * - Handles HTTP 423 (Locked) returned by /rfid endpoint when a resident
- *   is currently locked out. Shows inline lockout state with countdown
- *   instead of crashing into a generic alert.
+ * @file views/auth/ScanRFID.vue
+ * @description Kiosk RFID scan screen. Listens for hardware scanner input via
+ * keyboard events and authenticates the scanned card. Routes new cards to
+ * registration and existing cards to PIN entry. Includes lockout enforcement
+ * and a dev-mode manual UID input for testing.
  */
 
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
@@ -22,13 +21,20 @@ import { checkRfidStatus } from '@/api/registrationService'
 const router       = useRouter()
 const authStore    = useAuthStore()
 const rfidRegStore = useRfidRegistrationStore()
-const { locale, t } = useI18n()
+const { t } = useI18n()
 
+// =============================================================================
+// SCANNER STATE
+// =============================================================================
 const scannedUID    = ref('')
 const isProcessing  = ref(false)
 const hiddenInput   = ref(null)
+let inputBuffer = ''
+let timeout     = null
 
-// ── Lockout state ──────────────────────────────────────────────────────────
+// =============================================================================
+// LOCKOUT STATE
+// =============================================================================
 const isLocked           = ref(false)
 const lockoutSecondsLeft = ref(0)
 let lockoutInterval      = null
@@ -55,13 +61,15 @@ function startLockoutCountdown(seconds) {
   }, 1000)
 }
 
-// ── Dev mode ───────────────────────────────────────────────────────────────
+// =============================================================================
+// DEV MODE
+// =============================================================================
 const isDevMode  = import.meta.env.VITE_ENABLE_DEV_LOGIN === 'true'
 const manualUID  = ref('')
 
-let inputBuffer = ''
-let timeout     = null
-
+// =============================================================================
+// SCANNER HELPERS
+// =============================================================================
 const resetScanner = () => {
   isProcessing.value = false
   inputBuffer        = ''
@@ -70,7 +78,6 @@ const resetScanner = () => {
   if (hiddenInput.value) hiddenInput.value.value = ''
 }
 
-// ── Main auth handler ──────────────────────────────────────────────────────
 const authenticateRFID = async (uid) => {
   if (isLocked.value) return
 
@@ -103,7 +110,6 @@ const authenticateRFID = async (uid) => {
     router.push('/auth-pin')
 
   } catch (err) {
-    // ── 423 Locked ─────────────────────────────────────────────────────────
     if (err?.response?.status === 423) {
       const detail = err.response.data?.detail || {}
       const secs   = detail.lockout_seconds_remaining ?? 60
@@ -138,6 +144,9 @@ const handleManualLogin = async () => {
 
 const goBack = () => router.replace('/login')
 
+// =============================================================================
+// LIFECYCLE
+// =============================================================================
 onMounted(async () => {
   await nextTick()
   hiddenInput.value?.focus()

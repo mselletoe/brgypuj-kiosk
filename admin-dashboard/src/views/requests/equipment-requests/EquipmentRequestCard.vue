@@ -1,15 +1,16 @@
 <script setup>
+/**
+ * @file views/requests/equipment-requests/EquipmentRequestCard.vue
+ * @description Displays a single equipment request row with status-driven action buttons.
+ * Supports inline Notes and Details popovers, payment status toggling,
+ * due date indicators, and row selection. Action buttons are configured
+ * per status and delegate to the parent via button-click events.
+ */
+
 import { ref, computed, watch } from "vue";
 import { NPopover, NInput, NButton, NSpin } from "naive-ui";
 import { TrashIcon, ArrowUturnLeftIcon } from "@heroicons/vue/24/solid";
 import { getNotes, updateNotes } from "@/api/equipmentService";
-
-const notes = ref("");
-const showNotesPopover = ref(false);
-const showDetailsPopover = ref(false);
-const isLoadingNotes = ref(false);
-const isSavingNotes = ref(false);
-const originalNotes = ref("");
 
 const props = defineProps({
   id: {
@@ -47,7 +48,6 @@ const props = defineProps({
   borrowingPeriod: {
     type: Object,
     required: true,
-    // { from: 'MM/DD/YY', to: 'MM/DD/YY' }
   },
   amount: {
     type: String,
@@ -75,7 +75,23 @@ const props = defineProps({
   },
 });
 
-// Load notes when popover opens
+const emit = defineEmits([
+  "button-click",
+  "update:isPaid",
+  "update:selected",
+  "notes-updated",
+]);
+
+// =============================================================================
+// NOTES POPOVER
+// =============================================================================
+const notes = ref("");
+const showNotesPopover = ref(false);
+const showDetailsPopover = ref(false);
+const isLoadingNotes = ref(false);
+const isSavingNotes = ref(false);
+const originalNotes = ref("");
+
 watch(showNotesPopover, async (isOpen) => {
   if (isOpen) {
     await loadNotes();
@@ -103,7 +119,6 @@ const saveNotes = async () => {
     const { data } = await updateNotes(props.id, notes.value);
     originalNotes.value = data.notes || "";
 
-    // Emit success event
     emit("notes-updated", {
       requestId: props.id,
       notes: data.notes,
@@ -112,7 +127,6 @@ const saveNotes = async () => {
     showNotesPopover.value = false;
   } catch (error) {
     console.error("Failed to save notes:", error);
-    // Optionally show error notification here
   } finally {
     isSavingNotes.value = false;
   }
@@ -122,13 +136,9 @@ const hasUnsavedChanges = computed(() => {
   return notes.value !== originalNotes.value;
 });
 
-const emit = defineEmits([
-  "button-click",
-  "update:isPaid",
-  "update:selected",
-  "notes-updated",
-]);
-
+// =============================================================================
+// DUE STATUS
+// =============================================================================
 const dueStatus = computed(() => {
   if (!props.borrowingPeriod?.to) return null;
 
@@ -140,15 +150,18 @@ const dueStatus = computed(() => {
 
   if (props.status === "pickedup") {
     if (dueDate < today) {
-      return "overdue"; // Past due and not yet returned
+      return "overdue";
     } else if (dueDate.getTime() === today.getTime()) {
-      return "duetoday"; // Due today
+      return "duetoday";
     }
   }
 
   return null;
 });
 
+// =============================================================================
+// ACTION BUTTONS
+// =============================================================================
 const buttonConfigs = {
   pending: [
     { id: "details", label: "Details", variant: "primary" },

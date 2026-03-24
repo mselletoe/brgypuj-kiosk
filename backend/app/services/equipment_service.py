@@ -1,9 +1,11 @@
 """
-Equipment Borrowing Service Layer
----------------------------
-Handles the business logic for equipment management, including administrative 
-configuration of equipment inventory and resident-facing borrowing request processing.
+app/services/equipment_service.py
+
+Service layer for equipment inventory management and borrowing requests.
+Handles availability validation, cost calculation, request lifecycle
+(approve, reject, pickup, return, payment, refund, undo), and notes.
 """
+
 import random
 from datetime import datetime
 from sqlalchemy.orm import Session, joinedload
@@ -20,9 +22,10 @@ from app.schemas.equipment import (
 )
 from app.services.transaction_service import record_equipment_transaction
 
-# -------------------------------------------------
-# Internal Helpers
-# -------------------------------------------------
+
+# =================================================================================
+# INTERNAL HELPERS
+# =================================================================================
 
 def _validate_equipment_item(db: Session, item_id: int) -> EquipmentInventory:
     equipment = (
@@ -118,9 +121,18 @@ def _update_equipment_availability(db: Session, request_id: int, action: str):
         equipment.available_quantity = max(0, min(equipment.available_quantity, equipment.total_quantity))
 
 
-# -------------------------------------------------
-# Kiosk Service Functions
-# -------------------------------------------------
+def _get_request(db: Session, request_id: int):
+    return (
+        db.query(EquipmentRequest)
+        .options(joinedload(EquipmentRequest.resident).joinedload(Resident.rfids))
+        .filter(EquipmentRequest.id == request_id)
+        .first()
+    )
+
+
+# =================================================================================
+# KIOSK
+# =================================================================================
 
 def get_available_equipment(db: Session):
     return (
@@ -141,7 +153,6 @@ def get_equipment_autofill_data(db: Session, resident_id: int) -> EquipmentAutof
             detail="Resident not found"
         )
     
-    # Map resident data to equipment form fields
     return EquipmentAutofillData(
         contact_person=resident_data['full_name'],
         contact_number=resident_data['phone_number']
@@ -220,9 +231,9 @@ def get_kiosk_request_history(db: Session, resident_id: int):
     )
 
 
-# -------------------------------------------------
-# Equipment Inventory Management (Admin)
-# -------------------------------------------------
+# =================================================================================
+# ADMIN — INVENTORY
+# =================================================================================
 
 def get_all_equipment_inventory(db: Session):
     return (
@@ -344,19 +355,9 @@ def bulk_delete_equipment_inventory(db: Session, ids: list[int]):
     return deleted_count
 
 
-# -------------------------------------------------
-# Equipment Request Management (Admin)
-# -------------------------------------------------
-
-def _get_request(db: Session, request_id: int):
-    return (
-        db.query(EquipmentRequest)
-        .options(joinedload(EquipmentRequest.resident).joinedload(Resident.rfids))
-        .filter(EquipmentRequest.id == request_id)
-        .first()
-    )
-
-
+# =================================================================================
+# ADMIN — EQUIPMENT REQUESTS
+# =================================================================================
 def get_all_equipment_requests(db: Session):
     from sqlalchemy.orm import joinedload
     
@@ -384,6 +385,10 @@ def get_equipment_request_by_id(db: Session, request_id: int):
         .first()
     )
 
+
+# =================================================================================
+# ADMIN — REQUEST LIFECYCLE
+# =================================================================================
 
 def approve_equipment_request(db: Session, request_id: int):
     req = _get_request(db, request_id)
