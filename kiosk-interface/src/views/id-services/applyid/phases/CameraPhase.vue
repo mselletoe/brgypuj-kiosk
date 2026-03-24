@@ -33,14 +33,16 @@ let mediaStream = null;
 async function startCamera() {
   cameraError.value = "";
   try {
-    // Trigger permission prompt first so device labels become available
+    // Step 1: trigger permission prompt so labels are populated
     const permStream = await navigator.mediaDevices.getUserMedia({
       video: true,
       audio: false,
     });
     permStream.getTracks().forEach((t) => t.stop());
 
-    // Enumerate devices and find the best capture device
+    // Step 2: enumerate and pick the real capture device
+    // "HDR webcam (V4L2)" = /dev/video0 = real ✅
+    // "HDR webcam"        = /dev/video1 = metadata only ❌
     const devices = await navigator.mediaDevices.enumerateDevices();
     const videoDevices = devices.filter((d) => d.kind === "videoinput");
     console.log(
@@ -48,34 +50,16 @@ async function startCamera() {
       videoDevices.map((d) => `${d.label} [${d.deviceId}]`),
     );
 
-    // The HDR webcam registers two browser devices:
-    //   "HDR webcam (V4L2)" → /dev/video0 → real capture device ✅
-    //   "HDR webcam"        → /dev/video1 → metadata only ❌
-    // Priority 1: label contains "(V4L2)"
-    let chosenDeviceId = null;
-    const v4l2Device = videoDevices.find((d) => d.label.includes("(V4L2)"));
-    if (v4l2Device) {
-      chosenDeviceId = v4l2Device.deviceId;
-    }
-    // Priority 2: label contains "v4l2" case-insensitive
-    if (!chosenDeviceId) {
-      const loose = videoDevices.find((d) =>
-        d.label.toLowerCase().includes("v4l2"),
-      );
-      if (loose) chosenDeviceId = loose.deviceId;
-    }
-    // Priority 3: pick device with longest label (more specific = real device)
-    if (!chosenDeviceId) {
-      const sorted = [...videoDevices].sort(
-        (a, b) => b.label.length - a.label.length,
-      );
-      chosenDeviceId = sorted[0]?.deviceId ?? null;
-    }
-    // Final fallback
-    if (!chosenDeviceId && videoDevices.length > 0) {
-      chosenDeviceId = videoDevices[0].deviceId;
-    }
+    const v4l2Device =
+      videoDevices.find((d) => d.label.includes("(V4L2)")) ||
+      videoDevices.find((d) => d.label.toLowerCase().includes("v4l2")) ||
+      [...videoDevices].sort((a, b) => b.label.length - a.label.length)[0] ||
+      videoDevices[0];
 
+    const chosenDeviceId = v4l2Device?.deviceId ?? null;
+    console.log("Chosen camera:", v4l2Device?.label, chosenDeviceId);
+
+    // Step 3: get the stream
     const constraints = {
       video: chosenDeviceId
         ? {
@@ -86,40 +70,49 @@ async function startCamera() {
         : { width: { ideal: 1280 }, height: { ideal: 720 } },
       audio: false,
     };
-
     mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
 
-    if (videoRef.value) {
-      videoRef.value.srcObject = mediaStream;
-      await new Promise((resolve) => {
-        videoRef.value.onloadedmetadata = resolve;
-      });
-      await videoRef.value.play();
+    // Step 4: attach stream and force play — do NOT await onloadedmetadata
+    // because on Linux/Firefox it can fire late or not at all before play()
+    const video = videoRef.value;
+    if (!video) return;
 
-      // If we get no frames after 1s, this is the metadata device — try the other one
-      await new Promise((r) => setTimeout(r, 1000));
-      if (videoRef.value.videoWidth === 0 && videoDevices.length > 1) {
-        console.warn("First device gave no frames, trying next device...");
-        mediaStream.getTracks().forEach((t) => t.stop());
-        const fallbackId = videoDevices.find(
-          (d) => d.deviceId !== chosenDeviceId,
-        )?.deviceId;
-        if (fallbackId) {
-          mediaStream = await navigator.mediaDevices.getUserMedia({
-            video: {
-              deviceId: { exact: fallbackId },
-              width: { ideal: 1280 },
-              height: { ideal: 720 },
-            },
-            audio: false,
-          });
-          videoRef.value.srcObject = mediaStream;
-          await new Promise((resolve) => {
-            videoRef.value.onloadedmetadata = resolve;
-          });
-          await videoRef.value.play();
-        }
+    video.srcObject = mediaStream;
+    video.muted = true;
+    video.playsInline = true;
+
+    // Try to play immediately, retry up to 5 times if it fails
+    let played = false;
+    for (let i = 0; i < 5; i++) {
+      try {
+        await video.play();
+        played = true;
+        console.log("Camera playing on attempt", i + 1);
+        break;
+      } catch (playErr) {
+        console.warn(`Play attempt ${i + 1} failed:`, playErr.message);
+        await new Promise((r) => setTimeout(r, 300));
       }
+    }
+
+    if (!played) {
+      cameraError.value = "Could not start camera playback. Please try again.";
+      return;
+    }
+
+    // Step 5: poll for actual frames (videoWidth > 0 means frames are flowing)
+    let attempts = 0;
+    while (video.videoWidth === 0 && attempts < 30) {
+      await new Promise((r) => setTimeout(r, 200));
+      attempts++;
+    }
+
+    if (video.videoWidth === 0) {
+      console.warn("No frames after 6s — stream may be wrong device");
+      cameraError.value =
+        "Camera connected but not producing frames. Please replug the webcam.";
+    } else {
+      console.log(`Camera ready: ${video.videoWidth}x${video.videoHeight}`);
     }
   } catch (err) {
     console.error("Camera error:", err);
