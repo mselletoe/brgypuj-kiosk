@@ -26,28 +26,100 @@ let countdownInterval = null;
 let mediaStream = null;
 
 // ─── Camera: start ────────────────────────────────────────────────────────
-// Uses getUserMedia with ideal constraints for the USB webcam on /dev/video0.
-// Bookworm + Chromium will pick the USB cam automatically when facingMode is
-// omitted and there is only one real capture device.
+// Enumerates all video input devices and picks the first real capture device.
+// USB webcams on Linux register two entries: the real capture device and a
+// metadata/control-only device. We skip the metadata one and fall back if
+// the chosen device produces no frames after 1 second.
 async function startCamera() {
   cameraError.value = "";
   try {
-    mediaStream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        width: { ideal: 1280 },
-        height: { ideal: 720 },
-        frameRate: { ideal: 30 },
-      },
+    // Trigger permission prompt first so device labels become available
+    const permStream = await navigator.mediaDevices.getUserMedia({
+      video: true,
       audio: false,
     });
+    permStream.getTracks().forEach((t) => t.stop());
+
+    // Enumerate devices and find the best capture device
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const videoDevices = devices.filter((d) => d.kind === "videoinput");
+    console.log(
+      "Available cameras:",
+      videoDevices.map((d) => `${d.label} [${d.deviceId}]`),
+    );
+
+    // The HDR webcam registers two browser devices:
+    //   "HDR webcam (V4L2)" → /dev/video0 → real capture device ✅
+    //   "HDR webcam"        → /dev/video1 → metadata only ❌
+    // Priority 1: label contains "(V4L2)"
+    let chosenDeviceId = null;
+    const v4l2Device = videoDevices.find((d) => d.label.includes("(V4L2)"));
+    if (v4l2Device) {
+      chosenDeviceId = v4l2Device.deviceId;
+    }
+    // Priority 2: label contains "v4l2" case-insensitive
+    if (!chosenDeviceId) {
+      const loose = videoDevices.find((d) =>
+        d.label.toLowerCase().includes("v4l2"),
+      );
+      if (loose) chosenDeviceId = loose.deviceId;
+    }
+    // Priority 3: pick device with longest label (more specific = real device)
+    if (!chosenDeviceId) {
+      const sorted = [...videoDevices].sort(
+        (a, b) => b.label.length - a.label.length,
+      );
+      chosenDeviceId = sorted[0]?.deviceId ?? null;
+    }
+    // Final fallback
+    if (!chosenDeviceId && videoDevices.length > 0) {
+      chosenDeviceId = videoDevices[0].deviceId;
+    }
+
+    const constraints = {
+      video: chosenDeviceId
+        ? {
+            deviceId: { exact: chosenDeviceId },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          }
+        : { width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: false,
+    };
+
+    mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
 
     if (videoRef.value) {
       videoRef.value.srcObject = mediaStream;
-      // Wait until metadata is loaded so videoWidth/videoHeight are available
       await new Promise((resolve) => {
         videoRef.value.onloadedmetadata = resolve;
       });
       await videoRef.value.play();
+
+      // If we get no frames after 1s, this is the metadata device — try the other one
+      await new Promise((r) => setTimeout(r, 1000));
+      if (videoRef.value.videoWidth === 0 && videoDevices.length > 1) {
+        console.warn("First device gave no frames, trying next device...");
+        mediaStream.getTracks().forEach((t) => t.stop());
+        const fallbackId = videoDevices.find(
+          (d) => d.deviceId !== chosenDeviceId,
+        )?.deviceId;
+        if (fallbackId) {
+          mediaStream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              deviceId: { exact: fallbackId },
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
+            },
+            audio: false,
+          });
+          videoRef.value.srcObject = mediaStream;
+          await new Promise((resolve) => {
+            videoRef.value.onloadedmetadata = resolve;
+          });
+          await videoRef.value.play();
+        }
+      }
     }
   } catch (err) {
     console.error("Camera error:", err);
