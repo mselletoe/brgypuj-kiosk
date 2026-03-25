@@ -11,69 +11,34 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["submit", "counting-down"]);
-
 const { t } = useI18n();
 
-// ─── Refs ─────────────────────────────────────────────────────────────────
 const videoRef = ref(null);
 const canvasRef = ref(null);
 const photoData = ref(null);
 const cameraError = ref("");
-
 const countdown = ref(0);
 const isCountingDown = ref(false);
 let countdownInterval = null;
 let mediaStream = null;
 
-// ─── Camera: start ────────────────────────────────────────────────────────
-// Enumerates all video input devices and picks the first real capture device.
-// USB webcams on Linux register two entries: the real capture device and a
-// metadata/control-only device. We skip the metadata one and fall back if
-// the chosen device produces no frames after 1 second.
+// ─── Camera start ─────────────────────────────────────────────────────────
+// Simplified: single getUserMedia call directly targeting video0 via V4L2 label.
+// Avoids double getUserMedia (permission + real) which was freezing the Pi.
 async function startCamera() {
   cameraError.value = "";
   try {
-    // Step 1: trigger permission prompt so labels are populated
-    const permStream = await navigator.mediaDevices.getUserMedia({
-      video: true,
+    // Single call — Firefox on Linux already has permission from prior use.
+    // Use low resolution to reduce CPU load on Pi (640x480 is plenty for ID photo).
+    mediaStream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        width: { ideal: 640 },
+        height: { ideal: 480 },
+        frameRate: { ideal: 15, max: 20 },
+      },
       audio: false,
     });
-    permStream.getTracks().forEach((t) => t.stop());
 
-    // Step 2: enumerate and pick the real capture device
-    // "HDR webcam (V4L2)" = /dev/video0 = real ✅
-    // "HDR webcam"        = /dev/video1 = metadata only ❌
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    const videoDevices = devices.filter((d) => d.kind === "videoinput");
-    console.log(
-      "Available cameras:",
-      videoDevices.map((d) => `${d.label} [${d.deviceId}]`),
-    );
-
-    const v4l2Device =
-      videoDevices.find((d) => d.label.includes("(V4L2)")) ||
-      videoDevices.find((d) => d.label.toLowerCase().includes("v4l2")) ||
-      [...videoDevices].sort((a, b) => b.label.length - a.label.length)[0] ||
-      videoDevices[0];
-
-    const chosenDeviceId = v4l2Device?.deviceId ?? null;
-    console.log("Chosen camera:", v4l2Device?.label, chosenDeviceId);
-
-    // Step 3: get the stream
-    const constraints = {
-      video: chosenDeviceId
-        ? {
-            deviceId: { exact: chosenDeviceId },
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-          }
-        : { width: { ideal: 1280 }, height: { ideal: 720 } },
-      audio: false,
-    };
-    mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
-
-    // Step 4: attach stream and force play — do NOT await onloadedmetadata
-    // because on Linux/Firefox it can fire late or not at all before play()
     const video = videoRef.value;
     if (!video) return;
 
@@ -81,54 +46,31 @@ async function startCamera() {
     video.muted = true;
     video.playsInline = true;
 
-    // Try to play immediately, retry up to 5 times if it fails
-    let played = false;
-    for (let i = 0; i < 5; i++) {
-      try {
-        await video.play();
-        played = true;
-        console.log("Camera playing on attempt", i + 1);
-        break;
-      } catch (playErr) {
-        console.warn(`Play attempt ${i + 1} failed:`, playErr.message);
-        await new Promise((r) => setTimeout(r, 300));
-      }
+    // Play immediately — don't wait for onloadedmetadata on Linux/Firefox
+    try {
+      await video.play();
+    } catch (e) {
+      // Retry once after short delay
+      await new Promise((r) => setTimeout(r, 500));
+      await video.play();
     }
 
-    if (!played) {
-      cameraError.value = "Could not start camera playback. Please try again.";
-      return;
-    }
-
-    // Step 5: poll for actual frames (videoWidth > 0 means frames are flowing)
-    let attempts = 0;
-    while (video.videoWidth === 0 && attempts < 30) {
-      await new Promise((r) => setTimeout(r, 200));
-      attempts++;
-    }
-
-    if (video.videoWidth === 0) {
-      console.warn("No frames after 6s — stream may be wrong device");
-      cameraError.value =
-        "Camera connected but not producing frames. Please replug the webcam.";
-    } else {
-      console.log(`Camera ready: ${video.videoWidth}x${video.videoHeight}`);
-    }
+    console.log("Camera started");
   } catch (err) {
     console.error("Camera error:", err);
     cameraError.value =
       err.name === "NotAllowedError"
-        ? "Camera access was denied. Please allow camera permissions."
+        ? "Camera access denied. Please allow camera permissions."
         : err.name === "NotFoundError"
           ? "No camera found. Make sure the USB webcam is connected."
           : `Camera error: ${err.message}`;
   }
 }
 
-// ─── Camera: stop ─────────────────────────────────────────────────────────
+// ─── Camera stop ──────────────────────────────────────────────────────────
 function stopCamera() {
   if (mediaStream) {
-    mediaStream.getTracks().forEach((track) => track.stop());
+    mediaStream.getTracks().forEach((t) => t.stop());
     mediaStream = null;
   }
   if (videoRef.value) {
@@ -141,13 +83,12 @@ function stopCamera() {
   isCountingDown.value = false;
 }
 
-// ─── Countdown → capture ──────────────────────────────────────────────────
+// ─── Countdown ────────────────────────────────────────────────────────────
 function startCountdown() {
   if (isCountingDown.value) return;
   isCountingDown.value = true;
   countdown.value = 5;
   emit("counting-down", true);
-
   countdownInterval = setInterval(() => {
     countdown.value -= 1;
     if (countdown.value === 0) {
@@ -161,9 +102,6 @@ function startCountdown() {
 }
 
 // ─── Capture ──────────────────────────────────────────────────────────────
-// Key fix: draw the RAW (non-mirrored) frame onto the canvas.
-// The <video> is CSS-mirrored for a natural preview, but the saved image
-// must NOT be mirrored — we draw it straight.
 function executeCapture() {
   const video = videoRef.value;
   const canvas = canvasRef.value;
@@ -173,30 +111,22 @@ function executeCapture() {
   const vh = video.videoHeight;
 
   if (!vw || !vh) {
-    // Stream not ready — try once more after a short delay
-    setTimeout(executeCapture, 200);
+    setTimeout(executeCapture, 300);
     return;
   }
 
-  // Square crop from the center
   const size = Math.min(vw, vh);
   const startX = (vw - size) / 2;
   const startY = (vh - size) / 2;
-
   canvas.width = size;
   canvas.height = size;
-
   const ctx = canvas.getContext("2d");
-  // Draw straight (not mirrored) — the canvas save is the real image
   ctx.drawImage(video, startX, startY, size, size, 0, 0, size, size);
-
-  photoData.value = canvas.toDataURL("image/jpeg", 0.92);
+  photoData.value = canvas.toDataURL("image/jpeg", 0.85);
 }
 
-// ─── Retake ───────────────────────────────────────────────────────────────
 function retakePhoto() {
   photoData.value = null;
-  // Camera stream is still running — no need to restart
 }
 
 // ─── Submit ───────────────────────────────────────────────────────────────
@@ -206,17 +136,13 @@ async function handleSubmit() {
   try {
     await emit("submit", photoData.value);
   } catch {
-    // Parent failed — restart camera so user can retake
     photoData.value = null;
     await startCamera();
   }
 }
 
-// ─── Lifecycle ────────────────────────────────────────────────────────────
 onMounted(startCamera);
 onUnmounted(stopCamera);
-
-// Expose stopCamera so parent (ApplyID) can stop it on back-navigation
 defineExpose({ stopCamera });
 </script>
 
@@ -224,12 +150,12 @@ defineExpose({ stopCamera });
   <div
     class="flex w-full h-[340px] gap-20 items-center justify-center animate-fadeIn"
   >
-    <!-- Video / Photo preview -->
+    <!-- Video preview -->
     <div class="flex-shrink-0 h-full relative">
       <div
         class="h-full aspect-square bg-black rounded-3xl overflow-hidden relative flex items-center justify-center"
       >
-        <!-- Camera error state -->
+        <!-- Error state -->
         <div
           v-if="cameraError"
           class="flex flex-col items-center justify-center gap-3 p-6 text-center"
@@ -237,14 +163,13 @@ defineExpose({ stopCamera });
           <span class="text-white text-sm font-medium">{{ cameraError }}</span>
           <button
             @click="startCamera"
-            class="mt-2 px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-xl text-sm font-bold transition-colors"
+            class="mt-2 px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-xl text-sm font-bold"
           >
             Retry
           </button>
         </div>
 
         <template v-else>
-          <!-- Live video — CSS mirror for natural selfie preview only -->
           <video
             v-show="!photoData"
             ref="videoRef"
@@ -255,19 +180,16 @@ defineExpose({ stopCamera });
             style="transform: scaleX(-1)"
           ></video>
 
-          <!-- Captured photo — also mirrored to match what user saw -->
           <img
             v-show="photoData"
             :src="photoData"
-            alt="Captured ID photo"
+            alt="Captured photo"
             class="w-full h-full object-cover"
             style="transform: scaleX(-1)"
           />
 
-          <!-- Hidden canvas for capture (no CSS transform — real pixels) -->
           <canvas ref="canvasRef" class="hidden"></canvas>
 
-          <!-- Overlay: countdown / align hint -->
           <div
             v-if="!photoData"
             class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"
@@ -295,7 +217,7 @@ defineExpose({ stopCamera });
       </div>
     </div>
 
-    <!-- Controls panel -->
+    <!-- Controls -->
     <div class="w-[380px] flex flex-col justify-center h-full flex-shrink-0">
       <div class="flex-1 flex flex-col justify-center">
         <h2 class="text-3xl font-bold text-[#03335C] mb-1">
@@ -304,7 +226,6 @@ defineExpose({ stopCamera });
         <p class="text-gray-500 italic text-sm mb-4">
           {{ t("takeClearPhoto") }}
         </p>
-
         <div
           class="bg-[#EAF6FB] rounded-2xl p-6 border border-[#BDE0EF] flex flex-col gap-3"
         >
@@ -339,7 +260,6 @@ defineExpose({ stopCamera });
       </div>
 
       <div class="flex gap-3 mt-4">
-        <!-- No photo yet -->
         <template v-if="!photoData">
           <Button
             :variant="isCountingDown ? 'disabled' : 'primary'"
@@ -354,8 +274,6 @@ defineExpose({ stopCamera });
             </span>
           </Button>
         </template>
-
-        <!-- Photo captured -->
         <template v-else>
           <Button
             variant="outline"
@@ -363,17 +281,18 @@ defineExpose({ stopCamera });
             class="w-full justify-center text-lg py-3"
             :disabled="isSubmitting"
             @click="retakePhoto"
-            >{{ t("retake") }}</Button
           >
-
+            {{ t("retake") }}
+          </Button>
           <Button
             :variant="isSubmitting ? 'disabled' : 'secondary'"
             size="md"
             class="w-full justify-center text-lg py-4"
             :disabled="isSubmitting"
             @click="handleSubmit"
-            >{{ isSubmitting ? t("processing") : t("submit") }}</Button
           >
+            {{ isSubmitting ? t("processing") : t("submit") }}
+          </Button>
         </template>
       </div>
     </div>
