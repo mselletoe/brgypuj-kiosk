@@ -21,15 +21,48 @@ const countdown = ref(0);
 const isCountingDown = ref(false);
 let countdownInterval = null;
 let mediaStream = null;
+let frameCheckTimer = null;
+
+// ─── Camera stop — fully releases the device ──────────────────────────────
+function stopCamera() {
+  // Clear any pending timers first
+  if (frameCheckTimer) {
+    clearTimeout(frameCheckTimer);
+    frameCheckTimer = null;
+  }
+  if (countdownInterval) {
+    clearInterval(countdownInterval);
+    countdownInterval = null;
+  }
+  isCountingDown.value = false;
+
+  // Stop all tracks — this releases /dev/video0 back to the OS
+  if (mediaStream) {
+    mediaStream.getTracks().forEach((track) => {
+      track.stop();
+      mediaStream.removeTrack(track);
+    });
+    mediaStream = null;
+  }
+
+  // Detach from video element
+  if (videoRef.value) {
+    videoRef.value.pause();
+    videoRef.value.srcObject = null;
+    videoRef.value.load(); // force browser to release internal buffers
+  }
+}
 
 // ─── Camera start ─────────────────────────────────────────────────────────
-// Simplified: single getUserMedia call directly targeting video0 via V4L2 label.
-// Avoids double getUserMedia (permission + real) which was freezing the Pi.
 async function startCamera() {
+  // Always stop first to ensure clean state
+  stopCamera();
   cameraError.value = "";
+
+  // Small delay to let the OS fully release the device before re-opening
+  await new Promise((r) => setTimeout(r, 300));
+
   try {
-    // Single call — Firefox on Linux already has permission from prior use.
-    // Use low resolution to reduce CPU load on Pi (640x480 is plenty for ID photo).
     mediaStream = await navigator.mediaDevices.getUserMedia({
       video: {
         width: { ideal: 640 },
@@ -46,16 +79,47 @@ async function startCamera() {
     video.muted = true;
     video.playsInline = true;
 
-    // Play immediately — don't wait for onloadedmetadata on Linux/Firefox
     try {
       await video.play();
-    } catch (e) {
-      // Retry once after short delay
+    } catch {
       await new Promise((r) => setTimeout(r, 500));
       await video.play();
     }
 
-    console.log("Camera started");
+    // Check if we're actually getting frames after 3 seconds
+    // If not, the device is stuck — stop and retry once automatically
+    frameCheckTimer = setTimeout(async () => {
+      if (!videoRef.value || videoRef.value.videoWidth > 0) return;
+      console.warn("No frames after 3s — retrying camera...");
+      stopCamera();
+      await new Promise((r) => setTimeout(r, 800));
+      try {
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            width: { ideal: 640 },
+            height: { ideal: 480 },
+            frameRate: { ideal: 15, max: 20 },
+          },
+          audio: false,
+        });
+        const v = videoRef.value;
+        if (!v) return;
+        v.srcObject = mediaStream;
+        v.muted = true;
+        v.playsInline = true;
+        await v.play();
+
+        // If still no frames after retry, show error
+        setTimeout(() => {
+          if (videoRef.value && videoRef.value.videoWidth === 0) {
+            cameraError.value =
+              "Camera not responding. Please unplug and replug the webcam, then click Retry.";
+          }
+        }, 3000);
+      } catch (err) {
+        cameraError.value = `Camera error: ${err.message}`;
+      }
+    }, 3000);
   } catch (err) {
     console.error("Camera error:", err);
     cameraError.value =
@@ -65,22 +129,6 @@ async function startCamera() {
           ? "No camera found. Make sure the USB webcam is connected."
           : `Camera error: ${err.message}`;
   }
-}
-
-// ─── Camera stop ──────────────────────────────────────────────────────────
-function stopCamera() {
-  if (mediaStream) {
-    mediaStream.getTracks().forEach((t) => t.stop());
-    mediaStream = null;
-  }
-  if (videoRef.value) {
-    videoRef.value.srcObject = null;
-  }
-  if (countdownInterval) {
-    clearInterval(countdownInterval);
-    countdownInterval = null;
-  }
-  isCountingDown.value = false;
 }
 
 // ─── Countdown ────────────────────────────────────────────────────────────
@@ -106,15 +154,12 @@ function executeCapture() {
   const video = videoRef.value;
   const canvas = canvasRef.value;
   if (!video || !canvas) return;
-
   const vw = video.videoWidth;
   const vh = video.videoHeight;
-
   if (!vw || !vh) {
     setTimeout(executeCapture, 300);
     return;
   }
-
   const size = Math.min(vw, vh);
   const startX = (vw - size) / 2;
   const startY = (vh - size) / 2;
@@ -150,12 +195,10 @@ defineExpose({ stopCamera });
   <div
     class="flex w-full h-[340px] gap-20 items-center justify-center animate-fadeIn"
   >
-    <!-- Video preview -->
     <div class="flex-shrink-0 h-full relative">
       <div
         class="h-full aspect-square bg-black rounded-3xl overflow-hidden relative flex items-center justify-center"
       >
-        <!-- Error state -->
         <div
           v-if="cameraError"
           class="flex flex-col items-center justify-center gap-3 p-6 text-center"
@@ -179,7 +222,6 @@ defineExpose({ stopCamera });
             class="w-full h-full object-cover"
             style="transform: scaleX(-1)"
           ></video>
-
           <img
             v-show="photoData"
             :src="photoData"
@@ -187,7 +229,6 @@ defineExpose({ stopCamera });
             class="w-full h-full object-cover"
             style="transform: scaleX(-1)"
           />
-
           <canvas ref="canvasRef" class="hidden"></canvas>
 
           <div
@@ -217,7 +258,6 @@ defineExpose({ stopCamera });
       </div>
     </div>
 
-    <!-- Controls -->
     <div class="w-[380px] flex flex-col justify-center h-full flex-shrink-0">
       <div class="flex-1 flex flex-col justify-center">
         <h2 class="text-3xl font-bold text-[#03335C] mb-1">
