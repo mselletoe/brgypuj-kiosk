@@ -1,7 +1,5 @@
 <script setup>
-import { ref } from "vue";
 import { useI18n } from "vue-i18n";
-import { ChevronDownIcon } from "@heroicons/vue/24/outline";
 import Button from "@/components/shared/Button.vue";
 
 const props = defineProps({
@@ -45,16 +43,6 @@ const currentYear = new Date().getFullYear();
 const years = Array.from({ length: currentYear - 1899 }, (_, i) =>
   (currentYear - i).toString(),
 );
-
-const showMonthDropdown = ref(false);
-const showDayDropdown = ref(false);
-const showYearDropdown = ref(false);
-
-function toggle(menu) {
-  showMonthDropdown.value = menu === "month" ? !showMonthDropdown.value : false;
-  showDayDropdown.value = menu === "day" ? !showDayDropdown.value : false;
-  showYearDropdown.value = menu === "year" ? !showYearDropdown.value : false;
-}
 </script>
 
 <template>
@@ -78,99 +66,54 @@ function toggle(menu) {
         </p>
 
         <div class="flex gap-3 mb-4">
-          <!-- Month -->
-          <div class="flex-1 relative">
+          <!-- Month — native select for smooth performance on Pi -->
+          <div class="flex-1 flex flex-col">
             <label
               class="block text-[10px] font-bold text-gray-400 uppercase mb-1"
               >{{ t("month") }}</label
             >
-            <button
-              @click="toggle('month')"
-              class="w-full h-11 border border-gray-300 rounded-xl px-3 flex items-center justify-between text-[#03335C] font-bold bg-white text-sm hover:border-[#03335C]"
+            <select
+              :value="verifyMonth"
+              @change="emit('update:verifyMonth', $event.target.value)"
+              class="native-select"
             >
-              {{
-                months.find((m) => m.value === verifyMonth)?.name || t("select")
-              }}
-              <ChevronDownIcon class="w-4 h-4" />
-            </button>
-            <div
-              v-if="showMonthDropdown"
-              class="absolute top-full left-0 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-[60] p-1 flex flex-col h-40 overflow-y-auto custom-scroll"
-            >
-              <button
-                v-for="m in months"
-                :key="m.value"
-                @click="
-                  emit('update:verifyMonth', m.value);
-                  showMonthDropdown = false;
-                "
-                class="w-full text-left py-2 px-3 hover:bg-blue-50 rounded-lg font-bold text-[#03335C] text-sm"
-              >
+              <option value="" disabled>{{ t("select") }}</option>
+              <option v-for="m in months" :key="m.value" :value="m.value">
                 {{ m.name }}
-              </button>
-            </div>
+              </option>
+            </select>
           </div>
 
           <!-- Day -->
-          <div class="flex-1 relative">
+          <div class="flex-1 flex flex-col">
             <label
               class="block text-[10px] font-bold text-gray-400 uppercase mb-1"
               >{{ t("day") }}</label
             >
-            <button
-              @click="toggle('day')"
-              class="w-full h-11 border border-gray-300 rounded-xl px-3 flex items-center justify-between text-[#03335C] font-bold bg-white text-sm hover:border-[#03335C]"
+            <select
+              :value="verifyDay"
+              @change="emit('update:verifyDay', $event.target.value)"
+              class="native-select"
             >
-              {{ verifyDay || t("dd") }}
-              <ChevronDownIcon class="w-4 h-4" />
-            </button>
-            <div
-              v-if="showDayDropdown"
-              class="absolute top-full left-0 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-[60] p-1 flex flex-col h-40 overflow-y-auto custom-scroll"
-            >
-              <button
-                v-for="d in days"
-                :key="d"
-                @click="
-                  emit('update:verifyDay', d);
-                  showDayDropdown = false;
-                "
-                class="w-full text-center py-2 hover:bg-blue-50 rounded-lg font-bold text-[#03335C] text-sm"
-              >
-                {{ d }}
-              </button>
-            </div>
+              <option value="" disabled>{{ t("dd") }}</option>
+              <option v-for="d in days" :key="d" :value="d">{{ d }}</option>
+            </select>
           </div>
 
           <!-- Year -->
-          <div class="flex-1 relative">
+          <div class="flex-1 flex flex-col">
             <label
               class="block text-[10px] font-bold text-gray-400 uppercase mb-1"
               >{{ t("year") }}</label
             >
-            <button
-              @click="toggle('year')"
-              class="w-full h-11 border border-gray-300 rounded-xl px-3 flex items-center justify-between text-[#03335C] font-bold bg-white text-sm hover:border-[#03335C]"
+            <select
+              :value="verifyYear"
+              @change="emit('update:verifyYear', $event.target.value)"
+              class="native-select"
             >
-              {{ verifyYear || t("yyyy") }}
-              <ChevronDownIcon class="w-4 h-4" />
-            </button>
-            <div
-              v-if="showYearDropdown"
-              class="absolute top-full left-0 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-[60] p-1 flex flex-col h-40 overflow-y-auto custom-scroll"
-            >
-              <button
-                v-for="y in years"
-                :key="y"
-                @click="
-                  emit('update:verifyYear', y);
-                  showYearDropdown = false;
-                "
-                class="w-full text-center py-2 hover:bg-blue-50 rounded-lg font-bold text-[#03335C] text-sm"
-              >
-                {{ y }}
-              </button>
-            </div>
+              <option value="" disabled>{{ t("yyyy") }}</option>
+              <option v-for="y in years" :key="y" :value="y">{{ y }}</option>
+            </select>
           </div>
         </div>
 
@@ -187,8 +130,9 @@ function toggle(menu) {
             class="flex-1"
             :disabled="isVerifying"
             @click="emit('close')"
-            >{{ t("cancel") }}</Button
           >
+            {{ t("cancel") }}
+          </Button>
           <Button
             :variant="isVerifying ? 'disabled' : 'secondary'"
             class="flex-1"
@@ -204,15 +148,26 @@ function toggle(menu) {
 </template>
 
 <style scoped>
-.custom-scroll::-webkit-scrollbar {
-  width: 6px;
+.native-select {
+  height: 44px;
+  width: 100%;
+  padding: 0 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 0.75rem;
+  background-color: #ffffff;
+  color: #03335c;
+  font-weight: 700;
+  font-size: 0.875rem;
+  appearance: auto;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s;
 }
-.custom-scroll::-webkit-scrollbar-track {
-  background: transparent;
+.native-select:focus {
+  border-color: #03335c;
 }
-.custom-scroll::-webkit-scrollbar-thumb {
-  background-color: #bde0ef;
-  border-radius: 20px;
+.native-select:hover {
+  border-color: #03335c;
 }
 .modal-backdrop {
   backdrop-filter: blur(8px);
