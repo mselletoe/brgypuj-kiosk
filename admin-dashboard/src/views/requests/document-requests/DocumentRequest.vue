@@ -1,4 +1,11 @@
 <script setup>
+/**
+ * @file views/requests/document-requests/DocumentRequests.vue
+ * @description Parent layout for Document Requests. 
+ * Manages search, global filters (date, type, payment), and tab navigation.
+ * Orchestrates bulk actions (Undo/Delete) by calling methods exposed by sub-tabs.
+ */
+
 import { ref, computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {
@@ -28,67 +35,12 @@ const route = useRoute();
 const router = useRouter();
 const searchQuery = ref("");
 useSearchSync(searchQuery);
+
 const tabRef = ref(null);
-const showFilterPopover = ref(false);
 
-const documentTypeOptions = ref([]);
-
-onMounted(async () => {
-  try {
-    const { data } = await getDocumentTypes();
-
-    documentTypeOptions.value = [
-      { label: "All Document Types", value: null },
-      { label: "I.D Application", value: "id_application" },
-      ...data.map((type) => ({
-        label: type.doctype_name,
-        value: type.id,
-      })),
-    ];
-  } catch (error) {
-    console.error("Failed to load document types", error);
-  }
-});
-
-// Filter state
-const filterState = ref({
-  requestedDate: null,
-  documentType: null,
-  paymentStatus: null,
-});
-
-const paymentStatusOptions = [
-  { label: "All Status", value: null },
-  { label: "Paid", value: "paid" },
-  { label: "Unpaid", value: "unpaid" },
-];
-
-const isPendingTab = computed(() => activeTab.value === "pending");
-
-const triggerUndo = () => {
-  if (isPendingTab.value) return;
-  tabRef.value?.bulkUndo();
-};
-
-const selectionState = computed(() => {
-  const count = tabRef.value?.selectedCount || 0;
-  const total = tabRef.value?.totalCount || 0;
-
-  if (count === 0) return "none";
-  if (count > 0 && count < total) return "partial";
-  return "all";
-});
-
-const handleMainSelectToggle = () => {
-  if (selectionState.value === "all" || selectionState.value === "partial") {
-    tabRef.value?.deselectAll();
-  } else {
-    tabRef.value?.selectAll();
-  }
-};
-
-const triggerDelete = () => tabRef.value?.bulkDelete();
-
+// =============================================================================
+// TAB ROUTING
+// =============================================================================
 const tabMap = {
   pending: PendingTab,
   approved: ApprovedTab,
@@ -107,6 +59,26 @@ const currentTabComponent = computed(() => {
   return tabMap[activeTab.value] || PendingTab;
 });
 
+const isPendingTab = computed(() => activeTab.value === "pending");
+
+// =============================================================================
+// FILTER STATE
+// =============================================================================
+const showFilterPopover = ref(false);
+const documentTypeOptions = ref([]);
+
+const filterState = ref({
+  requestedDate: null,
+  documentType: null,
+  paymentStatus: null,
+});
+
+const paymentStatusOptions = [
+  { label: "All Status", value: null },
+  { label: "Paid", value: "paid" },
+  { label: "Unpaid", value: "unpaid" },
+];
+
 const handleFilterClear = () => {
   filterState.value = {
     requestedDate: null,
@@ -121,6 +93,56 @@ const hasActiveFilters = computed(() => {
     filterState.value.documentType ||
     filterState.value.paymentStatus
   );
+});
+
+// =============================================================================
+// SELECTION STATE
+// =============================================================================
+const selectionState = computed(() => {
+  const count = tabRef.value?.selectedCount || 0;
+  const total = tabRef.value?.totalCount || 0;
+
+  if (count === 0) return "none";
+  if (count > 0 && count < total) return "partial";
+  return "all";
+});
+
+const handleMainSelectToggle = () => {
+  if (selectionState.value === "all" || selectionState.value === "partial") {
+    tabRef.value?.deselectAll();
+  } else {
+    tabRef.value?.selectAll();
+  }
+};
+
+// =============================================================================
+// ACTIONS
+// =============================================================================
+const triggerUndo = () => {
+  if (isPendingTab.value) return;
+  tabRef.value?.bulkUndo();
+};
+
+const triggerDelete = () => tabRef.value?.bulkDelete();
+
+// =============================================================================
+// LIFECYCLE
+// =============================================================================
+onMounted(async () => {
+  try {
+    const { data } = await getDocumentTypes();
+
+    documentTypeOptions.value = [
+      { label: "All Document Types", value: null },
+      { label: "I.D Application", value: "id_application" },
+      ...data.map((type) => ({
+        label: type.doctype_name,
+        value: type.id,
+      })),
+    ];
+  } catch (error) {
+    console.error("Failed to load document types", error);
+  }
 });
 </script>
 

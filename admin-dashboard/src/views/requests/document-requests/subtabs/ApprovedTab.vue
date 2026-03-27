@@ -1,4 +1,12 @@
 <script setup>
+/**
+ * @file views/requests/document-requests/subtabs/ApprovedTab.vue
+ * @description Manages document and RFID requests that have been approved.
+ * Supports PDF viewing, SMS notifications for pickup, document release,
+ * and undoing approval (moving back to pending).
+ * Exposes selection state and bulk actions to the parent DocumentRequests view.
+ */
+
 import { ref, computed, onMounted } from "vue";
 import RequestCard from "@/views/requests/document-requests/DocumentRequestCard.vue";
 import ConfirmModal from "@/components/shared/ConfirmationModal.vue";
@@ -29,18 +37,94 @@ const props = defineProps({
   },
 });
 
+// =============================================================================
+// STATE
+// =============================================================================
 const approvedRequests = ref([]);
 const isLoading = ref(true);
 const errorMessage = ref(null);
 const selectedRequests = ref(new Set());
+
+// =============================================================================
+// CONFIRM MODAL
+// =============================================================================
 const showConfirmModal = ref(false);
 const confirmTitle = ref("Are you sure?");
 const confirmAction = ref(null);
+
+const openConfirmModal = (title, action) => {
+  confirmTitle.value = title;
+  confirmAction.value = action;
+  showConfirmModal.value = true;
+};
+
+const handleConfirm = async () => {
+  if (confirmAction.value) {
+    await confirmAction.value();
+  }
+  showConfirmModal.value = false;
+  confirmAction.value = null;
+};
+
+const handleCancel = () => {
+  showConfirmModal.value = false;
+  confirmAction.value = null;
+};
+
+// =============================================================================
+// SMS MODAL
+// =============================================================================
 const showSmsModal = ref(false);
 const smsRecipientName = ref("");
 const smsRecipientPhone = ref("");
 const smsDefaultMessage = ref("");
 
+const handleNotify = (request) => {
+  const fullName = [
+    request.requester.firstName,
+    request.requester.middleName,
+    request.requester.lastName,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  smsRecipientName.value = fullName || "Resident";
+  smsRecipientPhone.value = request.raw?.resident_phone || "";
+  smsDefaultMessage.value = `Hello ${request.requester.firstName || "Resident"},
+
+Your ${request.requestType} request (Transaction #${request.transaction_no}) has been approved and is ready for pickup.
+
+Please visit the office during business hours to claim your document.
+
+Thank you!`;
+
+  showSmsModal.value = true;
+};
+
+const handleSendSMS = async (smsData) => {
+  try {
+    console.log("Sending SMS:", smsData);
+
+    // TODO: Implement actual SMS sending API call
+    // Example:
+    // await sendSMS({
+    //   phone: smsData.phone,
+    //   message: smsData.message,
+    //   recipientName: smsData.recipientName
+    // })
+
+    // For now, just log the data
+    console.log("SMS would be sent to:", smsData.phone);
+    console.log("Message:", smsData.message);
+  } catch (error) {
+    console.error("Error sending SMS:", error);
+    throw error; // Re-throw to let the modal handle the error display
+  }
+};
+
+// =============================================================================
+// DATA FETCHING
+// =============================================================================
 const fetchApprovedRequests = async () => {
   isLoading.value = true;
   errorMessage.value = null;
@@ -93,25 +177,9 @@ const fetchApprovedRequests = async () => {
   }
 };
 
-const openConfirmModal = (title, action) => {
-  confirmTitle.value = title;
-  confirmAction.value = action;
-  showConfirmModal.value = true;
-};
-
-const handleConfirm = async () => {
-  if (confirmAction.value) {
-    await confirmAction.value();
-  }
-  showConfirmModal.value = false;
-  confirmAction.value = null;
-};
-
-const handleCancel = () => {
-  showConfirmModal.value = false;
-  confirmAction.value = null;
-};
-
+// =============================================================================
+// SELECTION
+// =============================================================================
 const selectAll = () => {
   selectedRequests.value = new Set(filteredRequests.value.map((r) => r.id));
 };
@@ -120,56 +188,17 @@ const deselectAll = () => {
   selectedRequests.value.clear();
 };
 
-const bulkUndo = () => {
-  if (selectedRequests.value.size === 0) return;
-
-  openConfirmModal(
-    `Move ${selectedRequests.value.size} selected requests back to pending?`,
-    async () => {
-      try {
-        await bulkUndoRequests(Array.from(selectedRequests.value));
-
-        approvedRequests.value = approvedRequests.value.filter(
-          (req) => !selectedRequests.value.has(req.id),
-        );
-        selectedRequests.value.clear();
-      } catch (error) {
-        console.error("Error during bulk undo:", error);
-        alert("Failed to undo some requests. Please try again.");
-      }
-    },
-  );
+const handleSelectionUpdate = (requestId, isSelected) => {
+  if (isSelected) {
+    selectedRequests.value.add(requestId);
+  } else {
+    selectedRequests.value.delete(requestId);
+  }
 };
 
-const bulkDelete = () => {
-  if (selectedRequests.value.size === 0) return;
-
-  openConfirmModal(
-    `Delete ${selectedRequests.value.size} selected requests?`,
-    async () => {
-      try {
-        await bulkDeleteRequests(Array.from(selectedRequests.value));
-        approvedRequests.value = approvedRequests.value.filter(
-          (req) => !selectedRequests.value.has(req.id),
-        );
-        selectedRequests.value.clear();
-      } catch (error) {
-        console.error("Error during bulk delete:", error);
-        alert("Failed to delete selected requests. Please try again.");
-      }
-    },
-  );
-};
-
-defineExpose({
-  selectedCount: computed(() => selectedRequests.value.size),
-  totalCount: computed(() => filteredRequests.value.length),
-  selectAll,
-  deselectAll,
-  bulkUndo,
-  bulkDelete,
-});
-
+// =============================================================================
+// ACTIONS
+// =============================================================================
 const handleButtonClick = async ({ action, requestId }) => {
   const request = approvedRequests.value.find((r) => r.id === requestId);
   if (!request) return;
@@ -178,9 +207,6 @@ const handleButtonClick = async ({ action, requestId }) => {
     switch (action) {
       case "view":
         viewRequestPdf(requestId);
-        break;
-      case "notes":
-        console.log(`Opening notes for request ${requestId}`);
         break;
       case "notify":
         handleNotify(request);
@@ -203,49 +229,6 @@ const handleButtonClick = async ({ action, requestId }) => {
   } catch (error) {
     console.error(`Error handling ${action}:`, error);
     alert(`Failed to ${action} request. Please try again.`);
-  }
-};
-
-const handleNotify = (request) => {
-  const fullName = [
-    request.requester.firstName,
-    request.requester.middleName,
-    request.requester.lastName,
-  ]
-    .filter(Boolean)
-    .join(" ");
-
-  smsRecipientName.value = fullName || "Resident";
-  smsRecipientPhone.value = request.raw?.resident_phone || "";
-  smsDefaultMessage.value = `Hello ${request.requester.firstName || "Resident"},
-
-Your ${request.requestType} request (Transaction #${request.transaction_no}) has been approved and is ready for pickup.
-
-Please visit the office during business hours to claim your document.
-
-Thank you!`;
-
-  showSmsModal.value = true;
-};
-
-const handleSendSMS = async (smsData) => {
-  try {
-    console.log("Sending SMS:", smsData);
-
-    // TODO: Implement actual SMS sending API call
-    // Example:
-    // await sendSMS({
-    //   phone: smsData.phone,
-    //   message: smsData.message,
-    //   recipientName: smsData.recipientName
-    // })
-
-    // For now, just log the data
-    console.log("SMS would be sent to:", smsData.phone);
-    console.log("Message:", smsData.message);
-  } catch (error) {
-    console.error("Error sending SMS:", error);
-    throw error; // Re-throw to let the modal handle the error display
   }
 };
 
@@ -300,16 +283,62 @@ const handleUndo = (id) => {
   });
 };
 
-const handleSelectionUpdate = (requestId, isSelected) => {
-  if (isSelected) {
-    selectedRequests.value.add(requestId);
-  } else {
-    selectedRequests.value.delete(requestId);
-  }
+const bulkUndo = () => {
+  if (selectedRequests.value.size === 0) return;
+
+  openConfirmModal(
+    `Move ${selectedRequests.value.size} selected requests back to pending?`,
+    async () => {
+      try {
+        await bulkUndoRequests(Array.from(selectedRequests.value));
+
+        approvedRequests.value = approvedRequests.value.filter(
+          (req) => !selectedRequests.value.has(req.id),
+        );
+        selectedRequests.value.clear();
+      } catch (error) {
+        console.error("Error during bulk undo:", error);
+        alert("Failed to undo some requests. Please try again.");
+      }
+    },
+  );
 };
 
-onMounted(fetchApprovedRequests);
+const bulkDelete = () => {
+  if (selectedRequests.value.size === 0) return;
 
+  openConfirmModal(
+    `Delete ${selectedRequests.value.size} selected requests?`,
+    async () => {
+      try {
+        await bulkDeleteRequests(Array.from(selectedRequests.value));
+        approvedRequests.value = approvedRequests.value.filter(
+          (req) => !selectedRequests.value.has(req.id),
+        );
+        selectedRequests.value.clear();
+      } catch (error) {
+        console.error("Error during bulk delete:", error);
+        alert("Failed to delete selected requests. Please try again.");
+      }
+    },
+  );
+};
+
+// =============================================================================
+// EXPOSED API (for parent DocumentRequests toolbar)
+// =============================================================================
+defineExpose({
+  selectedCount: computed(() => selectedRequests.value.size),
+  totalCount: computed(() => filteredRequests.value.length),
+  selectAll,
+  deselectAll,
+  bulkUndo,
+  bulkDelete,
+});
+
+// =============================================================================
+// FILTERING
+// =============================================================================
 const filteredRequests = computed(() => {
   let result = approvedRequests.value;
 
@@ -347,20 +376,28 @@ const filteredRequests = computed(() => {
 
   return result;
 });
+
+// =============================================================================
+// LIFECYCLE
+// =============================================================================
+onMounted(fetchApprovedRequests);
 </script>
 
 <template>
   <div class="space-y-4 h-full">
     
+    <!-- Loading state -->
     <div v-if="isLoading" class="flex flex-col items-center justify-center w-full h-full min-h-[300px] gap-4">
       <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
       <p class="text-gray-500 font-medium">Loading approved requests...</p>
     </div>
 
+    <!-- Error state -->
     <div v-else-if="errorMessage" class="text-center p-10 text-red-500">
       <p>{{ errorMessage }}</p>
     </div>
 
+    <!-- Empty state -->
     <div
       v-else-if="filteredRequests.length === 0"
       class="text-center p-10 text-gray-500"
