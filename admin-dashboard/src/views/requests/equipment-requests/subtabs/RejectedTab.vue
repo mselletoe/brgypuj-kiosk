@@ -27,18 +27,93 @@ const props = defineProps({
   }
 })
 
+// =============================================================================
+// STATE
+// =============================================================================
 const rejectedRequests = ref([])
 const isLoading = ref(true)
 const errorMessage = ref(null)
 const selectedRequests = ref(new Set())
+
+// =============================================================================
+// CONFIRM MODAL
+// =============================================================================
 const showConfirmModal = ref(false)
 const confirmTitle = ref('Are you sure?')
 const confirmAction = ref(null)
+
+const openConfirmModal = (title, action) => {
+  confirmTitle.value = title
+  confirmAction.value = action
+  showConfirmModal.value = true
+}
+
+const handleConfirm = async () => {
+  if (confirmAction.value) {
+    await confirmAction.value()
+  }
+  showConfirmModal.value = false
+  confirmAction.value = null
+}
+
+const handleCancel = () => {
+  showConfirmModal.value = false
+  confirmAction.value = null
+}
+
+// =============================================================================
+// SMS MODAL
+// =============================================================================
 const showSmsModal = ref(false)
 const smsRecipientName = ref('')
 const smsRecipientPhone = ref('')
 const smsDefaultMessage = ref('')
 
+const handleNotify = (request) => {
+  const fullName = [
+    request.requester.firstName,
+    request.requester.middleName,
+    request.requester.lastName
+  ].filter(Boolean).join(' ')
+
+  smsRecipientName.value = fullName || 'Resident'
+  smsRecipientPhone.value = request.raw?.resident_phone || ''
+  smsDefaultMessage.value = `Hello ${request.requester.firstName || 'Resident'},
+
+Regarding your ${request.requestType} request (Transaction #${request.transaction_no}): Unfortunately, your request has been rejected.
+
+You can address the issue above by going to the barangay office for further clarification.
+
+Thank you!`
+
+  showSmsModal.value = true
+}
+
+const handleSendSMS = async (smsData) => {
+  try {
+    console.log('Sending SMS:', smsData)
+    
+    // TODO: Implement actual SMS sending API call
+    // Example:
+    // await sendSMS({
+    //   phone: smsData.phone,
+    //   message: smsData.message,
+    //   recipientName: smsData.recipientName
+    // })
+    
+    // For now, just log the data
+    console.log('SMS would be sent to:', smsData.phone)
+    console.log('Message:', smsData.message)
+    
+  } catch (error) {
+    console.error('Error sending SMS:', error)
+    throw error // Re-throw to let the modal handle the error display
+  }
+}
+
+// =============================================================================
+// DATA FETCHING
+// =============================================================================
 const fetchRejectedRequests = async () => {
   isLoading.value = true
   errorMessage.value = null
@@ -99,31 +174,75 @@ const fetchRejectedRequests = async () => {
   }
 }
 
-const openConfirmModal = (title, action) => {
-  confirmTitle.value = title
-  confirmAction.value = action
-  showConfirmModal.value = true
-}
-
-const handleConfirm = async () => {
-  if (confirmAction.value) {
-    await confirmAction.value()
-  }
-  showConfirmModal.value = false
-  confirmAction.value = null
-}
-
-const handleCancel = () => {
-  showConfirmModal.value = false
-  confirmAction.value = null
-}
-
+// =============================================================================
+// SELECTION
+// =============================================================================
 const selectAll = () => {
   selectedRequests.value = new Set(filteredRequests.value.map(r => r.id))
 }
 
 const deselectAll = () => {
   selectedRequests.value.clear()
+}
+
+const handleSelectionUpdate = (requestId, isSelected) => {
+  if (isSelected) {
+    selectedRequests.value.add(requestId)
+  } else {
+    selectedRequests.value.delete(requestId)
+  }
+}
+
+// =============================================================================
+// ACTIONS
+// =============================================================================
+const handleButtonClick = ({ action, requestId }) => {
+  const request = rejectedRequests.value.find(r => r.id === requestId)
+  if (!request) return
+
+  switch (action) {
+    case 'notify':
+      handleNotify(request)
+      break
+    case 'undo':
+      handleUndo(requestId)
+      break
+    case 'delete':
+      handleDelete(requestId)
+      break
+    default:
+      console.log(`Action ${action} not implemented yet`)
+  }
+}
+
+const handleUndo = async (id) => {
+  openConfirmModal(
+    'Move this request back to pending for review?',
+    async () => {
+      try {
+        await undoRequest(id)
+        rejectedRequests.value = rejectedRequests.value.filter(req => req.id !== id)
+      } catch (error) {
+        console.error(error)
+        alert('Failed to undo request')
+      }
+    }
+  )
+}
+
+const handleDelete = (id) => {
+  openConfirmModal(
+    'Are you sure you want to delete this request?',
+    async () => {
+      try {
+        await deleteRequest(id)
+        rejectedRequests.value = rejectedRequests.value.filter(req => req.id !== id)
+      } catch (error) {
+        console.error(error)
+        alert('Failed to delete request')
+      }
+    }
+  )
 }
 
 const bulkUndo = () => {
@@ -166,6 +285,9 @@ const bulkDelete = () => {
   )
 }
 
+// =============================================================================
+// EXPOSED API (for parent EquipmentRequests toolbar)
+// =============================================================================
 defineExpose({
   selectedCount: computed(() => selectedRequests.value.size),
   totalCount: computed(() => filteredRequests.value.length),
@@ -175,113 +297,9 @@ defineExpose({
   bulkDelete
 })
 
-const handleButtonClick = ({ action, requestId }) => {
-  const request = rejectedRequests.value.find(r => r.id === requestId)
-  if (!request) return
-
-  switch (action) {
-    case 'details':
-      alert(`Viewing request ${requestId} (frontend only)`)
-      break
-    case 'notes':
-      console.log(`Opening notes for request ${requestId}`)
-        break
-    case 'notify':
-      handleNotify(request)
-      break
-    case 'undo':
-      handleUndo(requestId)
-      break
-    case 'delete':
-      handleDelete(requestId)
-      break
-    default:
-      console.log(`Action ${action} not implemented yet`)
-  }
-}
-
-const handleNotify = (request) => {
-  const fullName = [
-    request.requester.firstName,
-    request.requester.middleName,
-    request.requester.lastName
-  ].filter(Boolean).join(' ')
-
-  smsRecipientName.value = fullName || 'Resident'
-  smsRecipientPhone.value = request.raw?.resident_phone || ''
-  smsDefaultMessage.value = `Hello ${request.requester.firstName || 'Resident'},
-
-Regarding your ${request.requestType} request (Transaction #${request.transaction_no}): Unfortunately, your request has been rejected.
-
-You can address the issue above by going to the barangay office for further clarification.
-
-Thank you!`
-
-  showSmsModal.value = true
-}
-
-const handleSendSMS = async (smsData) => {
-  try {
-    console.log('Sending SMS:', smsData)
-    
-    // TODO: Implement actual SMS sending API call
-    // Example:
-    // await sendSMS({
-    //   phone: smsData.phone,
-    //   message: smsData.message,
-    //   recipientName: smsData.recipientName
-    // })
-    
-    // For now, just log the data
-    console.log('SMS would be sent to:', smsData.phone)
-    console.log('Message:', smsData.message)
-    
-  } catch (error) {
-    console.error('Error sending SMS:', error)
-    throw error // Re-throw to let the modal handle the error display
-  }
-}
-
-const handleUndo = async (id) => {
-  openConfirmModal(
-    'Move this request back to pending for review?',
-    async () => {
-      try {
-        await undoRequest(id)
-        rejectedRequests.value = rejectedRequests.value.filter(req => req.id !== id)
-      } catch (error) {
-        console.error(error)
-        alert('Failed to undo request')
-      }
-    }
-  )
-}
-
-const handleDelete = (id) => {
-  openConfirmModal(
-    'Are you sure you want to delete this request?',
-    async () => {
-      try {
-        await deleteRequest(id)
-        rejectedRequests.value = rejectedRequests.value.filter(req => req.id !== id)
-      } catch (error) {
-        console.error(error)
-        alert('Failed to delete request')
-      }
-    }
-  )
-}
-
-const handleSelectionUpdate = (requestId, isSelected) => {
-  if (isSelected) {
-    selectedRequests.value.add(requestId)
-  } else {
-    selectedRequests.value.delete(requestId)
-  }
-}
-
-onMounted(fetchRejectedRequests)
-
+// =============================================================================
+// FILTERING
+// =============================================================================
 const filteredRequests = computed(() => {
   let result = rejectedRequests.value
 
@@ -330,20 +348,28 @@ const filteredRequests = computed(() => {
 
   return result
 })
+
+// =============================================================================
+// LIFECYCLE
+// =============================================================================
+onMounted(fetchRejectedRequests)
 </script>
 
 <template>
   <div class="space-y-4 h-full">
 
+    <!-- Loading state -->
     <div v-if="isLoading" class="flex flex-col items-center justify-center w-full h-full min-h-[300px] gap-4">
       <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
       <p class="text-gray-500 font-medium">Loading rejected equipment requests...</p>
     </div>
 
+    <!-- Error state -->
     <div v-else-if="errorMessage" class="text-center p-10 text-red-500">
       <p>{{ errorMessage }}</p>
     </div>
 
+    <!-- Empty state -->
     <div 
       v-else-if="filteredRequests.length === 0" 
       class="text-center p-10 text-gray-500"
