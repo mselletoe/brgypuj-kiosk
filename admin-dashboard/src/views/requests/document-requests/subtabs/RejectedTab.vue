@@ -9,7 +9,8 @@ import {
   undoRequest,
   bulkDeleteRequests,
   bulkUndoRequests,
-  viewRequestPdf
+  viewRequestPdf,
+  notifyResident,
 } from '@/api/documentService'
 
 const props = defineProps({
@@ -68,47 +69,39 @@ const showSmsModal = ref(false)
 const smsRecipientName = ref('')
 const smsRecipientPhone = ref('')
 const smsDefaultMessage = ref('')
+const pendingNotifyRequest = ref(null)
 
 const handleNotify = (request) => {
   const fullName = [
     request.requester.firstName,
     request.requester.middleName,
-    request.requester.lastName
+    request.requester.lastName,
   ].filter(Boolean).join(' ')
-
+ 
   smsRecipientName.value = fullName || 'Resident'
   smsRecipientPhone.value = request.raw?.resident_phone || ''
   smsDefaultMessage.value = `Hello ${request.requester.firstName || 'Resident'},
-
+ 
 Regarding your ${request.requestType} request (Transaction #${request.transaction_no}): Unfortunately, your request has been rejected.
-
-You can address the issue above by going to the barangay office for further clarification.
-
+ 
+Please visit the barangay office for further clarification.
+ 
 Thank you.`
-
+ 
+  pendingNotifyRequest.value = request
   showSmsModal.value = true
 }
-
+ 
 const handleSendSMS = async (smsData) => {
-  try {
-    console.log('Sending SMS:', smsData)
-    
-    // TODO: Implement actual SMS sending API call
-    // Example:
-    // await sendSMS({
-    //   phone: smsData.phone,
-    //   message: smsData.message,
-    //   recipientName: smsData.recipientName
-    // })
-    
-    // For now, just log the data
-    console.log('SMS would be sent to:', smsData.phone)
-    console.log('Message:', smsData.message)
-    
-  } catch (error) {
-    console.error('Error sending SMS:', error)
-    throw error // Re-throw to let the modal handle the error display
-  }
+  const request = pendingNotifyRequest.value
+  if (!request) return
+ 
+  await notifyResident(
+    smsData.phone,
+    'rejected',
+    request.transaction_no,
+    request.requestType,
+  )
 }
 
 // =============================================================================
