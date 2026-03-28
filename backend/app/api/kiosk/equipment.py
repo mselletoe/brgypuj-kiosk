@@ -1,3 +1,12 @@
+"""
+app/api/kiosk/equipment.py
+
+Router for kiosk-facing equipment borrowing.
+Handles inventory listing, autofill data, request submission,
+and request history. Broadcasts new requests to connected
+admin clients via WebSocket on submission.
+"""
+
 from typing import List
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session

@@ -20,10 +20,8 @@ const props = defineProps({
 
 const emit = defineEmits(['save', 'cancel', 'delete', 'edit', 'toggle-select']);
 
-// Internal form state
 const form = ref({ ...props.equipment });
 
-// Sync form if the equipment prop updates externally
 watch(() => props.equipment, (newVal) => {
   form.value = { ...newVal };
 }, { deep: true });

@@ -1,10 +1,13 @@
 <script setup>
 /**
- * @file DocumentFormWrapper.vue
- * @description Orchestrates the document application lifecycle.
- * Manages dynamic form configuration fetching, resident data autofill for RFID users,
- * and handles the multi-step submission process including loading and success states.
+ * @file views/document-services/DocumentFormWrapper.vue
+ * @description Kiosk view for filling out and submitting a document request.
+ * Resolves the document type from the route slug, fetches the field config,
+ * auto-fills known fields for RFID users, and evaluates eligibility requirements
+ * before allowing submission. Displays requirements with live pass/fail status
+ * in a side panel.
  */
+
 import { ref, computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
@@ -20,46 +23,50 @@ import {
 } from "@/api/documentService";
 import { getResidentAutofillData } from "@/api/residentService";
 
-// --- Composition Utilities ---
 const auth = useAuthStore();
 const route = useRoute();
 const router = useRouter();
 const { t } = useI18n();
 
-// --- UI & Navigation State ---
-const currentStep = ref("form");
-const formData = ref({});
-const showSuccessModal = ref(false);
-const isFadingOut = ref(false);
-const showErrorModal = ref(false);
-const errorMessage = ref("");
-
-// --- Business Logic State ---
-const residentData = ref(null);
-const isLoadingResidentData = ref(false);
-const isSubmitting = ref(false);
-
-// --- Data Fetching State ---
+// =============================================================================
+// DOCUMENT TYPE STATE
+// =============================================================================
 const documents = ref({});
 const loadingDocuments = ref(true);
 const errorDocuments = ref(null);
-const transactionNo = ref("");
-const documentFormRef = ref(null);
+
+const docTypeSlug = computed(() =>
+  route.params.docType?.toLowerCase().replace(/\s+/g, "-"),
+);
+
+const config = computed(() => documents.value[docTypeSlug.value]);
+
+const displayTitle = computed(() => {
+  if (config.value?.title) return config.value.title;
+  if (!docTypeSlug.value) return "";
+  return docTypeSlug.value
+    .split("-")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+});
+
+// =============================================================================
+// RESIDENT / RFID STATE
+// =============================================================================
+const residentData = ref(null);
+const isLoadingResidentData = ref(false);
+
+const isRfidUser = computed(() => {
+  return auth.isAuthenticated && auth.residentId !== null;
+});
+
+// =============================================================================
+// ELIGIBILITY STATE
+// =============================================================================
 const eligibilityResult = ref(null);
 
-const submitFromWrapper = () => {
-  if (documentFormRef.value) {
-    documentFormRef.value.handleContinue();
-  }
-};
-
-/**
- * Normalizes a min_residency requirement label from its params.
- * Guards against legacy data that stored months as a decimal year (e.g. years: 0.6).
- */
 function formatResidencyLabel(params) {
   const raw = params?.years ?? 0;
-  // Legacy guard: if years is a float (e.g. 0.6), convert total to whole months
   const totalMonths = Number.isInteger(raw)
     ? raw * 12 + (params?.months ?? 0)
     : Math.round(raw * 12);
@@ -71,41 +78,73 @@ function formatResidencyLabel(params) {
   return `Minimum ${parts.join(" and ") || "0 months"} of residency`;
 }
 
-/**
- * Normalizes the URL parameter into a slug format for configuration lookup.
- */
-const docTypeSlug = computed(() =>
-  route.params.docType?.toLowerCase().replace(/\s+/g, "-"),
-);
+const mergedRequirements = computed(() => {
+  const reqs = config.value?.requirements || [];
 
-/**
- * Retrieves the specific configuration for the currently selected document.
- */
-const config = computed(() => documents.value[docTypeSlug.value]);
+  if (!eligibilityResult.value) {
+    return reqs.map((r) => ({
+      ...r,
+      label: r.id === "min_residency" ? formatResidencyLabel(r.params) : r.label,
+      passed: null,
+      message: null,
+    }));
+  }
 
-/**
- * Dynamically formats the title. Uses the loaded config title if available,
- * otherwise elegantly formats the URL slug (e.g. "barangay-permit" -> "Barangay Permit").
- */
-const displayTitle = computed(() => {
-  if (config.value?.title) return config.value.title;
-  if (!docTypeSlug.value) return "";
-  return docTypeSlug.value
-    .split("-")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
+  const checksMap = {};
+  for (const check of eligibilityResult.value.checks) {
+    checksMap[check.id] = check;
+  }
+
+  return reqs.map((r) => {
+    const live = checksMap[r.id];
+    const fixedLabel =
+      r.id === "min_residency" ? formatResidencyLabel(r.params) : r.label;
+
+    const fixedMessage =
+      r.id === "min_residency" && live?.message
+        ? `${fixedLabel} required. ${live.passed ? "Passed." : "Requirement not met."}`
+        : (live?.message ?? null);
+
+    return {
+      ...r,
+      label: fixedLabel,
+      passed: live?.passed ?? null,
+      message: fixedMessage,
+    };
+  });
 });
 
-/**
- * Checks if the current session belongs to a resident identified via RFID.
- */
-const isRfidUser = computed(() => {
-  return auth.isAuthenticated && auth.residentId !== null;
+const hasBlockingFailure = computed(() => {
+  return mergedRequirements.value.some(
+    (r) => r.type === "system_check" && r.passed === false,
+  );
 });
 
-/**
- * Fetches all document templates and maps them by slug for O(1) access.
- */
+// =============================================================================
+// FORM STATE
+// =============================================================================
+const currentStep = ref("form");
+const formData = ref({});
+const isSubmitting = ref(false);
+const documentFormRef = ref(null);
+
+const submitFromWrapper = () => {
+  if (documentFormRef.value) {
+    documentFormRef.value.handleContinue();
+  }
+};
+
+// =============================================================================
+// MODAL STATE
+// =============================================================================
+const showSuccessModal = ref(false);
+const showErrorModal = ref(false);
+const errorMessage = ref("");
+const transactionNo = ref("");
+
+// =============================================================================
+// DATA FETCHING
+// =============================================================================
 const fetchDocuments = async () => {
   loadingDocuments.value = true;
   errorDocuments.value = null;
@@ -131,10 +170,6 @@ const fetchDocuments = async () => {
   }
 };
 
-/**
- * Retrieves resident profile data to facilitate the 'Autofill' feature.
- * Occurs only for authenticated RFID users.
- */
 const fetchResidentData = async () => {
   if (!isRfidUser.value) {
     residentData.value = null;
@@ -147,17 +182,12 @@ const fetchResidentData = async () => {
     residentData.value = data.data;
   } catch (err) {
     console.error("Failed to fetch resident data for autofill:", err);
-    // Don't block the form - just proceed without autofill
     residentData.value = null;
   } finally {
     isLoadingResidentData.value = false;
   }
 };
 
-/**
- * Fetches eligibility check results for authenticated residents.
- * Only runs if the document type has system_check requirements.
- */
 const fetchEligibility = async () => {
   if (!isRfidUser.value || !config.value?.id) return;
 
@@ -177,65 +207,9 @@ const fetchEligibility = async () => {
   }
 };
 
-/**
- * Merges static requirements with live eligibility check results.
- * Document-type requirements show as informational.
- * System checks show their pass/fail status if available.
- *
- * For min_residency, both the label and message are recomputed from params
- * to guard against legacy data that stored months as a decimal year (e.g. 0.6 years).
- */
-const mergedRequirements = computed(() => {
-  const reqs = config.value?.requirements || [];
-
-  if (!eligibilityResult.value) {
-    return reqs.map((r) => ({
-      ...r,
-      label: r.id === "min_residency" ? formatResidencyLabel(r.params) : r.label,
-      passed: null,
-      message: null,
-    }));
-  }
-
-  const checksMap = {};
-  for (const check of eligibilityResult.value.checks) {
-    checksMap[check.id] = check;
-  }
-
-  return reqs.map((r) => {
-    const live = checksMap[r.id];
-    const fixedLabel =
-      r.id === "min_residency" ? formatResidencyLabel(r.params) : r.label;
-
-    // For min_residency, override the backend message with the clean label
-    // so legacy float values (e.g. "0.6 years") never reach the UI.
-    const fixedMessage =
-      r.id === "min_residency" && live?.message
-        ? `${fixedLabel} required. ${live.passed ? "Passed." : "Requirement not met."}`
-        : (live?.message ?? null);
-
-    return {
-      ...r,
-      label: fixedLabel,
-      passed: live?.passed ?? null,
-      message: fixedMessage,
-    };
-  });
-});
-
-/**
- * True if any system_check requirement has explicitly failed.
- * Used to visually warn the resident before they submit.
- */
-const hasBlockingFailure = computed(() => {
-  return mergedRequirements.value.some(
-    (r) => r.type === "system_check" && r.passed === false,
-  );
-});
-
-/**
- * Handles backwards navigation between preview/form steps or exits to the list.
- */
+// =============================================================================
+// ACTIONS
+// =============================================================================
 const goBack = () => {
   if (currentStep.value === "preview") {
     currentStep.value = "form";
@@ -248,21 +222,10 @@ const handleDone = () => {
   router.push("/home");
 };
 
-/**
- * Dismisses the error modal and keeps the resident on the current form
- * so they can correct their submission or try again without losing context.
- *
- * FIX: Previously called handleDone() which silently redirected to /home.
- */
 const handleErrorDismiss = () => {
   showErrorModal.value = false;
 };
 
-/**
- * Submits the finalized form data to the backend.
- * Captures the transaction number for the user's reference upon success.
- * FIXED: Properly handles async PDF generation without race conditions.
- */
 const handleSubmit = async (data) => {
   if (isSubmitting.value) return;
   isSubmitting.value = true;
@@ -273,40 +236,29 @@ const handleSubmit = async (data) => {
     return;
   }
 
-  // Resident ID - can be null for guest mode (RFID requests only)
   const residentId = auth.residentId || null;
 
   try {
-    // Construct payload for backend
     const payload = {
       doctype_id: config.value.id,
       form_data: data,
       resident_id: residentId,
     };
 
-    // Call backend (this may take time due to PDF generation)
     const response = await createDocumentRequest(payload);
 
-    // Store form data
     formData.value = data;
     transactionNo.value = response.transaction_no;
-
-    // IMPORTANT: Set isSubmitting to false BEFORE showing modal
-    // This ensures the loading overlay is removed first
     isSubmitting.value = false;
 
-    // Small delay to ensure loading overlay transition completes
     await new Promise((resolve) => setTimeout(resolve, 100));
 
-    // Show success modal
     showSuccessModal.value = true;
   } catch (err) {
     console.error("Document submission error:", err);
 
-    // Set isSubmitting to false before showing error
     isSubmitting.value = false;
 
-    // Show user-friendly error message
     errorMessage.value =
       err?.response?.data?.detail ||
       "Failed to submit document request. Please try again.";
@@ -315,21 +267,26 @@ const handleSubmit = async (data) => {
   }
 };
 
+const handleNewRequest = () => {
+  showSuccessModal.value = false;
+  formData.value = {};
+  router.push("/document-services");
+};
+
+// =============================================================================
+// LIFECYCLE
+// =============================================================================
 onMounted(async () => {
   await fetchDocuments();
   await fetchResidentData();
   await fetchEligibility();
 });
-
-const handleNewRequest = () => {
-  showSuccessModal.value = false;
-  formData.value = {};
-  router.push("/document-services"); // Brings them back to the selection screen
-};
 </script>
 
 <template>
   <div class="flex flex-col w-full h-full">
+
+    <!-- ─ HEADER ─────────────────────────────────────────────── -->
     <div class="flex items-center mb-6 gap-7 flex-shrink-0">
       <ArrowBackButton @click="goBack" />
       <div>
@@ -342,12 +299,13 @@ const handleNewRequest = () => {
       </div>
     </div>
 
+    <!-- ─ MAIN CONTENT ───────────────────────────────────────── -->
     <div class="flex-1 overflow-y-auto">
       <div class="grid grid-cols-5 gap-8 items-stretch mb-4">
+
+        <!-- ─ LEFT PANEL ─────────────────────────────────────────────── -->
         <div class="col-span-3">
-          <div
-            class="bg-white rounded-2xl shadow-lg border border-gray-200 p-8 min-h-[280px]"
-          >
+          <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-8 min-h-[280px]">
             <div
               v-if="loadingDocuments || isLoadingResidentData"
               class="flex flex-col justify-center items-center py-8"
@@ -379,10 +337,9 @@ const handleNewRequest = () => {
           </div>
         </div>
 
+        <!-- ─ RIGHT PANEL ────────────────────────────────────────────── -->
         <div class="col-span-2">
-          <div
-            class="bg-[#EBF5FF] rounded-2xl shadow-lg border border-[#B0D7F8] p-6 min-h-[280px]"
-          >
+          <div class="bg-[#EBF5FF] rounded-2xl shadow-lg border border-[#B0D7F8] p-6 min-h-[280px]">
             <h2 class="text-lg font-bold text-[#03335C] mb-2 tracking-tight">{{ t('requirements') }}</h2>
             <p class="text-sm italic text-[#03335C] mb-4 tracking-tight">
               {{ t('reviewRequirements') }}
@@ -519,6 +476,7 @@ const handleNewRequest = () => {
       </div>
     </div>
 
+    <!-- ─ FOOTER ─────────────────────────────────────────────── -->
     <div class="flex gap-6 mt-6 justify-between items-center flex-shrink-0">
       <Button
         @click="goBack"
@@ -545,6 +503,7 @@ const handleNewRequest = () => {
       </Button>
     </div>
 
+    <!-- ─ SUBMISSION LOADING ─────────────────────────────────────────────── -->
     <transition name="fade-blur">
       <div
         v-if="isSubmitting"
@@ -566,6 +525,7 @@ const handleNewRequest = () => {
       </div>
     </transition>
 
+    <!-- ─ SUCCESS MODAL ─────────────────────────────────────────────── -->
     <transition name="fade-blur">
       <div
         v-if="showSuccessModal"
@@ -587,11 +547,7 @@ const handleNewRequest = () => {
       </div>
     </transition>
 
-    <!-- Error Modal -->
-    <!-- FIX: @primary-click now calls handleErrorDismiss instead of handleDone.
-         This keeps the resident on the form so they can read the error and
-         retry or navigate away intentionally, rather than being silently
-         redirected to /home on any submission failure. -->
+    <!-- ─ ERROR MODAL ─────────────────────────────────────────────── -->
     <transition name="fade-blur">
       <div
         v-if="showErrorModal"
@@ -622,7 +578,6 @@ const handleNewRequest = () => {
   opacity: 0;
 }
 
-/* Loader Dots CSS */
 .loader-dots {
   display: flex;
   justify-content: space-around;

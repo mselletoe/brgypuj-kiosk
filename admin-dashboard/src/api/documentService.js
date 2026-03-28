@@ -139,3 +139,32 @@ export function checkResidentEligibility(residentId, doctypeId) {
 export function updateDocumentRequirements(id, requirements) {
   return api.put(`/admin/documents/types/${id}`, { requirements })
 }
+
+// =================================================================================
+// NOTIFY (SMS)
+// =================================================================================
+
+/**
+ * Send an SMS notification to a resident for a specific document request.
+ *
+ * @param {string} phoneNumber  - Resident phone number e.g. '+639123456789'
+ * @param {'approved'|'rejected'|'released'} status - Request status triggering the notification
+ * @param {string} transactionNo - e.g. 'TXN-0042'
+ * @param {string} documentType  - e.g. 'Barangay Clearance'
+ * @returns {Promise}
+ */
+export function notifyResident(phoneNumber, status, transactionNo, documentType) {
+  const messages = {
+    approved: `Your ${documentType} request (Transaction #${transactionNo}) has been approved and is ready for pickup. Please visit the barangay hall during office hours.`,
+    rejected: `We regret to inform you that your ${documentType} request (Transaction #${transactionNo}) has been rejected. Please visit the barangay hall for more information.`,
+    released: `Your ${documentType} (Transaction #${transactionNo}) has been released. Thank you for transacting with us.`,
+  }
+
+  const message = messages[status] ?? `Update on your request (Transaction #${transactionNo}): status is now ${status}.`
+
+  return api.post('/admin/sms/send', {
+    message,
+    recipient_mode: 'specific',
+    phone_numbers: [phoneNumber],
+  })
+}

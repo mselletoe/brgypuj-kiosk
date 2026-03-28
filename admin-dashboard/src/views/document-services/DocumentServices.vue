@@ -1,4 +1,12 @@
 <script setup>
+/**
+ * @file views/document-services/DocumentServices.vue
+ * @description Admin view for managing barangay document types and the ID application.
+ * Supports creating, editing, deleting, and bulk-deleting document types.
+ * Each type can have a template file, dynamic form fields, and eligibility requirements.
+ * The Barangay ID is managed separately in a collapsible panel.
+ */
+
 import { ref, onMounted, h, computed, watch } from "vue";
 import {
   NDataTable,
@@ -46,16 +54,15 @@ import { useSearchSync } from "@/composables/useSearchSync";
 
 const message = useMessage();
 
+// =============================================================================
+// DOCUMENT TYPES — STATE
+// =============================================================================
 const services = ref([]);
 const isLoading = ref(true);
 const editingId = ref(null);
 const showAddForm = ref(false);
 const searchQuery = ref("");
 useSearchSync(searchQuery);
-const showDeleteModal = ref(false);
-const deleteTargetId = ref(null);
-const selectedIds = ref([]);
-const isBulkDelete = ref(false);
 
 const newService = ref({
   request_type_name: "",
@@ -65,25 +72,74 @@ const newService = ref({
   fields: [],
 });
 
+// =============================================================================
+// SELECTION & DELETE STATE
+// =============================================================================
+const showDeleteModal = ref(false);
+const deleteTargetId = ref(null);
+const selectedIds = ref([]);
+const isBulkDelete = ref(false);
+
+// =============================================================================
+// ID APPLICATION — STATE
+// =============================================================================
 const idPanelOpen = ref(false);
 const idDocType = ref(null);
 const idLocalPrice = ref(0);
 const idSaving = ref(false);
 const idUploading = ref(false);
 const idHasTemplate = computed(() => !!idDocType.value?.has_template);
-
 const showIdFieldModal = ref(false);
 const showIdReqModal = ref(false);
-
 const showIdPreviewModal = ref(false);
+
 const idPreviewUrl = computed(() =>
   idDocType.value?.id ? getIDTemplatePreviewUrl() : null
 );
 
+// =============================================================================
+// FIELD & REQUIREMENTS MODAL STATE
+// =============================================================================
+const editingFields = ref(null);
+const showFieldModal = ref(false);
+const showReqModal = ref(false);
+const editingReqService = ref(null);
+
+// =============================================================================
+// COMPUTED — SELECTION
+// =============================================================================
+const totalCount = computed(() => filteredServices.value.length);
+const selectedCount = computed(() => selectedIds.value.length);
+
+const selectionState = computed(() => {
+  if (totalCount.value === 0 || selectedCount.value === 0) return "none";
+  if (selectedCount.value < totalCount.value) return "partial";
+  return "all";
+});
+
+// =============================================================================
+// FILTER SERVICES BY SEARCH QUERY
+// =============================================================================
+const filteredServices = computed(() => {
+  const filtered = services.value.filter((s) =>
+    !searchQuery.value || s.request_type_name.toLowerCase().includes(searchQuery.value.toLowerCase())
+  );
+  if (editingId.value && !filtered.find((s) => s.id === editingId.value)) editingId.value = null;
+  return filtered;
+});
+
+// Clear selection when search query changes
+watch(searchQuery, () => { selectedIds.value = []; });
+
+// =============================================================================
+// FETCH DOCUMENT SERVICES
+// =============================================================================
 async function fetchServices() {
   isLoading.value = true;
   try {
     const { data } = await getDocumentTypes();
+
+    // Isolate the ID application type into its own managed state
     const idType = data.find((d) => !!d.is_id_application);
     if (idType) {
       idDocType.value = {
@@ -99,6 +155,8 @@ async function fetchServices() {
       };
       idLocalPrice.value = Number(idType.price) ?? 0;
     }
+
+    // All remaining types populate the main data table
     services.value = data
       .filter((d) => !d.is_id_application)
       .map((d) => ({
@@ -120,6 +178,9 @@ async function fetchServices() {
   }
 }
 
+// =============================================================================
+// ID APPLICATION — ACTIONS
+// =============================================================================
 async function ensureIDDocType() {
   if (idDocType.value) return idDocType.value;
   const { data } = await createDocumentType({
@@ -151,8 +212,6 @@ async function handleIDFileUpload({ file }) {
   try {
     const docType = await ensureIDDocType();
     await uploadDocumentTemplate(docType.id, raw);
-    // Update idDocType directly — GET /admin/documents/types may exclude
-    // is_id_application types so fetchServices() cannot be relied upon here.
     idDocType.value = { ...idDocType.value, has_template: true };
     message.success("Template uploaded successfully.");
   } catch (err) {
@@ -236,6 +295,9 @@ async function saveIdRequirements(updatedRequirements, serviceId) {
   }
 }
 
+// =============================================================================
+// DOCUMENT TYPES — ADD AND UPDATE
+// =============================================================================
 async function addService() {
   if (!newService.value.request_type_name.trim()) return message.warning("Please enter a service name.");
   try {
@@ -307,8 +369,20 @@ async function toggleAvailability(service) {
   }
 }
 
-function requestDelete(id) { deleteTargetId.value = id; isBulkDelete.value = false; showDeleteModal.value = true; }
-function bulkDelete() { if (!selectedIds.value.length) return; isBulkDelete.value = true; showDeleteModal.value = true; }
+// =============================================================================
+// DOCUMENT TYPES — DELETE
+// =============================================================================
+function requestDelete(id) {
+  deleteTargetId.value = id
+  isBulkDelete.value   = false
+  showDeleteModal.value = true
+}
+
+function bulkDelete() {
+  if (!selectedIds.value.length) return
+  isBulkDelete.value   = true
+  showDeleteModal.value = true
+}
 
 async function confirmDelete() {
   try {
@@ -330,21 +404,22 @@ async function confirmDelete() {
   }
 }
 
-function cancelDelete() { showDeleteModal.value = false; deleteTargetId.value = null; }
+function cancelDelete() {
+  showDeleteModal.value = false
+  deleteTargetId.value  = null
+}
 
-const totalCount = computed(() => filteredServices.value.length);
-const selectedCount = computed(() => selectedIds.value.length);
-const selectionState = computed(() => {
-  if (totalCount.value === 0 || selectedCount.value === 0) return "none";
-  if (selectedCount.value < totalCount.value) return "partial";
-  return "all";
-});
-
+// =============================================================================
+// SELECTION HANDLERS
+// =============================================================================
 function handleMainSelectToggle() {
   if (selectionState.value === "all" || selectionState.value === "partial") selectedIds.value = [];
   else selectedIds.value = filteredServices.value.map((s) => s.id);
 }
 
+// =============================================================================
+// TEMPLATE UPLOAD / DOWNLOAD
+// =============================================================================
 async function handleUploadTemplate(service) {
   const input = document.createElement("input");
   input.type = "file";
@@ -371,9 +446,9 @@ async function handleDownload(service) {
   } catch { message.error("Failed to download template."); }
 }
 
-const editingFields = ref(null);
-const showFieldModal = ref(false);
-
+// =============================================================================
+// FIELDS & REQUIREMENTS MODALS
+// =============================================================================
 function editFields(service) {
   editingFields.value = { fields: JSON.parse(JSON.stringify(service.fields || [])), serviceId: service.id };
   showFieldModal.value = true;
@@ -396,10 +471,10 @@ async function saveFields(updatedFields, serviceId) {
   finally { showFieldModal.value = false; }
 }
 
-const showReqModal = ref(false);
-const editingReqService = ref(null);
-
-function editRequirements(service) { editingReqService.value = service; showReqModal.value = true; }
+function editRequirements(service) {
+  editingReqService.value = service
+  showReqModal.value      = true
+}
 
 async function saveRequirements(updatedRequirements, serviceId) {
   if (updatedRequirements === null) { message.warning("Please fill in all requirement fields before saving."); return; }
@@ -413,16 +488,9 @@ async function saveRequirements(updatedRequirements, serviceId) {
   } catch { message.error("Failed to update requirements."); }
 }
 
-const filteredServices = computed(() => {
-  const filtered = services.value.filter((s) =>
-    !searchQuery.value || s.request_type_name.toLowerCase().includes(searchQuery.value.toLowerCase())
-  );
-  if (editingId.value && !filtered.find((s) => s.id === editingId.value)) editingId.value = null;
-  return filtered;
-});
-
-watch(searchQuery, () => { selectedIds.value = []; });
-
+// =============================================================================
+// TABLE COLUMNS
+// =============================================================================
 function iconBtn({ onClick, icon, colorClass, tooltip }) {
   return h("div", { class: "relative group/tip inline-flex" }, [
     h("button", { onClick, class: `p-1.5 ${colorClass} rounded transition` }, [h(icon, { class: "w-5 h-5" })]),
@@ -494,22 +562,32 @@ const columns = computed(() => [
   },
 ]);
 
+// =============================================================================
+// LIFECYCLE
+// =============================================================================
 onMounted(fetchServices);
 </script>
 
 <template>
   <div class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden animate-fade-in">
 
+    <!-- ─ HEADER ─────────────────────────────────────────────── -->
     <div class="flex mb-6 items-center justify-between">
+
+      <!-- Page Title -->
       <div>
         <PageTitle title="Document Services Management" />
         <p class="text-sm text-gray-500 mt-1">
           Create, edit, and configure official barangay document templates and pricing.
         </p>
       </div>
+
       <div class="flex items-center gap-3">
+        <!-- Search -->
         <input v-model="searchQuery" type="text" placeholder="Search"
           class="border border-gray-200 text-gray-700 rounded-md py-2 px-3 w-[250px] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-gray-400" />
+        
+        <!-- Delete -->
         <div class="relative group inline-block">
           <button @click="bulkDelete" :disabled="selectionState === 'none'"
             class="p-2 border border-red-400 rounded-lg transition-colors"
@@ -518,6 +596,8 @@ onMounted(fetchServices);
           </button>
           <div class="absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded whitespace-nowrap shadow-md z-50">Delete</div>
         </div>
+
+        <!-- Select -->
         <div class="relative group inline-block">
           <div class="flex items-center border rounded-lg overflow-hidden transition-colors"
             :class="selectionState !== 'none' ? 'border-blue-600' : 'border-gray-400'">
@@ -531,6 +611,8 @@ onMounted(fetchServices);
           </div>
           <div class="absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded whitespace-nowrap shadow-md z-50">Select All</div>
         </div>
+
+        <!-- Add -->
         <button @click="showAddForm = true"
           class="px-4 py-2 bg-blue-600 text-white rounded-md font-medium text-sm hover:bg-blue-700 transition flex items-center gap-2">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -541,6 +623,7 @@ onMounted(fetchServices);
       </div>
     </div>
 
+    <!-- ─ LOADING ─────────────────────────────────────────────── -->
     <div v-if="isLoading" class="flex-1 flex flex-col items-center justify-center gap-4">
       <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
       <p class="text-gray-500 font-medium">Loading document services...</p>
@@ -548,8 +631,10 @@ onMounted(fetchServices);
 
     <template v-else>
 
-      <!-- ID APPLICATION -->
+      <!-- ── BARANGAY ID APPLICATION PANEL ──────────────────────────────── -->
       <div class="mb-4 rounded-xl border border-indigo-200 bg-indigo-50/60 overflow-hidden">
+
+        <!-- Panel toggle header -->
         <button @click="idPanelOpen = !idPanelOpen"
           class="w-full flex items-center justify-between px-5 py-4 hover:bg-indigo-50 transition">
           <div class="flex items-center gap-3">
@@ -573,6 +658,7 @@ onMounted(fetchServices);
           </div>
         </button>
 
+        <!-- Panel body -->
         <div v-if="idPanelOpen" class="border-t border-indigo-200 bg-white">
           <div class="p-5 flex gap-6 items-stretch">
 
@@ -648,7 +734,7 @@ onMounted(fetchServices);
         </div>
       </div>
 
-      <!-- REGULAR DOCUMENT TYPES -->
+      <!-- ── REGULAR DOCUMENT TYPES ─────────────────────────────────────── -->
       <div v-if="showAddForm" class="bg-[#F0F5FF] p-6 mb-3 rounded-lg border border-[#0957FF] relative">
         <button @click="showAddForm = false" class="absolute top-4 right-4 p-1 hover:bg-gray-200 rounded">
           <XMarkIcon class="w-5 h-5 text-gray-600" />
@@ -676,10 +762,12 @@ onMounted(fetchServices);
         </div>
       </div>
 
+      <!-- ── DOCUMENT TYPES TABLE ─────────────────────────────────────── -->
       <div v-if="services.length > 0 || showAddForm" class="overflow-y-auto bg-white rounded-lg border border-gray-200 flex-1">
         <n-data-table :columns="columns" :data="filteredServices" :bordered="false" />
       </div>
 
+      <!-- Empty state -->
       <div v-else class="h-full flex flex-col items-center justify-center flex-1">
         <NEmpty description="No document services yet">
           <template #extra>
@@ -688,9 +776,7 @@ onMounted(fetchServices);
         </NEmpty>
       </div>
 
-      <!-- ============================== -->
-      <!-- Regular doc type modals        -->
-      <!-- ============================== -->
+      <!-- ── MODALS — REGULAR DOCUMENT TYPES ───────────────────────────── -->
       <FieldEditor
         :show="showFieldModal"
         :fields-data="editingFields?.fields"
@@ -698,6 +784,7 @@ onMounted(fetchServices);
         @saved="saveFields"
         :service-id="editingFields?.serviceId"
       />
+
       <RequirementsEditor
         :show="showReqModal"
         :requirements-data="editingReqService?.requirements"
@@ -706,9 +793,7 @@ onMounted(fetchServices);
         @saved="saveRequirements"
       />
 
-      <!-- ============================== -->
-      <!-- ID Application modals          -->
-      <!-- ============================== -->
+      <!-- ── MODALS — ID APPLICATION ────────────────────────────────────── -->
       <FieldEditor
         :show="showIdFieldModal"
         :fields-data="idDocType?.fields"
@@ -728,7 +813,14 @@ onMounted(fetchServices);
     </template>
   </div>
 
-  <ConfirmModal :show="showDeleteModal" :title="isBulkDelete ? `Delete ${selectedIds.length} service(s)?` : 'Delete this service?'" confirm-text="Delete" cancel-text="Cancel" @confirm="confirmDelete" @cancel="cancelDelete" />
+  <ConfirmModal
+    :show="showDeleteModal"
+    :title="isBulkDelete ? `Delete ${selectedIds.length} service(s)?` : 'Delete this service?'" 
+    confirm-text="Delete" 
+    cancel-text="Cancel" 
+    @confirm="confirmDelete" 
+    @cancel="cancelDelete" 
+  />
 
   <NModal :show="showIdPreviewModal" @update:show="showIdPreviewModal = false" :mask-closable="true">
     <div class="bg-white rounded-xl shadow-xl flex flex-col overflow-hidden" style="width: 860px; height: 90vh;">

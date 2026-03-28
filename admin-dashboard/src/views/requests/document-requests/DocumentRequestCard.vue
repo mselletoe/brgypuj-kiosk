@@ -1,14 +1,15 @@
 <script setup>
+/**
+ * @file views/requests/document-requests/DocumentRequestCard.vue
+ * @description A reusable card component for Document and RFID requests.
+ * Features dynamic action buttons based on status, integrated notes management 
+ * with auto-loading, payment status toggles, and selection support.
+ */
+
 import { ref, computed, onMounted, watch } from 'vue'
 import { NPopover, NInput, NButton, NSpin } from 'naive-ui'
 import { TrashIcon, ArrowUturnLeftIcon } from '@heroicons/vue/24/solid';
 import { getNotes, updateNotes } from '@/api/documentService'
-
-const notes = ref('')
-const showNotesPopover = ref(false)
-const isLoadingNotes = ref(false)
-const isSavingNotes = ref(false)
-const originalNotes = ref('')
 
 const props = defineProps({
   id: {
@@ -63,7 +64,22 @@ const props = defineProps({
   }
 });
 
-// Load notes when popover opens
+const emit = defineEmits([
+  'button-click', 
+  'update:isPaid', 
+  'update:selected', 
+  'notes-updated'
+]);
+
+// =============================================================================
+// NOTES POPOVER
+// =============================================================================
+const notes = ref('')
+const showNotesPopover = ref(false)
+const isLoadingNotes = ref(false)
+const isSavingNotes = ref(false)
+const originalNotes = ref('')
+
 watch(showNotesPopover, async (isOpen) => {
   if (isOpen) {
     await loadNotes()
@@ -110,8 +126,9 @@ const hasUnsavedChanges = computed(() => {
   return notes.value !== originalNotes.value
 })
 
-const emit = defineEmits(['button-click', 'update:isPaid', 'update:selected', 'notes-updated']);
-
+// =============================================================================
+// STYLING & BUTTON CONFIGURATION
+// =============================================================================
 const accentColorClass = computed(() => {
   return props.type === 'rfid' ? 'border-l-[#FF2B3A]' : 'border-l-[#0957FF]';
 });

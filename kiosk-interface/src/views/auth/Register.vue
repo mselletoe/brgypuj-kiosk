@@ -1,7 +1,9 @@
 <script setup>
 /**
- * @file Register.vue
- * @description Links a newly scanned RFID card to an approved ID Application resident.
+ * @file views/auth/Register.vue
+ * @description Kiosk RFID registration screen. Allows an admin to link a scanned
+ * RFID card to an approved ID application. Displays a selectable list of approved
+ * transactions and shows the resident's details before confirming the link.
  */
 
 import { ref, computed, onMounted } from 'vue'
@@ -15,9 +17,12 @@ import { getApprovedApplications, linkRfidToResident } from '@/api/registrationS
 
 const router = useRouter()
 const rfidRegStore = useRfidRegistrationStore()
-const { locale, t } = useI18n()
+const { t } = useI18n()
 
-// ---- State ----
+
+// =============================================================================
+// STATE
+// =============================================================================
 const applications = ref([])
 const selectedApp = ref(null)
 const isLoading = ref(true)
@@ -25,17 +30,21 @@ const isSubmitting = ref(false)
 const errorMessage = ref('')
 const showSuccessModal = ref(false)
 const showErrorModal = ref(false)
+
+/** Formatted expiration date of the newly linked RFID card */
 const linkedExpiration = ref('')
 
-// ---- Computed ----
+/** RFID UID scanned on the previous screen, passed via the registration store */
 const pendingUid = computed(() => rfidRegStore.pendingRfidUid)
 
+/** True when a transaction is selected, a UID is available, and no request is in flight */
 const canSubmit = computed(() =>
   selectedApp.value !== null && pendingUid.value && !isSubmitting.value
 )
 
-// ---- Helpers ----
-
+// =============================================================================
+// FORMATTERS
+// =============================================================================
 const formatBirthdate = (dateStr) => {
   if (!dateStr) return '—'
   const d = new Date(dateStr + 'T00:00:00')
@@ -49,8 +58,9 @@ const fullName = (app) => {
     .join(' ')
 }
 
-// ---- Handlers ----
-
+// =============================================================================
+// DATA LOADING
+// =============================================================================
 const loadApplications = async () => {
   isLoading.value = true
   errorMessage.value = ''
@@ -63,6 +73,9 @@ const loadApplications = async () => {
   }
 }
 
+// =============================================================================
+// ACTIONS
+// =============================================================================
 const handleSubmit = async () => {
   if (!canSubmit.value) return
 
@@ -73,7 +86,6 @@ const handleSubmit = async () => {
       resident_id: selectedApp.value.resident_id,
       document_request_id: selectedApp.value.document_request_id,
     })
-    // Format expiration date for display
     if (result?.data?.expiration_date) {
       const d = new Date(result.data.expiration_date + 'T00:00:00')
       linkedExpiration.value = d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
@@ -102,7 +114,9 @@ const handleCancel = () => {
   router.replace('/login')
 }
 
-// ---- Lifecycle ----
+// =============================================================================
+// LIFECYCLE
+// =============================================================================
 onMounted(() => {
   if (!rfidRegStore.pendingRfidUid) {
     router.replace('/login-rfid')

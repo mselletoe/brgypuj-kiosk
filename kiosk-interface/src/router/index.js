@@ -26,7 +26,7 @@ import TransactionHistory from "../views/transactions/TransactionHistory.vue";
 import IDServices from "../views/id-services/IDServices.vue";
 import ChangePasscode from "../views/id-services/ChangePasscode.vue";
 import ReportLost from "../views/id-services/ReportLost.vue";
-import ApplyID from "../views/id-services/ApplyID.vue";
+import ApplyID from "../views/id-services/applyid/ApplyID.vue";
 
 const routes = [
   { path: "/", redirect: "/idle" },

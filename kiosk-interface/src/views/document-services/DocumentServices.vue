@@ -1,12 +1,12 @@
 <script setup>
 /**
- * @file DocumentServices.vue
- * @description Kiosk Document Services Selection View.
- * This component serves as the primary gateway for residents to browse
- * available barangay documents. It fetches dynamic document types from
- * the backend and handles conditional routing between the service list
- * and specific application forms.
+ * @file views/document-services/DocumentServices.vue
+ * @description Kiosk document services listing view.
+ * Acts as a parent route that displays all available document types as
+ * selectable cards. When a document type is selected, the router renders
+ * the child route (DocumentFormWrapper) in place of the card grid.
  */
+
 import { useRoute, useRouter } from "vue-router";
 import { ref, onMounted } from "vue";
 import { useI18n } from "vue-i18n";
@@ -17,26 +17,17 @@ const route = useRoute();
 const router = useRouter();
 const { t } = useI18n();
 
-/**
- * Navigates back to the main Kiosk Home.
- */
-const goBack = () => router.push("/home");
-
-/**
- * Determines if the user is on the main selection page or a child form route.
- * @returns {boolean} True if no specific document type is selected.
- */
 const isParent = () => !route.params.docType;
 
-// --- Data Management ---
 const documents = ref([]);
 const loading = ref(false);
 const error = ref(null);
 
-/**
- * Fetches available document templates from the API.
- * Maps backend 'doctype_name' to the UI's 'request_type_name' for consistency.
- */
+const goBack = () => router.push("/home");
+
+// =============================================================================
+// DATA FETCHING
+// =============================================================================
 const fetchDocuments = async () => {
   loading.value = true;
   error.value = null;
@@ -55,12 +46,16 @@ const fetchDocuments = async () => {
   }
 };
 
-// Initialize data on component mount
+// =============================================================================
+// LIFECYCLE
+// =============================================================================
 onMounted(fetchDocuments);
 </script>
 
 <template>
   <div class="flex flex-col w-full h-full">
+
+    <!-- ─ HEADER ─────────────────────────────────────────────── -->
     <div v-if="isParent()" class="flex items-center mb-6 gap-7 flex-shrink-0">
       <ArrowBackButton @click="goBack" />
       <div>
@@ -73,6 +68,7 @@ onMounted(fetchDocuments);
       </div>
     </div>
 
+    <!-- ─ LOADING ─────────────────────────────────────────────── -->
     <div
       v-if="loading"
       class="flex flex-col justify-center items-center py-20 flex-1"
@@ -85,8 +81,10 @@ onMounted(fetchDocuments);
       <p class="text-[#03335C] text-lg font-semibold">{{ t('loadingServices') }}</p>
     </div>
 
+    <!-- ─ ERROR STATE ─────────────────────────────────────────────── -->
     <div v-if="error" class="text-center text-red-500 py-10">{{ error }}</div>
 
+    <!-- ─ DOCUMENT OPTIONS ─────────────────────────────────────────────── -->
     <div class="flex-1 overflow-y-auto">
       <div v-if="isParent() && !loading && !error">
         <div
@@ -128,12 +126,12 @@ onMounted(fetchDocuments);
       </div>
     </div>
 
+    <!-- ─ DOCUMENT TYPE WRAPPER ─────────────────────────────────────────────── -->
     <router-view v-if="!isParent()" />
   </div>
 </template>
 
 <style scoped>
-/* Loader Dots CSS */
 .loader-dots {
   display: flex;
   justify-content: space-around;

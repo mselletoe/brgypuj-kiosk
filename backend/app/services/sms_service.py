@@ -2,6 +2,7 @@
 app/services/sms_service.py
 ──────────────────────────────────────────────────────────────────────────────
 Business logic for the SMS Announcement feature.
+SMS delivery is handled by sms_gateway.py (A7670E serial modem).
 
 Recipient resolution
 ────────────────────
@@ -32,6 +33,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_, and_, func
 
 from app.models.resident import Resident, Address, ResidentRFID, Purok
+from app.services.sms_gateway import get_gateway
 from app.models.sms import SMSLog
 from app.schemas.sms import (
     SMSRequest,
@@ -212,21 +214,20 @@ def _count_residents_by_purok(db: Session, purok_id: int) -> int:
 
 def _dispatch_sms(phone_numbers: List[str], message: str) -> Dict[str, Any]:
     """
-    ╔══════════════════════════════════════════════════════════════════╗
-    ║  REPLACE THIS STUB with your actual SMS gateway SDK call.        ║
-    ║                                                                  ║
-    ║  Semaphore (Philippines) example:                                ║
-    ║    import semaphore                                              ║
-    ║    client = semaphore.Client(api_key=settings.SEMAPHORE_KEY)     ║
-    ║    result = client.send_message(                                 ║
-    ║        number=",".join(phone_numbers),                           ║
-    ║        message=message,                                          ║
-    ║        sender_name=settings.SMS_SENDER_NAME,                     ║
-    ║    )                                                             ║
-    ║    return {"sent": len(phone_numbers), "failed": 0}             ║
-    ╚══════════════════════════════════════════════════════════════════╝
+    Send SMS via the A7670E serial modem (sms_gateway.py).
+
+    Returns a dict with keys: sent (int), failed (int), failures (List[str]).
+    Raises HTTPException if the modem itself cannot be opened, so the caller
+    surfaces a clear error to the frontend instead of logging a silent zero.
     """
-    return {"sent": len(phone_numbers), "failed": 0}
+    try:
+        gateway = get_gateway()
+        return gateway.send_bulk(phone_numbers, message)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"SMS gateway error: {exc}",
+        )
 
 
 # Human-readable labels for each group enum value

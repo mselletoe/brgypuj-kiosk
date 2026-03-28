@@ -1,10 +1,16 @@
 <script setup>
+/**
+ * @file views/document-services/FieldEditor.vue
+ * @description Modal component for configuring dynamic form fields on a document type.
+ * Each field defines a label, template placeholder name, input type, and whether
+ * it is required. Select fields also support a comma-separated options list.
+ */
+
 import { ref, watch } from 'vue'
 import { NModal, NButton, NInput, NSelect, NCheckbox, useMessage } from 'naive-ui'
 import { v4 as uuidv4 } from 'uuid'
 import { TrashIcon, XMarkIcon } from '@heroicons/vue/24/outline'
 
-// Component props
 const props = defineProps({
   show: Boolean,
   fieldsData: {
@@ -14,15 +20,10 @@ const props = defineProps({
   serviceId: Number
 })
 
-// Component events
 const emit = defineEmits(['close', 'saved'])
-
 const message = useMessage()
-
-// Local fields array for editing
 const localFields = ref([])
 
-// Watch for changes in fieldsData prop and deep clone it
 watch(
   () => props.fieldsData,
   (newVal) => {
@@ -31,6 +32,9 @@ watch(
   { immediate: true }
 )
 
+// =============================================================================
+// FIELD HELPERS
+// =============================================================================
 function formatName(value) {
   return value
     .trim()
@@ -39,7 +43,6 @@ function formatName(value) {
     .replace(/[^\w_]/g, '')
 }
 
-// Add a new field to the list
 function addField() {
   localFields.value.push({
     id: uuidv4(),
@@ -52,12 +55,13 @@ function addField() {
   })
 }
 
-// Remove a field by index
 function removeField(index) {
   localFields.value.splice(index, 1)
 }
 
-// Save the configured fields
+// =============================================================================
+// SAVE
+// =============================================================================
 function save() {
   for (const field of localFields.value) {
     if (!field.name.trim() && field.label.trim()) {
@@ -94,7 +98,6 @@ function handleClose() {
   <NModal :show="show" @update:show="handleClose" :mask-closable="false">
     <div class="w-[800px] max-h-[80vh] overflow-hidden bg-white rounded-xl shadow-lg flex flex-col">
 
-      <!-- Header -->
       <div class="flex items-center justify-between px-6 py-4 border-b bg-gray-50">
         <div>
           <h2 class="text-base font-semibold text-gray-800">Configure Fields</h2>
@@ -107,10 +110,8 @@ function handleClose() {
         </button>
       </div>
 
-      <!-- Body -->
       <div class="px-6 py-4 overflow-y-auto flex-1">
 
-        <!-- Empty state when no fields exist -->
         <div
           v-if="localFields.length === 0"
           class="flex flex-col items-center justify-center py-12 text-gray-400 gap-3"
@@ -119,7 +120,6 @@ function handleClose() {
           <NButton type="primary" @click="addField">Add Your First Field</NButton>
         </div>
 
-        <!-- List of configured fields -->
         <div v-else class="flex flex-col gap-4">
           <div
             v-for="(field, index) in localFields"
@@ -127,7 +127,6 @@ function handleClose() {
             class="grid gap-4 p-5 bg-gray-50 border border-gray-200 rounded-lg items-start"
             style="grid-template-columns: 1fr 1fr 1fr auto;"
           >
-            <!-- Label -->
             <div class="flex flex-col gap-1.5">
               <label class="text-xs font-medium text-gray-500">Field Label</label>
               <NInput
@@ -138,7 +137,6 @@ function handleClose() {
               />
             </div>
 
-            <!-- Template placeholder -->
             <div class="flex flex-col gap-1.5">
               <label class="text-xs font-medium text-gray-500">Template Placeholder</label>
               <NInput
@@ -148,7 +146,6 @@ function handleClose() {
               />
             </div>
 
-            <!-- Type -->
             <div class="flex flex-col gap-1.5">
               <label class="text-xs font-medium text-gray-500">Type</label>
               <NSelect
@@ -166,7 +163,6 @@ function handleClose() {
               />
             </div>
 
-            <!-- Remove button -->
             <button
               class="mt-6 p-2 border border-red-400 rounded-lg text-red-500 hover:bg-red-50 transition flex items-center justify-center"
               @click="removeField(index)"
@@ -175,7 +171,6 @@ function handleClose() {
               <TrashIcon class="w-5 h-5" />
             </button>
 
-            <!-- Required checkbox + options on second row -->
             <div class="col-span-full flex flex-col gap-3">
               <NCheckbox v-model:checked="field.required" size="medium">
                 Required field
@@ -197,7 +192,6 @@ function handleClose() {
         </div>
       </div>
 
-      <!-- Footer -->
       <div class="flex items-center justify-between px-6 py-4 border-t">
         <NButton @click="addField" size="medium">
           Add Field
