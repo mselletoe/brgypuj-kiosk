@@ -7,13 +7,13 @@ from datetime import datetime
 # ─────────────────────────────────────────
 PORT      = "COM12"             # Check Device Manager for correct COM port
 BAUD      = 115200
-RECIPIENT = "+639457217155"     # Single target phone number
+RECIPIENT = "+639152893228"     # Single target phone number
 SMSC      = "+639180000101"     # Smart SMSC | Globe: +63917000000
 
 # Multiple recipients — add/remove numbers as needed
 RECIPIENTS = [
     "+639457217155",    #ALLEAH
-    "+639274923500",    #EMILY
+    "+639452017662",    #EMILY
     "+639152893228",    #KEANNO
     "+639673884442",    #KURU
     "+639954629650",    #LEI
@@ -54,7 +54,7 @@ def send_at(ser, command, wait=1):
 # VERSION 1 — Basic send
 # Simplest possible SMS, no extras
 # ─────────────────────────────────────────
-def basic(message="Your I.D Application request (Transaction #ID-8397) has been approved and is ready for pickup."):
+def basic(message="hi"):
     print(f"\n{ts()} ========== VERSION 1: Basic Send ==========")
     try:
         with serial.Serial(PORT, BAUD, timeout=5) as ser:
@@ -143,7 +143,7 @@ def with_retry(message="Hello from A7670E! (v3)", retries=3):
 # VERSION 4 — Full diagnostic + send
 # Runs full checks then sends SMS
 # ─────────────────────────────────────────
-def full(message="Hello from A7670E! (v4)"):
+def full(message="helloooooo"):
     print(f"\n{ts()} ========== VERSION 4: Full Diagnostic + Send ==========")
     try:
         with serial.Serial(PORT, BAUD, timeout=5) as ser:
@@ -224,8 +224,8 @@ def send_multiple(message="Test message sent from 4602 Kiosk System."):
 # RUN — comment/uncomment version to test
 # ─────────────────────────────────────────
 if __name__ == "__main__":
-    # basic()
+    basic()
     # with_smsc()
     # with_retry()
     # full()
-    send_multiple()
+    # send_multiple()

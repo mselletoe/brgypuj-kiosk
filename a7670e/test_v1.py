@@ -140,6 +140,6 @@ def reset_module():
 # ─────────────────────────────────────────
 if __name__ == "__main__":
     # basic_connection()
-    sim_and_signal()
-    # full_diagnostic()
+    # sim_and_signal()
+    full_diagnostic()
     # reset_module()

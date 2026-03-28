@@ -201,7 +201,12 @@ const handleSend = async () => {
     recipientCount.value  = 0
     setTimeout(() => (sentSuccess.value = false), 3500)
   } catch (err) {
-    errorMessage.value = err?.response?.data?.detail ?? 'Failed to send SMS. Please try again.'
+    const detail = err?.response?.data?.detail ?? ''
+    if (err?.response?.status === 503) {
+      errorMessage.value = `SMS gateway unavailable — ${detail || 'check modem connection and COM port.'}`
+    } else {
+      errorMessage.value = detail || 'Failed to send SMS. Please try again.'
+    }
   } finally {
     isSending.value = false
   }

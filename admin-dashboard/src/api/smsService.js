@@ -74,7 +74,16 @@ export const previewRecipients = async (recipientMode, selection, message = 'pre
  */
 export const sendSMSAnnouncement = async (recipientMode, selection, message) => {
   const payload = _buildPayload(recipientMode, selection, message)
-  const res = await api.post('/admin/sms/send', payload)
+
+  // Override timeout — the modem takes ~7-10s per recipient.
+  // Formula: 30s base + 20s per recipient, capped at 5 minutes.
+  const recipientCount =
+    recipientMode === 'specific'
+      ? (payload.phone_numbers?.length ?? 1)
+      : 50  // conservative estimate for group/purok sends
+  const timeoutMs = Math.min(30_000 + recipientCount * 20_000, 300_000)
+
+  const res = await api.post('/admin/sms/send', payload, { timeout: timeoutMs })
   return res.data
 }
 
