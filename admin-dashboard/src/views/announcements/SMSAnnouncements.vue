@@ -28,6 +28,12 @@ const history         = ref([])
 const recipientCount   = ref(0)
 const isResolvingCount = ref(false)
 
+// ── Send progress (SSE) ───────────────────────────────────
+const sendProgress     = ref(0)   // 0–100
+const sendCurrent      = ref(0)
+const sendTotal        = ref(0)
+const sendResults      = ref([])  // { number, ok }[]
+
 const templates = [
   { label: 'Assembly',           accent: 'blue',   text: 'Mahal na mga Residente, may barangay assembly sa [DATE] ng [TIME] sa [LUGAR]. Pakiusap ay dumalo.' },
   { label: 'Water Interruption', accent: 'cyan',   text: 'Abiso: Magkakaroon ng water interruption sa [DATE] mula [TIME] hanggang [TIME]. Mangyaring maghanda.' },
@@ -160,56 +166,124 @@ const togglePurok = (id) => {
 const switchMode    = (mode) => { recipientMode.value = mode; selectedGroups.value = []; selectedPuroks.value = [] }
 const applyTemplate = (text) => { message.value = text }
 
-const handleSend = async () => {
-  if (!canSend.value) return
+const handleSend = () => {
+  if (!canSend.value || isSending.value) return
+
   isSending.value    = true
   errorMessage.value = ''
+  sendProgress.value = 0
+  sendCurrent.value  = 0
+  sendTotal.value    = 0
+  sendResults.value  = []
 
-  try {
-    const res = await sendSMSAnnouncement(
-      recipientMode.value,
-      {
-        groups:       selectedGroups.value,
-        purokIds:     selectedPuroks.value,
-        phoneNumbers: specificNumbers.value,
-      },
-      message.value
-    )
+  // Capture message/selection before they reset on success
+  const frozenMessage = message.value
+  const frozenMode    = recipientMode.value
+  const frozenGroups  = [...selectedGroups.value]
+  const frozenPuroks  = [...selectedPuroks.value]
 
-    const modeLabel =
-      recipientMode.value === 'groups'
-        ? selectedGroups.value.map(id => groups.value.find(g => g.id === id)?.label).join(', ')
-        : recipientMode.value === 'puroks'
-          ? selectedPuroks.value.map(id => puroks.value.find(p => p.id === id)?.purok_name).join(', ')
-          : 'Specific Numbers'
+  const baseURL = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:8000`
 
-    const dotColors = ['#3B82F6', '#06B6D4', '#8B5CF6', '#10B981', '#F59E0B', '#F43F5E']
-    history.value.unshift({
-      id:         res.queued_at ?? Date.now(),
-      preview:    message.value.substring(0, 60) + (message.value.length > 60 ? '...' : ''),
-      recipients: res.recipients ?? recipientCount.value,
-      mode:       modeLabel,
-      time:       'Just now',
-      dot:        dotColors[history.value.length % dotColors.length],
+  const payload = JSON.stringify({
+    message:        frozenMessage,
+    recipient_mode: frozenMode,
+    groups:         frozenMode === 'groups'   ? frozenGroups  : undefined,
+    purok_ids:      frozenMode === 'puroks'   ? frozenPuroks  : undefined,
+    phone_numbers:  frozenMode === 'specific'
+      ? specificNumbers.value.split(',').map(n => n.trim()).filter(Boolean)
+      : undefined,
+  })
+
+  // Use fetch + ReadableStream to POST with SSE response
+  fetch(`${baseURL}/admin/sms/send-stream`, {
+    method:  'POST',
+    headers: {
+      'Content-Type':  'application/json',
+      'Authorization': `Bearer ${localStorage.getItem('token') ?? ''}`,
+    },
+    body: payload,
+  })
+    .then(res => {
+      if (!res.ok) return res.json().then(e => { throw e })
+      const reader  = res.body.getReader()
+      const decoder = new TextDecoder()
+      let   buffer  = ''
+
+      const pump = () => reader.read().then(({ done, value }) => {
+        if (done) { isSending.value = false; return }
+
+        buffer += decoder.decode(value, { stream: true })
+        const frames = buffer.split('\n\n')
+        buffer = frames.pop() // keep incomplete frame
+
+        for (const frame of frames) {
+          const eventMatch = frame.match(/^event: (\w+)/m)
+          const dataMatch  = frame.match(/^data: (.+)/m)
+          if (!eventMatch || !dataMatch) continue
+
+          const event = eventMatch[1]
+          const data  = JSON.parse(dataMatch[1])
+
+          if (event === 'start') {
+            sendTotal.value = data.total
+          }
+
+          else if (event === 'progress') {
+            sendCurrent.value  = data.current
+            sendTotal.value    = data.total
+            sendProgress.value = Math.round((data.current / data.total) * 100)
+            sendResults.value.push({ number: data.number, ok: data.ok })
+          }
+
+          else if (event === 'done') {
+            sendProgress.value = 100
+
+            const modeLabel =
+              frozenMode === 'groups'
+                ? frozenGroups.map(id => groups.value.find(g => g.id === id)?.label).join(', ')
+                : frozenMode === 'puroks'
+                  ? frozenPuroks.map(id => puroks.value.find(p => p.id === id)?.purok_name).join(', ')
+                  : 'Specific Numbers'
+
+            const dotColors = ['#3B82F6', '#06B6D4', '#8B5CF6', '#10B981', '#F59E0B', '#F43F5E']
+            history.value.unshift({
+              id:         data.queued_at ?? Date.now(),
+              preview:    frozenMessage.substring(0, 60) + (frozenMessage.length > 60 ? '...' : ''),
+              recipients: data.sent,
+              mode:       modeLabel,
+              time:       'Just now',
+              dot:        dotColors[history.value.length % dotColors.length],
+            })
+
+            sentSuccess.value     = true
+            message.value         = ''
+            selectedGroups.value  = []
+            selectedPuroks.value  = []
+            specificNumbers.value = ''
+            recipientCount.value  = 0
+            isSending.value       = false
+            setTimeout(() => {
+              sentSuccess.value  = false
+              sendProgress.value = 0
+              sendResults.value  = []
+            }, 4000)
+          }
+
+          else if (event === 'error') {
+            errorMessage.value = data.detail || 'SMS gateway error.'
+            isSending.value    = false
+          }
+        }
+
+        pump()
+      })
+
+      pump()
     })
-
-    sentSuccess.value     = true
-    message.value         = ''
-    selectedGroups.value  = []
-    selectedPuroks.value  = []
-    specificNumbers.value = ''
-    recipientCount.value  = 0
-    setTimeout(() => (sentSuccess.value = false), 3500)
-  } catch (err) {
-    const detail = err?.response?.data?.detail ?? ''
-    if (err?.response?.status === 503) {
-      errorMessage.value = `SMS gateway unavailable — ${detail || 'check modem connection and COM port.'}`
-    } else {
-      errorMessage.value = detail || 'Failed to send SMS. Please try again.'
-    }
-  } finally {
-    isSending.value = false
-  }
+    .catch(err => {
+      errorMessage.value = err?.detail || 'Failed to send SMS. Please try again.'
+      isSending.value    = false
+    })
 }
 
 // ── Bootstrap ────────────────────────────────────────────
@@ -473,31 +547,76 @@ function formatRelativeTime(isoString) {
           </div>
         </div>
 
-        <!-- Send Button -->
-        <button
-          @click="handleSend"
-          :disabled="!canSend || isSending"
-          :class="[
-            'w-full py-4 rounded-[20px] font-bold text-sm transition-all flex items-center justify-center gap-2 flex-shrink-0',
-            canSend && !isSending
-              ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm hover:shadow-md'
-              : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-          ]"
-        >
-          <template v-if="isSending">
-            <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-            </svg>
-            Sending to {{ recipientCount }} recipients...
-          </template>
-          <template v-else>
+        <!-- Send Button + Progress -->
+        <div class="flex flex-col gap-3 flex-shrink-0">
+
+          <!-- Progress panel (visible while sending) -->
+          <transition name="banner-slide">
+            <div v-if="isSending" class="bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex flex-col gap-3">
+
+              <!-- Header row -->
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <svg class="w-4 h-4 animate-spin text-blue-600" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                  </svg>
+                  <span class="text-sm font-bold text-gray-700">
+                    Sending SMS...
+                  </span>
+                </div>
+                <span class="text-xs font-bold text-blue-600 tabular-nums">
+                  {{ sendCurrent }} / {{ sendTotal }}
+                </span>
+              </div>
+
+              <!-- Progress bar -->
+              <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  class="h-full rounded-full transition-all duration-700 ease-out"
+                  :class="sendProgress === 100 ? 'bg-green-500' : 'bg-blue-600'"
+                  :style="{ width: sendProgress + '%' }"
+                ></div>
+              </div>
+
+              <!-- Per-number result pills -->
+              <div v-if="sendResults.length" class="flex flex-wrap gap-1.5 max-h-20 overflow-y-auto">
+                <span
+                  v-for="(r, i) in sendResults" :key="i"
+                  :class="[
+                    'inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full',
+                    r.ok
+                      ? 'bg-green-50 text-green-700 border border-green-200'
+                      : 'bg-red-50 text-red-700 border border-red-200'
+                  ]"
+                >
+                  <span>{{ r.ok ? '✓' : '✗' }}</span>
+                  <span class="tabular-nums">{{ r.number }}</span>
+                </span>
+              </div>
+
+            </div>
+          </transition>
+
+          <!-- Send button -->
+          <button
+            @click="handleSend"
+            :disabled="!canSend || isSending"
+            :class="[
+              'w-full py-4 rounded-[20px] font-bold text-sm transition-all flex items-center justify-center gap-2',
+              canSend && !isSending
+                ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm hover:shadow-md'
+                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+            ]"
+          >
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5"/>
             </svg>
-            Send to {{ recipientCount }} Recipient{{ recipientCount !== 1 ? 's' : '' }}
-          </template>
-        </button>
+            <span v-if="isSending">Sending {{ sendProgress }}%...</span>
+            <span v-else>Send to {{ recipientCount }} Recipient{{ recipientCount !== 1 ? 's' : '' }}</span>
+          </button>
+
+        </div>
 
       </div>
 

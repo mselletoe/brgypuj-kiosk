@@ -168,9 +168,15 @@ class A7670EGateway:
         self,
         phone_numbers: List[str],
         message: str,
+        on_progress=None,
     ) -> Dict[str, Any]:
         """
         Send `message` to every number in `phone_numbers`.
+
+        Args:
+            on_progress: optional callable(current, total, number, ok)
+                         called after each number is attempted.
+                         Use this to stream SSE progress to the frontend.
 
         Returns:
             {"sent": int, "failed": int, "failures": List[str]}
@@ -178,36 +184,29 @@ class A7670EGateway:
         sent     = 0
         failed   = 0
         failures = []
+        total    = len(phone_numbers)
 
-        log.info(
-            "%s Starting bulk send: %d recipient(s)",
-            _ts(), len(phone_numbers),
-        )
+        log.info("%s Starting bulk send: %d recipient(s)", _ts(), total)
 
         try:
             ser = self._open()
         except Exception as exc:
             log.error("%s Could not open modem: %s", _ts(), exc)
+            if on_progress:
+                on_progress(0, total, None, False, error=str(exc))
             return {
                 "sent":     0,
-                "failed":   len(phone_numbers),
+                "failed":   total,
                 "failures": phone_numbers,
                 "error":    str(exc),
             }
 
         try:
-            # Optional: abort if signal is too weak
             if not _signal_ok(ser):
-                log.warning(
-                    "%s Proceeding despite weak signal (will attempt anyway)",
-                    _ts(),
-                )
+                log.warning("%s Proceeding despite weak signal (will attempt anyway)", _ts())
 
             for i, number in enumerate(phone_numbers, 1):
-                log.info(
-                    "%s --- %d of %d: %s ---",
-                    _ts(), i, len(phone_numbers), number,
-                )
+                log.info("%s --- %d of %d: %s ---", _ts(), i, total, number)
                 ok = self._send_one(ser, number, message)
                 if ok:
                     sent += 1
@@ -215,18 +214,18 @@ class A7670EGateway:
                     failed += 1
                     failures.append(number)
 
-                # Inter-message delay (skip after the last one)
-                if i < len(phone_numbers):
+                # Notify caller of progress
+                if on_progress:
+                    on_progress(i, total, number, ok)
+
+                if i < total:
                     log.info("%s ⏳ Waiting %ss before next...", _ts(), self.inter_delay)
                     time.sleep(self.inter_delay)
 
         finally:
             ser.close()
 
-        log.info(
-            "%s Bulk send complete — ✅ %d sent, ❌ %d failed",
-            _ts(), sent, failed,
-        )
+        log.info("%s Bulk send complete — ✅ %d sent, ❌ %d failed", _ts(), sent, failed)
         return {"sent": sent, "failed": failed, "failures": failures}
 
 
