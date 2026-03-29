@@ -19,6 +19,7 @@ import {
   deleteRequest,
   bulkUndoRequests,
   bulkDeleteRequests,
+  notifyResident
 } from "@/api/equipmentService";
 
 const props = defineProps({
@@ -78,6 +79,7 @@ const showSmsModal = ref(false);
 const smsRecipientName = ref("");
 const smsRecipientPhone = ref("");
 const smsDefaultMessage = ref("");
+const notifyTargetRequest = ref(null)
 
 const handleNotify = (request) => {
   const fullName = [
@@ -85,8 +87,7 @@ const handleNotify = (request) => {
     request.requester.middleName,
     request.requester.lastName,
   ]
-    .filter(Boolean)
-    .join(" ");
+    .filter(Boolean).join(" ");
 
   smsRecipientName.value = fullName || "Resident";
   smsRecipientPhone.value = request.raw?.resident_phone || "";
@@ -98,29 +99,16 @@ Please visit the office during business hours to claim your document.
 
 Thank you!`;
 
-  showSmsModal.value = true;
+  notifyTargetRequest.value = request
+  showSmsModal.value = true
 };
 
 const handleSendSMS = async (smsData) => {
-  try {
-    console.log("Sending SMS:", smsData);
+  const request = notifyTargetRequest.value
+  if (!request) return
 
-    // TODO: Implement actual SMS sending API call
-    // Example:
-    // await sendSMS({
-    //   phone: smsData.phone,
-    //   message: smsData.message,
-    //   recipientName: smsData.recipientName
-    // })
-
-    // For now, just log the data
-    console.log("SMS would be sent to:", smsData.phone);
-    console.log("Message:", smsData.message);
-  } catch (error) {
-    console.error("Error sending SMS:", error);
-    throw error; // Re-throw to let the modal handle the error display
-  }
-};
+  await notifyResident(smsData.phone, smsData.message)
+}
 
 // =============================================================================
 // DATA FETCHING
