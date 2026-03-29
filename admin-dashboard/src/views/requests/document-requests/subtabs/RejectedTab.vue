@@ -10,7 +10,7 @@ import {
   bulkDeleteRequests,
   bulkUndoRequests,
   viewRequestPdf,
-  sendSms,
+  notifyResident,
 } from '@/api/documentService'
 
 const props = defineProps({
@@ -69,7 +69,7 @@ const showSmsModal = ref(false)
 const smsRecipientName = ref('')
 const smsRecipientPhone = ref('')
 const smsDefaultMessage = ref('')
-const pendingNotifyRequest = ref(null)
+const notifyTargetRequest = ref(null)
 
 const handleNotify = (request) => {
   const fullName = [
@@ -88,15 +88,15 @@ Please visit the barangay office for further clarification.
  
 Thank you.`
  
-  pendingNotifyRequest.value = request
+  notifyTargetRequest.value = request
   showSmsModal.value = true
 }
  
 const handleSendSMS = async (smsData) => {
-  const request = pendingNotifyRequest.value
+  const request = notifyTargetRequest.value
   if (!request) return
  
-  await sendSms(smsData.phone, smsData.message)
+  await notifyResident(smsData.phone, smsData.message)
 }
 
 // =============================================================================

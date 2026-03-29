@@ -144,7 +144,7 @@ export function updateDocumentRequirements(id, requirements) {
 // NOTIFY (SMS)
 // =================================================================================
 
-export function sendSms(phoneNumber, message) {
+export function notifyResident(phoneNumber, message) {
   return api.post('/admin/sms/send', {
     message,
     recipient_mode: 'specific',

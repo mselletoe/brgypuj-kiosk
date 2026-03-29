@@ -92,3 +92,15 @@ export function getNotes(requestId) {
 export function updateNotes(requestId, notes) {
   return api.put(`/admin/equipment/requests/${requestId}/notes`, { notes })
 }
+
+// =================================================================================
+// NOTIFY (SMS)
+// =================================================================================
+
+export function notifyResident(phone, message) {
+  return api.post('/admin/sms/send', {
+    message,
+    recipient_mode: 'specific',
+    phone_numbers: [phone],
+  })
+}
