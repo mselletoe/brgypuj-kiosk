@@ -93,7 +93,7 @@ class A7670EGateway:
         send_wait:   float = None,
         inter_delay: float = None,
     ):
-        self.port        = port        or getattr(settings, "SMS_PORT",        "COM12")
+        self.port        = port        or getattr(settings, "SMS_PORT",        "/dev/ttyUSB1")
         self.baud        = baud        or getattr(settings, "SMS_BAUD",        115200)
         self.smsc        = smsc        or getattr(settings, "SMS_SMSC",        "+639180000101")
         self.retries     = retries     or getattr(settings, "SMS_RETRIES",     3)
