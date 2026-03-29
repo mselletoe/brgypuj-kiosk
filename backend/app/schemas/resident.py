@@ -47,7 +47,11 @@ class ResidentCreate(ResidentBase):
     @field_validator('residency_start_date')
     @classmethod
     def validate_residency_date(cls, v):
-        if v and v > date.today():
+        from datetime import timezone, timedelta
+        if v is None:
+            return v
+        pht_today = (date.today())  # server runs in Asia/Manila per your logs
+        if v > pht_today:
             raise ValueError('Residency start date cannot be in the future')
         return v
     

@@ -161,7 +161,6 @@ async function loadTransactionHistory() {
   try {
     transactionHistory.value = await fetchResidentTransactionHistory(props.residentId)
   } catch (error) {
-    console.error('Failed to load transaction history:', error)
     message.error('Failed to load transaction history')
   } finally {
     transactionLoading.value = false
@@ -245,7 +244,6 @@ async function loadBlotterRecords() {
   try {
     blotterRecords.value = await fetchResidentBlotterRecords(props.residentId)
   } catch (error) {
-    console.error('Failed to load blotter records:', error)
     message.error('Failed to load blotter records')
   } finally {
     blotterLoading.value = false
@@ -302,7 +300,6 @@ onMounted(async () => {
       value: p.id
     }))
   } catch (error) {
-    console.error('Failed to load puroks:', error)
     message.error('Failed to load puroks')
   }
 })
@@ -355,7 +352,6 @@ async function loadResidentDetails() {
     originalFormData.value = JSON.parse(JSON.stringify(formData.value))
 
   } catch (error) {
-    console.error('Failed to load resident details:', error)
     message.error('Failed to load resident details')
   } finally {
     loading.value = false
@@ -457,7 +453,6 @@ async function handleSave() {
         phone_number: formData.value.phone_number || null
       }
 
-      console.log('[DEBUG] UPDATE PAYLOAD:', JSON.stringify(updatePayload))
 
       await updateResident(props.residentId, updatePayload)
       
@@ -485,7 +480,6 @@ async function handleSave() {
     
     emit('saved')
   } catch (error) {
-    console.error('Failed to save resident:', error)
     const errorMsg = error.response?.data?.detail || 'Failed to save resident'
     message.error(errorMsg)
   } finally {

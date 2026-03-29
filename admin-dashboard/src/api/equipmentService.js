@@ -1,9 +1,15 @@
+/**
+ * @file admin-dashboard/src/api/equipmentService.js
+ * @description API service functions for admin equipment and inventory management.
+ * Covers inventory tracking, equipment request lifecycle (Approval, Pickup, Return),
+ * payment/refund management, and bulk maintenance actions.
+ */
+
 import api from './http'
 
-// =========================================================
-// EQUIPMENT INVENTORY MANAGEMENT
-// =========================================================
-
+// =================================================================================
+// EQUIPMENT INVENTORY
+// =================================================================================
 export function getEquipmentInventory() {
   return api.get('/admin/equipment/inventory')
 }
@@ -24,10 +30,9 @@ export function bulkDeleteEquipmentItems(ids) {
   return api.post('/admin/equipment/inventory/bulk-delete', ids)
 }
 
-// =========================================================
-// EQUIPMENT REQUEST MANAGEMENT
-// =========================================================
-
+// =================================================================================
+// EQUIPMENT REQUESTS
+// =================================================================================
 export function getEquipmentRequests() {
   return api.get('/admin/equipment/requests')
 }
@@ -35,10 +40,6 @@ export function getEquipmentRequests() {
 export function getEquipmentRequestDetail(id) {
   return api.get(`/admin/equipment/requests/${id}`)
 }
-
-// =========================================================
-// REQUEST STATUS MANAGEMENT
-// =========================================================
 
 export function approveRequest(id) {
   return api.post(`/admin/equipment/requests/${id}/approve`)
@@ -76,10 +77,6 @@ export function bulkUndoRequests(ids) {
   return api.post('/admin/equipment/requests/bulk-undo', ids)
 }
 
-// =========================================================
-// REQUEST DELETION
-// =========================================================
-
 export function deleteRequest(id) {
   return api.delete(`/admin/equipment/requests/${id}`)
 }
@@ -87,10 +84,6 @@ export function deleteRequest(id) {
 export function bulkDeleteRequests(ids) {
   return api.post('/admin/equipment/requests/bulk-delete', ids)
 }
-
-// =========================================================
-// REQUEST NOTES
-// =========================================================
 
 export function getNotes(requestId) {
   return api.get(`/admin/equipment/requests/${requestId}/notes`)

@@ -121,7 +121,7 @@ const handleMainSelectToggle = () => {
 };
 
 // =============================================================================
-// TOOLBAR ACTIONS
+// ACTIONS
 // =============================================================================
 const triggerUndo = () => {
   if (isPendingTab.value) return;

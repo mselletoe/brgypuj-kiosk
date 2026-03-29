@@ -60,7 +60,7 @@ export const fetchResidentDetail = async (residentId) => {
  * @returns {Promise<Object>} The created resident with full details.
  */
 export const createResident = async (residentData) => {
-  const res = await api.post('/admin/residents', residentData)
+  const res = await api.post('/admin/residents/', residentData)
   return res.data
 }
 

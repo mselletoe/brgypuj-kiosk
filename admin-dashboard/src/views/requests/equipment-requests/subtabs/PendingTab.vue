@@ -1,4 +1,13 @@
 <script setup>
+/**
+ * @file views/requests/equipment-requests/subtabs/PendingTab.vue
+ * @description Displays and manages Pending equipment requests.
+ * Fetches all requests, filters to Pending status, and supports
+ * search, date/payment filters, approve, reject, delete, bulk delete,
+ * and payment status toggling. Exposes selection state and bulk actions
+ * to the parent EquipmentRequests view via defineExpose.
+ */
+
 import { ref, computed, onMounted } from 'vue'
 import EquipmentRequestCard from '@/views/requests/equipment-requests/EquipmentRequestCard.vue'
 import ConfirmModal from '@/components/shared/ConfirmationModal.vue'
@@ -28,14 +37,43 @@ const props = defineProps({
   }
 })
 
+// =============================================================================
+// STATE
+// =============================================================================
 const pendingRequests = ref([])
 const isLoading = ref(true)
 const errorMessage = ref(null)
 const selectedRequests = ref(new Set())
+
+// =============================================================================
+// CONFIRM MODAL
+// =============================================================================
 const showConfirmModal = ref(false)
 const confirmTitle = ref('Are you sure?')
 const confirmAction = ref(null)
 
+const openConfirmModal = (title, action) => {
+  confirmTitle.value = title
+  confirmAction.value = action
+  showConfirmModal.value = true
+}
+
+const handleConfirm = async () => {
+  if (confirmAction.value) {
+    await confirmAction.value()
+  }
+  showConfirmModal.value = false
+  confirmAction.value = null
+}
+
+const handleCancel = () => {
+  showConfirmModal.value = false
+  confirmAction.value = null
+}
+
+// =============================================================================
+// DATA FETCHING
+// =============================================================================
 const fetchPendingRequests = async () => {
   isLoading.value = true
   errorMessage.value = null
@@ -94,25 +132,9 @@ const fetchPendingRequests = async () => {
   }
 }
 
-const openConfirmModal = (title, action) => {
-  confirmTitle.value = title
-  confirmAction.value = action
-  showConfirmModal.value = true
-}
-
-const handleConfirm = async () => {
-  if (confirmAction.value) {
-    await confirmAction.value()
-  }
-  showConfirmModal.value = false
-  confirmAction.value = null
-}
-
-const handleCancel = () => {
-  showConfirmModal.value = false
-  confirmAction.value = null
-}
-
+// =============================================================================
+// SELECTION
+// =============================================================================
 const selectAll = () => {
   selectedRequests.value = new Set(filteredRequests.value.map(r => r.id))
 }
@@ -121,45 +143,22 @@ const deselectAll = () => {
   selectedRequests.value.clear()
 }
 
-const bulkDelete = () => {
-  if (selectedRequests.value.size === 0) return
-
-  openConfirmModal(
-    `Delete ${selectedRequests.value.size} selected requests?`,
-    async () => {
-      try {
-        await bulkDeleteRequests(Array.from(selectedRequests.value))
-        pendingRequests.value = pendingRequests.value.filter(
-          req => !selectedRequests.value.has(req.id)
-        )
-        selectedRequests.value.clear()
-      } catch (error) {
-        console.error(error)
-        alert('Failed to delete selected requests')
-      }
-    }
-  )
+const handleSelectionUpdate = (requestId, isSelected) => {
+  if (isSelected) {
+    selectedRequests.value.add(requestId)
+  } else {
+    selectedRequests.value.delete(requestId)
+  }
 }
 
-defineExpose({
-  selectedCount: computed(() => selectedRequests.value.size),
-  totalCount: computed(() => filteredRequests.value.length),
-  selectAll,
-  deselectAll,
-  bulkDelete
-})
-
+// =============================================================================
+// ACTIONS
+// =============================================================================
 const handleButtonClick = ({ action, requestId }) => {
   const request = pendingRequests.value.find(r => r.id === requestId)
   if (!request) return
 
   switch (action) {
-    case 'details':
-      alert(`Viewing request ${requestId} (frontend only)`)
-      break
-    case 'notes':
-      console.log(`Opening notes for request ${requestId}`)
-      break
     case 'approve':
       handleApprove(requestId)
       break
@@ -209,6 +208,26 @@ const handleDelete = async (id) => {
   )
 }
 
+const bulkDelete = () => {
+  if (selectedRequests.value.size === 0) return
+
+  openConfirmModal(
+    `Delete ${selectedRequests.value.size} selected requests?`,
+    async () => {
+      try {
+        await bulkDeleteRequests(Array.from(selectedRequests.value))
+        pendingRequests.value = pendingRequests.value.filter(
+          req => !selectedRequests.value.has(req.id)
+        )
+        selectedRequests.value.clear()
+      } catch (error) {
+        console.error(error)
+        alert('Failed to delete selected requests')
+      }
+    }
+  )
+}
+
 const handlePaymentUpdate = async (requestId, newPaidStatus) => {
   try {
     if (newPaidStatus) {
@@ -224,16 +243,20 @@ const handlePaymentUpdate = async (requestId, newPaidStatus) => {
   }
 }
 
-const handleSelectionUpdate = (requestId, isSelected) => {
-  if (isSelected) {
-    selectedRequests.value.add(requestId)
-  } else {
-    selectedRequests.value.delete(requestId)
-  }
-}
+// =============================================================================
+// EXPOSED API (for parent EquipmentRequests toolbar)
+// =============================================================================
+defineExpose({
+  selectedCount: computed(() => selectedRequests.value.size),
+  totalCount: computed(() => filteredRequests.value.length),
+  selectAll,
+  deselectAll,
+  bulkDelete
+})
 
-onMounted(fetchPendingRequests)
-
+// =============================================================================
+// FILTERING
+// =============================================================================
 const filteredRequests = computed(() => {
   let result = pendingRequests.value
 
@@ -282,20 +305,28 @@ const filteredRequests = computed(() => {
 
   return result
 })
+
+// =============================================================================
+// LIFECYCLE
+// =============================================================================
+onMounted(fetchPendingRequests)
 </script>
 
 <template>
   <div class="space-y-4 h-full">
 
+    <!-- Loading state -->
     <div v-if="isLoading" class="flex flex-col items-center justify-center w-full h-full min-h-[300px] gap-4">
       <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
       <p class="text-gray-500 font-medium">Loading pending equipment requests...</p>
     </div>
 
+    <!-- Error state -->
     <div v-else-if="errorMessage" class="text-center p-10 text-red-500">
       <p>{{ errorMessage }}</p>
     </div>
 
+    <!-- Loading state -->
     <div 
       v-else-if="filteredRequests.length === 0" 
       class="text-center p-10 text-gray-500"

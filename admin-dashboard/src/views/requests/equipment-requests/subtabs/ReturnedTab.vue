@@ -29,14 +29,43 @@ const props = defineProps({
   }
 })
 
+// =============================================================================
+// STATE
+// =============================================================================
 const returnedRequests = ref([])
 const isLoading = ref(true)
 const errorMessage = ref(null)
 const selectedRequests = ref(new Set())
+
+// =============================================================================
+// CONFIRM MODAL
+// =============================================================================
 const showConfirmModal = ref(false)
 const confirmTitle = ref('Are you sure?')
 const confirmAction = ref(null)
 
+const openConfirmModal = (title, action) => {
+  confirmTitle.value = title
+  confirmAction.value = action
+  showConfirmModal.value = true
+}
+
+const handleConfirm = async () => {
+  if (confirmAction.value) {
+    await confirmAction.value()
+  }
+  showConfirmModal.value = false
+  confirmAction.value = null
+}
+
+const handleCancel = () => {
+  showConfirmModal.value = false
+  confirmAction.value = null
+}
+
+// =============================================================================
+// DATA FETCHING
+// =============================================================================
 const fetchReturnedRequests = async () => {
   isLoading.value = true
   errorMessage.value = null
@@ -98,25 +127,9 @@ const fetchReturnedRequests = async () => {
   }
 }
 
-const openConfirmModal = (title, action) => {
-  confirmTitle.value = title
-  confirmAction.value = action
-  showConfirmModal.value = true
-}
-
-const handleConfirm = async () => {
-  if (confirmAction.value) {
-    await confirmAction.value()
-  }
-  showConfirmModal.value = false
-  confirmAction.value = null
-}
-
-const handleCancel = () => {
-  showConfirmModal.value = false
-  confirmAction.value = null
-}
-
+// =============================================================================
+// SELECTION
+// =============================================================================
 const selectAll = () => {
   selectedRequests.value = new Set(filteredRequests.value.map(r => r.id))
 }
@@ -125,66 +138,22 @@ const deselectAll = () => {
   selectedRequests.value.clear()
 }
 
-const bulkUndo = () => {
-  if (selectedRequests.value.size === 0) return
-
-  openConfirmModal(
-    `Undo ${selectedRequests.value.size} selected requests back to picked up?`,
-    async () => {
-      try {
-        await bulkUndoRequests(Array.from(selectedRequests.value))
-        returnedRequests.value = returnedRequests.value.filter(
-          req => !selectedRequests.value.has(req.id)
-        )
-        selectedRequests.value.clear()
-      } catch (error) {
-        console.error(error)
-        alert('Failed to undo selected requests')
-      }
-    }
-  )
+const handleSelectionUpdate = (requestId, isSelected) => {
+  if (isSelected) {
+    selectedRequests.value.add(requestId)
+  } else {
+    selectedRequests.value.delete(requestId)
+  }
 }
 
-const bulkDelete = () => {
-  if (selectedRequests.value.size === 0) return
-
-  openConfirmModal(
-    `Delete ${selectedRequests.value.size} selected requests?`,
-    async () => {
-      try {
-        await bulkDeleteRequests(Array.from(selectedRequests.value))
-        returnedRequests.value = returnedRequests.value.filter(
-          req => !selectedRequests.value.has(req.id)
-        )
-        selectedRequests.value.clear()
-      } catch (error) {
-        console.error(error)
-        alert('Failed to delete selected requests')
-      }
-    }
-  )
-}
-
-defineExpose({
-  selectedCount: computed(() => selectedRequests.value.size),
-  totalCount: computed(() => filteredRequests.value.length),
-  selectAll,
-  deselectAll,
-  bulkUndo,
-  bulkDelete
-})
-
+// =============================================================================
+// ACTIONS
+// =============================================================================
 const handleButtonClick = ({ action, requestId }) => {
   const request = returnedRequests.value.find(r => r.id === requestId)
   if (!request) return
 
   switch (action) {
-    case 'details':
-      alert(`Viewing request ${requestId} (frontend only)`)
-      break
-    case 'notes':
-      console.log(`Opening notes for request ${requestId}`)
-      break
     case 'refund':
       handleRefund(requestId)
       break
@@ -252,16 +221,61 @@ const handlePaymentUpdate = async (requestId, newPaidStatus) => {
   }
 }
 
-const handleSelectionUpdate = (requestId, isSelected) => {
-  if (isSelected) {
-    selectedRequests.value.add(requestId)
-  } else {
-    selectedRequests.value.delete(requestId)
-  }
+const bulkUndo = () => {
+  if (selectedRequests.value.size === 0) return
+
+  openConfirmModal(
+    `Undo ${selectedRequests.value.size} selected requests back to picked up?`,
+    async () => {
+      try {
+        await bulkUndoRequests(Array.from(selectedRequests.value))
+        returnedRequests.value = returnedRequests.value.filter(
+          req => !selectedRequests.value.has(req.id)
+        )
+        selectedRequests.value.clear()
+      } catch (error) {
+        console.error(error)
+        alert('Failed to undo selected requests')
+      }
+    }
+  )
 }
 
-onMounted(fetchReturnedRequests)
+const bulkDelete = () => {
+  if (selectedRequests.value.size === 0) return
 
+  openConfirmModal(
+    `Delete ${selectedRequests.value.size} selected requests?`,
+    async () => {
+      try {
+        await bulkDeleteRequests(Array.from(selectedRequests.value))
+        returnedRequests.value = returnedRequests.value.filter(
+          req => !selectedRequests.value.has(req.id)
+        )
+        selectedRequests.value.clear()
+      } catch (error) {
+        console.error(error)
+        alert('Failed to delete selected requests')
+      }
+    }
+  )
+}
+
+// =============================================================================
+// EXPOSED API (for parent EquipmentRequests toolbar)
+// =============================================================================
+defineExpose({
+  selectedCount: computed(() => selectedRequests.value.size),
+  totalCount: computed(() => filteredRequests.value.length),
+  selectAll,
+  deselectAll,
+  bulkUndo,
+  bulkDelete
+})
+
+// =============================================================================
+// FILTERING
+// =============================================================================
 const filteredRequests = computed(() => {
   let result = returnedRequests.value
 
@@ -310,20 +324,28 @@ const filteredRequests = computed(() => {
 
   return result
 })
+
+// =============================================================================
+// LIFECYCLE
+// =============================================================================
+onMounted(fetchReturnedRequests)
 </script>
 
 <template>
   <div class="space-y-4 h-full">
 
+    <!-- Loading state -->
     <div v-if="isLoading" class="flex flex-col items-center justify-center w-full h-full min-h-[300px] gap-4">
       <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
       <p class="text-gray-500 font-medium">Loading returned equipment requests...</p>
     </div>
 
+    <!-- Error state -->
     <div v-else-if="errorMessage" class="text-center p-10 text-red-500">
       <p>{{ errorMessage }}</p>
     </div>
 
+    <!-- Empty state -->
     <div 
       v-else-if="filteredRequests.length === 0" 
       class="text-center p-10 text-gray-500"
