@@ -10,7 +10,7 @@ import {
   bulkDeleteRequests,
   bulkUndoRequests,
   viewRequestPdf,
-  notifyResident,
+  sendSms,
 } from '@/api/documentService'
 
 const props = defineProps({
@@ -96,12 +96,7 @@ const handleSendSMS = async (smsData) => {
   const request = pendingNotifyRequest.value
   if (!request) return
  
-  await notifyResident(
-    smsData.phone,
-    'rejected',
-    request.transaction_no,
-    request.requestType,
-  )
+  await sendSms(smsData.phone, smsData.message)
 }
 
 // =============================================================================
