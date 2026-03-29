@@ -267,7 +267,6 @@ const handleSave = () => {
               type="date"
               placeholder="Select date"
               class="w-full"
-              :to="false"
               clearable
             />
           </div>
@@ -281,7 +280,6 @@ const handleSave = () => {
               format="hh:mm a"
               placeholder="Select time"
               class="w-full"
-              :to="false"
               clearable
             />
           </div>
