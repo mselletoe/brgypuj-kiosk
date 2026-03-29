@@ -22,14 +22,8 @@ const viewAllSettings = () => {
 </script>
 
 <template>
-  <!--
-    No fixed height here. The parent (Overview.vue) passes class="flex-1"
-    so this card stretches to fill the full sidebar height in its row.
-    We use h-full + flex flex-col internally so the scrollable list fills the card.
-  -->
   <div
     class="w-full bg-white rounded-[24px] p-6 shadow-sm border border-gray-100 flex flex-col overflow-hidden"
-    style="height: auto"
   >
     <div class="mb-4 flex items-start justify-between shrink-0">
       <div>
@@ -50,10 +44,10 @@ const viewAllSettings = () => {
       </button>
     </div>
 
-    <!-- Fixed height shows ~7 items; overflow scrolls the rest -->
+    <!-- max-height reduced to ~7 items; overflow scrolls the rest -->
     <div
       class="flex-1 min-h-0 pr-1 overflow-y-auto audit-scroll"
-      style="max-height: 476px"
+      style="max-height: 320px"
     >
       <div class="ml-2 border-l-2 border-gray-50 space-y-3 pb-2">
         <div

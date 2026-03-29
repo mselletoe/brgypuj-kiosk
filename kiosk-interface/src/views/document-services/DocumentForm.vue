@@ -1,11 +1,12 @@
 <script setup>
 /**
- * @file DocumentForm.vue
- * @description Dynamic Form Renderer for Document Requests.
- * This component builds a form based on administrative configuration, 
- * automatically maps and pre-fills resident data for authenticated RFID users, 
- * and handles localized field validation.
+ * @file views/document-services/DocumentForm.vue
+ * @description Renders a dynamic form based on a document type's configured field definitions.
+ * Supports text, email, tel, number, textarea, date, and select field types.
+ * For authenticated RFID users, known fields are auto-filled and locked from editing
+ * using a field mapping that matches resident profile data to form field names.
  */
+
 import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import VueDatePicker from '@vuepic/vue-datepicker'
@@ -13,21 +14,28 @@ import '@vuepic/vue-datepicker/dist/main.css'
 import { CalendarIcon, ChevronDownIcon } from '@heroicons/vue/24/outline'
 import { LockClosedIcon } from '@heroicons/vue/24/solid'
 
-// --- Props Configuration ---
 const props = defineProps({
   config: Object,
+
+  /** Pre-existing form values to restore (e.g. when navigating back) */
   initialData: {
     type: Object,
     default: () => ({})
   },
+
+  /** Authenticated resident's profile data used for auto-fill */
   residentData: {
     type: Object,
     default: () => null
   },
+
+  /** When true, enables auto-fill from residentData and locks matched fields */
   isRfidUser: {
     type: Boolean,
     default: false
   },
+
+  /** Disables all inputs while the form submission is in progress */
   isSubmitting: {
     type: Boolean,
     default: false
@@ -37,33 +45,26 @@ const props = defineProps({
 const emit = defineEmits(['continue'])
 const { t } = useI18n()
 
-// --- Form & Error States ---
 const formData = ref({})
 const errors = ref({})
 
-/**
- * Field Mapping Dictionary
- * Maps standardized database keys (keys) to various potential form field 
- * naming conventions (values) set by the admin in the dashboard.
- */
+// =============================================================================
+// FIELD MAPPING - PLACEHOLDERS
+// =============================================================================
 const fieldMapping = {
-  // Name fields
   full_name: ['full_name', 'name', 'resident_name', 'applicant_name'],
   first_name: ['first_name', 'fname'],
   middle_name: ['middle_name', 'mname'],
   last_name: ['last_name', 'lname', 'surname'],
   suffix: ['suffix', 'name_suffix'],
   
-  // Personal info
   gender: ['gender', 'sex'],
   birthdate: ['birthdate', 'date_of_birth', 'birth_date', 'dob'],
   age: ['age'],
   
-  // Contact info
   email: ['email', 'email_address'],
   phone_number: ['phone_number', 'contact_number', 'mobile_number', 'phone', 'contact'],
   
-  // Address fields
   unit_blk_street: ['unit_blk_street', 'street', 'house_number', 'house_no'],
   purok_name: ['purok_name', 'purok', 'sitio'],
   barangay: ['barangay', 'brgy'],
@@ -72,29 +73,23 @@ const fieldMapping = {
   region: ['region'],
   full_address: ['full_address', 'address', 'complete_address'],
   
-  // Residency info
   years_residency: ['yr_res', 'years_residency', 'years_of_residency', 'residency_years', 'year_residency'],
-  residency_start_date: ['residency_start_date', 'date_started_residency'],
+  residency_start_date: ['rds', 'residency_start_date', 'date_started_residency'],
   
-  // RFID info
   rfid_uid: ['rfid_uid', 'rfid', 'card_number', 'rfid_number'],
 }
 
-// Tracks fields that were automatically populated from the resident profile
+// =============================================================================
+// FORM INITIALIZATION
+// =============================================================================
 const preFilledFields = ref(new Set())
 
-/**
- * Initializes form values. 
- * Combines initial state with profile-based autofill logic.
- */
 const initializeFormData = () => {
   props.config.fields.forEach((field) => {
     let value = props.initialData[field.name] || ''
     let isPrefilled = false
 
-    // Attempt to autofill if user is authenticated and resident data is available
     if (props.isRfidUser && props.residentData) {
-      // Look through all possible mappings for this field
       for (const [residentField, formFieldVariants] of Object.entries(fieldMapping)) {
         if (formFieldVariants.includes(field.name)) {
           const residentValue = props.residentData[residentField]
@@ -116,16 +111,10 @@ const initializeFormData = () => {
 
 initializeFormData()
 
-/**
- * Watcher: Resident Data Sync
- * Reacts to async resident data loading. Populates empty fields if data 
- * arrives after the component has already mounted.
- */
 watch(() => props.residentData, (newData) => {
   if (!newData || !props.isRfidUser) return
   
   props.config.fields.forEach((field) => {
-    // Only autofill if field is currently empty
     if (formData.value[field.name]) return
     
     for (const [residentField, formFieldVariants] of Object.entries(fieldMapping)) {
@@ -142,20 +131,15 @@ watch(() => props.residentData, (newData) => {
   })
 }, { immediate: true, deep: true })
 
-// ==============================================
-// Helpers
-// ==============================================
 
-/**
- * Identifies if a field is locked based on RFID authentication.
- */
+// =============================================================================
+// FIELD HELPERS
+// =============================================================================
+
 const isPreFilled = (fieldName) => {
   return props.isRfidUser && preFilledFields.value.has(fieldName)
 }
 
-/**
- * Dynamically adjusts placeholders based on field status.
- */
 const formatPlaceholder = (placeholder, label, isPrefilled) => {
   if (isPrefilled) {
     return t('autoFilledProfile')
@@ -163,10 +147,10 @@ const formatPlaceholder = (placeholder, label, isPrefilled) => {
   return placeholder || `Enter ${label.toLowerCase()}`
 }
 
-/**
- * Validates required fields before allowing submission.
- * @returns {boolean} True if all required fields are populated.
- */
+
+// =============================================================================
+// VALIDATION
+// =============================================================================
 const validate = () => {
   let isValid = true
   props.config.fields.forEach((field) => {
@@ -183,9 +167,6 @@ const validate = () => {
   return isValid
 }
 
-/**
- * Emits the 'continue' event with valid form data to the parent wrapper.
- */
 const handleContinue = () => {
   if (props.isSubmitting) return
   if (validate()) {
@@ -193,7 +174,13 @@ const handleContinue = () => {
   }
 }
 
-// Tracks which custom select dropdown is currently open
+defineExpose({
+  handleContinue
+})
+
+// =============================================================================
+// SELECT DROPDOWN
+// =============================================================================
 const openDropdown = ref(null)
 
 const toggleSelectDropdown = (fieldName) => {
@@ -205,10 +192,6 @@ const selectOption = (fieldName, option) => {
   openDropdown.value = null
   errors.value[fieldName] = ''
 }
-
-defineExpose({
-  handleContinue
-})
 </script>
 
 <template>
@@ -250,10 +233,7 @@ defineExpose({
           format="MM/dd/yyyy"
           :max-date="new Date()"
           :placeholder="formatPlaceholder(field.placeholder, field.label, isPreFilled(field.name))"
-          :input-class-name="[
-            'w-full h-[48px] pl-10 pr-3 py-3 border border-gray-300 rounded-xl shadow-sm transition-shadow focus:outline-none focus:ring-2 focus:ring-[#013C6D]',
-            isPreFilled(field.name) ? 'bg-gray-100 cursor-not-allowed' : ''
-          ].join(' ')"
+          :ui="{ input: ['dp-field', isPreFilled(field.name) ? 'dp-field--prefilled' : ''] }"
         >
           <template #input-icon>
             <LockClosedIcon v-if="isPreFilled(field.name)" class="w-5 h-5 text-blue-600 ml-3"/>
@@ -317,3 +297,31 @@ defineExpose({
     </div>
   </div>
 </template>
+
+<style>
+.dp-field.dp__input {
+  height: 48px !important;
+  border-radius: 0.75rem !important;
+  border-color: #d1d5db !important;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05) !important;
+  padding-top: 0.75rem !important;
+  padding-bottom: 0.75rem !important;
+  font-size: 1rem !important;
+}
+
+.dp-field.dp__input:focus {
+  border-color: #013C6D !important;
+  box-shadow: 0 0 0 2px #013C6D !important;
+}
+
+.dp-field--prefilled.dp__input {
+  background-color: #f3f4f6 !important;
+  color: #374151 !important;
+  cursor: not-allowed !important;
+}
+
+.dp__input_wrap {
+  border: none !important;
+  box-shadow: none !important;
+}
+</style>

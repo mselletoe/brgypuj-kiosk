@@ -80,7 +80,7 @@ const actions = [
     color: "text-cyan-600",
     iconBg: "bg-cyan-100",
     cardBg: "bg-cyan-50 hover:bg-cyan-100 border-cyan-200",
-    route: "/help-and-support",
+    route: "/system-guide",
   },
 ];
 

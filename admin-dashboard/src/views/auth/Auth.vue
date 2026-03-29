@@ -1,6 +1,6 @@
 <script setup>
 /**
- * @file Auth.vue
+ * @file views/auth/Auth.vue
  * @description Admin authentication view providing login functionality
  * and navigation to account creation.
  */

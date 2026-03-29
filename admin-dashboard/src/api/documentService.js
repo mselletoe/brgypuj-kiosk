@@ -139,3 +139,15 @@ export function checkResidentEligibility(residentId, doctypeId) {
 export function updateDocumentRequirements(id, requirements) {
   return api.put(`/admin/documents/types/${id}`, { requirements })
 }
+
+// =================================================================================
+// NOTIFY (SMS)
+// =================================================================================
+
+export function sendSms(phoneNumber, message) {
+  return api.post('/admin/sms/send', {
+    message,
+    recipient_mode: 'specific',
+    phone_numbers: [phoneNumber],
+  })
+}

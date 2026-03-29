@@ -127,6 +127,7 @@ onMounted(() => {
         </div>
 
         <!-- Right sidebar: AuditLog + QuickActions stacked -->
+        <!-- align-self: start prevents the sidebar from stretching to match left-side row heights -->
         <div
           class="section-row-right flex flex-col gap-6 sidebar-col"
           style="

@@ -7,7 +7,7 @@ Admin Dashboard blotter management feature.
 """
 
 from datetime import date, datetime, time
-from typing import Optional
+from typing import Literal, Optional
 from pydantic import BaseModel, ConfigDict
 
 
@@ -87,6 +87,10 @@ class BlotterRecordOut(BlotterRecordBase):
 
     # Populated by the /resident/{id} endpoint to indicate involvement
     role: Optional[str] = None
+
+    # "active" | "resolved"
+    status: str = "active"
+    resolved_at: Optional[datetime] = None
 
     created_at: datetime
 

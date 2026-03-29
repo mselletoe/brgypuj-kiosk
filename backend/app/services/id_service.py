@@ -37,6 +37,7 @@ from app.models.resident import Resident, ResidentRFID
 from app.models.document import DocumentRequest, DocumentType
 from app.models.barangayid import BarangayID
 from app.models.misc import RFIDReport
+from app.models.systemconfig import SystemConfig
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -60,6 +61,8 @@ _FORM_DATA_META_KEYS = {
     "session_rfid",
     "requested_date",
     "use_manual_data",
+    # Reserved system placeholder — injected at render time, never stored in form_data
+    "validity",
 }
 
 
@@ -448,6 +451,19 @@ def apply_for_id(
                 name_parts.append(applicant.middle_name)
             context.setdefault("full_name", f"{applicant.last_name}, {' '.join(name_parts)}")
             context.setdefault("last_name", applicant.last_name.upper())
+
+            # ── Reserved placeholder: {{ validity }} ─────────────────────────
+            # Always injected — docxtpl silently ignores it if not in the template.
+            # Reads rfid_expiry_days from SystemConfig (falls back to 365 days).
+            # Formatted as "Month DD, YYYY" (e.g. "March 16, 2027").
+            try:
+                from datetime import timedelta
+                sys_config = db.query(SystemConfig).filter(SystemConfig.id == 1).first()
+                expiry_days = (sys_config.rfid_expiry_days if sys_config else None) or 365
+                context["validity"] = (date.today() + timedelta(days=expiry_days)).strftime("%B %d, %Y")
+            except Exception as ve:
+                print(f"⚠️ Could not compute validity date: {ve}")
+                context["validity"] = ""
 
             pdf_bytes = _generate_id_pdf(bytes(id_doctype.file), context)
             relative_path = _save_id_pdf(request.transaction_no, pdf_bytes)

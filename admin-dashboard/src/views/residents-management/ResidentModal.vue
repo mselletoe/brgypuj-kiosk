@@ -161,11 +161,21 @@ async function loadTransactionHistory() {
   try {
     transactionHistory.value = await fetchResidentTransactionHistory(props.residentId)
   } catch (error) {
-    console.error('Failed to load transaction history:', error)
     message.error('Failed to load transaction history')
   } finally {
     transactionLoading.value = false
   }
+}
+
+function parseDateToTimestamp(str) {
+  if (!str) return null
+  // Handle "MM/DD/YYYY" format from backend
+  const [month, day, year] = str.split('/')
+  if (month && day && year) {
+    return new Date(Number(year), Number(month) - 1, Number(day)).getTime()
+  }
+  // Fallback for ISO "YYYY-MM-DD" format
+  return new Date(str).getTime()
 }
 
 // Blotter records (only loaded in view mode)
@@ -234,7 +244,6 @@ async function loadBlotterRecords() {
   try {
     blotterRecords.value = await fetchResidentBlotterRecords(props.residentId)
   } catch (error) {
-    console.error('Failed to load blotter records:', error)
     message.error('Failed to load blotter records')
   } finally {
     blotterLoading.value = false
@@ -291,7 +300,6 @@ onMounted(async () => {
       value: p.id
     }))
   } catch (error) {
-    console.error('Failed to load puroks:', error)
     message.error('Failed to load puroks')
   }
 })
@@ -327,8 +335,8 @@ async function loadResidentDetails() {
       last_name: data.last_name,
       suffix: data.suffix || '',
       gender: data.gender,
-      birthdate: data.birthdate ? new Date(data.birthdate).getTime() : null,
-      residency_start_date: data.residency_start_date ? new Date(data.residency_start_date).getTime() : null,
+      birthdate: parseDateToTimestamp(data.birthdate),
+      residency_start_date: parseDateToTimestamp(data.residency_start_date),
       phone_number: data.phone_number || '',
       email: data.email || '',
       house_no_street: data.current_address?.house_no_street || '',
@@ -344,7 +352,6 @@ async function loadResidentDetails() {
     originalFormData.value = JSON.parse(JSON.stringify(formData.value))
 
   } catch (error) {
-    console.error('Failed to load resident details:', error)
     message.error('Failed to load resident details')
   } finally {
     loading.value = false
@@ -446,7 +453,6 @@ async function handleSave() {
         phone_number: formData.value.phone_number || null
       }
 
-      console.log('[DEBUG] UPDATE PAYLOAD:', JSON.stringify(updatePayload))
 
       await updateResident(props.residentId, updatePayload)
       
@@ -474,7 +480,6 @@ async function handleSave() {
     
     emit('saved')
   } catch (error) {
-    console.error('Failed to save resident:', error)
     const errorMsg = error.response?.data?.detail || 'Failed to save resident'
     message.error(errorMsg)
   } finally {

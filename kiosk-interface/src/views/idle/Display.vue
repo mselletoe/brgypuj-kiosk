@@ -1,4 +1,12 @@
 <script setup>
+/**
+ * @file views/idle/Display.vue
+ * @description Kiosk attract/display screen shown before any interaction.
+ * Displays the barangay name, emergency contact info, a language toggle,
+ * and a prompt to touch the screen to start. Emits see-announcements
+ * when the user taps the announcements button.
+ */
+
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useSystemConfig } from '@/composables/useSystemConfig'
@@ -7,6 +15,9 @@ const emit = defineEmits(['see-announcements'])
 const { locale, t } = useI18n()
 const { resolvedLogoUrl } = useSystemConfig()
 
+// =============================================================================
+// LANGUAGE TOGGLE
+// =============================================================================
 const isFilipino = computed(() => locale.value === 'tl')
 
 const toggleLang = () => {

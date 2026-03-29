@@ -64,23 +64,26 @@ const placeholderGroups = [
     icon: ClockIcon,
     color: "teal",
     placeholders: [
-      { key: "years_residency", aliases: ["yr_res", "years_residency", "years_of_residency", "residency_years", "year_residency"], description: "Number of years residing in the barangay" },
-      { key: "residency_start_date", aliases: ["residency_start_date", "date_started_residency"], description: "Date when residency started" },
+      { key: "yr_res", aliases: ["yr_res", "years_residency", "years_of_residency", "residency_years", "year_residency"], description: "Number of years residing in the barangay" },
+      { key: "rds", aliases: ["rds", "residency_start_date", "date_started_residency"], description: "Date when residency started" },
     ],
   },
   {
-    group: "RFID & System Fields",
+    group: "ID Numbers",
     icon: LockClosedIcon,
     color: "rose",
     placeholders: [
       { key: "rfid_uid", aliases: ["rfid_uid", "rfid", "card_number", "rfid_number"], description: "Resident RFID card unique identifier" },
+      { key: "id_num", aliases: ["id_num", "brgy_id"], description: "Resident Barangay I.D Number" },
     ],
   },
 ];
 
 const copiedKey = ref(null);
+
 const copyToClipboard = (text) => {
-  navigator.clipboard.writeText(`{{${text}}}`);
+  const normalized = ` ${text.trim()} `;
+  navigator.clipboard.writeText(`{{${normalized}}}`);
   copiedKey.value = text;
   setTimeout(() => { copiedKey.value = null; }, 2000);
 };

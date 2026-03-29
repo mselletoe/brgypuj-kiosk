@@ -18,14 +18,11 @@ import { getAdminProfile, getAdminPhotoUrl } from "@/api/accountSettingsService"
 const router       = useRouter();
 const adminAuth    = useAdminAuthStore();
 const notifStore   = useNotificationStore();
-
-// ----------------------------------------------------------------
-// Admin profile
-// ----------------------------------------------------------------
 const adminName     = ref('')
 const adminPosition = ref('')
 const photoUrl      = ref(null)
 let   photoBlobUrl  = null
+const REPORT_EVENTS = new Set(['new_lost_card_report'])
 
 onMounted(async () => {
   try {
@@ -51,34 +48,48 @@ onUnmounted(() => {
 
 const initial = computed(() => adminName.value?.charAt(0)?.toUpperCase() || '?')
 
-// ----------------------------------------------------------------
-// Notifications — now from Pinia store
-// ----------------------------------------------------------------
 const showNotifications = ref(false);
 
 // Show only the 5 most recent in the dropdown preview
-const recentNotifications = computed(() =>                             // 👈
+const recentNotifications = computed(() => 
   notifStore.notifications.slice(0, 5)
 )
 
-const unreadCount = computed(() =>                                     // 👈
+const unreadCount = computed(() => 
   notifStore.notifications.filter(n => n.unread).length
 )
 
-function markAllRead() {                                               // 👈
+function markAllRead() { 
   const unreadIds = notifStore.notifications
     .filter(n => n.unread)
     .map(n => n.id)
   if (unreadIds.length) notifStore.markAllRead(unreadIds)
 }
 
-function handleNotifClick(notif) {                                     // 👈
+function handleNotifClick(notif) {
   notifStore.markRead(notif.id)
+  showNotifications.value = false
+
+  switch (notif.type) {
+    case 'Document':
+      router.push('/document-requests')
+      break
+    case 'Equipment':
+      router.push('/equipment-requests')
+      break
+    case 'Feedback':
+      router.push('/feedback-and-reports/feedbacks')
+      break
+    case 'ID Services':
+      if (REPORT_EVENTS.has(notif.event)) {
+        router.push('/feedback-and-reports/reports')
+      } else {
+        router.push('/document-requests')
+      }
+      break
+  }
 }
 
-// ----------------------------------------------------------------
-// Dropdown
-// ----------------------------------------------------------------
 const renderIcon = (icon) => () => h(icon, { class: "h-5 w-5" });
 
 const dropdownOptions = [
@@ -126,7 +137,7 @@ const handleSelect = (key) => {
       <!-- Help -->
       <div class="relative group inline-block">
         <button
-          @click="router.push('/help-and-support')"
+          @click="router.push('/system-guide')"
           class="w-11 h-11 flex items-center justify-center text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all"
         >
           <BookOpenIcon class="h-6 w-6" />

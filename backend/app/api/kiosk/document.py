@@ -50,15 +50,23 @@ async def submit_document_request(
     db: Session = Depends(get_db)
 ):
     result = create_document_request(db, payload)
+
+    resident_name = None
+    if payload.resident_id:
+        from app.models.resident import Resident
+        resident = db.query(Resident).filter(Resident.id == payload.resident_id).first()
+        if resident:
+            resident_name = " ".join(filter(None, [resident.first_name, resident.last_name]))
+
     await ws_manager.broadcast_to_admin(
         "new_transaction",
         {
             "type": "Document",
-            "resident_name": getattr(payload, 'resident_name', 'A resident'),
-            "document_type": getattr(payload, 'document_type', 'Document'),
+            "resident_name": resident_name,
+            "document_type": "Document",
             "transaction_no": getattr(result, 'transaction_no', ''),
         },
-        db=db 
+        db=db
     )
     return result
 

@@ -1,4 +1,11 @@
 <script setup>
+/**
+ * @file views/equipment-inventory/EquipmentInventory.vue
+ * @description Admin view for managing equipment inventory.
+ * Supports creating, editing, deleting, and bulk-deleting inventory items.
+ * Each item tracks total quantity, available quantity, and rental rate per day.
+ */
+
 import { ref, onMounted, computed, watch } from "vue";
 import { TrashIcon, CheckIcon } from "@heroicons/vue/24/outline";
 import EquipmentInventoryCard from "./EquipmentInventoryCard.vue";
@@ -17,17 +24,23 @@ import { useSearchSync } from "@/composables/useSearchSync";
 const message = useMessage();
 const emit = defineEmits(["inventory-updated"]);
 
-// --- State Management ---
 const localInventory = ref([]);
 const selectedIds = ref([]);
 const isLoading = ref(false);
-const showDeleteModal = ref(false);
-const deleteTargetId = ref(null);
-const isBulkDelete = ref(false);
+
 const searchQuery = ref("");
 useSearchSync(searchQuery);
 
-// --- Data Fetching & Mapping ---
+// =============================================================================
+// DELETE STATE
+// =============================================================================
+const showDeleteModal = ref(false);
+const deleteTargetId = ref(null);
+const isBulkDelete = ref(false);
+
+// =============================================================================
+// DATA FETCHING
+// =============================================================================
 async function fetchActualInventory() {
   isLoading.value = true;
   try {
@@ -51,7 +64,9 @@ async function fetchActualInventory() {
   }
 }
 
-// --- CRUD Actions ---
+// =============================================================================
+// CRUD
+// =============================================================================
 function startCreate() {
   if (localInventory.value.some((item) => item.isNew)) return;
 
@@ -142,22 +157,6 @@ function toggleSelect(id) {
   }
 }
 
-const filteredInventory = computed(() => {
-  if (!searchQuery.value) return localInventory.value;
-  return localInventory.value.filter((item) =>
-    item.item_name.toLowerCase().includes(searchQuery.value.toLowerCase()),
-  );
-});
-
-const totalCount = computed(() => filteredInventory.value.length);
-const selectedCount = computed(() => selectedIds.value.length);
-
-const selectionState = computed(() => {
-  if (totalCount.value === 0 || selectedCount.value === 0) return "none";
-  if (selectedCount.value < totalCount.value) return "partial";
-  return "all";
-});
-
 function handleMainSelectToggle() {
   if (selectionState.value === "all" || selectionState.value === "partial") {
     selectedIds.value = [];
@@ -165,10 +164,6 @@ function handleMainSelectToggle() {
     selectedIds.value = filteredInventory.value.map((i) => i.id);
   }
 }
-
-watch(searchQuery, () => {
-  selectedIds.value = [];
-});
 
 function requestDelete(id) {
   deleteTargetId.value = id;
@@ -214,13 +209,39 @@ function cancelDelete() {
   deleteTargetId.value = null;
 }
 
+// =============================================================================
+// COMPUTED — FILTERING & SELECTION
+// =============================================================================
+const filteredInventory = computed(() => {
+  if (!searchQuery.value) return localInventory.value;
+  return localInventory.value.filter((item) =>
+    item.item_name.toLowerCase().includes(searchQuery.value.toLowerCase()),
+  );
+});
+
+const totalCount = computed(() => filteredInventory.value.length);
+const selectedCount = computed(() => selectedIds.value.length);
+
+const selectionState = computed(() => {
+  if (totalCount.value === 0 || selectedCount.value === 0) return "none";
+  if (selectedCount.value < totalCount.value) return "partial";
+  return "all";
+});
+
+watch(searchQuery, () => {
+  selectedIds.value = [];
+});
+
+// =============================================================================
+// LIFECYCLE
+// =============================================================================
 onMounted(fetchActualInventory);
 </script>
 
 <template>
-  <div
-    class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden"
-  >
+  <div class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden">
+
+    <!-- ─ HEADER ─────────────────────────────────────────────── -->
     <div class="flex mb-6 items-center justify-between">
       <div>
         <PageTitle title="Equipment Inventory Management" />
@@ -230,6 +251,7 @@ onMounted(fetchActualInventory);
       </div>
 
       <div class="flex items-center gap-3">
+        <!-- Search -->
         <input
           v-model="searchQuery"
           type="text"
@@ -237,6 +259,7 @@ onMounted(fetchActualInventory);
           class="border border-gray-200 text-gray-700 rounded-md py-2 px-3 w-[250px] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-gray-400"
         />
 
+        <!-- Delete -->
         <div class="relative group inline-block">
           <button
             @click="requestBulkDelete"
@@ -257,6 +280,7 @@ onMounted(fetchActualInventory);
           </div>
         </div>
 
+        <!-- Select -->
         <div class="relative group inline-block">
           <div
             class="flex items-center border rounded-lg overflow-hidden transition-colors"
@@ -294,6 +318,7 @@ onMounted(fetchActualInventory);
           </div>
         </div>
 
+        <!-- Add -->
         <button
           @click="startCreate"
           class="px-4 py-2 bg-blue-600 text-white rounded-md font-medium text-sm hover:bg-blue-700 transition flex items-center gap-2"
@@ -317,7 +342,10 @@ onMounted(fetchActualInventory);
       </div>
     </div>
 
+    <!-- ─ MAIN ─────────────────────────────────────────────── -->
     <div class="flex-1 overflow-y-auto pr-2 flex flex-col">
+
+      <!-- Loading state -->
       <div
         v-if="isLoading"
         class="flex-1 flex flex-col items-center justify-center gap-4"
@@ -328,6 +356,7 @@ onMounted(fetchActualInventory);
         <p class="text-gray-500 font-medium">Loading equipment inventory...</p>
       </div>
 
+      <!-- Inventory Items -->
       <div
         v-else-if="localInventory.length"
         class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-6"
@@ -347,6 +376,7 @@ onMounted(fetchActualInventory);
         />
       </div>
 
+      <!-- Empty state -->
       <div
         v-if="!isLoading && !localInventory.length"
         class="h-full flex flex-col items-center justify-center flex-1"
@@ -362,6 +392,7 @@ onMounted(fetchActualInventory);
     </div>
   </div>
 
+  <!-- ─ MODALS ─────────────────────────────────────────────── -->
   <ConfirmModal
     :show="showDeleteModal"
     :title="
