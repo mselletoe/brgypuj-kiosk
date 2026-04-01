@@ -1,4 +1,12 @@
 <script setup>
+/**
+ * @file views/equipment-borrowing/steps/BorrowerInfo.vue
+ * @description Step 3 of the equipment borrowing wizard.
+ * Collects the borrower's contact person, contact number, and purpose.
+ * Supports auto-fill from the resident's profile for RFID users.
+ * Uses an on-screen keyboard for touch input.
+ */
+
 import { ref, computed, nextTick, watch } from 'vue';
 import ArrowBackButton from '@/components/shared/ArrowBackButton.vue';
 import Button from '@/components/shared/Button.vue';
@@ -10,17 +18,6 @@ import { getAutofillData } from '@/api/equipmentService';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 
-const useAutofill = ref(false);
-const isLoadingAutofill = ref(false);
-const authStore = useAuthStore();
-const residentId = computed(() => authStore.residentId);
-const showKeyboard = ref(false);
-const activeInput = ref(null);
-const showExitModal = ref(false);
-const showPurposeDropdown = ref(false);
-const router = useRouter();
-const { t } = useI18n();
-
 const props = defineProps({
   borrowerInfo: Object,
   goNext: Function,
@@ -30,13 +27,43 @@ const props = defineProps({
 
 const emit = defineEmits(['update:borrower-info']);
 
-// localInfo must be declared before the watcher that references it
+const router = useRouter();
+const { t } = useI18n();
+const authStore = useAuthStore();
+
+const residentId = computed(() => authStore.residentId);
+
+// =============================================================================
+// FORM STATE
+// =============================================================================
 const localInfo = ref({
   contactPerson: props.borrowerInfo.contactPerson || '',
   contactNumber: props.borrowerInfo.contactNumber || '',
   purpose: props.borrowerInfo.purpose || null,
   notes: props.borrowerInfo.notes || ''
 });
+
+const isFormValid = computed(() => {
+  return localInfo.value.contactPerson &&
+         localInfo.value.contactNumber &&
+         localInfo.value.purpose;
+});
+
+const inputClass = "w-full h-[48px] px-4 py-3 border border-gray-300 rounded-xl shadow-sm transition-shadow focus:outline-none focus:ring-2 focus:ring-[#013C6D]";
+
+const purposeOptions = ref([
+  'Barangay Event',
+  'Personal Event (Birthday, Wedding, etc.)',
+  'Community Meeting',
+  'Emergency Use',
+  'Other'
+]);
+
+// =============================================================================
+// AUTOFILL
+// =============================================================================
+const useAutofill = ref(false);
+const isLoadingAutofill = ref(false);
 
 const applyAutofill = async () => {
   if (!residentId.value) return;
@@ -62,31 +89,21 @@ watch(useAutofill, async (enabled) => {
   }
 });
 
-const purposeOptions = ref([
-  'Barangay Event',
-  'Personal Event (Birthday, Wedding, etc.)',
-  'Community Meeting',
-  'Emergency Use',
-  'Other'
-]);
+// =============================================================================
+// PURPOSE DROPDOWN
+// =============================================================================
+const showPurposeDropdown = ref(false);
 
-const isFormValid = computed(() => {
-  return localInfo.value.contactPerson &&
-         localInfo.value.contactNumber &&
-         localInfo.value.purpose;
-});
-
-const handleBack = () => {
-  props.goBack('dates');
+const selectPurpose = (option) => {
+  localInfo.value.purpose = option;
+  showPurposeDropdown.value = false;
 };
 
-const handleNext = () => {
-  emit('update:borrower-info', {
-    ...localInfo.value,
-    use_autofill: useAutofill.value
-  });
-  props.goNext('review');
-};
+// =============================================================================
+// ON-SCREEN KEYBOARD
+// =============================================================================
+const showKeyboard = ref(false);
+const activeInput = ref(null);
 
 const focusInput = (elementId, fieldName) => {
   showPurposeDropdown.value = false;
@@ -99,11 +116,6 @@ const focusInput = (elementId, fieldName) => {
       el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   });
-};
-
-const selectPurpose = (option) => {
-  localInfo.value.purpose = option;
-  showPurposeDropdown.value = false;
 };
 
 const handleKeyboardKeyPress = (char) => {
@@ -136,6 +148,26 @@ const handleKeyboardHide = () => {
   activeInput.value = null;
 };
 
+// =============================================================================
+// NAVIGATION
+// =============================================================================
+const handleBack = () => {
+  props.goBack('dates');
+};
+
+const handleNext = () => {
+  emit('update:borrower-info', {
+    ...localInfo.value,
+    use_autofill: useAutofill.value
+  });
+  props.goNext('review');
+};
+
+// =============================================================================
+// EXIT MODAL
+// =============================================================================
+const showExitModal = ref(false);
+
 const handleBackClick = () => {
   if (props.hasStartedForm && props.hasStartedForm()) {
     showExitModal.value = true;
@@ -152,12 +184,12 @@ const confirmExit = () => {
 const cancelExit = () => {
   showExitModal.value = false;
 };
-
-const inputClass = "w-full h-[48px] px-4 py-3 border border-gray-300 rounded-xl shadow-sm transition-shadow focus:outline-none focus:ring-2 focus:ring-[#013C6D]";
 </script>
 
 <template>
   <div class="flex flex-col w-full h-full" :class="{ 'content-with-keyboard': showKeyboard }">
+
+    <!-- HEADER -->
     <div class="flex items-center mb-6 gap-7 flex-shrink-0">
       <ArrowBackButton @click="handleBackClick" />
       <div>
@@ -168,11 +200,13 @@ const inputClass = "w-full h-[48px] px-4 py-3 border border-gray-300 rounded-xl 
 
     <div class="flex-1 overflow-y-auto">
       <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-5">
+        <!-- Title -->
         <h3 class="text-2xl font-bold text-[#013C6D] flex items-center gap-2">
           <DocumentTextIcon class="w-8 h-8" />
           {{ t('borrowingInfoTitle') }}
         </h3>
 
+        <!-- Checkbox -->
         <div class="mt-4 flex items-center gap-3">
           <input
             type="checkbox"
@@ -186,6 +220,7 @@ const inputClass = "w-full h-[48px] px-4 py-3 border border-gray-300 rounded-xl 
           </label>
         </div>
 
+        <!-- Form -->
         <div class="mt-4 grid grid-cols-2 gap-x-6 gap-y-4">
           <div>
             <label for="contact-person" class="block text-base font-bold text-[#003A6B] mb-2">
@@ -253,6 +288,7 @@ const inputClass = "w-full h-[48px] px-4 py-3 border border-gray-300 rounded-xl 
       </div>
     </div>
 
+    <!-- FOOTER: BUTTONS -->
     <div class="flex gap-6 mt-6 justify-between items-center bottom-0 flex-shrink-0">
       <Button @click="handleBack" variant="outline" size="md">
         {{ t('backToDates') }}
