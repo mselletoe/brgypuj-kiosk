@@ -1,4 +1,12 @@
 <script setup>
+/**
+ * @file views/equipment-borrowing/steps/SelectEquipment.vue
+ * @description Step 1 of the equipment borrowing wizard.
+ * Displays all available equipment as cards with quantity controls.
+ * Supports increment/decrement buttons and a numeric on-screen keyboard
+ * for direct quantity entry. Emits the updated selection to the parent wizard.
+ */
+ 
 import { ref, computed, nextTick, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import ArrowBackButton from "@/components/shared/ArrowBackButton.vue";
@@ -14,14 +22,18 @@ const props = defineProps({
   goNext: Function,
   hasStartedForm: Function,
 });
+
 const emit = defineEmits(["update:selected-equipment"]);
+
 const router = useRouter();
 const { t } = useI18n();
 
+// =============================================================================
+// INVENTORY DATA
+// =============================================================================
 const allEquipment = ref([]);
 const loading = ref(false);
 const loadError = ref(null);
-const showExitModal = ref(false);
 
 const fetchEquipment = async () => {
   loading.value = true;
@@ -46,9 +58,12 @@ const fetchEquipment = async () => {
   }
 };
 
-const showKeyboard = ref(false);
-const activeEquipment = ref(null);
-const quantityWarning = ref("");
+const formatCurrency = (value) => `₱${parseFloat(value).toLocaleString()}`;
+
+// =============================================================================
+// SELECTION STATE
+// =============================================================================
+const hasSelection = computed(() => props.selectedEquipment.length > 0);
 
 const getSelectedItem = (equipment) =>
   props.selectedEquipment.find((item) => item.id === equipment.id);
@@ -57,10 +72,6 @@ const getItemQuantity = (equipment) => {
   const item = getSelectedItem(equipment);
   return item ? item.quantity : 0;
 };
-
-const formatCurrency = (value) => `₱${parseFloat(value).toLocaleString()}`;
-
-const hasSelection = computed(() => props.selectedEquipment.length > 0);
 
 const setQuantity = (equipment, newQuantity) => {
   if (newQuantity < 0) newQuantity = 0;
@@ -93,10 +104,18 @@ const setQuantity = (equipment, newQuantity) => {
   emit("update:selected-equipment", newSelection);
 };
 
-const increment = (equipment) =>
-  setQuantity(equipment, getItemQuantity(equipment) + 1);
-const decrement = (equipment) =>
-  setQuantity(equipment, getItemQuantity(equipment) - 1);
+const increment = (equipment) => setQuantity(equipment, getItemQuantity(equipment) + 1);
+const decrement = (equipment) => setQuantity(equipment, getItemQuantity(equipment) - 1);
+
+const resetSelection = () => emit("update:selected-equipment", []);
+const continueStep = () => props.goNext("dates");
+
+// =============================================================================
+// ON-SCREEN KEYBOARD
+// =============================================================================
+const showKeyboard = ref(false);
+const activeEquipment = ref(null);
+const quantityWarning = ref("");
 
 const openKeyboard = (equipment) => {
   activeEquipment.value = equipment;
@@ -130,8 +149,10 @@ const handleKeyboardHide = () => {
   quantityWarning.value = "";
 };
 
-const resetSelection = () => emit("update:selected-equipment", []);
-const continueStep = () => props.goNext("dates");
+// =============================================================================
+// EXIT MODAL
+// =============================================================================
+const showExitModal = ref(false);
 
 const handleBackClick = () => {
   if (props.hasStartedForm && props.hasStartedForm()) {
@@ -150,6 +171,9 @@ const cancelExit = () => {
   showExitModal.value = false;
 };
 
+// =============================================================================
+// LIFECYCLE
+// =============================================================================
 onMounted(() => {
   fetchEquipment();
 });
@@ -160,6 +184,7 @@ onMounted(() => {
     class="flex flex-col w-full h-full"
     :class="{ 'content-with-keyboard': showKeyboard }"
   >
+    <!-- HEADER -->
     <div class="flex items-center mb-6 gap-7 flex-shrink-0">
       <ArrowBackButton @click="handleBackClick" />
       <div>
@@ -173,10 +198,8 @@ onMounted(() => {
     </div>
 
     <div class="flex-1 overflow-y-auto">
-      <div
-        v-if="loading"
-        class="flex flex-col justify-center items-center py-20"
-      >
+      <!-- Loading state -->
+      <div v-if="loading" class="flex flex-col justify-center items-center py-20">
         <div class="loader-dots mb-4">
           <div class="dot"></div>
           <div class="dot"></div>
@@ -185,17 +208,17 @@ onMounted(() => {
         <p class="text-[#03335C] text-lg font-semibold">{{ t('loadingEquipment') }}</p>
       </div>
 
+      <!-- Error state -->
       <div v-else-if="loadError" class="text-center text-red-500 py-10">
         {{ loadError }}
       </div>
 
-      <div
-        v-else-if="allEquipment.length === 0"
-        class="flex justify-center items-center py-20"
-      >
+      <!-- Empty state -->
+      <div v-else-if="allEquipment.length === 0" class="flex justify-center items-center py-20">
         <p class="text-gray-400 text-xl font-medium">{{ t('noEquipmentAvailable') }}</p>
       </div>
 
+      <!-- EQUIPMENT LIST GRID -->
       <div v-else class="grid grid-cols-4 gap-5">
         <div
           v-for="equipment in allEquipment"
@@ -267,9 +290,8 @@ onMounted(() => {
       </div>
     </div>
 
-    <div
-      class="flex gap-6 mt-6 justify-between items-center bottom-0 flex-shrink-0"
-    >
+    <!-- FOOOTER -->
+    <div class="flex gap-6 mt-6 justify-between items-center bottom-0 flex-shrink-0">
       <Button
         :variant="hasSelection ? 'outline' : 'disabled'"
         size="md"
