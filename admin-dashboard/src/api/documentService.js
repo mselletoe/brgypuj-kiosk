@@ -27,6 +27,10 @@ export function deleteDocumentType(id) {
   return api.delete(`/admin/documents/types/${id}`)
 }
 
+export function bulkDeleteDocumentTypes(ids) {
+  return api.post('/admin/documents/types/bulk-delete', ids)
+}
+
 // =================================================================================
 // DOCUMENT TEMPLATES
 // =================================================================================

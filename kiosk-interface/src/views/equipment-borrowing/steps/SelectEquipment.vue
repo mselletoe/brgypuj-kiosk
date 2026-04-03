@@ -7,14 +7,14 @@
  * for direct quantity entry. Emits the updated selection to the parent wizard.
  */
  
-import { ref, computed, nextTick, onMounted } from "vue";
+import { ref, computed, nextTick, onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import ArrowBackButton from "@/components/shared/ArrowBackButton.vue";
 import Button from "@/components/shared/Button.vue";
 import Modal from "@/components/shared/Modal.vue";
 import { PlusIcon, MinusIcon } from "@heroicons/vue/24/solid";
 import Keyboard from "@/components/shared/Keyboard.vue";
-import { getAvailableEquipment } from "@/api/equipmentService";
+import { useEquipmentInventoryStore } from "@/stores/equipmentInventory";
 import { useI18n } from 'vue-i18n';
 
 const props = defineProps({
@@ -31,32 +31,20 @@ const { t } = useI18n();
 // =============================================================================
 // INVENTORY DATA
 // =============================================================================
-const allEquipment = ref([]);
-const loading = ref(false);
-const loadError = ref(null);
+const equipmentInventoryStore = useEquipmentInventoryStore();
 
-const fetchEquipment = async () => {
-  loading.value = true;
-  loadError.value = null;
-
-  try {
-    const data = await getAvailableEquipment();
-
-    allEquipment.value = data.map((item) => ({
-      id: item.id,
-      name: item.name,
-      total: item.total_quantity,
-      available: item.available_quantity,
-      rate: Number(item.rate_per_day),
-      ratePer: "day",
-    }));
-  } catch (err) {
-    loadError.value = "Failed to load equipment inventory";
-    console.error(err);
-  } finally {
-    loading.value = false;
-  }
-};
+const allEquipment = computed(() =>
+  equipmentInventoryStore.inventory.map((item) => ({
+    id: item.id,
+    name: item.name,
+    total: item.total_quantity,
+    available: item.available_quantity,
+    rate: Number(item.rate_per_day),
+    ratePer: "day",
+  }))
+);
+const loading   = computed(() => equipmentInventoryStore.loading);
+const loadError = computed(() => equipmentInventoryStore.error);
 
 const formatCurrency = (value) => `₱${parseFloat(value).toLocaleString()}`;
 
@@ -109,6 +97,15 @@ const decrement = (equipment) => setQuantity(equipment, getItemQuantity(equipmen
 
 const resetSelection = () => emit("update:selected-equipment", []);
 const continueStep = () => props.goNext("dates");
+
+// If an item is deleted via WebSocket while it's in the selection, remove it
+watch(allEquipment, (list) => {
+  const validIds = new Set(list.map((i) => i.id))
+  const cleaned = props.selectedEquipment.filter((i) => validIds.has(i.id))
+  if (cleaned.length !== props.selectedEquipment.length) {
+    emit("update:selected-equipment", cleaned)
+  }
+})
 
 // =============================================================================
 // ON-SCREEN KEYBOARD
@@ -174,9 +171,7 @@ const cancelExit = () => {
 // =============================================================================
 // LIFECYCLE
 // =============================================================================
-onMounted(() => {
-  fetchEquipment();
-});
+onMounted(() => equipmentInventoryStore.fetchInventory());
 </script>
 
 <template>

@@ -8,48 +8,37 @@
  */
 
 import { useRoute, useRouter } from "vue-router";
-import { ref, onMounted } from "vue";
+import { computed, onMounted } from "vue";
 import { useI18n } from "vue-i18n";
 import ArrowBackButton from "@/components/shared/ArrowBackButton.vue";
-import { getDocumentTypes } from "@/api/documentService";
+import { useDocumentTypesStore } from "@/stores/documentTypes";
 
 const route = useRoute();
 const router = useRouter();
 const { t } = useI18n();
 
 const isParent = () => !route.params.docType;
-
-const documents = ref([]);
-const loading = ref(false);
-const error = ref(null);
-
 const goBack = () => router.push("/home");
 
 // =============================================================================
-// DATA FETCHING
+// STORE
 // =============================================================================
-const fetchDocuments = async () => {
-  loading.value = true;
-  error.value = null;
+const documentTypesStore = useDocumentTypesStore();
 
-  try {
-    const data = await getDocumentTypes();
-    documents.value = data.map((doc) => ({
-      request_type_name: doc.doctype_name,
-      description: doc.description,
-      price: doc.price,
-    }));
-  } catch (err) {
-    error.value = "Failed to load documents";
-  } finally {
-    loading.value = false;
-  }
-};
+const documents = computed(() =>
+  documentTypesStore.types.map((doc) => ({
+    request_type_name: doc.doctype_name,
+    description: doc.description,
+    price: doc.price,
+  }))
+);
+const loading = computed(() => documentTypesStore.loading);
+const error   = computed(() => documentTypesStore.error);
 
 // =============================================================================
 // LIFECYCLE
 // =============================================================================
-onMounted(fetchDocuments);
+onMounted(() => documentTypesStore.fetchTypes());
 </script>
 
 <template>

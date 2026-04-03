@@ -12,6 +12,7 @@ from pathlib import Path
 from io import BytesIO
 from sqlalchemy.orm import Session
 from app.api.deps import get_db
+from app.core.websocket_manager import ws_manager
 from app.schemas.document import (
     DocumentTypeAdminOut,
     DocumentTypeCreate,
@@ -109,33 +110,53 @@ def list_document_types(db: Session = Depends(get_db),):
     response_model=DocumentTypeAdminOut,
     status_code=status.HTTP_201_CREATED,
 )
-def create_type(payload: DocumentTypeCreate, db: Session = Depends(get_db),):
-    return create_document_type(db, payload)
+async def create_type(payload: DocumentTypeCreate, db: Session = Depends(get_db)):
+    result = create_document_type(db, payload)
+    await ws_manager.broadcast_to_kiosk("document_types_updated", {
+        "action": "created",
+        "doctype_id": result.id,
+        "doctype_name": result.doctype_name,
+        "is_available": result.is_available,
+        "price": float(result.price) if result.price is not None else None,
+    })
+    return result
+
+
+@router.post("/types/bulk-delete", status_code=status.HTTP_200_OK)
+async def bulk_delete_types(ids: list[int] = Body(...), db: Session = Depends(get_db)):
+    for id in ids:
+        delete_document_type(db, id)
+        await ws_manager.broadcast_to_kiosk("document_types_updated", {
+            "action": "deleted",
+            "doctype_id": id,
+        })
+    return {"detail": f"{len(ids)} document type(s) deleted"}
 
 
 @router.put( "/types/{doctype_id}", response_model=DocumentTypeAdminOut, )
-def update_type(
-    doctype_id: int,
-    payload: DocumentTypeUpdate,
-    db: Session = Depends(get_db),
-):
+async def update_type(doctype_id: int, payload: DocumentTypeUpdate, db: Session = Depends(get_db)):
     updated = update_document_type(db, doctype_id, payload)
     if not updated:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Document type not found",
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document type not found")
+    await ws_manager.broadcast_to_kiosk("document_types_updated", {
+        "action": "updated",
+        "doctype_id": updated.id,
+        "doctype_name": updated.doctype_name,
+        "is_available": updated.is_available,
+        "price": float(updated.price) if updated.price is not None else None,
+    })
     return updated
 
 
 @router.delete( "/types/{doctype_id}", status_code=status.HTTP_204_NO_CONTENT, )
-def delete_type(doctype_id: int, db: Session = Depends(get_db)):
+async def delete_type(doctype_id: int, db: Session = Depends(get_db)):
     deleted = delete_document_type(db, doctype_id)
     if not deleted:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Document type not found",
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document type not found")
+    await ws_manager.broadcast_to_kiosk("document_types_updated", {
+        "action": "deleted",
+        "doctype_id": doctype_id,
+    })
 
 
 @router.get( "/types/{doctype_id}/file" )

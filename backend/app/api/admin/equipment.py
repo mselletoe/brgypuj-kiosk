@@ -10,6 +10,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status, Body
 from sqlalchemy.orm import Session
 from app.api.deps import get_db
+from app.core.websocket_manager import ws_manager
 from app.schemas.equipment import (
     EquipmentInventoryOut,
     EquipmentInventoryCreate,
@@ -103,46 +104,52 @@ def get_equipment_inventory(db: Session = Depends(get_db)):
 
 
 @router.post("/inventory", response_model=EquipmentInventoryOut, status_code=status.HTTP_201_CREATED)
-def create_equipment_item(
-    payload: EquipmentInventoryCreate,
-    db: Session = Depends(get_db)
-):
-    return equipment_service.create_equipment_inventory(db, payload)
+async def create_equipment_item(payload: EquipmentInventoryCreate, db: Session = Depends(get_db)):
+    result = equipment_service.create_equipment_inventory(db, payload)
+    await ws_manager.broadcast_to_kiosk("equipment_inventory_updated", {
+        "action": "created",
+        "id": result.id,
+        "name": result.name,
+        "available_quantity": result.available_quantity,
+        "rate_per_day": float(result.rate_per_day),
+    })
+    return result
 
 
 @router.put("/inventory/{equipment_id}", response_model=EquipmentInventoryOut)
-def update_equipment_item(
-    equipment_id: int,
-    payload: EquipmentInventoryUpdate,
-    db: Session = Depends(get_db)
-):
+async def update_equipment_item(equipment_id: int, payload: EquipmentInventoryUpdate, db: Session = Depends(get_db)):
     result = equipment_service.update_equipment_inventory(db, equipment_id, payload)
-    
     if not result:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Equipment item not found"
-        )
-    
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Equipment item not found")
+    await ws_manager.broadcast_to_kiosk("equipment_inventory_updated", {
+        "action": "updated",
+        "id": result.id,
+        "name": result.name,
+        "available_quantity": result.available_quantity,
+        "rate_per_day": float(result.rate_per_day),
+    })
     return result
 
 
 @router.delete("/inventory/{equipment_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_equipment_item(equipment_id: int, db: Session = Depends(get_db)):
+async def delete_equipment_item(equipment_id: int, db: Session = Depends(get_db)):
     result = equipment_service.delete_equipment_inventory(db, equipment_id)
-    
     if not result:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Equipment item not found"
-        )
-    
-    return None
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Equipment item not found")
+    await ws_manager.broadcast_to_kiosk("equipment_inventory_updated", {
+        "action": "deleted",
+        "id": equipment_id,
+    })
 
 
 @router.post("/inventory/bulk-delete", status_code=status.HTTP_200_OK)
-def bulk_delete_inventory(ids: List[int], db: Session = Depends(get_db)):
+async def bulk_delete_inventory(ids: List[int], db: Session = Depends(get_db)):
     count = equipment_service.bulk_delete_equipment_inventory(db, ids)
+    for id in ids:
+        await ws_manager.broadcast_to_kiosk("equipment_inventory_updated", {
+            "action": "deleted",
+            "id": id,
+        })
     return {"message": f"{count} equipment item(s) deleted"}
 
 
