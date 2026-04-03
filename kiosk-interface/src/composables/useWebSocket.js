@@ -16,7 +16,9 @@ export function useWebSocket() {
   function connect() {
     if (socket && socket.readyState === WebSocket.OPEN) return
 
-    socket = new WebSocket('ws://localhost:8000/ws/kiosk')
+    const host     = window.location.hostname
+    const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws'
+    socket = new WebSocket(`${protocol}://${host}:8000/ws/kiosk`)
 
     socket.onopen = () => {
       console.log('[WS] Kiosk connected')
