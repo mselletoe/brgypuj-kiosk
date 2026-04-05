@@ -1,4 +1,11 @@
 <script setup>
+/**
+ * @file views/feedback-and-reports/subtabs/FeedbackTab.vue
+ * @description Displays and manages resident feedback submissions.
+ * Supports search filtering, single delete, and bulk delete.
+ * Exposes selection state and bulk actions to the parent via defineExpose.
+ */
+
 import { ref, computed, onMounted } from 'vue'
 import FeedbackReportCard from '@/views/feedback-and-reports/FeedbackReportCard.vue'
 import ConfirmModal from '@/components/shared/ConfirmationModal.vue'
@@ -8,7 +15,6 @@ import {
   bulkDeleteFeedbacks
 } from '@/api/feedbackService'
 
-/* ---------- PROPS ---------- */
 const props = defineProps({
   searchQuery: {
     type: String,
@@ -16,17 +22,41 @@ const props = defineProps({
   }
 })
 
-/* ---------- STATE ---------- */
+// =============================================================================
+// STATE
+// =============================================================================
 const feedbacks = ref([])
 const selectedFeedbacks = ref(new Set())
 const isLoading = ref(true)
 const errorMessage = ref(null)
 
+// =============================================================================
+// CONFIRM MODAL
+// =============================================================================
 const showConfirmModal = ref(false)
 const confirmTitle = ref('')
 const confirmAction = ref(null)
 
-/* ---------- HELPERS ---------- */
+const openConfirmModal = (title, action) => {
+  confirmTitle.value = title
+  confirmAction.value = action
+  showConfirmModal.value = true
+}
+
+const handleConfirm = async () => {
+  if (confirmAction.value) await confirmAction.value()
+  showConfirmModal.value = false
+  confirmAction.value = null
+}
+
+const handleCancel = () => {
+  showConfirmModal.value = false
+  confirmAction.value = null
+}
+
+// =============================================================================
+// DATA FETCHING
+// =============================================================================
 const getRatingLabel = (rating) => ({
   1: 'Very Poor',
   2: 'Poor',
@@ -44,7 +74,6 @@ const formatDate = (isoDate) => {
   })
 }
 
-/* ---------- FETCH ---------- */
 const fetchFeedbacks = async () => {
   isLoading.value = true
   try {
@@ -72,7 +101,9 @@ const fetchFeedbacks = async () => {
   }
 }
 
-/* ---------- SELECTION ---------- */
+// =============================================================================
+// SELECTION
+// =============================================================================
 const handleSelectionUpdate = (id, isSelected) => {
   if (isSelected) {
     selectedFeedbacks.value.add(id)
@@ -89,24 +120,9 @@ const deselectAll = () => {
   selectedFeedbacks.value.clear()
 }
 
-/* ---------- DELETE ---------- */
-const openConfirmModal = (title, action) => {
-  confirmTitle.value = title
-  confirmAction.value = action
-  showConfirmModal.value = true
-}
-
-const handleConfirm = async () => {
-  if (confirmAction.value) await confirmAction.value()
-  showConfirmModal.value = false
-  confirmAction.value = null
-}
-
-const handleCancel = () => {
-  showConfirmModal.value = false
-  confirmAction.value = null
-}
-
+// =============================================================================
+// ACTIONS
+// =============================================================================
 const handleDelete = (id) => {
   openConfirmModal('Delete this feedback?', async () => {
     await deleteFeedback(id)
@@ -130,7 +146,9 @@ const bulkDelete = () => {
   )
 }
 
-/* ---------- EXPOSE TO PARENT ---------- */
+// =============================================================================
+// EXPOSED API (for parent FeedbackReports toolbar)
+// =============================================================================
 defineExpose({
   selectedCount: computed(() => selectedFeedbacks.value.size),
   totalCount: computed(() => filteredFeedbacks.value.length),
@@ -139,7 +157,9 @@ defineExpose({
   bulkDelete
 })
 
-/* ---------- FILTER ---------- */
+// =============================================================================
+// FILTERING
+// =============================================================================
 const filteredFeedbacks = computed(() => {
   if (!props.searchQuery) return feedbacks.value
 
@@ -154,21 +174,28 @@ const filteredFeedbacks = computed(() => {
   )
 })
 
+// =============================================================================
+// LIFECYCLE
+// =============================================================================
 onMounted(fetchFeedbacks)
 </script>
 
 <template>
   <div class="space-y-4 animate-fade-in">
+
+    <!-- Loading state -->
     <div v-if="isLoading" class="flex flex-col items-center justify-center w-full h-[65vh] gap-4 pt-24">
       <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
       <p class="text-gray-500 font-medium">Loading feedbacks and reports...</p>
     </div>
 
     <template v-else>
+      <!-- Error state -->
       <div v-if="errorMessage" class="text-center p-10 text-red-500">
         {{ errorMessage }}
       </div>
 
+      <!-- Empty state -->
       <div 
         v-else-if="filteredFeedbacks.length === 0" 
         class="text-center p-10 text-gray-500"
