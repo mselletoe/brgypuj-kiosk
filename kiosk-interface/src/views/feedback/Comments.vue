@@ -91,7 +91,7 @@ const handleSubmit = async () => {
 
     await submitFeedback(payload);
 
-    showKeyboard.value = false; // Hide keyboard if it's open
+    showKeyboard.value = false; 
     isModalVisible.value = true;
   } catch (error) {
     console.error("Failed to submit feedback:", error);
@@ -101,7 +101,6 @@ const handleSubmit = async () => {
   }
 };
 
-// --- Keyboard Logic ---
 const focusInput = () => {
   showKeyboard.value = true;
   nextTick(() => {

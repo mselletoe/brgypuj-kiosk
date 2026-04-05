@@ -1,12 +1,10 @@
 import api from './http';
 
-// Kiosk
 const getKioskFAQs = async () => {
   const res = await api.get('/admin/faqs/kiosk');
   return res.data;
 };
 
-// Admin
 const getAllFAQs = async () => {
   const res = await api.get('/admin/faqs/admin');
   return res.data;

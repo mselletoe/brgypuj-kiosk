@@ -11,8 +11,6 @@ import GeneralExperienceIcon from '@/assets/vectors/GeneralExperience.svg'
 const router = useRouter()
 const { t } = useI18n()
 
-// Category `name` stays English — passed as route query param
-// `labelKey` is used for translated display
 const categories = [
   { name: 'Service Quality',    labelKey: 'serviceQuality',     icon: ServiceQualityIcon,    color: 'bg-[#E74C3C]' },
   { name: 'Interface Design',   labelKey: 'interfaceDesign',    icon: InterfaceDesignIcon,   color: 'bg-[#F16C14]' },

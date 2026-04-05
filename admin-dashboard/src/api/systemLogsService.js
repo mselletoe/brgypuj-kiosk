@@ -1,4 +1,3 @@
-// admin-dashboard/src/api/systemLogService.js
 import http from "./http";
 
 export const getSystemLogs = async (params = {}) => {

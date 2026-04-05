@@ -29,13 +29,12 @@ export function useWebSocket() {
       try {
         const { event: type, data } = JSON.parse(event.data)
 
-        // ── Config changes from admin ──────────────────────────────────────
         if (type === 'config_updated') {
           if (systemConfigStore.config) {
-            Object.assign(systemConfigStore.config, data)  // merge partial payload
+            Object.assign(systemConfigStore.config, data) 
           }
           if ('has_logo' in data) {
-            systemConfigStore.refreshLogo(data.has_logo)   // re-fetch or revoke blob URL
+            systemConfigStore.refreshLogo(data.has_logo)  
           }
           return
         }

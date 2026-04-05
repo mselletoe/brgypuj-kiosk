@@ -1,6 +1,3 @@
-/**
- * @file stores/equipmentInventory.js
- */
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { getAvailableEquipment } from '@/api/equipmentService'
@@ -26,7 +23,6 @@ export const useEquipmentInventoryStore = defineStore('equipmentInventory', () =
     }
   }
 
-  // Called by useWebSocket when equipment_inventory_updated arrives
   function handleWebSocketEvent(action, data) {
     if (action === 'created') {
       inventory.value.push(data)

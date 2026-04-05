@@ -10,10 +10,8 @@ const router = useRouter()
 const { t } = useI18n()
 const feedbackCategory = ref('')
 
-// Applied a vibrant, semantic color scale that bridges with your KioskHome palette
 const ratingKeys = ['veryPoor', 'poor', 'average', 'good', 'excellent']
 const ratingColors = ['#E74C3C', '#F16C14', '#E69500', '#13B3A1', '#2C67E7']
-// ratings is computed so text updates reactively on locale change
 const ratings = computed(() =>
   ratingKeys.map((key, i) => ({
     stars: i + 1,

@@ -44,7 +44,7 @@ export const useNotificationStore = defineStore('notification', () => {
     if (!mapped) return
 
     notifications.value.unshift({
-      id:     Date.now(),   // no DB id needed on kiosk side
+      id:     Date.now(),
       type:   mapped.type,
       msg:    mapped.msg,
       date,

@@ -23,38 +23,30 @@ const router = useRouter();
 const authStore = useAuthStore();
 const { t } = useI18n();
 
-// Phase
 const currentPhase = ref("selection"); // 'selection' | 'pin'
 
-// PIN state
 const pinBuffer = ref("");
 const isSubmitting = ref(false);
 const isShaking = ref(false);
 const verificationError = ref("");
 const pinLength = 4;
 
-// Modals
 const showSuccessModal = ref(false);
 const showNoRfidModal = ref(false);
 const showConfirmModal = ref(false);
 
-// Selection state
 const lastNameLetter = ref("");
 const firstNameLetter = ref("");
-const selectedResident = ref(null); // full info from getReportCardInfo
+const selectedResident = ref(null); 
 const residentList = ref([]);
 const isFetching = ref(false);
 const isCheckingCard = ref(false);
 
-// Dropdowns
 const showLastNameDropdown = ref(false);
 const showFirstNameDropdown = ref(false);
 const showResidentDropdown = ref(false);
 const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
-// -------------------------------------------------------
-// Fetch residents whenever both letters are set
-// -------------------------------------------------------
 watch([lastNameLetter, firstNameLetter], async ([last, first]) => {
   if (!last || !first) {
     residentList.value = [];
@@ -93,13 +85,12 @@ const selectFirstNameLetter = (letter) => {
   selectedResident.value = null;
 };
 
-// On resident pick — immediately fetch card info to check has_rfid
 const selectResident = async (r) => {
   showResidentDropdown.value = false;
   isCheckingCard.value = true;
   try {
     const { data: info } = await getReportCardInfo(r.resident_id);
-    selectedResident.value = info; // { resident_id, first_name, last_name, rfid_uid, has_rfid }
+    selectedResident.value = info; 
   } catch {
     selectedResident.value = { ...r, has_rfid: false, rfid_uid: null };
   } finally {
@@ -107,9 +98,6 @@ const selectResident = async (r) => {
   }
 };
 
-// -------------------------------------------------------
-// PIN logic
-// -------------------------------------------------------
 const handleKeypad = (num) => {
   if (pinBuffer.value.length < pinLength) {
     pinBuffer.value += num;
@@ -130,9 +118,6 @@ const triggerError = (msg) => {
   }, 500);
 };
 
-// -------------------------------------------------------
-// Navigation
-// -------------------------------------------------------
 const proceedToPin = () => {
   if (!selectedResident.value) return;
   if (!selectedResident.value.has_rfid) {
@@ -159,9 +144,6 @@ const handleReset = () => {
   residentList.value = [];
 };
 
-// -------------------------------------------------------
-// Submit — show confirm modal first, then call API
-// -------------------------------------------------------
 const submitReport = () => {
   if (pinBuffer.value.length !== pinLength) return;
   showConfirmModal.value = true;
@@ -176,7 +158,6 @@ const handleFinalDeactivation = async () => {
       pin: pinBuffer.value,
       rfid_uid: authStore.rfidUid || null,
     });
-    // If logged-in user just reported their own card, log them out
     if (
       authStore.isRFID &&
       authStore.residentId === selectedResident.value.resident_id

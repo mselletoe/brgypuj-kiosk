@@ -1,6 +1,3 @@
-/**
- * @file stores/documentTypes.js
- */
 import { defineStore } from 'pinia'
 import { getDocumentTypes } from '@/api/documentService'
 import { ref } from 'vue'
@@ -26,7 +23,6 @@ export const useDocumentTypesStore = defineStore('documentTypes', () => {
     }
   }
 
-  // Called by useWebSocket when document_types_updated arrives
   function handleWebSocketEvent(action, data) {
     if (action === 'created') {
       types.value.push(data)

@@ -1,4 +1,3 @@
-// src/composables/useIDApplication.js
 import { ref } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
@@ -12,7 +11,6 @@ import {
 } from "@/api/idService";
 import { getResidentAutofillData } from "@/api/residentService";
 
-// Maps fixed placeholder names → autofill response keys
 const AUTOFILL_MAP = {
   last_name: "last_name",
   first_name: "first_name",
@@ -25,11 +23,7 @@ const AUTOFILL_MAP = {
 export function useIDApplication() {
   const router = useRouter();
   const authStore = useAuthStore();
-
-  // ─── Phase ───────────────────────────────────────────────────────────────
   const currentPhase = ref("selection"); // 'selection' | 'details' | 'camera'
-
-  // ─── Selection Phase ──────────────────────────────────────────────────────
   const lastNameLetter = ref("");
   const firstNameLetter = ref("");
   const selectedResident = ref(null);
@@ -61,7 +55,6 @@ export function useIDApplication() {
     residentList.value = [];
   }
 
-  // ─── Verification Modal ───────────────────────────────────────────────────
   const showVerificationModal = ref(false);
   const verifyMonth = ref("");
   const verifyDay = ref("");
@@ -103,7 +96,6 @@ export function useIDApplication() {
     }
   }
 
-  // ─── Requirements Modal ───────────────────────────────────────────────────
   const showRequirementsModal = ref(false);
   const requirementsChecks = ref([]);
   const isEligible = ref(true);
@@ -126,7 +118,6 @@ export function useIDApplication() {
     }
   }
 
-  // ─── Details Phase ────────────────────────────────────────────────────────
   const idFields = ref([]);
   const detailsForm = ref({});
   const detailsErrors = ref({});
@@ -216,11 +207,8 @@ export function useIDApplication() {
     currentPhase.value = "camera";
   }
 
-  // ─── Camera / Submission Phase ────────────────────────────────────────────
   const photoData = ref(null);
   const isSubmitting = ref(false);
-
-  // Result modals
   const showSuccessModal = ref(false);
   const showErrorModal = ref(false);
   const showPendingModal = ref(false);
@@ -248,14 +236,12 @@ export function useIDApplication() {
       const msg =
         err?.response?.data?.detail || "Submission failed. Please try again.";
       console.error("ID application failed:", msg);
-      // Re-throw so CameraPhase can restart the camera
       throw err;
     } finally {
       isSubmitting.value = false;
     }
   }
 
-  // ─── Navigation ───────────────────────────────────────────────────────────
   function proceedToVerification() {
     if (!selectedResident.value) return;
     if (selectedResident.value.has_rfid) {
@@ -286,10 +272,7 @@ export function useIDApplication() {
   }
 
   return {
-    // Phase
     currentPhase,
-
-    // Selection
     lastNameLetter,
     firstNameLetter,
     selectedResident,
@@ -299,7 +282,6 @@ export function useIDApplication() {
     resetSelection,
     proceedToVerification,
 
-    // Verification modal
     showVerificationModal,
     verifyMonth,
     verifyDay,
@@ -308,14 +290,12 @@ export function useIDApplication() {
     isVerifying,
     handleVerification,
 
-    // Requirements modal
     showRequirementsModal,
     requirementsChecks,
     isEligible,
     isCheckingRequirements,
     proceedFromRequirements,
 
-    // Details
     idFields,
     detailsForm,
     detailsErrors,
@@ -326,18 +306,15 @@ export function useIDApplication() {
     proceedToCameraFromDetails,
     AUTOFILL_MAP,
 
-    // Camera / submission
     photoData,
     isSubmitting,
     submitApplication,
 
-    // Result modals
     showSuccessModal,
     showErrorModal,
     showPendingModal,
     referenceId,
 
-    // Navigation
     goBack,
     handleModalDone,
   };
