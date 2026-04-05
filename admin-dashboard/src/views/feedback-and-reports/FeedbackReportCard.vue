@@ -1,25 +1,63 @@
 <script setup>
+/**
+ * @file views/feedback-and-reports/FeedbackReportCard.vue
+ * @description Displays a single feedback or report entry.
+ * Feedback cards show a star rating and optional comment.
+ * Report cards show a resolve/undo action. Both support row selection and deletion.
+ * Accent color and badge styling differ between the two types.
+ */
+
 import { computed } from 'vue';
 import { TrashIcon, StarIcon, ArrowUturnLeftIcon } from '@heroicons/vue/24/solid';
 import { StarIcon as StarOutline } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
-  id: { type: String, required: true },
-  type: { 
-    type: String, 
-    required: true, 
-    validator: (v) => ['feedback', 'report'].includes(v) 
+  id: {
+    type: String,
+    required: true,
   },
-  title: { type: String, required: true },
-  requester: { type: Object, required: true },
-  rfidNo: { type: String, required: true },
-  createdOn: { type: String, required: true },
-  rating: { type: Number, default: 0 }, // 1-5
-  ratingLabel: { type: String, default: '' },
-  comment: { type: String, default: '' },
-  isSelected: { type: Boolean, default: false },
-  isResolved: { type: Boolean, default: false }
-});
+  type: {
+    type: String,
+    required: true,
+    validator: (v) => ['feedback', 'report'].includes(v),
+  },
+  title: {
+    type: String,
+    required: true,
+  },
+  requester: {
+    type: Object,
+    required: true,
+  },
+  rfidNo: {
+    type: String,
+    required: true,
+  },
+  createdOn: {
+    type: String,
+    required: true,
+  },
+  rating: {
+    type: Number,
+    default: 0,
+  },
+  ratingLabel: {
+    type: String,
+    default: '',
+  },
+  comment: {
+    type: String,
+    default: '',
+  },
+  isSelected: {
+    type: Boolean,
+    default: false,
+  },
+  isResolved: {
+    type: Boolean,
+    default: false,
+  },
+})
 
 const emit = defineEmits(['delete', 'undo', 'update:selected']);
 

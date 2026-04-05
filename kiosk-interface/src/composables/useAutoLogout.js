@@ -21,6 +21,7 @@ import { ref, watch, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { getKioskSettings } from '@/api/systemConfigService'
+import { useSystemConfigStore } from '@/stores/systemConfig'
 
 // Routes where the timer should NOT run
 const EXCLUDED_ROUTES = ['/idle', '/login', '/login-rfid', '/auth-pin']
@@ -36,6 +37,7 @@ export function useAutoLogout() {
   const router = useRouter()
   const route  = useRoute()
   const auth   = useAuthStore()
+  const systemConfigStore = useSystemConfigStore()
 
   // ── Load duration from backend config ───────────────────────────────────
   async function loadConfig() {
@@ -106,6 +108,15 @@ export function useAutoLogout() {
     (authenticated) => {
       if (authenticated) startTimer()
       else { clearTimer(); secondsRemaining.value = 0 }
+    }
+  )
+
+  watch(
+    () => systemConfigStore.config?.auto_logout_duration,
+    (newDuration) => {
+      if (newDuration == null) return
+      logoutDuration = Math.max(newDuration, 10)
+      startTimer() 
     }
   )
 

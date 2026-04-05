@@ -57,6 +57,7 @@ async def patch_system_config(          # ← make async
         "has_logo":            result.has_logo,
         "maintenance_mode":    result.maintenance_mode,
         "maintenance_message": result.maintenance_message,
+        "auto_logout_duration": result.auto_logout_duration,
     })
     return result
 
