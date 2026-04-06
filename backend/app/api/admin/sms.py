@@ -1,3 +1,11 @@
+"""
+app/api/admin/sms.py
+
+Router for SMS announcement broadcasting.
+Handles recipient preview, standard send, streaming send with
+real-time progress via SSE, and SMS history retrieval.
+"""
+
 import json
 import asyncio
 from typing import List, AsyncGenerator
@@ -28,6 +36,19 @@ from app.api.deps import get_db
 router = APIRouter(prefix="/sms")
 
 
+# =================================================================================
+# INTERNAL HELPERS
+# =================================================================================
+
+def _sse(event: str, data: dict) -> str:
+    """Format a server-sent event string."""
+    return f"event: {event}\ndata: {json.dumps(data)}\n\n"
+
+
+# =================================================================================
+# RECIPIENT PREVIEW & STANDARD SEND
+# =================================================================================
+
 @router.post("/preview", response_model=RecipientCountResponse)
 def preview_recipients(payload: SMSRequest, db: Session = Depends(get_db)):
     return get_recipient_count(db, payload)
@@ -38,16 +59,15 @@ def send_announcement(payload: SMSRequest, db: Session = Depends(get_db)):
     return send_sms_announcement(db, payload)
 
 
-def _sse(event: str, data: dict) -> str:
-    return f"event: {event}\ndata: {json.dumps(data)}\n\n"
-
+# =================================================================================
+# STREAMING SEND (SSE)
+# =================================================================================
 
 @router.post("/send-stream")
 async def send_announcement_stream(
     payload: SMSRequest,
     db: Session = Depends(get_db),
 ):
-
     async def event_stream() -> AsyncGenerator[str, None]:
         loop = asyncio.get_event_loop()
 
@@ -137,6 +157,10 @@ async def send_announcement_stream(
         },
     )
 
+
+# =================================================================================
+# SMS HISTORY
+# =================================================================================
 
 @router.get("/history", response_model=List[SMSHistoryItem])
 def list_sms_history(

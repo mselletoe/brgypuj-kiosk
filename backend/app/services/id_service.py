@@ -1,3 +1,13 @@
+
+"""
+app/services/id_service.py
+ 
+Service layer for barangay ID applications and RFID card management.
+Handles ID application submission, PDF generation, release lifecycle,
+PIN management, lost-card reporting, RFID report operations,
+and ID requirement eligibility checks.
+"""
+
 import random
 import subprocess
 import tempfile
@@ -32,6 +42,7 @@ ID_APPLICATION_DOCTYPE_NAME = "ID Application"
 
 RFID_PIN_DEFAULT = "0000"
 
+# Form data keys that are metadata, not template context variables
 _FORM_DATA_META_KEYS = {
     "request_type",
     "request_for_id",
@@ -42,6 +53,10 @@ _FORM_DATA_META_KEYS = {
     "validity",
 }
 
+
+# =================================================================================
+# INTERNAL HELPERS
+# =================================================================================
 
 def _get_resident_or_404(db: Session, resident_id: int) -> Resident:
     resident = db.query(Resident).filter(Resident.id == resident_id).first()
@@ -77,6 +92,10 @@ def _generate_brgy_id_number(db: Session) -> str:
             next_number = 1
     return str(next_number).zfill(5)
 
+
+# =================================================================================
+# PDF GENERATION
+# =================================================================================
 
 def _convert_docx_to_pdf(docx_bytes: bytes) -> bytes:
     with tempfile.TemporaryDirectory() as temp_dir:
@@ -177,6 +196,10 @@ def _save_id_pdf(transaction_no: str, pdf_bytes: bytes) -> str:
     return str(file_path.relative_to(BASE_DIR).as_posix())
 
 
+# =================================================================================
+# KIOSK — ID LOOKUP & SEARCH
+# =================================================================================
+
 def generate_brgy_id_number(db: Session) -> str:
     return _generate_brgy_id_number(db)
 
@@ -207,6 +230,7 @@ def search_residents_by_name(db: Session, query: str) -> list[dict]:
         .all()
     )
 
+    # Flag residents who already have a pending application
     pending_applicant_ids = set()
     for r in residents:
         exists = (
@@ -240,6 +264,10 @@ def verify_resident_birthdate(db: Session, resident_id: int, birthdate) -> bool:
     return resident.birthdate == birthdate
 
 
+# =================================================================================
+# KIOSK — ID APPLICATION SUBMISSION
+# =================================================================================
+
 def apply_for_id(
     db: Session,
     resident_id: int | None,
@@ -254,6 +282,7 @@ def apply_for_id(
     requester_id = resident_id if resident_id is not None else applicant_resident_id
     requester = _get_resident_or_404(db, requester_id)
 
+    # Prevent duplicate pending applications for the same resident
     duplicate = (
         db.query(DocumentRequest)
         .filter(
@@ -367,6 +396,10 @@ def apply_for_id(
     }
 
 
+# =================================================================================
+# ADMIN — ID APPLICATION RELEASE
+# =================================================================================
+
 def release_id_application(db: Session, request_id: int) -> dict:
     req = (
         db.query(DocumentRequest)
@@ -446,6 +479,10 @@ def release_id_application(db: Session, request_id: int) -> dict:
     }
 
 
+# =================================================================================
+# KIOSK — PIN MANAGEMENT
+# =================================================================================
+
 def change_pin(db: Session, resident_id: int, current_pin: str, new_pin: str) -> dict:
     resident = _get_resident_or_404(db, resident_id)
 
@@ -484,6 +521,10 @@ def verify_pin(db: Session, resident_id: int, pin: str) -> dict:
 
     return {"verified": True}
 
+
+# =================================================================================
+# KIOSK — LOST CARD REPORTING
+# =================================================================================
 
 def get_rfid_report_card_info(db: Session, resident_id: int) -> dict:
     resident = (
@@ -555,6 +596,10 @@ def report_lost_card(db: Session, resident_id: int, pin: str, rfid_uid: str | No
     }
 
 
+# =================================================================================
+# ADMIN — RFID REPORTS
+# =================================================================================
+
 def get_all_rfid_reports(db: Session) -> list:
     reports = (
         db.query(RFIDReport)
@@ -576,42 +621,6 @@ def get_all_rfid_reports(db: Session) -> list:
             "rfid_uid": last_rfid,
             "status": r.status,
             "reported_at": r.created_at,
-        })
-
-    return result
-
-
-def get_all_id_applications(db: Session) -> list:
-    requests = (
-        db.query(DocumentRequest)
-        .options(
-            joinedload(DocumentRequest.resident).joinedload(Resident.rfids),
-            joinedload(DocumentRequest.barangay_id),
-        )
-        .filter(DocumentRequest.doctype_id.is_(None))
-        .order_by(DocumentRequest.requested_at.desc())
-        .all()
-    )
-
-    result = []
-    for req in requests:
-        fd = req.form_data or {}
-        session_rfid = fd.get("session_rfid", "Guest Mode")
-        brgy_id_number = fd.get("brgy_id_number") or (
-            req.barangay_id.brgy_id_number if req.barangay_id else None
-        )
-
-        result.append({
-            "id": req.id,
-            "transaction_no": req.transaction_no,
-            "resident_id": req.resident_id,
-            "resident_first_name": req.resident.first_name if req.resident else None,
-            "resident_last_name": req.resident.last_name if req.resident else None,
-            "resident_rfid": session_rfid,
-            "brgy_id_number": brgy_id_number,
-            "requested_at": req.requested_at,
-            "status": req.status,
-            "payment_status": req.payment_status,
         })
 
     return result
@@ -663,6 +672,50 @@ def bulk_delete_rfid_reports(db: Session, ids: list[int]) -> int:
     count = db.query(RFIDReport).filter(RFIDReport.id.in_(ids)).delete(synchronize_session=False)
     db.commit()
     return count
+
+
+# =================================================================================
+# ADMIN — ID APPLICATION
+# =================================================================================
+
+def get_all_id_applications(db: Session) -> list:
+    requests = (
+        db.query(DocumentRequest)
+        .options(
+            joinedload(DocumentRequest.resident).joinedload(Resident.rfids),
+            joinedload(DocumentRequest.barangay_id),
+        )
+        .filter(DocumentRequest.doctype_id.is_(None))
+        .order_by(DocumentRequest.requested_at.desc())
+        .all()
+    )
+
+    result = []
+    for req in requests:
+        fd = req.form_data or {}
+        session_rfid = fd.get("session_rfid", "Guest Mode")
+        brgy_id_number = fd.get("brgy_id_number") or (
+            req.barangay_id.brgy_id_number if req.barangay_id else None
+        )
+
+        result.append({
+            "id": req.id,
+            "transaction_no": req.transaction_no,
+            "resident_id": req.resident_id,
+            "resident_first_name": req.resident.first_name if req.resident else None,
+            "resident_last_name": req.resident.last_name if req.resident else None,
+            "resident_rfid": session_rfid,
+            "brgy_id_number": brgy_id_number,
+            "requested_at": req.requested_at,
+            "status": req.status,
+            "payment_status": req.payment_status,
+        })
+
+    return result
+
+# =================================================================================
+# ELIGIBILITY CHECKS
+# =================================================================================
 
 def check_id_requirements(db: Session, resident_id: int) -> dict:
     doc_type = db.query(DocumentType).filter(
@@ -801,6 +854,10 @@ def check_id_requirements(db: Session, resident_id: int) -> dict:
 
     return {"eligible": all_passed, "checks": checks}
 
+
+# =================================================================================
+# ADMIN — TEMPLATE PREVIEW
+# =================================================================================
 
 def preview_id_template(db: Session) -> bytes | None:
     doc_type = db.query(DocumentType).filter(

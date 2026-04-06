@@ -1,3 +1,11 @@
+"""
+app/api/admin/blotter.py
+ 
+Router for barangay blotter record management.
+Handles CRUD operations, per-resident record lookup,
+status transitions (resolve/reopen), and bulk deletion.
+"""
+
 from fastapi import APIRouter, Depends, HTTPException, status, Body
 from sqlalchemy.orm import Session
 from app.api.deps import get_db
@@ -21,6 +29,10 @@ from app.services.blotter_service import (
 
 router = APIRouter(prefix="/blotter")
 
+
+# =================================================================================
+# INTERNAL HELPERS
+# =================================================================================
 
 def _resolve_party(resident) -> dict:
     if not resident:
@@ -85,6 +97,10 @@ def _format_record(record) -> dict:
     }
 
 
+# =================================================================================
+# BLOTTER RECORDS
+# =================================================================================
+
 @router.get("", response_model=list[BlotterRecordOut])
 def list_blotter_records(db: Session = Depends(get_db)):
     records = get_all_blotter_records(db)
@@ -131,6 +147,10 @@ def update_record(blotter_id: int, payload: BlotterRecordUpdate, db: Session = D
     return _format_record(record)
 
 
+# =================================================================================
+# STATUS TRANSITIONS
+# =================================================================================
+
 @router.post("/{blotter_id}/resolve", response_model=BlotterRecordOut)
 def resolve_record(blotter_id: int, db: Session = Depends(get_db)):
     record = resolve_blotter_record(db, blotter_id)
@@ -146,6 +166,10 @@ def reopen_record(blotter_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Blotter record not found")
     return _format_record(record)
 
+
+# =================================================================================
+# DELETION
+# =================================================================================
 
 @router.delete("/{blotter_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_record(blotter_id: int, db: Session = Depends(get_db)):

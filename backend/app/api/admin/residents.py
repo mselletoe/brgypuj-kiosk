@@ -1,3 +1,11 @@
+"""
+app/api/admin/residents.py
+
+Router for resident record management.
+Handles listing, detail retrieval, creation, update of personal info,
+address, and RFID assignment, as well as resident deletion and purok lookup.
+"""
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
@@ -27,6 +35,10 @@ from app.api.deps import get_db
 router = APIRouter(prefix="/residents")
 
 
+# =================================================================================
+# RESIDENT LISTING
+# =================================================================================
+
 @router.get("/", response_model=List[ResidentListItem])
 def list_residents(db: Session = Depends(get_db)):
     return get_all_residents_list(db)
@@ -40,20 +52,21 @@ def list_residents_dropdown(db: Session = Depends(get_db)):
 @router.get("/{resident_id}", response_model=ResidentDetailResponse)
 def get_resident(resident_id: int, db: Session = Depends(get_db)):
     resident = get_resident_detail(db, resident_id)
-    
     if not resident:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Resident with ID {resident_id} not found"
         )
-    
     return resident
 
+
+# =================================================================================
+# RESIDENT CREATION & UPDATES
+# =================================================================================
 
 @router.post("/", response_model=ResidentDetailResponse, status_code=status.HTTP_201_CREATED)
 def create_new_resident(resident_data: ResidentCreate, db: Session = Depends(get_db)):
     new_resident = create_resident(db, resident_data)
-    
     return get_resident_detail(db, new_resident.id)
 
 
@@ -64,7 +77,6 @@ def update_resident_info(
     db: Session = Depends(get_db)
 ):
     updated_resident = update_resident(db, resident_id, resident_data)
-    
     return get_resident_detail(db, updated_resident.id)
 
 
@@ -75,7 +87,6 @@ def update_resident_address_info(
     db: Session = Depends(get_db)
 ):
     update_resident_address(db, resident_id, address_data)
-    
     return get_resident_detail(db, resident_id)
 
 
@@ -86,9 +97,12 @@ def update_resident_rfid_info(
     db: Session = Depends(get_db)
 ):
     update_resident_rfid(db, resident_id, rfid_data)
-    
     return get_resident_detail(db, resident_id)
 
+
+# =================================================================================
+# DELETION & UTILITIES
+# =================================================================================
 
 @router.delete("/{resident_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_resident_record(resident_id: int, db: Session = Depends(get_db)):

@@ -1,3 +1,11 @@
+"""
+app/api/admin/backup.py
+ 
+Router for database backup and restore operations.
+Handles manual backup triggering, backup history listing,
+individual file downloads, and SQL restore uploads.
+"""
+
 import os
 import subprocess
 import tempfile
@@ -17,6 +25,11 @@ router = APIRouter(prefix="/backup")
 
 BACKUP_DIR = Path(settings.BACKUP_DIR)
 BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+
+
+# =================================================================================
+# INTERNAL HELPERS
+# =================================================================================
 
 def _parse_db_url(url: str) -> dict:
     from urllib.parse import urlparse
@@ -52,6 +65,10 @@ def _run_pg_dump(dest_path: Path) -> None:
     if result.returncode != 0:
         raise RuntimeError(f"pg_dump failed: {result.stderr.strip()}")
 
+
+# =================================================================================
+# BACKUP OPERATIONS
+# =================================================================================
 
 @router.post("", status_code=200)
 def trigger_manual_backup(
@@ -117,6 +134,10 @@ def list_backup_history(
 
     return history
 
+
+# =================================================================================
+# DOWNLOAD & RESTORE
+# =================================================================================
 
 @router.get("/download/{filename}")
 def download_backup(

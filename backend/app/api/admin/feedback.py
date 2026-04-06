@@ -1,3 +1,11 @@
+"""
+app/api/admin/feedback.py
+ 
+Router for resident feedback management.
+Handles listing all submitted feedback entries and
+individual or bulk deletion by admin.
+"""
+
 from fastapi import APIRouter, Depends, HTTPException, status, Body
 from sqlalchemy.orm import Session
 from app.api.deps import get_db
@@ -10,6 +18,10 @@ from app.services.feedback_service import (
 
 router = APIRouter(prefix="/feedbacks")
 
+
+# =================================================================================
+# INTERNAL HELPERS
+# =================================================================================
 
 def _format_feedback_for_admin(feedback):
     rfid_display = "Guest Mode"
@@ -35,6 +47,10 @@ def _format_feedback_for_admin(feedback):
     }
 
 
+# =================================================================================
+# FEEDBACK RECORDS
+# =================================================================================
+
 @router.get(
     "",
     response_model=list[FeedbackAdminOut],
@@ -43,6 +59,10 @@ def list_feedbacks(db: Session = Depends(get_db)):
     feedbacks = get_all_feedbacks(db)
     return [_format_feedback_for_admin(fb) for fb in feedbacks]
 
+
+# =================================================================================
+# DELETION
+# =================================================================================
 
 @router.delete("/{feedback_id}")
 def delete_feedback_record(feedback_id: int, db: Session = Depends(get_db)):

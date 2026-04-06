@@ -1,3 +1,12 @@
+"""
+app/api/admin/id.py
+
+Router for barangay I.D application and RFID report management.
+Handles application listing, status transitions (approve, reject, release,
+mark paid/unpaid, undo), filled ID downloads, RFID report operations,
+and bulk actions for both applications and reports.
+"""
+
 from pathlib import Path
 from fastapi import APIRouter, Depends, Body, HTTPException
 from fastapi.responses import FileResponse, Response, StreamingResponse
@@ -7,6 +16,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_db
 
 BASE_DIR = Path(__file__).resolve().parents[3]
+
 from app.schemas.id import (
     IDApplicationAdminOut,
     RFIDReportAdminOut,
@@ -35,6 +45,10 @@ from app.models.document import DocumentRequest
 router = APIRouter(prefix="/id-services")
 
 
+# =================================================================================
+# ID APPLICATIONS
+# =================================================================================
+
 @router.get(
     "/applications",
     response_model=list[IDApplicationAdminOut],
@@ -42,15 +56,6 @@ router = APIRouter(prefix="/id-services")
 )
 def list_id_applications(db: Session = Depends(get_db)):
     return get_all_id_applications(db)
-
-
-@router.get(
-    "/reports",
-    response_model=list[RFIDReportAdminOut],
-    summary="[Admin] List all RFID lost-card reports",
-)
-def list_rfid_reports(db: Session = Depends(get_db)):
-    return get_all_rfid_reports(db)
 
 
 @router.get(
@@ -89,10 +94,7 @@ def reject_id_application(request_id: int, db: Session = Depends(get_db)):
     return {"detail": "Application rejected"}
 
 
-@router.post(
-    "/applications/{request_id}/release",
-    summary="[Admin] Release ID application",
-)
+@router.post("/applications/{request_id}/release", summary="[Admin] Release ID application")
 def release_id_application_endpoint(request_id: int, db: Session = Depends(get_db)):
     return release_id_application(db, request_id)
 
@@ -123,9 +125,9 @@ def undo_id_application(request_id: int, db: Session = Depends(get_db)):
 
 @router.get(
     "/applications/{request_id}/download",
-    summary="[Admin] Download the filled ID card docx",
+    summary="[Admin] Download the filled ID card PDF",
     description=(
-        "Returns the filled .docx file generated at release time. "
+        "Returns the filled PDF file generated at release time. "
         "Returns 404 if the application has not been released yet or "
         "no template was uploaded when it was released."
     ),
@@ -150,6 +152,38 @@ def download_filled_id(request_id: int, db: Session = Depends(get_db)):
         filename=f"BarangayID-{tx_no}.pdf",
     )
 
+
+# =================================================================================
+# RFID REPORTS
+# =================================================================================
+
+@router.get(
+    "/reports",
+    response_model=list[RFIDReportAdminOut],
+    summary="[Admin] List all RFID lost-card reports",
+)
+def list_rfid_reports(db: Session = Depends(get_db)):
+    return get_all_rfid_reports(db)
+
+
+@router.post(
+    "/reports/{report_id}/undo",
+    summary="[Admin] Undo RFID report — reactivates the resident's RFID card",
+)
+def undo_rfid_report_endpoint(report_id: int, db: Session = Depends(get_db)):
+    return undo_rfid_report(db, report_id)
+
+
+@router.delete("/reports/{report_id}", summary="[Admin] Delete RFID report")
+def delete_rfid_report_endpoint(report_id: int, db: Session = Depends(get_db)):
+    if not delete_rfid_report(db, report_id):
+        raise HTTPException(status_code=404, detail="Report not found")
+    return {"detail": "Report deleted"}
+
+
+# =================================================================================
+# BULK OPERATIONS
+# =================================================================================
 
 @router.delete("/applications/{request_id}", summary="[Admin] Delete ID application")
 def delete_id_application(request_id: int, db: Session = Depends(get_db)):
@@ -186,18 +220,3 @@ def bulk_undo_rfid_reports_endpoint(ids: list[int] = Body(...), db: Session = De
 def bulk_delete_rfid_reports_endpoint(ids: list[int] = Body(...), db: Session = Depends(get_db)):
     deleted_count = bulk_delete_rfid_reports(db, ids)
     return {"detail": f"{deleted_count} reports deleted"}
-
-
-@router.post(
-    "/reports/{report_id}/undo",
-    summary="[Admin] Undo RFID report — reactivates the resident's RFID card",
-)
-def undo_rfid_report_endpoint(report_id: int, db: Session = Depends(get_db)):
-    return undo_rfid_report(db, report_id)
-
-
-@router.delete("/reports/{report_id}", summary="[Admin] Delete RFID report")
-def delete_rfid_report_endpoint(report_id: int, db: Session = Depends(get_db)):
-    if not delete_rfid_report(db, report_id):
-        raise HTTPException(status_code=404, detail="Report not found")
-    return {"detail": "Report deleted"}

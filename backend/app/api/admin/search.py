@@ -1,3 +1,12 @@
+"""
+app/api/admin/search.py
+
+Router for global admin search.
+Searches across residents, document requests, equipment, blotter records,
+announcements, FAQs, feedback, document types, and contact information,
+as well as static admin page routes.
+"""
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_, cast, String
@@ -26,9 +35,13 @@ STATIC_PAGES = [
     { "label": "Document Services",    "subtitle": "Page", "route": "/document-services",    "type": "page" },
     { "label": "Feedback & Reports",   "subtitle": "Page", "route": "/feedback-and-reports", "type": "page" },
     { "label": "Account Settings",     "subtitle": "Page", "route": "/account-settings",     "type": "page" },
-    { "label": "Help & Support",       "subtitle": "Page", "route": "/system-guide",     "type": "page" },
+    { "label": "Help & Support",       "subtitle": "Page", "route": "/system-guide",         "type": "page" },
 ]
 
+
+# =================================================================================
+# GLOBAL SEARCH
+# =================================================================================
 
 @router.get("")
 def global_search(
@@ -38,6 +51,7 @@ def global_search(
     term = f"%{q.lower()}%"
     results = {}
 
+    # Static page matches
     matched_pages = [
         {**p, "id": i}
         for i, p in enumerate(STATIC_PAGES)
@@ -46,6 +60,7 @@ def global_search(
     if matched_pages:
         results["pages"] = matched_pages
 
+    # Residents
     residents = (
         db.query(Resident)
         .filter(
@@ -61,16 +76,17 @@ def global_search(
         .all()
     )
     results["members"] = [
-    {
-        "id": r.id,
-        "label": f"{r.first_name} {r.last_name}",
-        "subtitle": f"Resident · ID #{r.id}",
-        "route": f"/residents-management?q={r.id}", 
-        "type": "member",
-    }
-    for r in residents
-]
+        {
+            "id":       r.id,
+            "label":    f"{r.first_name} {r.last_name}",
+            "subtitle": f"Resident · ID #{r.id}",
+            "route":    f"/residents-management?q={r.id}",
+            "type":     "member",
+        }
+        for r in residents
+    ]
 
+    # Document requests
     doc_requests = (
         db.query(DocumentRequest)
         .join(DocumentRequest.resident)
@@ -87,7 +103,7 @@ def global_search(
                 Resident.first_name.ilike(term),
                 Resident.last_name.ilike(term),
                 Resident.middle_name.ilike(term),
-                DocumentType.doctype_name.ilike(term), 
+                DocumentType.doctype_name.ilike(term),
             )
         )
         .limit(5)
@@ -103,12 +119,13 @@ def global_search(
                 if d.resident else ""
             ),
             "subtitle": f"{d.transaction_no} · {d.status}",
-            "route": f"/document-requests/{d.status}?q={d.transaction_no}",
-            "type": "document",
+            "route":    f"/document-requests/{d.status}?q={d.transaction_no}",
+            "type":     "document",
         }
         for d in doc_requests
     ]
 
+    # Equipment inventory
     equipment = (
         db.query(EquipmentInventory)
         .filter(EquipmentInventory.name.ilike(term))
@@ -117,15 +134,16 @@ def global_search(
     )
     results["equipment"] = [
         {
-            "id": e.id,
-            "label": e.name,
+            "id":       e.id,
+            "label":    e.name,
             "subtitle": f"Equipment · {e.available_quantity}/{e.total_quantity} available",
-            "route": f"/equipment-inventory?q={e.name.replace(' ', '+')}",
-            "type": "equipment",
+            "route":    f"/equipment-inventory?q={e.name.replace(' ', '+')}",
+            "type":     "equipment",
         }
         for e in equipment
     ]
 
+    # Equipment requests
     equip_requests = (
         db.query(EquipmentRequest)
         .join(EquipmentRequest.resident)
@@ -140,10 +158,10 @@ def global_search(
                 Resident.first_name.ilike(term),
                 Resident.last_name.ilike(term),
                 Resident.middle_name.ilike(term),
-                EquipmentInventory.name.ilike(term), 
+                EquipmentInventory.name.ilike(term),
             )
         )
-        .distinct()  
+        .distinct()
         .limit(5)
         .all()
     )
@@ -155,12 +173,13 @@ def global_search(
                 if er.resident else f"Request #{er.id}"
             ),
             "subtitle": f"{er.transaction_no} · {er.status}",
-            "route": f"/equipment-requests/{er.status}?q={er.transaction_no}",
-            "type": "equipment_request",
+            "route":    f"/equipment-requests/{er.status}?q={er.transaction_no}",
+            "type":     "equipment_request",
         }
         for er in equip_requests
     ]
 
+    # Blotter records
     blotter = (
         db.query(BlotterRecord)
         .filter(
@@ -176,15 +195,16 @@ def global_search(
     )
     results["blotter"] = [
         {
-            "id": b.id,
-            "label": f"{b.blotter_no} – {b.incident_type or 'Blotter Record'}",
+            "id":       b.id,
+            "label":    f"{b.blotter_no} – {b.incident_type or 'Blotter Record'}",
             "subtitle": f"vs. {b.respondent_name or 'Unknown'} · {str(b.incident_date) if b.incident_date else 'No date'}",
-            "route": f"/blotter-kp-logs?q={b.blotter_no}",
-            "type": "blotter",
+            "route":    f"/blotter-kp-logs?q={b.blotter_no}",
+            "type":     "blotter",
         }
         for b in blotter
     ]
 
+    # Announcements
     announcements = (
         db.query(Announcement)
         .filter(
@@ -197,16 +217,17 @@ def global_search(
         .all()
     )
     results["announcements"] = [
-    {
-        "id": a.id,
-        "label": a.title,
-        "subtitle": f"Announcement · {a.location}",
-        "route": f"/kiosk-announcements?q={a.title.replace(' ', '+')}",
-        "type": "announcement",
-    }
-    for a in announcements
-]
+        {
+            "id":       a.id,
+            "label":    a.title,
+            "subtitle": f"Announcement · {a.location}",
+            "route":    f"/kiosk-announcements?q={a.title.replace(' ', '+')}",
+            "type":     "announcement",
+        }
+        for a in announcements
+    ]
 
+    # FAQs
     faqs = (
         db.query(FAQ)
         .filter(
@@ -220,15 +241,16 @@ def global_search(
     )
     results["faqs"] = [
         {
-            "id": faq.id,
-            "label": faq.question,
+            "id":       faq.id,
+            "label":    faq.question,
             "subtitle": "FAQ",
-            "route": f"/faqs-management?q={faq.question[:30].replace(' ', '+')}",
-            "type": "faq",
+            "route":    f"/faqs-management?q={faq.question[:30].replace(' ', '+')}",
+            "type":     "faq",
         }
         for faq in faqs
     ]
 
+    # Feedback
     feedbacks = (
         db.query(Feedback)
         .filter(
@@ -243,15 +265,16 @@ def global_search(
     )
     results["feedback"] = [
         {
-            "id": fb.id,
-            "label": fb.category,
+            "id":       fb.id,
+            "label":    fb.category,
             "subtitle": f"Rating: {fb.rating}/5",
-            "route": f"/feedback-and-reports?q={fb.category.replace(' ', '+')}",
-            "type": "feedback",
+            "route":    f"/feedback-and-reports?q={fb.category.replace(' ', '+')}",
+            "type":     "feedback",
         }
         for fb in feedbacks
     ]
 
+    # Document types / services
     doc_types = (
         db.query(DocumentType)
         .filter(
@@ -265,33 +288,34 @@ def global_search(
     )
     results["doc_services"] = [
         {
-            "id": dt.id,
-            "label": dt.doctype_name,
+            "id":       dt.id,
+            "label":    dt.doctype_name,
             "subtitle": f"Document Service · {'Available' if dt.is_available else 'Unavailable'} · ₱{dt.price}",
-            "route": f"/document-services?q={dt.doctype_name.replace(' ', '+')}",
-            "type": "doc_service",
+            "route":    f"/document-services?q={dt.doctype_name.replace(' ', '+')}",
+            "type":     "doc_service",
         }
         for dt in doc_types
     ]
 
+    # Contact information fields
     contact = db.query(ContactInformation).first()
     if contact:
         contact_fields = [
-            ("Emergency Number", contact.emergency_number),
+            ("Emergency Number",    contact.emergency_number),
             ("Emergency Description", contact.emergency_desc),
-            ("Phone", contact.phone),
-            ("Email", contact.email),
-            ("Office Hours", contact.office_hours),
-            ("Address", contact.address),
-            ("Technical Support", contact.tech_support),
+            ("Phone",               contact.phone),
+            ("Email",               contact.email),
+            ("Office Hours",        contact.office_hours),
+            ("Address",             contact.address),
+            ("Technical Support",   contact.tech_support),
         ]
         matched_contact = [
             {
-                "id": i,
-                "label": label,
+                "id":       i,
+                "label":    label,
                 "subtitle": f"Contact Information · {value}",
-                "route": "/contact-information",
-                "type": "contact",
+                "route":    "/contact-information",
+                "type":     "contact",
             }
             for i, (label, value) in enumerate(contact_fields)
             if value and q.lower() in value.lower()
@@ -299,4 +323,5 @@ def global_search(
         if matched_contact:
             results["contact"] = matched_contact
 
+    # Strip empty result categories before returning
     return {k: v for k, v in results.items() if v}

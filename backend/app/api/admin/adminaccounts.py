@@ -1,3 +1,11 @@
+"""
+app/api/admin/adminaccounts.py
+ 
+Router for superadmin account management.
+Handles listing all admin accounts, serving profile photos,
+and modifying account status, role, and deletion.
+"""
+
 from fastapi import APIRouter, Depends
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
@@ -23,6 +31,9 @@ from app.api.deps import get_db
 router = APIRouter(prefix="/accounts")
 
 
+# =================================================================================
+# ACCOUNT LISTING
+# =================================================================================
 @router.get("", response_model=list[AdminAccountListItem])
 def get_all_admins(
     db: Session = Depends(get_db),
@@ -46,6 +57,9 @@ def get_admin_photo(
     return Response(content=admin.photo, media_type="image/jpeg")
 
 
+# =================================================================================
+# ACCOUNT MODIFICATIONS
+# =================================================================================
 
 @router.patch("/{admin_id}/status", response_model=AdminSetStatusResponse)
 def patch_admin_status(
@@ -77,6 +91,9 @@ def patch_admin_role(
     )
 
 
+# =================================================================================
+# ACCOUNT DELETION
+# =================================================================================
 @router.delete("/{admin_id}", response_model=AdminDeleteResponse)
 def remove_admin(
     admin_id: int,

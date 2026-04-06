@@ -1,3 +1,12 @@
+"""
+app/api/admin/finance.py
+ 
+Router for financial statement exports.
+Generates PDF financial statements covering Document Services,
+I.D Services, and/or Equipment Borrowing for a given date range.
+Accessible by all admin roles.
+"""
+
 from datetime import date
 from typing import Optional
 

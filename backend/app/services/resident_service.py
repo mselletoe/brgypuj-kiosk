@@ -1,3 +1,12 @@
+"""
+app/services/resident_service.py
+
+Service layer for resident record management.
+Handles listing, detail retrieval, autofill data, creation, and update of
+personal info, address, and RFID assignment, as well as resident deletion
+and purok listing.
+"""
+
 from datetime import date
 import base64
 
@@ -15,9 +24,13 @@ from app.schemas.resident import (
 from typing import List, Optional, Dict
 
 
+# =================================================================================
+# INTERNAL HELPERS — DATE & NAME UTILITIES
+# =================================================================================
+
 def calculate_age(birthdate: date) -> int:
     today = date.today()
-    age = today.year - birthdate.year
+    age   = today.year - birthdate.year
     if (today.month, today.day) < (birthdate.month, birthdate.day):
         age -= 1
     return age
@@ -29,20 +42,24 @@ def calculate_residency_duration(residency_start_date: date) -> dict:
     if (today.month, today.day) < (residency_start_date.month, residency_start_date.day):
         years -= 1
     years = max(0, years)
+
     target_year = residency_start_date.year + years
     try:
         start_after_years = residency_start_date.replace(year=target_year)
     except ValueError:
         start_after_years = residency_start_date.replace(year=target_year, day=28)
+
     months = (today.year - start_after_years.year) * 12 + (today.month - start_after_years.month)
     if today.day < start_after_years.day:
         months = max(0, months - 1)
+
     if years == 0:
         label = f"{months} month{'s' if months != 1 else ''}" if months > 0 else "Less than a month"
     elif months == 0:
         label = f"{years} year{'s' if years != 1 else ''}"
     else:
         label = f"{years} year{'s' if years != 1 else ''}, {months} month{'s' if months != 1 else ''}"
+
     return {"years": years, "months": months, "label": label}
 
 
@@ -87,6 +104,10 @@ def _get_brgy_id_fields(resident: Resident) -> dict:
     }
 
 
+# =================================================================================
+# RESIDENT LISTING
+# =================================================================================
+
 def get_all_residents_list(db: Session) -> List[Dict]:
     residents = (
         db.query(Resident)
@@ -101,10 +122,11 @@ def get_all_residents_list(db: Session) -> List[Dict]:
     result = []
     for resident in residents:
         current_address = next((addr for addr in resident.addresses if addr.is_current), None)
-        active_rfid = next((rfid for rfid in resident.rfids if rfid.is_active), None)
-        any_rfid = active_rfid or (
+        active_rfid     = next((rfid for rfid in resident.rfids if rfid.is_active), None)
+        any_rfid        = active_rfid or (
             max(resident.rfids, key=lambda r: r.created_at) if resident.rfids else None
         )
+
         if active_rfid:
             rfid_display = active_rfid.rfid_uid
         elif any_rfid:
@@ -113,16 +135,16 @@ def get_all_residents_list(db: Session) -> List[Dict]:
             rfid_display = None
 
         result.append({
-            "id": resident.id,
-            "full_name": build_full_name(
+            "id":              resident.id,
+            "full_name":       build_full_name(
                 resident.first_name, resident.middle_name,
-                resident.last_name, resident.suffix
+                resident.last_name,  resident.suffix
             ),
-            "gender": resident.gender,
-            "phone_number": resident.phone_number,
-            "rfid_no": rfid_display,
-            "purok_id": current_address.purok_id if current_address else None,
-            "current_address": build_full_address(current_address) if current_address else None
+            "gender":          resident.gender,
+            "phone_number":    resident.phone_number,
+            "rfid_no":         rfid_display,
+            "purok_id":        current_address.purok_id if current_address else None,
+            "current_address": build_full_address(current_address) if current_address else None,
         })
 
     return result
@@ -136,15 +158,19 @@ def get_residents_dropdown(db: Session) -> List[Dict]:
     )
     return [
         {
-            "id": resident.id,
+            "id":        resident.id,
             "full_name": build_full_name(
                 resident.first_name, resident.middle_name,
-                resident.last_name, resident.suffix
+                resident.last_name,  resident.suffix
             )
         }
         for resident in residents
     ]
 
+
+# =================================================================================
+# RESIDENT DETAIL & AUTOFILL
+# =================================================================================
 
 def get_resident_by_id(db: Session, resident_id: int) -> Optional[Resident]:
     return (
@@ -152,7 +178,7 @@ def get_resident_by_id(db: Session, resident_id: int) -> Optional[Resident]:
         .options(
             joinedload(Resident.addresses).joinedload(Address.purok),
             joinedload(Resident.rfids),
-            joinedload(Resident.barangay_ids),   # ← needed for brgy_id_number + expiry
+            joinedload(Resident.barangay_ids),  # needed for brgy_id_number + expiry
         )
         .filter(Resident.id == resident_id)
         .first()
@@ -168,64 +194,64 @@ def get_resident_detail(db: Session, resident_id: int) -> Optional[Dict]:
 
     rfid_card = None
     if resident.rfids:
-        active = next((r for r in resident.rfids if r.is_active), None)
+        active    = next((r for r in resident.rfids if r.is_active), None)
         rfid_card = active or max(resident.rfids, key=lambda r: r.created_at)
 
-    age = calculate_age(resident.birthdate)
+    age       = calculate_age(resident.birthdate)
     residency = calculate_residency_duration(resident.residency_start_date)
 
     return {
-        # Basic Info
-        "id": resident.id,
+        # Basic info
+        "id":         resident.id,
         "first_name": resident.first_name,
-        "middle_name": resident.middle_name,
-        "last_name": resident.last_name,
-        "suffix": resident.suffix,
-        "full_name": build_full_name(
+        "middle_name":resident.middle_name,
+        "last_name":  resident.last_name,
+        "suffix":     resident.suffix,
+        "full_name":  build_full_name(
             resident.first_name, resident.middle_name,
-            resident.last_name, resident.suffix
+            resident.last_name,  resident.suffix
         ),
-        "gender": resident.gender,
-        "birthdate": resident.birthdate.strftime("%m/%d/%Y"),
-        "age": age,
-        "photo": base64.b64encode(resident.photo).decode("utf-8") if resident.photo else None,
+        "gender":     resident.gender,
+        "birthdate":  resident.birthdate.strftime("%m/%d/%Y"),
+        "age":        age,
+        "photo":      base64.b64encode(resident.photo).decode("utf-8") if resident.photo else None,
 
-        # Contact Info
-        "email": resident.email,
+        # Contact info
+        "email":        resident.email,
         "phone_number": resident.phone_number,
 
-        # Residency Info
+        # Residency info
         "residency_start_date": resident.residency_start_date.strftime("%m/%d/%Y"),
-        "years_of_residency": residency["years"],
-        "residency_months": residency["months"],
-        "residency_label": residency["label"],
+        "years_of_residency":   residency["years"],
+        "residency_months":     residency["months"],
+        "residency_label":      residency["label"],
 
-        # Address Info
+        # Address info
         "current_address": {
-            "id": current_address.id,
+            "id":              current_address.id,
             "house_no_street": current_address.house_no_street,
-            "purok_id": current_address.purok_id,
+            "purok_id":        current_address.purok_id,
             "purok": {
-                "id": current_address.purok.id,
+                "id":         current_address.purok.id,
                 "purok_name": current_address.purok.purok_name
             } if current_address.purok else None,
-            "barangay": current_address.barangay,
-            "municipality": current_address.municipality,
-            "province": current_address.province,
-            "region": current_address.region,
-            "is_current": current_address.is_current
+            "barangay":    current_address.barangay,
+            "municipality":current_address.municipality,
+            "province":    current_address.province,
+            "region":      current_address.region,
+            "is_current":  current_address.is_current
         } if current_address else None,
 
-        # RFID Info
+        # RFID info
         "active_rfid": {
-            "id": rfid_card.id,
-            "rfid_uid": rfid_card.rfid_uid,
-            "is_active": rfid_card.is_active,
-            "created_at": rfid_card.created_at.isoformat(),
+            "id":              rfid_card.id,
+            "rfid_uid":        rfid_card.rfid_uid,
+            "is_active":       rfid_card.is_active,
+            "created_at":      rfid_card.created_at.isoformat(),
             "expiration_date": rfid_card.expiration_date,
         } if rfid_card else None,
 
-        # Barangay ID Info — active card only
+        # Barangay ID info — active card only
         **_get_brgy_id_fields(resident),
 
         # Timestamps
@@ -234,6 +260,7 @@ def get_resident_detail(db: Session, resident_id: int) -> Optional[Dict]:
 
 
 def get_resident_autofill_data(db: Session, resident_id: int) -> Optional[dict]:
+    """Return a flat dict of resident data suitable for pre-filling kiosk forms."""
     resident = (
         db.query(Resident)
         .options(
@@ -247,7 +274,7 @@ def get_resident_autofill_data(db: Session, resident_id: int) -> Optional[dict]:
         return None
 
     current_address = next((addr for addr in resident.addresses if addr.is_current), None)
-    active_rfid = next((rfid for rfid in resident.rfids if rfid.is_active), None)
+    active_rfid     = next((rfid for rfid in resident.rfids if rfid.is_active), None)
 
     name_parts = [resident.first_name]
     if resident.middle_name:
@@ -268,32 +295,36 @@ def get_resident_autofill_data(db: Session, resident_id: int) -> Optional[dict]:
         ]
         full_address = ", ".join(filter(None, address_parts))
 
-    age = calculate_age(resident.birthdate)
-    years_residency = calculate_years_of_residency(resident.residency_start_date)
+    age              = calculate_age(resident.birthdate)
+    years_residency  = calculate_years_of_residency(resident.residency_start_date)
 
     return {
-        "full_name": full_name,
-        "first_name": resident.first_name,
-        "middle_name": resident.middle_name,
-        "last_name": resident.last_name,
-        "suffix": resident.suffix,
-        "gender": resident.gender,
-        "birthdate": resident.birthdate.strftime("%m/%d/%Y"),
-        "age": age,
-        "email": resident.email,
-        "phone_number": resident.phone_number,
-        "unit_blk_street": current_address.house_no_street if current_address else None,
-        "purok_name": current_address.purok.purok_name if current_address and current_address.purok else None,
-        "barangay": current_address.barangay if current_address else None,
-        "municipality": current_address.municipality if current_address else None,
-        "province": current_address.province if current_address else None,
-        "region": current_address.region if current_address else None,
-        "full_address": full_address,
-        "years_residency": years_residency,
-        "residency_start_date": resident.residency_start_date.strftime("%m/%d/%Y"),
-        "rfid_uid": active_rfid.rfid_uid if active_rfid else None,
+        "full_name":             full_name,
+        "first_name":            resident.first_name,
+        "middle_name":           resident.middle_name,
+        "last_name":             resident.last_name,
+        "suffix":                resident.suffix,
+        "gender":                resident.gender,
+        "birthdate":             resident.birthdate.strftime("%m/%d/%Y"),
+        "age":                   age,
+        "email":                 resident.email,
+        "phone_number":          resident.phone_number,
+        "unit_blk_street":       current_address.house_no_street if current_address else None,
+        "purok_name":            current_address.purok.purok_name if current_address and current_address.purok else None,
+        "barangay":              current_address.barangay if current_address else None,
+        "municipality":          current_address.municipality if current_address else None,
+        "province":              current_address.province if current_address else None,
+        "region":                current_address.region if current_address else None,
+        "full_address":          full_address,
+        "years_residency":       years_residency,
+        "residency_start_date":  resident.residency_start_date.strftime("%m/%d/%Y"),
+        "rfid_uid":              active_rfid.rfid_uid if active_rfid else None,
     }
 
+
+# =================================================================================
+# RESIDENT CREATION & UPDATES
+# =================================================================================
 
 def create_resident(db: Session, resident_data: ResidentCreate) -> Resident:
     residency_start_date = resident_data.residency_start_date or date.today()
@@ -429,6 +460,7 @@ def update_resident_rfid(db: Session, resident_id: int, rfid_data: ResidentRFIDU
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail=f"Resident with ID {resident_id} not found")
 
+    # Prefer the active card; fall back to the most recently created one
     target_rfid = next((rfid for rfid in resident.rfids if rfid.is_active), None)
     if not target_rfid and resident.rfids:
         target_rfid = max(resident.rfids, key=lambda r: r.created_at)
@@ -454,6 +486,10 @@ def update_resident_rfid(db: Session, resident_id: int, rfid_data: ResidentRFIDU
     db.refresh(target_rfid)
     return target_rfid
 
+
+# =================================================================================
+# DELETION & UTILITIES
+# =================================================================================
 
 def delete_resident(db: Session, resident_id: int) -> bool:
     resident = get_resident_by_id(db, resident_id)

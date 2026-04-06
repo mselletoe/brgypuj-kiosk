@@ -1,3 +1,11 @@
+"""
+app/api/admin/systemconfig.py
+
+Router for barangay system configuration management.
+Handles reading and patching system settings, uploading, retrieving,
+and deleting the barangay logo, and broadcasting config changes to the kiosk.
+"""
+
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, status
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
@@ -14,6 +22,10 @@ ALLOWED_IMAGE_TYPES = {"image/png", "image/jpeg", "image/webp", "image/svg+xml"}
 MAX_LOGO_SIZE_MB = 2
 
 
+# =================================================================================
+# SYSTEM CONFIGURATION
+# =================================================================================
+
 @router.get("", response_model=SystemConfigRead)
 def get_system_config(
     db: Session = Depends(get_db),
@@ -23,7 +35,7 @@ def get_system_config(
 
 
 @router.patch("", response_model=SystemConfigRead)
-async def patch_system_config(     
+async def patch_system_config(
     data: SystemConfigUpdate,
     db: Session = Depends(get_db),
     current_admin: Admin = Depends(get_current_admin),
@@ -34,18 +46,22 @@ async def patch_system_config(
         apply_new_schedule()
 
     await ws_manager.broadcast_to_kiosk("config_updated", {
-        "brgy_name":           result.brgy_name,
-        "brgy_subname":        result.brgy_subname,
-        "has_logo":            result.has_logo,
-        "maintenance_mode":    result.maintenance_mode,
-        "maintenance_message": result.maintenance_message,
+        "brgy_name":            result.brgy_name,
+        "brgy_subname":         result.brgy_subname,
+        "has_logo":             result.has_logo,
+        "maintenance_mode":     result.maintenance_mode,
+        "maintenance_message":  result.maintenance_message,
         "auto_logout_duration": result.auto_logout_duration,
     })
     return result
 
 
+# =================================================================================
+# BARANGAY LOGO
+# =================================================================================
+
 @router.put("/logo", status_code=204)
-async def upload_brgy_logo(  
+async def upload_brgy_logo(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
     current_admin: Admin = Depends(get_current_admin),
@@ -78,7 +94,7 @@ def get_brgy_logo(
 
 
 @router.delete("/logo", status_code=204)
-async def delete_brgy_logo(      
+async def delete_brgy_logo(
     db: Session = Depends(get_db),
     current_admin: Admin = Depends(get_current_admin),
 ):

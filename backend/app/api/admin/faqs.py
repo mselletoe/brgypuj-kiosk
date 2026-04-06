@@ -1,3 +1,11 @@
+"""
+app/api/admin/faqs.py
+ 
+Router for kiosk FAQ management.
+Handles creation, update, deletion, and bulk deletion
+of FAQ entries displayed on the resident-facing kiosk.
+"""
+
 from fastapi import APIRouter, Depends, status, HTTPException, Body
 from sqlalchemy.orm import Session
 from app.schemas.faqs import FAQCreate, FAQUpdate, FAQAdminOut
@@ -13,9 +21,15 @@ from app.api.deps import get_db
 
 router = APIRouter(prefix="/faqs")
 
+
+# =================================================================================
+# FAQ MANAGEMENT
+# =================================================================================
+
 @router.post("", response_model=FAQAdminOut, status_code=status.HTTP_201_CREATED)
 def admin_create_faq(payload: FAQCreate, db: Session = Depends(get_db)):
     return create_faq(db, payload)
+
 
 @router.put("/{faq_id}", response_model=FAQAdminOut)
 def admin_update_faq(faq_id: int, payload: FAQUpdate, db: Session = Depends(get_db)):
@@ -24,16 +38,23 @@ def admin_update_faq(faq_id: int, payload: FAQUpdate, db: Session = Depends(get_
         raise HTTPException(status_code=404, detail="FAQ not found")
     return faq
 
+
+# =================================================================================
+# DELETION
+# =================================================================================
+
 @router.delete("/{faq_id}", status_code=status.HTTP_204_NO_CONTENT)
 def admin_delete_faq(faq_id: int, db: Session = Depends(get_db)):
     if not delete_faq(db, faq_id):
         raise HTTPException(status_code=404, detail="FAQ not found")
     return
 
+
 @router.post("/bulk-delete")
 def admin_bulk_delete(ids: list[int] = Body(...), db: Session = Depends(get_db)):
     count = bulk_delete_faqs(db, ids)
     return {"deleted_count": count}
+
 
 @router.get("/admin", response_model=list[FAQAdminOut])
 def admin_list_faqs(db: Session = Depends(get_db)):

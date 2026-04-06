@@ -1,3 +1,11 @@
+"""
+app/api/admin/transaction.py
+
+Router for resident transaction history.
+Exposes a single endpoint to retrieve the combined document
+and equipment transaction history for a given resident.
+"""
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.api.deps import get_db
@@ -6,6 +14,10 @@ from app.services.transaction_service import get_transaction_history
 
 router = APIRouter(prefix="/transactions")
 
+
+# =================================================================================
+# TRANSACTION HISTORY
+# =================================================================================
 
 @router.get(
     "/history/{resident_id}",
