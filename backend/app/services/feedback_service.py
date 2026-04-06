@@ -1,9 +1,21 @@
+"""
+app/services/feedback_service.py
+ 
+Service layer for resident feedback submissions.
+Handles creation, retrieval, and deletion of feedback entries.
+Supports both RFID-authenticated and guest submissions.
+"""
+
 from sqlalchemy.orm import Session, joinedload
 from fastapi import HTTPException, status
 from app.models.misc import Feedback
 from app.models.resident import Resident
 from app.schemas.feedback import FeedbackCreate, FeedbackKioskResponse
 
+
+# =================================================================================
+# INTERNAL HELPERS
+# =================================================================================
 
 def _validate_resident(db: Session, resident_id: int) -> Resident:
     resident = db.query(Resident).filter(Resident.id == resident_id).first()
@@ -20,6 +32,10 @@ def _validate_resident(db: Session, resident_id: int) -> Resident:
 def _get_feedback(db: Session, feedback_id: int):
     return db.query(Feedback).filter(Feedback.id == feedback_id).first()
 
+
+# =================================================================================
+# KIOSK
+# =================================================================================
 
 def create_feedback(db: Session, payload: FeedbackCreate) -> FeedbackKioskResponse:
     if payload.resident_id is not None:
@@ -38,6 +54,10 @@ def create_feedback(db: Session, payload: FeedbackCreate) -> FeedbackKioskRespon
 
     return FeedbackKioskResponse()
 
+
+# =================================================================================
+# ADMIN
+# =================================================================================
 
 def get_all_feedbacks(db: Session):
     return (

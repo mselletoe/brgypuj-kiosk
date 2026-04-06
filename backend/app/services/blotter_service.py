@@ -1,3 +1,11 @@
+"""
+app/services/blotter_service.py
+ 
+Service layer for barangay blotter record management.
+Handles creation, retrieval, update, resolution, reopening, and deletion
+of blotter records. Auto-generates sequential blotter numbers per year.
+"""
+
 from sqlalchemy.orm import Session, joinedload
 from datetime import datetime, date
 from fastapi import HTTPException, status
@@ -5,6 +13,10 @@ from app.models.blotter import BlotterRecord
 from app.models.resident import Resident, Address
 from app.schemas.blotter import BlotterRecordCreate, BlotterRecordUpdate
 
+
+# =================================================================================
+# INTERNAL HELPERS
+# =================================================================================
 
 def _get_record(db: Session, blotter_id: int) -> BlotterRecord | None:
     return (
@@ -79,6 +91,10 @@ def _get_resident_address(db: Session, resident_id: int) -> str | None:
     return ", ".join(parts) or None
 
 
+# =================================================================================
+# READ
+# =================================================================================
+
 def get_all_blotter_records(db: Session) -> list[BlotterRecord]:
     return (
         db.query(BlotterRecord)
@@ -122,46 +138,9 @@ def has_blotter_record_as_respondent(db: Session, resident_id: int) -> bool:
     ) is not None
 
 
-def resolve_blotter_record(db: Session, blotter_id: int) -> BlotterRecord | None:
-
-    record = _get_record(db, blotter_id)
-    if not record:
-        return None
-
-    if record.status == "resolved":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Blotter record is already resolved",
-        )
-
-    record.status = "resolved"
-    record.resolved_at = datetime.utcnow()
-
-    db.commit()
-    db.refresh(record)
-
-    return record
-
-
-def reopen_blotter_record(db: Session, blotter_id: int) -> BlotterRecord | None:
-    record = _get_record(db, blotter_id)
-    if not record:
-        return None
-
-    if record.status == "active":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Blotter record is already active",
-        )
-
-    record.status = "active"
-    record.resolved_at = None
-
-    db.commit()
-    db.refresh(record)
-
-    return record
-
+# =================================================================================
+# CREATE / UPDATE
+# =================================================================================
 
 def create_blotter_record(db: Session, payload: BlotterRecordCreate) -> BlotterRecord:
     data = payload.model_dump()
@@ -215,6 +194,55 @@ def update_blotter_record( db: Session, blotter_id: int, payload: BlotterRecordU
 
     return record
 
+
+# =================================================================================
+# STATUS ACTIONS
+# =================================================================================
+
+def resolve_blotter_record(db: Session, blotter_id: int) -> BlotterRecord | None:
+
+    record = _get_record(db, blotter_id)
+    if not record:
+        return None
+
+    if record.status == "resolved":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Blotter record is already resolved",
+        )
+
+    record.status = "resolved"
+    record.resolved_at = datetime.utcnow()
+
+    db.commit()
+    db.refresh(record)
+
+    return record
+
+
+def reopen_blotter_record(db: Session, blotter_id: int) -> BlotterRecord | None:
+    record = _get_record(db, blotter_id)
+    if not record:
+        return None
+
+    if record.status == "active":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Blotter record is already active",
+        )
+
+    record.status = "active"
+    record.resolved_at = None
+
+    db.commit()
+    db.refresh(record)
+
+    return record
+
+
+# =================================================================================
+# DELETE
+# =================================================================================
 
 def delete_blotter_record(db: Session, blotter_id: int) -> bool:
     record = db.query(BlotterRecord).filter(BlotterRecord.id == blotter_id).first()

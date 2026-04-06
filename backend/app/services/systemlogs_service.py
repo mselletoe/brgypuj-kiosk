@@ -1,3 +1,13 @@
+"""
+app/services/systemlogs_service.py
+ 
+Service layer for writing structured system audit logs.
+Supports admin, resident, kiosk, and system actors. Logs are written
+to the SystemLog table with optional request context (IP, endpoint, method).
+Convenience wrappers (log_info, log_warning, log_error, log_critical) are
+provided for the most common log levels.
+"""
+
 import json
 import logging
 from typing import Optional, TYPE_CHECKING
@@ -14,6 +24,9 @@ if TYPE_CHECKING:
 _logger = logging.getLogger("system_logs")
 
 
+# =================================================================================
+# ACTOR NAME HELPERS
+# =================================================================================
 
 def get_admin_actor_name(admin: "Admin") -> str:
     try:
@@ -31,6 +44,10 @@ def get_resident_actor_name(resident: "Resident") -> str:
     except Exception:
         return f"Resident #{resident.id}"
 
+
+# =================================================================================
+# CORE LOG WRITER
+# =================================================================================
 
 def log_action(
     db: Session,
@@ -81,6 +98,7 @@ def log_action(
             endpoint = endpoint or str(request.url.path)
             http_method = http_method or request.method
 
+        # Serialize details dict to JSON string for storage
         details_str: Optional[str] = None
         if isinstance(details, dict):
             details_str = json.dumps(details, ensure_ascii=False)
@@ -118,6 +136,10 @@ def log_action(
         return None
 
 
+# =================================================================================
+# REQUEST HELPERS
+# =================================================================================
+
 def _get_client_ip(request: Request) -> str:
     forwarded_for = request.headers.get("X-Forwarded-For")
     if forwarded_for:
@@ -126,6 +148,10 @@ def _get_client_ip(request: Request) -> str:
         return request.client.host
     return "unknown"
 
+
+# =================================================================================
+# CONVENIENCE WRAPPERS
+# =================================================================================
 
 def log_info(db, action, source, category, **kwargs):
     return log_action(db, action=action, source=source, category=category, level=LogLevel.INFO, **kwargs)

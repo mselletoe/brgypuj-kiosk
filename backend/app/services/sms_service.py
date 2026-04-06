@@ -1,3 +1,12 @@
+"""
+app/services/sms_service.py
+ 
+Service layer for SMS announcement broadcasting.
+Resolves phone numbers by recipient mode (groups, puroks, specific),
+dispatches messages via the A7670E hardware gateway, and logs each send
+to the SMSLog table.
+"""
+
 from datetime import date
 from typing import List, Optional, Dict, Any
 
@@ -17,6 +26,10 @@ from app.schemas.sms import (
     SMSHistoryItem,
 )
 
+
+# =================================================================================
+# INTERNAL HELPERS
+# =================================================================================
 
 def _age_cutoff(years: int) -> date:
     today = date.today()
@@ -114,7 +127,6 @@ def _resolve_phone_numbers(db: Session, payload: SMSRequest) -> List[str]:
     )
 
 
-
 def _count_residents_by_group(db: Session, group: str) -> int:
     q = db.query(func.count(Resident.id))
 
@@ -182,6 +194,10 @@ _GROUP_LABELS: Dict[str, str] = {
     ResidentGroup.with_rfid: "With RFID",
 }
 
+
+# =================================================================================
+# PUBLIC SERVICE FUNCTIONS
+# =================================================================================
 
 def get_recipient_count(db: Session, payload: SMSRequest) -> RecipientCountResponse:
     group_labels: Optional[List[str]] = None

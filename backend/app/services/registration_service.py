@@ -1,3 +1,11 @@
+"""
+app/services/registration_service.py
+ 
+Service layer for kiosk RFID card registration.
+Handles RFID status checks, admin passcode verification, retrieval of
+approved ID applications, and linking a scanned RFID card to a resident.
+"""
+
 from datetime import datetime, date, timedelta
 from sqlalchemy.orm import Session, joinedload
 from fastapi import HTTPException, status
@@ -12,6 +20,10 @@ ADMIN_PASSCODE = "7890"
 ID_APPLICATION_DOCTYPE_NAME = "ID Application"
 
 
+# =================================================================================
+# RFID STATUS
+# =================================================================================
+
 def check_rfid_status(db: Session, rfid_uid: str) -> dict:
     existing = (
         db.query(ResidentRFID)
@@ -21,9 +33,17 @@ def check_rfid_status(db: Session, rfid_uid: str) -> dict:
     return {"is_new": existing is None}
 
 
+# =================================================================================
+# ADMIN PASSCODE
+# =================================================================================
+
 def verify_admin_passcode(passcode: str) -> dict:
     return {"valid": passcode == ADMIN_PASSCODE}
 
+
+# =================================================================================
+# APPROVED ID APPLICATIONS
+# =================================================================================
 
 def get_approved_id_applications(db: Session) -> list[dict]:
     applications = (
@@ -53,6 +73,7 @@ def get_approved_id_applications(db: Session) -> list[dict]:
         if not applicant:
             continue
 
+        # Skip if the resident already has an active RFID card
         has_active_rfid = any(r.is_active for r in applicant.rfids)
         if has_active_rfid:
             continue
@@ -73,12 +94,17 @@ def get_approved_id_applications(db: Session) -> list[dict]:
     return result
 
 
+# =================================================================================
+# RFID LINKING
+# =================================================================================
+
 def link_rfid_to_resident(
     db: Session,
     rfid_uid: str,
     resident_id: int,
     document_request_id: int,
 ) -> dict:
+    # Guard: prevent duplicate RFID registrations
     duplicate = db.query(ResidentRFID).filter(ResidentRFID.rfid_uid == rfid_uid).first()
     if duplicate:
         raise HTTPException(
@@ -106,6 +132,7 @@ def link_rfid_to_resident(
             detail="ID Application is not in Approved status."
         )
 
+    # Calculate expiration date from system config
     config = get_config(db)
     expiration_date = date.today() + timedelta(days=config.rfid_expiry_days)
 
@@ -119,6 +146,7 @@ def link_rfid_to_resident(
     db.add(new_rfid)
     db.flush() 
 
+    # Activate the linked Barangay ID row if it exists
     barangay_id_row = (
         db.query(BarangayID)
         .filter(
@@ -132,6 +160,7 @@ def link_rfid_to_resident(
         barangay_id_row.expiration_date = expiration_date
         barangay_id_row.is_active       = True
 
+    # Mark the document request as RFID-linked in its form_data
     updated_form_data = dict(doc_request.form_data or {})
     updated_form_data["rfid_linked"] = True
     updated_form_data["rfid_uid"] = rfid_uid

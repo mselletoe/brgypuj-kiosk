@@ -1,3 +1,12 @@
+"""
+app/services/backup_service.py
+ 
+Automated database backup service using APScheduler and pg_dump.
+Supports daily and weekly schedules configurable via the system config.
+Backups are stored in the configured BACKUP_DIR and pruned to the 30 most recent.
+All times are expressed in Asia/Manila (PH) timezone.
+"""
+
 import os
 import logging
 import subprocess
@@ -15,6 +24,7 @@ from app.core.config import settings
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Directory where backup .sql files are written
 BACKUP_DIR = Path(settings.BACKUP_DIR)
 BACKUP_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -23,6 +33,10 @@ PH_TIMEZONE = "Asia/Manila"
 _scheduler = BackgroundScheduler(timezone=PH_TIMEZONE)
 _JOB_ID = "auto_backup"
 
+
+# =================================================================================
+# INTERNAL HELPERS
+# =================================================================================
 
 def _parse_db_url(url: str) -> dict:
     parsed = urlparse(url)
@@ -34,6 +48,24 @@ def _parse_db_url(url: str) -> dict:
         "dbname":   parsed.path.lstrip("/"),
     }
 
+
+def _build_trigger(schedule: str, backup_time: str) -> CronTrigger:
+    try:
+        hour, minute = backup_time.split(":")
+    except (ValueError, AttributeError):
+        hour, minute = "2", "0"
+
+    if schedule == "daily":
+        return CronTrigger(hour=int(hour), minute=int(minute), timezone=PH_TIMEZONE)
+    elif schedule == "weekly":
+        return CronTrigger(day_of_week="mon", hour=int(hour), minute=int(minute), timezone=PH_TIMEZONE)
+    else:
+        return CronTrigger(hour=int(hour), minute=int(minute), timezone=PH_TIMEZONE)
+
+
+# =================================================================================
+# BACKUP EXECUTION
+# =================================================================================
 
 def _do_backup() -> None:
     print("✅ SCHEDULER FIRED", flush=True)
@@ -87,19 +119,9 @@ def _do_backup() -> None:
         db.close()
 
 
-def _build_trigger(schedule: str, backup_time: str) -> CronTrigger:
-    try:
-        hour, minute = backup_time.split(":")
-    except (ValueError, AttributeError):
-        hour, minute = "2", "0"
-
-    if schedule == "daily":
-        return CronTrigger(hour=int(hour), minute=int(minute), timezone=PH_TIMEZONE)
-    elif schedule == "weekly":
-        return CronTrigger(day_of_week="mon", hour=int(hour), minute=int(minute), timezone=PH_TIMEZONE)
-    else:
-        return CronTrigger(hour=int(hour), minute=int(minute), timezone=PH_TIMEZONE)
-
+# =================================================================================
+# SCHEDULER MANAGEMENT
+# =================================================================================
 
 def _reschedule() -> None:
     db = SessionLocal()

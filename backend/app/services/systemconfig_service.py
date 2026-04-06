@@ -1,3 +1,11 @@
+"""
+app/services/systemconfig_service.py
+ 
+Service layer for system configuration management.
+Handles reading, updating, and persisting the single SystemConfig row (id=1).
+Also manages the barangay logo and last backup timestamp.
+"""
+
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from datetime import datetime, timezone

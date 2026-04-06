@@ -1,3 +1,12 @@
+"""
+app/services/sms_gateway.py
+ 
+Hardware SMS gateway driver for the A7670E GSM modem.
+Communicates via AT commands over a serial connection.
+Supports bulk sending with configurable retries, inter-message delays,
+and signal strength checking before dispatch.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -12,6 +21,9 @@ from app.core.config import settings
 log = logging.getLogger(__name__)
 
 
+# =================================================================================
+# AT COMMAND HELPERS
+# =================================================================================
 
 def _ts() -> str:
     return datetime.now().strftime("[%Y-%m-%d %H:%M:%S]")
@@ -43,6 +55,9 @@ def _signal_ok(ser: serial.Serial) -> bool:
         return False
 
 
+# =================================================================================
+# GATEWAY CLASS
+# =================================================================================
 class A7670EGateway:
     def __init__(
         self,
@@ -161,6 +176,10 @@ class A7670EGateway:
         log.info("%s Bulk send complete — ✅ %d sent, ❌ %d failed", _ts(), sent, failed)
         return {"sent": sent, "failed": failed, "failures": failures}
 
+
+# =================================================================================
+# SINGLETON ACCESSOR
+# =================================================================================
 
 _gateway: A7670EGateway | None = None
 

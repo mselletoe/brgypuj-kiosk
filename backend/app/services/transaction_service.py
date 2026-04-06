@@ -1,17 +1,31 @@
+"""
+app/services/transaction_service.py
+ 
+Service layer for transaction history recording and retrieval.
+Called by document and equipment service layers after terminal status changes
+(Released, Rejected, Returned) to persist a permanent transaction record.
+"""
+
 from sqlalchemy.orm import Session, joinedload
 from app.models.transaction import TransactionHistory
 
 
+# Maps document request terminal statuses to their transaction history equivalents
 DOCUMENT_STATUS_MAP = {
     "Released": "Completed",
     "Rejected": "Rejected",
 }
 
+# Maps equipment request terminal statuses to their transaction history equivalents
 EQUIPMENT_STATUS_MAP = {
     "Returned": "Completed",
     "Rejected": "Rejected",
 }
 
+
+# =================================================================================
+# INTERNAL HELPERS
+# =================================================================================
 
 def _get_resident_rfid(resident) -> str | None:
     if not resident or not hasattr(resident, "rfids"):
@@ -36,11 +50,16 @@ def _build_equipment_title(request) -> str:
         return "Equipment Request"
 
 
+# =================================================================================
+# RECORD WRITERS
+# =================================================================================
+
 def record_document_transaction(db: Session, request) -> None:
     history_status = DOCUMENT_STATUS_MAP.get(request.status)
     if not history_status:
         return
 
+    # Prevent duplicate history entries for the same transaction
     if _entry_exists(db, request.transaction_no):
         return 
     rfid_uid = _get_resident_rfid(request.resident) if request.resident else None
@@ -70,6 +89,7 @@ def record_equipment_transaction(db: Session, request) -> None:
     if not history_status:
         return
 
+    # Prevent duplicate history entries for the same transaction
     if _entry_exists(db, request.transaction_no):
         return
 
@@ -88,6 +108,10 @@ def record_equipment_transaction(db: Session, request) -> None:
     db.add(entry)
     db.commit()
 
+
+# =================================================================================
+# READ
+# =================================================================================
 
 def get_transaction_history(db: Session, resident_id: int) -> list[dict]:
     entries = (

@@ -1,9 +1,22 @@
+"""
+app/services/adminaccounts_service.py
+ 
+Service layer for superadmin account management.
+Handles listing admins, toggling active status, updating roles,
+and deleting accounts. Enforces guards to prevent self-modification
+and removal of the last active superadmin.
+"""
+
 from sqlalchemy.orm import Session, joinedload
 from fastapi import HTTPException, status
 
 from app.models.admin import Admin
 from app.models.resident import Resident
 
+
+# =================================================================================
+# INTERNAL HELPERS
+# =================================================================================
 
 def _build_full_name(resident) -> str:
     parts = [resident.first_name]
@@ -14,6 +27,10 @@ def _build_full_name(resident) -> str:
         parts.append(resident.suffix)
     return " ".join(parts)
 
+
+# =================================================================================
+# READ
+# =================================================================================
 
 def list_all_admins(db: Session) -> list[dict]:
     admins = (
@@ -39,6 +56,10 @@ def list_all_admins(db: Session) -> list[dict]:
 
     return result
 
+
+# =================================================================================
+# UPDATE
+# =================================================================================
 
 def set_admin_active_status(
     db: Session,
@@ -135,6 +156,10 @@ def update_admin_role(
         "detail": f"Role updated to '{new_role}' successfully",
     }
 
+
+# =================================================================================
+# DELETE
+# =================================================================================
 
 def delete_admin_account(
     db: Session,
