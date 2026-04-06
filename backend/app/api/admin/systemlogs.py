@@ -1,10 +1,3 @@
-"""
-Admin Audit / System Logs Routes
----------------------------------
-Endpoints for the admin dashboard to query and filter system logs.
-All routes require a valid admin JWT token.
-"""
-
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import desc, and_
@@ -21,7 +14,6 @@ router = APIRouter(prefix="/system-logs")
 
 @router.get("/logs", response_model=SystemLogListResponse)
 def get_system_logs(
-    # ── Filters ───────────────────────────────────────────────
     source: Optional[LogSource] = Query(None, description="Filter by source: admin | kiosk | system"),
     level: Optional[LogLevel] = Query(None, description="Filter by level: info | warning | error | critical"),
     category: Optional[LogCategory] = Query(None, description="Filter by category"),
@@ -32,18 +24,12 @@ def get_system_logs(
     date_from: Optional[datetime] = Query(None, description="Start of date range (ISO 8601)"),
     date_to: Optional[datetime] = Query(None, description="End of date range (ISO 8601)"),
 
-    # ── Pagination ────────────────────────────────────────────
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Results per page"),
 
-    # ── Dependencies ──────────────────────────────────────────
     db: Session = Depends(get_db),
     current_admin: Admin = Depends(get_current_admin),
 ):
-    """
-    Retrieve paginated system logs with optional filters.
-    Accessible only by authenticated admins.
-    """
     filters = []
 
     if source:
@@ -92,7 +78,6 @@ def get_log_detail(
     db: Session = Depends(get_db),
     current_admin: Admin = Depends(get_current_admin),
 ):
-    """Retrieve a single log entry by ID."""
     log = db.query(SystemLog).filter(SystemLog.id == log_id).first()
     if not log:
         from fastapi import HTTPException, status
@@ -105,10 +90,6 @@ def get_log_summary(
     db: Session = Depends(get_db),
     current_admin: Admin = Depends(get_current_admin),
 ):
-    """
-    Quick summary counts grouped by level.
-    Useful for the dashboard stats cards (e.g. X errors today).
-    """
     from sqlalchemy import func, cast, Date
     from datetime import date
 

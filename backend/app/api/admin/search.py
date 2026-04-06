@@ -38,7 +38,6 @@ def global_search(
     term = f"%{q.lower()}%"
     results = {}
 
-    # ── Static pages ──────────────────────────────────────────────────────────
     matched_pages = [
         {**p, "id": i}
         for i, p in enumerate(STATIC_PAGES)
@@ -47,7 +46,6 @@ def global_search(
     if matched_pages:
         results["pages"] = matched_pages
 
-    # ── Residents ─────────────────────────────────────────────────────────────
     residents = (
         db.query(Resident)
         .filter(
@@ -67,14 +65,12 @@ def global_search(
         "id": r.id,
         "label": f"{r.first_name} {r.last_name}",
         "subtitle": f"Resident · ID #{r.id}",
-        "route": f"/residents-management?q={r.id}",  # ← use ID not name
+        "route": f"/residents-management?q={r.id}", 
         "type": "member",
     }
     for r in residents
 ]
 
-    # ── Document Requests ─────────────────────────────────────────────────────
-    # joins Resident + DocumentType so we can search by name and doc type
     doc_requests = (
         db.query(DocumentRequest)
         .join(DocumentRequest.resident)
@@ -91,7 +87,7 @@ def global_search(
                 Resident.first_name.ilike(term),
                 Resident.last_name.ilike(term),
                 Resident.middle_name.ilike(term),
-                DocumentType.doctype_name.ilike(term),  # ← search by doc type name
+                DocumentType.doctype_name.ilike(term), 
             )
         )
         .limit(5)
@@ -113,7 +109,6 @@ def global_search(
         for d in doc_requests
     ]
 
-    # ── Equipment Inventory ───────────────────────────────────────────────────
     equipment = (
         db.query(EquipmentInventory)
         .filter(EquipmentInventory.name.ilike(term))
@@ -131,9 +126,6 @@ def global_search(
         for e in equipment
     ]
 
-    # ── Equipment Requests ────────────────────────────────────────────────────
-    # joins Resident + EquipmentRequestItem + EquipmentInventory
-    # so searching "monobloc chairs" finds requests that include that item
     equip_requests = (
         db.query(EquipmentRequest)
         .join(EquipmentRequest.resident)
@@ -148,10 +140,10 @@ def global_search(
                 Resident.first_name.ilike(term),
                 Resident.last_name.ilike(term),
                 Resident.middle_name.ilike(term),
-                EquipmentInventory.name.ilike(term),  # ← search by item name
+                EquipmentInventory.name.ilike(term), 
             )
         )
-        .distinct()  # outerjoin can produce duplicates, this prevents that
+        .distinct()  
         .limit(5)
         .all()
     )
@@ -169,7 +161,6 @@ def global_search(
         for er in equip_requests
     ]
 
-    # ── Blotter Records ───────────────────────────────────────────────────────
     blotter = (
         db.query(BlotterRecord)
         .filter(
@@ -194,7 +185,6 @@ def global_search(
         for b in blotter
     ]
 
-    # ── Announcements ─────────────────────────────────────────────────────────
     announcements = (
         db.query(Announcement)
         .filter(
@@ -217,7 +207,6 @@ def global_search(
     for a in announcements
 ]
 
-    # ── FAQs ──────────────────────────────────────────────────────────────────
     faqs = (
         db.query(FAQ)
         .filter(
@@ -240,7 +229,6 @@ def global_search(
         for faq in faqs
     ]
 
-    # ── Feedback ──────────────────────────────────────────────────────────────
     feedbacks = (
         db.query(Feedback)
         .filter(
@@ -264,7 +252,6 @@ def global_search(
         for fb in feedbacks
     ]
 
-# ── Document Services (Document Types) ───────────────────────────────────
     doc_types = (
         db.query(DocumentType)
         .filter(
@@ -287,7 +274,6 @@ def global_search(
         for dt in doc_types
     ]
 
-# ── Contact Information ───────────────────────────────────────────────────
     contact = db.query(ContactInformation).first()
     if contact:
         contact_fields = [

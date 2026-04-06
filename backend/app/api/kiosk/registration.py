@@ -1,18 +1,3 @@
-"""
-RFID Registration Router
-------------------------
-Exposes the new-RFID registration workflow as REST endpoints.
-
-All routes are prefixed with /kiosk/rfid-registration and consumed
-exclusively by the Kiosk interface (ScanRFID.vue, AdminPasscode.vue, Register.vue).
-
-Endpoints:
-  GET  /rfid-registration/check/{rfid_uid}    — is this UID new or already linked?
-  POST /rfid-registration/verify-passcode     — validate admin passcode gate
-  GET  /rfid-registration/approved-applications — list approved ID apps awaiting linking
-  POST /rfid-registration/link                — bind a new RFID UID to a resident
-"""
-
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -36,10 +21,6 @@ from app.services.registration_service import (
 router = APIRouter(prefix="/rfid-registration")
 
 
-# =========================================================
-# 1. CHECK RFID STATUS
-# =========================================================
-
 @router.get(
     "/check/{rfid_uid}",
     response_model=RFIDStatusResponse,
@@ -53,10 +34,6 @@ router = APIRouter(prefix="/rfid-registration")
 def check_rfid(rfid_uid: str, db: Session = Depends(get_db)):
     return check_rfid_status(db, rfid_uid)
 
-
-# =========================================================
-# 2. VERIFY ADMIN PASSCODE
-# =========================================================
 
 @router.post(
     "/verify-passcode",
@@ -72,10 +49,6 @@ def check_passcode(payload: AdminPasscodeRequest):
     return verify_admin_passcode(payload.passcode)
 
 
-# =========================================================
-# 3. GET APPROVED ID APPLICATIONS
-# =========================================================
-
 @router.get(
     "/approved-applications",
     response_model=list[ApprovedIDApplication],
@@ -89,10 +62,6 @@ def check_passcode(payload: AdminPasscodeRequest):
 def get_approved_applications(db: Session = Depends(get_db)):
     return get_approved_id_applications(db)
 
-
-# =========================================================
-# 4. LINK RFID TO RESIDENT
-# =========================================================
 
 @router.post("/link", response_model=LinkRFIDResponse, status_code=status.HTTP_201_CREATED)
 async def link_rfid(payload: LinkRFIDRequest, db: Session = Depends(get_db)):

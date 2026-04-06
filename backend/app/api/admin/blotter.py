@@ -1,9 +1,3 @@
-"""
-Blotter Records API
----------------------------
-Provides management endpoints for barangay blotter records
-within the administrative dashboard.
-"""
 from fastapi import APIRouter, Depends, HTTPException, status, Body
 from sqlalchemy.orm import Session
 from app.api.deps import get_db

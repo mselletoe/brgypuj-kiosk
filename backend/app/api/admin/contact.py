@@ -8,7 +8,6 @@ router = APIRouter(prefix="/contact")
 
 
 def get_or_create_contact(db: Session) -> ContactInformation:
-    """Always returns the single contact record, creating it if it doesn't exist."""
     contact = db.query(ContactInformation).first()
     if not contact:
         contact = ContactInformation(

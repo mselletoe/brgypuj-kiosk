@@ -13,7 +13,6 @@ router = APIRouter(prefix="/notifications")
 
 @router.get("", response_model=list[NotificationOut])
 def list_notifications(db: Session = Depends(get_db)):
-    """Fetch all notifications ordered by newest first."""
     return get_all_notifications(db)
 
 @router.patch("/{notification_id}/read")

@@ -8,7 +8,6 @@ router = APIRouter(prefix="/audit-logs")
 
 @router.get("", response_model=list[AuditLogOut])
 def get_audit_logs(db: Session = Depends(get_db)):
-    # Gets the 100 most recent logs
     return db.query(AdminAuditLog).order_by(AdminAuditLog.created_at.desc()).limit(100).all()
 
 @router.post("", response_model=AuditLogOut)

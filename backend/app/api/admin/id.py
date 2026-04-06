@@ -1,37 +1,3 @@
-"""
-ID Services Router  (Admin)
----------------------------
-Admin-only endpoints for the ID Services feature.
-
-  GET    /id-services/applications                  — list all ID applications
-  GET    /id-services/reports                       — list all RFID lost-card reports
-
-  POST   /id-services/applications/{id}/approve
-  POST   /id-services/applications/{id}/reject
-  POST   /id-services/applications/{id}/release     — generates brgy_id_number,
-                                                       fills docx template, creates
-                                                       BarangayID row
-  POST   /id-services/applications/{id}/mark-paid
-  POST   /id-services/applications/{id}/mark-unpaid
-  POST   /id-services/applications/{id}/undo
-  GET    /id-services/applications/{id}/download    — download the filled ID docx
-  DELETE /id-services/applications/{id}
-  POST   /id-services/applications/bulk-delete
-  POST   /id-services/applications/bulk-undo
-
-  POST   /id-services/reports/{id}/undo
-  DELETE /id-services/reports/{id}
-  POST   /id-services/reports/bulk-undo
-  POST   /id-services/reports/bulk-delete
-
-ID Applications are stored in the DocumentRequest table with doctype_id = NULL.
-Release is handled by id_service.release_id_application (NOT the shared
-document_service.release_request) because it carries extra logic:
-brgy_id_number generation, docx template filling, and BarangayID row creation.
-All other actions (approve, reject, mark-paid, undo, delete) still delegate to
-the shared document_service helpers.
-"""
-
 from pathlib import Path
 from fastapi import APIRouter, Depends, Body, HTTPException
 from fastapi.responses import FileResponse, Response, StreamingResponse
@@ -69,10 +35,6 @@ from app.models.document import DocumentRequest
 router = APIRouter(prefix="/id-services")
 
 
-# =========================================================
-# LIST
-# =========================================================
-
 @router.get(
     "/applications",
     response_model=list[IDApplicationAdminOut],
@@ -90,10 +52,6 @@ def list_id_applications(db: Session = Depends(get_db)):
 def list_rfid_reports(db: Session = Depends(get_db)):
     return get_all_rfid_reports(db)
 
-
-# =========================================================
-# ID TEMPLATE PREVIEW
-# =========================================================
 
 @router.get(
     "/template/preview",
@@ -116,10 +74,6 @@ def preview_id_template_endpoint(db: Session = Depends(get_db)):
         headers={"Content-Disposition": "inline; filename=id-template-preview.pdf"},
     )
 
-
-# =========================================================
-# ID APPLICATION ACTIONS
-# =========================================================
 
 @router.post("/applications/{request_id}/approve", summary="[Admin] Approve ID application")
 def approve_id_application(request_id: int, db: Session = Depends(get_db)):
@@ -215,10 +169,6 @@ def bulk_undo_id_applications(ids: list[int] = Body(...), db: Session = Depends(
     updated_count = bulk_undo_requests(db, ids)
     return {"detail": f"{updated_count} applications reverted"}
 
-
-# =========================================================
-# RFID REPORT ACTIONS
-# =========================================================
 
 @router.post("/reports/bulk-undo", summary="[Admin] Bulk undo RFID reports")
 def bulk_undo_rfid_reports_endpoint(ids: list[int] = Body(...), db: Session = Depends(get_db)):

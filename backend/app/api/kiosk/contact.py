@@ -11,7 +11,6 @@ router = APIRouter(prefix="/contact")
 def get_contact(db: Session = Depends(get_db)):
     contact = db.query(ContactInformation).first()
     if not contact:
-        # return sensible defaults if admin hasn't saved yet
         return ContactInformation(
             id=1,
             emergency_number="911",

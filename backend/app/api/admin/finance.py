@@ -1,23 +1,3 @@
-"""
-Financial Statement API
-------------------------
-Provides a single PDF export endpoint used by the admin dashboard
-to generate and download a financial statement for the treasurer.
-
-Accessible by both Admin and Superadmin roles.
-(Either admin on duty can export — treasurer doesn't have a system login.)
-
-Route map (prefix: /admin/financial)
---------------------------------------
-  GET /statement/export  — returns a PDF file as a download
-
-Query parameters
-----------------
-  date_from   : YYYY-MM-DD  (required)
-  date_to     : YYYY-MM-DD  (required)
-  service     : "documents" | "id_services" | "equipment" | omit for all
-"""
-
 from datetime import date
 from typing import Optional
 
@@ -55,16 +35,14 @@ def export_financial_statement(
         description="Filter: 'documents', 'id_services', 'equipment', or omit for all",
     ),
     db: Session = Depends(get_db),
-    current_admin=Depends(get_current_admin),   # any authenticated admin
+    current_admin=Depends(get_current_admin), 
 ):
-    # Basic date validation
     if date_from > date_to:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="date_from must be on or before date_to",
         )
 
-    # Service filter validation
     allowed_services = {"documents", "id_services", "equipment", None}
     if service not in allowed_services:
         raise HTTPException(
@@ -79,7 +57,6 @@ def export_financial_statement(
         service_filter=service,
     )
 
-    # Build a descriptive filename
     service_slug = service or "all-services"
     filename = (
         f"financial-statement_{service_slug}"
