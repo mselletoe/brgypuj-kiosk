@@ -1,6 +1,3 @@
-/**
- * @file stores/systemConfig.js
- */
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import http from '@/api/http'
@@ -11,7 +8,6 @@ export const useSystemConfigStore = defineStore('systemConfig', () => {
   const error    = ref(null)
   const fetched  = ref(false)
 
-  // Blob URL for the logo — created once, revoked on refresh/removal
   let _logoBlobUrl = null
   const logoBlobUrl = ref(null)
 
@@ -46,7 +42,6 @@ export const useSystemConfigStore = defineStore('systemConfig', () => {
     }
   }
 
-  // Lightweight poll — only updates config fields, skips logo re-fetch unless has_logo changed
   async function pollConfig() {
     try {
       const response   = await http.get('/kiosk/settings')

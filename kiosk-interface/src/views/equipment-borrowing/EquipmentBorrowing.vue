@@ -1,13 +1,27 @@
 <script setup>
+/**
+ * @file views/equipment-borrowing/EquipmentBorrowing.vue
+ * @description Multi-step equipment borrowing request flow for the kiosk.
+ * Manages shared state across four steps: equipment selection, date selection,
+ * borrower info, and review/submit. Resets to the first step whenever the
+ * component is re-activated (e.g. navigating back to this route).
+ *
+ * Steps: select → dates → info → review
+ */
+
 import { ref, onActivated } from 'vue';
 import EquipmentSelect from './steps/SelectEquipment.vue';
 import EquipmentSelectDates from './steps/SelectDates.vue';
 import EquipmentForm from './steps/BorrowerInfo.vue';
 import EquipmentReviewRequest from './steps/ReviewRequest.vue';
 
+// =============================================================================
+// SHARED FORM STATE
+// =============================================================================
 const selectedEquipment = ref([]);
 const selectedDates = ref(null);
 
+/** Borrower contact and purpose details */
 const borrowerInfo = ref({
   contactPerson: '',
   contactNumber: '',
@@ -16,11 +30,17 @@ const borrowerInfo = ref({
   use_autofill: false
 });
 
+// =============================================================================
+// STEP NAVIGATION
+// =============================================================================
 const currentStep = ref('select');
 
 const goNext = (step) => currentStep.value = step;
 const goBack = (step) => currentStep.value = step;
 
+// =============================================================================
+// STEP DATA HANDLERS
+// =============================================================================
 const onUpdateEquipment = (newEquipmentArray) => {
   selectedEquipment.value = newEquipmentArray;
 };
@@ -33,6 +53,9 @@ const onUpdateBorrowerInfo = (newInfoObject) => {
   borrowerInfo.value = newInfoObject;
 };
 
+// =============================================================================
+// FORM RESET
+// =============================================================================
 const resetFormAndGoToStart = () => {
   selectedEquipment.value = [];
   selectedDates.value = null;
@@ -49,6 +72,9 @@ const hasStartedForm = () => {
          borrowerInfo.value.notes;
 };
 
+// =============================================================================
+// LIFECYCLE
+// =============================================================================
 onActivated(() => {
   resetFormAndGoToStart();
 });

@@ -11,7 +11,9 @@ export function useWebSocket() {
     // Avoid duplicate connections
     if (socket && socket.readyState === WebSocket.OPEN) return
 
-    socket = new WebSocket('ws://localhost:8000/ws/admin')
+    const host     = window.location.hostname
+    const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws'
+    socket = new WebSocket(`${protocol}://${host}:8000/ws/admin`)
 
     socket.onopen = () => {
       console.log('[WS] Admin connected')

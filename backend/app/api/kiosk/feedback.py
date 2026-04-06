@@ -1,3 +1,10 @@
+"""
+app/api/kiosk/feedback.py
+
+Router for kiosk feedback submission.
+Handles resident and guest feedback creation and broadcasts
+a real-time notification to connected admin clients on submission.
+"""
 
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session

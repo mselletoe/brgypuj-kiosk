@@ -1,3 +1,12 @@
+"""
+app/api/kiosk/id.py
+
+Router for kiosk ID services.
+Handles resident search, birthdate verification, ID applications,
+PIN management, and lost card reporting. Broadcasts relevant events
+to connected admin clients via WebSocket on submission.
+"""
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -33,6 +42,10 @@ from app.services.id_service import (
 router = APIRouter(prefix="/id-services")
 
 
+# =================================================================================
+# RESIDENT LOOKUP
+# =================================================================================
+
 @router.get(
     "/residents/search",
     response_model=list[ResidentSearchResult],
@@ -46,6 +59,10 @@ def search_residents(query: str, db: Session = Depends(get_db)):
         )
     return search_residents_by_name(db, query.strip())
 
+
+# =================================================================================
+# ID APPLICATION
+# =================================================================================
 
 @router.get(
     "/apply/fields",
@@ -113,6 +130,10 @@ async def apply(payload: IDApplicationRequest, db: Session = Depends(get_db)):
     return result
 
 
+# =================================================================================
+# PIN MANAGEMENT
+# =================================================================================
+
 @router.post(
     "/verify-pin",
     response_model=VerifyPinResponse,
@@ -130,6 +151,10 @@ def check_pin(payload: VerifyPinRequest, db: Session = Depends(get_db)):
 def update_pin(payload: ChangePinRequest, db: Session = Depends(get_db)):
     return change_pin(db, payload.resident_id, payload.current_pin, payload.new_pin)
 
+
+# =================================================================================
+# LOST CARD REPORTING
+# =================================================================================
 
 @router.get(
     "/report-lost/info/{resident_id}",

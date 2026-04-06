@@ -2,102 +2,44 @@ import { createRouter, createWebHistory } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import UserLayout from "@/layouts/UserLayout.vue";
 
-// Views
-import Display from "@/views/idle/Display.vue";
+// Only eagerly import the most critical first-render routes
 import Idle from "@/views/idle/Idle.vue";
-import Announcements from "@/views/idle/Announcements.vue";
 import Login from "@/views/auth/Login.vue";
-import ScanRFID from "@/views/auth/ScanRFID.vue";
-import AuthPIN from "@/views/auth/AuthPIN.vue";
-import Register from "@/views/auth/Register.vue";
-import KioskHome from "@/views/home/KioskHome.vue";
-import DocumentServices from "@/views/document-services/DocumentServices.vue";
-import DocumentFormWrapper from "@/views/document-services/DocumentFormWrapper.vue";
-import EquipmentBorrowing from "@/views/equipment-borrowing/EquipmentBorrowing.vue";
-import HelpAndSupport from "@/views/help-and-support/HelpAndSupport.vue";
-import Feedback from "@/views/feedback/Feedback.vue";
-import Rating from "@/views/feedback/Rating.vue";
-import Comments from "@/views/feedback/Comments.vue";
-import ComponentShowcase from "../components/ComponentShowcase.vue";
-import InAnnouncements from "../views/announcements/Announcement.vue";
-import TransactionHistory from "../views/transactions/TransactionHistory.vue";
-
-// ID Services Views
-import IDServices from "../views/id-services/IDServices.vue";
-import ChangePasscode from "../views/id-services/ChangePasscode.vue";
-import ReportLost from "../views/id-services/ReportLost.vue";
-import ApplyID from "../views/id-services/applyid/ApplyID.vue";
 
 const routes = [
   { path: "/", redirect: "/idle" },
-  { path: "/display", name: "Display", component: Display },
+  { path: "/display", name: "Display", component: () => import("@/views/idle/Display.vue") },
   { path: "/idle", name: "Idle", component: Idle },
-  { path: "/announcements", name: "Announcements", component: Announcements },
+  { path: "/announcements", name: "Announcements", component: () => import("@/views/idle/Announcements.vue") },
   { path: "/login", name: "LoginSelection", component: Login },
-  { path: "/login-rfid", name: "ScanRFID", component: ScanRFID },
-  { path: "/auth-pin", name: "VerifyPIN", component: AuthPIN },
-  {
-    path: "/inannouncements",
-    name: "InAnnouncements",
-    component: InAnnouncements,
-  },
+  { path: "/login-rfid", name: "ScanRFID", component: () => import("@/views/auth/ScanRFID.vue") },
+  { path: "/auth-pin", name: "VerifyPIN", component: () => import("@/views/auth/AuthPIN.vue") },
+  { path: "/inannouncements", name: "InAnnouncements", component: () => import("@/views/announcements/Announcement.vue") },
 
   {
     path: "/",
     component: UserLayout,
     meta: { requiresAuth: true },
     children: [
-      { path: "home", name: "Home", component: KioskHome },
+      { path: "home", name: "Home", component: () => import("@/views/home/KioskHome.vue") },
       {
         path: "document-services",
         name: "DocumentServices",
-        component: DocumentServices,
-        children: [{ path: ":docType", component: DocumentFormWrapper }],
+        component: () => import("@/views/document-services/DocumentServices.vue"),
+        children: [{ path: ":docType", component: () => import("@/views/document-services/DocumentFormWrapper.vue") }],
       },
-      { path: "id-services", name: "IDServices", component: IDServices },
-      {
-        path: "id-services/change-pin",
-        name: "ChangePasscode",
-        component: ChangePasscode,
-      },
-      {
-        path: "id-services/report-lost",
-        name: "ReportLost",
-        component: ReportLost,
-      },
-      {
-        path: "id-services/apply",
-        name: "ApplyID",
-        component: ApplyID,
-        meta: { noBottomPadding: true },
-      },
-      {
-        path: "equipment-borrowing",
-        name: "EquipmentBorrowing",
-        component: EquipmentBorrowing,
-      },
-      { path: "help-and-support", name: "Support", component: HelpAndSupport },
-      { path: "feedback", name: "Feedback", component: Feedback },
-      { path: "rating", name: "Rating", component: Rating },
-      { path: "comments", name: "Comments", component: Comments },
-      {
-        // Register is inside UserLayout so it gets the same shell,
-        // but meta.guestAllowed = true bypasses the requiresAuth guard.
-        path: "register",
-        name: "Register",
-        component: Register,
-        meta: { guestAllowed: true },
-      },
-      {
-        path: "component-showcase",
-        name: "DevShowcase",
-        component: ComponentShowcase,
-      },
-      {
-        path: "transaction-history",
-        name: "TransactionHistory",
-        component: TransactionHistory,
-      },
+      { path: "id-services", name: "IDServices", component: () => import("@/views/id-services/IDServices.vue") },
+      { path: "id-services/change-pin", name: "ChangePasscode", component: () => import("@/views/id-services/ChangePasscode.vue") },
+      { path: "id-services/report-lost", name: "ReportLost", component: () => import("@/views/id-services/ReportLost.vue") },
+      { path: "id-services/apply", name: "ApplyID", component: () => import("@/views/id-services/applyid/ApplyID.vue"), meta: { noBottomPadding: true } },
+      { path: "equipment-borrowing", name: "EquipmentBorrowing", component: () => import("@/views/equipment-borrowing/EquipmentBorrowing.vue") },
+      { path: "help-and-support", name: "Support", component: () => import("@/views/help-and-support/HelpAndSupport.vue") },
+      { path: "feedback", name: "Feedback", component: () => import("@/views/feedback/Feedback.vue") },
+      { path: "rating", name: "Rating", component: () => import("@/views/feedback/Rating.vue") },
+      { path: "comments", name: "Comments", component: () => import("@/views/feedback/Comments.vue") },
+      { path: "register", name: "Register", component: () => import("@/views/auth/Register.vue"), meta: { guestAllowed: true } },
+      { path: "component-showcase", name: "DevShowcase", component: () => import("@/components/ComponentShowcase.vue") },
+      { path: "transaction-history", name: "TransactionHistory", component: () => import("@/views/transactions/TransactionHistory.vue") },
     ],
   },
 
@@ -113,7 +55,6 @@ router.beforeEach((to, from, next) => {
   const authStore = useAuthStore();
   if (!authStore.isAuthenticated) authStore.restore();
 
-  // guestAllowed routes (e.g. /register) use UserLayout but skip auth check
   if (to.meta.guestAllowed) {
     next();
   } else if (to.meta.requiresAuth && !authStore.isAuthenticated) {

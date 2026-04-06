@@ -58,4 +58,4 @@ def send_basic(message="Hello!", recipient=RECIPIENT):
 # RUN
 # ─────────────────────────────────────────
 if __name__ == "__main__":
-    send_basic("hi po")
+    send_basic("good morning")

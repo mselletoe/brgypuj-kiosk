@@ -22,9 +22,9 @@ export const getDocumentTypes = async () => {
 // =================================================================================
 // DOCUMENT REQUEST
 // =================================================================================
-export const createDocumentRequest = async (payload) => {
+export const createDocumentRequest = async (payload, options = {}) => {
   try {
-    const response = await api.post('/kiosk/documents/requests', payload)
+    const response = await api.post('/kiosk/documents/requests', payload, options)
     return response.data
   } catch (err) {
     console.error('Failed to create document request:', err)

@@ -45,6 +45,7 @@ import {
   createDocumentType,
   updateDocumentType,
   deleteDocumentType,
+  bulkDeleteDocumentTypes,
   uploadDocumentTemplate,
   downloadDocumentTemplate,
   updateDocumentRequirements,
@@ -387,10 +388,10 @@ function bulkDelete() {
 async function confirmDelete() {
   try {
     if (isBulkDelete.value) {
-      await Promise.all(selectedIds.value.map((id) => deleteDocumentType(id)));
-      services.value = services.value.filter((s) => !selectedIds.value.includes(s.id));
-      message.success(`${selectedIds.value.length} service(s) deleted.`);
-      selectedIds.value = [];
+      await bulkDeleteDocumentTypes(selectedIds.value)
+      services.value = services.value.filter((s) => !selectedIds.value.includes(s.id))
+      message.success(`${selectedIds.value.length} service(s) deleted.`)
+      selectedIds.value = []
     } else {
       await deleteDocumentType(deleteTargetId.value);
       services.value = services.value.filter((s) => s.id !== deleteTargetId.value);

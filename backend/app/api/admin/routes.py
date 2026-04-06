@@ -1,22 +1,28 @@
 """
-Admin Dashboard API Aggregator
----------------------------
-Centralizes administrative functions such as document request processing, 
-resident management, and system configuration.
+app/api/admin/routes.py
+
+Admin Dashboard API Aggregator.
+Centralizes all administrative sub-routers covering document requests,
+resident management, system configuration, and supporting services.
 """
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.api.deps import get_db
-from app.api.admin import document, auth, residents, equipment, feedback, announcement, blotter, transaction, faqs, id, audit, search, systemlogs, contact, systemconfig, backup, adminaccounts, finance, notifications, sms
+from app.api.admin import (
+    document, auth, residents, equipment, feedback, announcement,
+    blotter, transaction, faqs, id, audit, search, systemlogs,
+    contact, systemconfig, backup, adminaccounts, finance,
+    notifications, sms,
+)
 
-
-
-# Initialize the master Admin router
 router = APIRouter()
 
-# Sub-Router Registration
-# -----------------------
+
+# =================================================================================
+# SUB-ROUTER REGISTRATION
+# =================================================================================
+
 router.include_router(auth.router)
 router.include_router(document.router)
 router.include_router(residents.router)
@@ -38,9 +44,11 @@ router.include_router(finance.router)
 router.include_router(notifications.router)
 router.include_router(sms.router)
 
+
+# =================================================================================
+# HEALTH CHECK
+# =================================================================================
+
 @router.get("/health")
 def admin_health(db: Session = Depends(get_db)):
-    """
-    Admin Service Health Check.
-    """
     return {"status": "admin ok"}

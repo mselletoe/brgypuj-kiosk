@@ -1,3 +1,10 @@
+"""
+app/api/kiosk/residents.py
+
+Router for kiosk resident data access.
+Provides resident profile data for form auto-fill on the kiosk.
+"""
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.api.deps import get_db
@@ -16,10 +23,6 @@ def get_resident_for_autofill(
     resident_id: int,
     db: Session = Depends(get_db)
 ):
-    """
-    Retrieves comprehensive resident data for autofilling document request forms.
-    Includes computed fields like age and years of residency.
-    """
     resident_data = get_resident_autofill_data(db, resident_id)
     
     if not resident_data:

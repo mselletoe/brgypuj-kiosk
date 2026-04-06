@@ -98,7 +98,6 @@ const formData = ref({
   is_active: true
 })
 
-// Dropdown options
 const suffixOptions = [
   { label: 'None', value: '' },
   { label: 'Jr.', value: 'Jr.' },
@@ -116,7 +115,6 @@ const genderOptions = [
 
 const purokOptions = ref([])
 
-// Transaction history (only loaded in view mode)
 const transactionHistory = ref([])
 const transactionLoading = ref(false)
 
@@ -383,7 +381,6 @@ function resetForm() {
   originalFormData.value = JSON.parse(JSON.stringify(formData.value))
 }
 
-// Convert timestamp to YYYY-MM-DD format using local time (avoids UTC timezone shift)
 function formatDateForAPI(timestamp) {
   if (!timestamp) return null
   const date = new Date(timestamp)
@@ -394,7 +391,6 @@ function formatDateForAPI(timestamp) {
 }
 
 async function handleSave() {
-  // Validation
   if (!formData.value.first_name || !formData.value.last_name) {
     message.error('First name and last name are required')
     return
@@ -416,7 +412,6 @@ async function handleSave() {
   
   try {
     if (props.mode === 'add') {
-      // Create new resident
       const payload = {
         first_name: formData.value.first_name,
         middle_name: formData.value.middle_name || null,
@@ -440,7 +435,6 @@ async function handleSave() {
       await createResident(payload)
       message.success('Resident registered successfully')
     } else {
-      // Update existing resident — build payload and log for debugging
       const updatePayload = {
         first_name: formData.value.first_name,
         middle_name: formData.value.middle_name || null,
@@ -456,7 +450,6 @@ async function handleSave() {
 
       await updateResident(props.residentId, updatePayload)
       
-      // Update address if changed
       if (formData.value.house_no_street || formData.value.purok_id) {
         await updateResidentAddress(props.residentId, {
           house_no_street: formData.value.house_no_street,
@@ -468,7 +461,6 @@ async function handleSave() {
         })
       }
       
-      // Update RFID status if there's an RFID on record
       if (formData.value.rfid_uid) {
         await updateResidentRFID(props.residentId, {
           is_active: formData.value.is_active

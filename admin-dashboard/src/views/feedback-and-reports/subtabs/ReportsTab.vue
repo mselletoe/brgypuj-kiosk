@@ -1,4 +1,12 @@
 <script setup>
+/**
+ * @file views/feedback-and-reports/subtabs/ReportsTab.vue
+ * @description Displays and manages lost RFID card reports.
+ * Undo marks a report as resolved and reactivates the resident's RFID card.
+ * Supports search filtering, single/bulk undo, and single/bulk delete.
+ * Exposes selection state and bulk actions to the parent via defineExpose.
+ */
+
 import { ref, computed, onMounted } from 'vue'
 import FeedbackReportCard from '@/views/feedback-and-reports/FeedbackReportCard.vue'
 import ConfirmModal from '@/components/shared/ConfirmationModal.vue'
@@ -14,17 +22,41 @@ const props = defineProps({
   searchQuery: { type: String, default: '' }
 })
 
-// ── State ──────────────────────────────────────────────────────
+// =============================================================================
+// STATE
+// =============================================================================
 const reports = ref([])
 const isLoading = ref(true)
 const errorMessage = ref(null)
 const selectedReports = ref(new Set())
 
+// =============================================================================
+// CONFIRM MODAL
+// =============================================================================
 const showConfirmModal = ref(false)
 const confirmTitle = ref('Are you sure?')
 const confirmAction = ref(null)
 
-// ── Fetch ──────────────────────────────────────────────────────
+const openConfirmModal = (title, action) => {
+  confirmTitle.value = title
+  confirmAction.value = action
+  showConfirmModal.value = true
+}
+
+const handleConfirm = async () => {
+  if (confirmAction.value) await confirmAction.value()
+  showConfirmModal.value = false
+  confirmAction.value = null
+}
+
+const handleCancel = () => {
+  showConfirmModal.value = false
+  confirmAction.value = null
+}
+
+// =============================================================================
+// DATA FETCHING
+// =============================================================================
 const fetchReports = async () => {
   isLoading.value = true
   errorMessage.value = null
@@ -52,25 +84,27 @@ const fetchReports = async () => {
   }
 }
 
-// ── Confirm modal helpers ───────────────────────────────────────
-const openConfirmModal = (title, action) => {
-  confirmTitle.value = title
-  confirmAction.value = action
-  showConfirmModal.value = true
+// =============================================================================
+// SELECTION
+// =============================================================================
+const selectAll = () => {
+  selectedReports.value = new Set(filteredReports.value.map(r => r.id))
 }
 
-const handleConfirm = async () => {
-  if (confirmAction.value) await confirmAction.value()
-  showConfirmModal.value = false
-  confirmAction.value = null
+const deselectAll = () => {
+  selectedReports.value = new Set()
 }
 
-const handleCancel = () => {
-  showConfirmModal.value = false
-  confirmAction.value = null
+const handleSelectionUpdate = (reportId, isSelected) => {
+  const next = new Set(selectedReports.value)
+  if (isSelected) next.add(reportId)
+  else next.delete(reportId)
+  selectedReports.value = next
 }
 
-// ── Undo (single) — reactivates RFID card ─────────────────────
+// =============================================================================
+// ACTIONS
+// =============================================================================
 const handleUndo = async (reportId) => {
   try {
     await undoRFIDReport(reportId)
@@ -82,7 +116,6 @@ const handleUndo = async (reportId) => {
   }
 }
 
-// ── Bulk undo ──────────────────────────────────────────────────
 const bulkUndo = () => {
   if (selectedReports.value.size === 0) return
   openConfirmModal(
@@ -101,7 +134,6 @@ const bulkUndo = () => {
   )
 }
 
-// ── Delete (single) ────────────────────────────────────────────
 const handleDelete = (reportId) => {
   openConfirmModal(
     'Delete this report? The RFID card will remain deactivated.',
@@ -118,7 +150,6 @@ const handleDelete = (reportId) => {
   )
 }
 
-// ── Bulk delete ────────────────────────────────────────────────
 const bulkDelete = () => {
   if (selectedReports.value.size === 0) return
   openConfirmModal(
@@ -137,23 +168,9 @@ const bulkDelete = () => {
   )
 }
 
-// ── Selection ──────────────────────────────────────────────────
-const selectAll = () => {
-  selectedReports.value = new Set(filteredReports.value.map(r => r.id))
-}
-
-const deselectAll = () => {
-  selectedReports.value = new Set()
-}
-
-const handleSelectionUpdate = (reportId, isSelected) => {
-  const next = new Set(selectedReports.value)
-  if (isSelected) next.add(reportId)
-  else next.delete(reportId)
-  selectedReports.value = next
-}
-
-// ── Expose to parent toolbar ───────────────────────────────────
+// =============================================================================
+// EXPOSED API (for parent FeedbackReports toolbar)
+// =============================================================================
 defineExpose({
   selectedCount: computed(() => selectedReports.value.size),
   totalCount: computed(() => filteredReports.value.length),
@@ -163,7 +180,9 @@ defineExpose({
   bulkUndo,
 })
 
-// ── Search filter ──────────────────────────────────────────────
+// =============================================================================
+// FILTERING
+// =============================================================================
 const filteredReports = computed(() => {
   if (!props.searchQuery) return reports.value
   const q = props.searchQuery.toLowerCase()
@@ -180,16 +199,20 @@ onMounted(fetchReports)
 
 <template>
   <div class="space-y-4 animate-fade-in">
+
+    <!-- Loading state -->
     <div v-if="isLoading" class="flex flex-col items-center justify-center w-full h-[65vh] gap-4 pt-24">
       <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
       <p class="text-gray-500 font-medium">Loading reports...</p>
     </div>
 
     <template v-else>
+      <!-- Error state -->
       <div v-if="errorMessage" class="text-center p-10 text-red-500">
         <p>{{ errorMessage }}</p>
       </div>
 
+      <!-- Empty state -->
       <div v-else-if="filteredReports.length === 0" class="text-center p-10 text-gray-500">
         <h3 class="text-lg font-medium text-gray-700">No Reports Found</h3>
         <p class="text-gray-500">

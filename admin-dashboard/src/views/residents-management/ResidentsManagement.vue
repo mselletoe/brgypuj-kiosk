@@ -22,10 +22,6 @@ import {
 import { useSearchSync } from "@/composables/useSearchSync";
 
 const message = useMessage();
-
-// ======================================
-// State Management
-// ======================================
 const residents = ref([]);
 const loading = ref(false);
 const searchQuery = ref("");
@@ -39,9 +35,6 @@ const modalMode = ref("add");
 const showSingleDeleteModal = ref(false);
 const pendingDeleteId = ref(null);
 
-// ======================================
-// Filter State
-// ======================================
 const filterState = ref({
   gender: null,
   purokId: null,
@@ -77,9 +70,6 @@ function handleFilterClear() {
   filterState.value = { gender: null, purokId: null, rfidStatus: null };
 }
 
-// ======================================
-// Data Loading
-// ======================================
 async function loadResidents() {
   loading.value = true;
   try {
@@ -106,9 +96,6 @@ onMounted(async () => {
   }
 });
 
-// ======================================
-// Selection Logic
-// ======================================
 const filteredResidents = computed(() => {
   let list = residents.value;
 
@@ -163,9 +150,6 @@ watch(searchQuery, () => {
   selectedIds.value = [];
 });
 
-// ======================================
-// CRUD Operations
-// ======================================
 function openAddModal() {
   modalMode.value = "add";
   currentResident.value = null;
@@ -189,9 +173,6 @@ function handleResidentSaved() {
   loadResidents();
 }
 
-// ======================================
-// Delete Operations
-// ======================================
 function requestBulkDelete() {
   if (selectedIds.value.length === 0) {
     message.warning("Please select residents to delete");
@@ -233,9 +214,6 @@ async function confirmSingleDelete() {
   }
 }
 
-// ======================================
-// Table Columns
-// ======================================
 const columns = computed(() => [
   {
     title: "",

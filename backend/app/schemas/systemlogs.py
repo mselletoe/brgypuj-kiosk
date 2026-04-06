@@ -1,16 +1,8 @@
-"""
-System Log Schemas
-------------------
-Pydantic models for validating and serializing system log data.
-"""
-
 from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional
 from app.models.systemlogs import LogSource, LogLevel, LogCategory
 
-
-# ── Internal schema used by log_action() service ──────────────────────────────
 
 class SystemLogCreate(BaseModel):
     actor_id: Optional[int] = None
@@ -31,8 +23,6 @@ class SystemLogCreate(BaseModel):
     http_method: Optional[str] = None
     status_code: Optional[int] = None
 
-
-# ── Response schema returned to admin dashboard ────────────────────────────────
 
 class SystemLogRead(BaseModel):
     id: int
@@ -58,8 +48,6 @@ class SystemLogRead(BaseModel):
 
     model_config = {"from_attributes": True}
 
-
-# ── Paginated response wrapper ─────────────────────────────────────────────────
 
 class SystemLogListResponse(BaseModel):
     total: int

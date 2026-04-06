@@ -245,7 +245,7 @@ const handleSubmit = async (data) => {
       resident_id: residentId,
     };
 
-    const response = await createDocumentRequest(payload);
+    const response = await createDocumentRequest(payload, { timeout: 120000 });
 
     formData.value = data;
     transactionNo.value = response.transaction_no;

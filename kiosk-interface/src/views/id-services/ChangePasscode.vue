@@ -18,7 +18,6 @@ const router = useRouter();
 const authStore = useAuthStore();
 const { t } = useI18n();
 
-// Step Logic
 const step = ref(1);
 const pinBuffer = ref("");
 const currentPin = ref("");
@@ -83,7 +82,6 @@ const handleNext = async () => {
         resident_id: authStore.residentId,
         pin: pinBuffer.value,
       });
-      // Verified — advance to step 2
       currentPin.value = pinBuffer.value;
       step.value = 2;
       pinBuffer.value = "";
@@ -133,7 +131,6 @@ const submitChange = async () => {
     const detail = err?.response?.data?.detail || "Something went wrong. Please try again.";
 
     if (status === 401) {
-      // Wrong current PIN — send user back to step 1 with error
       step.value = 1;
       pinBuffer.value = "";
       currentPin.value = "";

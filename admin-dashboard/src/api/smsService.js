@@ -1,5 +1,5 @@
 /**
- * @file smsService.js
+ * @file admin-dashboard/api/smsService.js
  * @description SMS Announcement Service Module
  *
  * Covers three recipient modes:
@@ -26,10 +26,6 @@ export const RESIDENT_GROUPS = [
 // READ — fetch puroks from database
 // ============================================================================
 
-/**
- * Fetches all puroks for the "By Purok" recipient tab.
- * @returns {Promise<Array<{ id: number, purok_name: string }>>}
- */
 export const fetchPuroks = async () => {
   const res = await api.get('/admin/residents/utils/puroks')
   return res.data
@@ -39,18 +35,6 @@ export const fetchPuroks = async () => {
 // Preview — resolve recipient count without sending
 // ============================================================================
 
-/**
- * Resolves and returns the recipient count for the current selection
- * WITHOUT sending any SMS. Use this to power the live badge in the UI.
- *
- * @param {'groups'|'puroks'|'specific'} recipientMode
- * @param {Object} selection
- * @param {string[]}  [selection.groups]       - e.g. ['senior', 'with_rfid']
- * @param {number[]}  [selection.purokIds]     - e.g. [1, 3]
- * @param {string[]}  [selection.phoneNumbers] - e.g. ['+639123456789']
- * @param {string}    message                  - any non-empty string (required by schema)
- * @returns {Promise<{ recipient_mode: string, count: number, group_labels?: string[], purok_names?: string[] }>}
- */
 export const previewRecipients = async (recipientMode, selection, message = 'preview') => {
   const payload = _buildPayload(recipientMode, selection, message)
   const res = await api.post('/admin/sms/preview', payload)
@@ -61,22 +45,8 @@ export const previewRecipients = async (recipientMode, selection, message = 'pre
 // Send
 // ============================================================================
 
-/**
- * Sends an SMS announcement to the resolved recipient list.
- *
- * @param {'groups'|'puroks'|'specific'} recipientMode
- * @param {Object} selection
- * @param {string[]}  [selection.groups]
- * @param {number[]}  [selection.purokIds]
- * @param {string[]}  [selection.phoneNumbers]
- * @param {string}    message
- * @returns {Promise<{ success: boolean, recipients: number, message_preview: string, failed: number, queued_at: string }>}
- */
 export const sendSMSAnnouncement = async (recipientMode, selection, message) => {
   const payload = _buildPayload(recipientMode, selection, message)
-
-  // Override timeout — the modem takes ~7-10s per recipient.
-  // Formula: 30s base + 20s per recipient, capped at 5 minutes.
   const recipientCount =
     recipientMode === 'specific'
       ? (payload.phone_numbers?.length ?? 1)
@@ -91,11 +61,6 @@ export const sendSMSAnnouncement = async (recipientMode, selection, message) => 
 // History
 // ============================================================================
 
-/**
- * Fetches the SMS send history for the "Recent Sends" panel.
- * @param {number} [limit=20]
- * @returns {Promise<Array<{ id: number, message: string, mode: string, recipients: number, sent_at: string }>>}
- */
 export const fetchSMSHistory = async (limit = 20) => {
   const res = await api.get('/admin/sms/history', { params: { limit } })
   return res.data
@@ -105,10 +70,6 @@ export const fetchSMSHistory = async (limit = 20) => {
 // Internal helper
 // ============================================================================
 
-/**
- * Builds the request payload expected by the backend SMSRequest schema.
- * @private
- */
 function _buildPayload(recipientMode, selection, message) {
   const base = { message, recipient_mode: recipientMode }
 
@@ -119,7 +80,6 @@ function _buildPayload(recipientMode, selection, message) {
     return { ...base, purok_ids: selection.purokIds ?? [] }
   }
   if (recipientMode === 'specific') {
-    // Accept a comma-separated string OR an array
     const raw = Array.isArray(selection.phoneNumbers)
       ? selection.phoneNumbers
       : (selection.phoneNumbers ?? '').split(',')

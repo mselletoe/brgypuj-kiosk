@@ -1,27 +1,17 @@
 """
-Financial Statement Service
------------------------------
-Aggregates financial data from Document Requests, ID Applications,
-and Equipment Borrowing Requests and renders a professional PDF
-report that admins can download and forward to the treasurer.
+app/services/finance_service.py
 
-Usage
------
-  from app.services.financial_service import generate_financial_statement_pdf
-
-  pdf_bytes = generate_financial_statement_pdf(
-      db,
-      date_from=date(2025, 1, 1),
-      date_to=date(2025, 12, 31),
-      service_filter=None,   # or "documents" / "id_services" / "equipment"
-  )
+Service layer for financial statement PDF generation.
+Queries document requests, ID applications, and equipment borrowing records
+for a given date range, then assembles a styled multi-section PDF report
+using ReportLab.
 """
 
 from datetime import date, datetime
 from decimal import Decimal
 from io import BytesIO
 from typing import Optional
-
+from sqlalchemy.orm import Session
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 from reportlab.lib.pagesizes import A4
@@ -36,28 +26,32 @@ from reportlab.platypus import (
     TableStyle,
     KeepTogether,
 )
-from sqlalchemy.orm import Session
-
-# ─────────────────────────────────────────────────────────────
-# COLOR PALETTE  (matches a professional government document look)
-# ─────────────────────────────────────────────────────────────
-PRIMARY     = colors.HexColor("#03335C")
-SECONDARY   = colors.HexColor("#2563eb")   # accent blue
-LIGHT_BG    = colors.HexColor("#f0f4f8")   # alternating row fill
-BORDER      = colors.HexColor("#cbd5e1")   # table border
-GREEN       = colors.HexColor("#16a34a")
-RED         = colors.HexColor("#dc2626")
-GOLD        = colors.HexColor("#ca8a04")
-DARK_TEXT   = colors.HexColor("#1e293b")
-MUTED_TEXT  = colors.HexColor("#64748b")
-WHITE       = colors.white
+from app.models.document import DocumentRequest
+from app.models.equipment import EquipmentRequest
 
 
-# ─────────────────────────────────────────────────────────────
+# =================================================================================
+# COLOR PALETTE
+# =================================================================================
+
+PRIMARY    = colors.HexColor("#03335C")
+SECONDARY  = colors.HexColor("#2563eb")
+LIGHT_BG   = colors.HexColor("#f0f4f8")
+BORDER     = colors.HexColor("#cbd5e1")
+GREEN      = colors.HexColor("#16a34a")
+RED        = colors.HexColor("#dc2626")
+GOLD       = colors.HexColor("#ca8a04")
+DARK_TEXT  = colors.HexColor("#1e293b")
+MUTED_TEXT = colors.HexColor("#64748b")
+WHITE      = colors.white
+
+
+# =================================================================================
 # STYLES
-# ─────────────────────────────────────────────────────────────
+# =================================================================================
 
 def _build_styles():
+    """Build and return the full set of named ParagraphStyles for the report."""
     base = getSampleStyleSheet()
 
     return {
@@ -199,17 +193,12 @@ def _build_styles():
     }
 
 
-# ─────────────────────────────────────────────────────────────
-# DATA AGGREGATION
-# ─────────────────────────────────────────────────────────────
+# =================================================================================
+# DATA QUERIES
+# =================================================================================
 
 def _get_document_data(db: Session, date_from: date, date_to: date) -> dict:
-    """
-    Pulls paid Document Requests (excluding ID Applications) within the date range.
-    Only Released + Paid rows count as actual income.
-    """
-    from app.models.document import DocumentRequest
-
+    """Fetch document service transactions (excludes ID applications) for the period."""
     dt_from = datetime.combine(date_from, datetime.min.time())
     dt_to   = datetime.combine(date_to,   datetime.max.time())
 
@@ -218,21 +207,21 @@ def _get_document_data(db: Session, date_from: date, date_to: date) -> dict:
         .filter(
             DocumentRequest.requested_at >= dt_from,
             DocumentRequest.requested_at <= dt_to,
-            DocumentRequest.doctype_id.isnot(None),   # exclude ID Applications
+            DocumentRequest.doctype_id.isnot(None),
         )
         .order_by(DocumentRequest.requested_at.asc())
         .all()
     )
 
-    transactions = []
+    transactions    = []
     total_collected = Decimal("0")
     total_pending   = Decimal("0")
 
     for r in rows:
-        doctype_name = r.doctype.doctype_name if r.doctype else "Unknown"
+        doctype_name  = r.doctype.doctype_name if r.doctype else "Unknown"
         resident_name = "N/A"
         if r.resident:
-            parts = filter(None, [r.resident.first_name, r.resident.middle_name, r.resident.last_name])
+            parts         = filter(None, [r.resident.first_name, r.resident.middle_name, r.resident.last_name])
             resident_name = " ".join(parts)
 
         is_paid = r.payment_status == "paid"
@@ -245,28 +234,24 @@ def _get_document_data(db: Session, date_from: date, date_to: date) -> dict:
 
         transactions.append({
             "transaction_no": r.transaction_no,
-            "resident_name": resident_name,
-            "document_type": doctype_name,
-            "status": r.status,
+            "resident_name":  resident_name,
+            "document_type":  doctype_name,
+            "status":         r.status,
             "payment_status": r.payment_status,
-            "amount": price,
-            "date": r.requested_at.strftime("%m/%d/%Y") if r.requested_at else "—",
+            "amount":         price,
+            "date":           r.requested_at.strftime("%m/%d/%Y") if r.requested_at else "—",
         })
 
     return {
-        "transactions": transactions,
+        "transactions":    transactions,
         "total_collected": total_collected,
-        "total_pending": total_pending,
-        "count": len(transactions),
+        "total_pending":   total_pending,
+        "count":           len(transactions),
     }
 
 
 def _get_id_application_data(db: Session, date_from: date, date_to: date) -> dict:
-    """
-    Pulls ID Application rows (doctype_id IS NULL) within the date range.
-    """
-    from app.models.document import DocumentRequest
-
+    """Fetch ID application transactions (doctype_id IS NULL) for the period."""
     dt_from = datetime.combine(date_from, datetime.min.time())
     dt_to   = datetime.combine(date_to,   datetime.max.time())
 
@@ -275,20 +260,20 @@ def _get_id_application_data(db: Session, date_from: date, date_to: date) -> dic
         .filter(
             DocumentRequest.requested_at >= dt_from,
             DocumentRequest.requested_at <= dt_to,
-            DocumentRequest.doctype_id.is_(None),    # only ID Applications
+            DocumentRequest.doctype_id.is_(None),   # NULL marks ID applications
         )
         .order_by(DocumentRequest.requested_at.asc())
         .all()
     )
 
-    transactions = []
+    transactions    = []
     total_collected = Decimal("0")
     total_pending   = Decimal("0")
 
     for r in rows:
         resident_name = "N/A"
         if r.resident:
-            parts = filter(None, [r.resident.first_name, r.resident.last_name])
+            parts         = filter(None, [r.resident.first_name, r.resident.last_name])
             resident_name = " ".join(parts)
 
         is_paid = r.payment_status == "paid"
@@ -301,27 +286,23 @@ def _get_id_application_data(db: Session, date_from: date, date_to: date) -> dic
 
         transactions.append({
             "transaction_no": r.transaction_no,
-            "resident_name": resident_name,
-            "status": r.status,
+            "resident_name":  resident_name,
+            "status":         r.status,
             "payment_status": r.payment_status,
-            "amount": price,
-            "date": r.requested_at.strftime("%m/%d/%Y") if r.requested_at else "—",
+            "amount":         price,
+            "date":           r.requested_at.strftime("%m/%d/%Y") if r.requested_at else "—",
         })
 
     return {
-        "transactions": transactions,
+        "transactions":    transactions,
         "total_collected": total_collected,
-        "total_pending": total_pending,
-        "count": len(transactions),
+        "total_pending":   total_pending,
+        "count":           len(transactions),
     }
 
 
 def _get_equipment_data(db: Session, date_from: date, date_to: date) -> dict:
-    """
-    Pulls Equipment Borrowing Requests within the date range.
-    """
-    from app.models.equipment import EquipmentRequest
-
+    """Fetch equipment borrowing transactions for the period, including refunds."""
     dt_from = datetime.combine(date_from, datetime.min.time())
     dt_to   = datetime.combine(date_to,   datetime.max.time())
 
@@ -335,7 +316,7 @@ def _get_equipment_data(db: Session, date_from: date, date_to: date) -> dict:
         .all()
     )
 
-    transactions = []
+    transactions    = []
     total_collected = Decimal("0")
     total_pending   = Decimal("0")
     total_refunded  = Decimal("0")
@@ -343,7 +324,7 @@ def _get_equipment_data(db: Session, date_from: date, date_to: date) -> dict:
     for r in rows:
         resident_name = "N/A"
         if r.resident:
-            parts = filter(None, [r.resident.first_name, r.resident.last_name])
+            parts         = filter(None, [r.resident.first_name, r.resident.last_name])
             resident_name = " ".join(parts)
 
         item_names = ", ".join(
@@ -351,9 +332,9 @@ def _get_equipment_data(db: Session, date_from: date, date_to: date) -> dict:
             for item in r.items
         ) if r.items else "—"
 
-        is_paid    = r.payment_status == "paid"
+        is_paid     = r.payment_status == "paid"
         is_refunded = r.is_refunded
-        cost       = r.total_cost or Decimal("0")
+        cost        = r.total_cost or Decimal("0")
 
         if is_refunded:
             total_refunded += cost
@@ -364,37 +345,36 @@ def _get_equipment_data(db: Session, date_from: date, date_to: date) -> dict:
 
         transactions.append({
             "transaction_no": r.transaction_no,
-            "resident_name": resident_name,
-            "items": item_names,
-            "borrow_date": r.borrow_date.strftime("%m/%d/%Y") if r.borrow_date else "—",
-            "return_date": r.return_date.strftime("%m/%d/%Y") if r.return_date else "—",
-            "status": r.status,
+            "resident_name":  resident_name,
+            "items":          item_names,
+            "borrow_date":    r.borrow_date.strftime("%m/%d/%Y") if r.borrow_date else "—",
+            "return_date":    r.return_date.strftime("%m/%d/%Y") if r.return_date else "—",
+            "status":         r.status,
             "payment_status": r.payment_status,
-            "is_refunded": is_refunded,
-            "amount": cost,
-            "date": r.requested_at.strftime("%m/%d/%Y") if r.requested_at else "—",
+            "is_refunded":    is_refunded,
+            "amount":         cost,
+            "date":           r.requested_at.strftime("%m/%d/%Y") if r.requested_at else "—",
         })
 
     return {
-        "transactions": transactions,
+        "transactions":    transactions,
         "total_collected": total_collected,
-        "total_pending": total_pending,
-        "total_refunded": total_refunded,
-        "count": len(transactions),
+        "total_pending":   total_pending,
+        "total_refunded":  total_refunded,
+        "count":           len(transactions),
     }
 
 
-# ─────────────────────────────────────────────────────────────
-# PDF BUILDING HELPERS
-# ─────────────────────────────────────────────────────────────
+# =================================================================================
+# PDF LAYOUT COMPONENTS
+# =================================================================================
 
 PAGE_W, PAGE_H = A4
-MARGIN = 18 * mm
+MARGIN    = 18 * mm
 CONTENT_W = PAGE_W - 2 * MARGIN
 
 
 def _header_table(styles, date_from: date, date_to: date, service_filter: Optional[str]) -> Table:
-    """Renders the navy-blue banner at the top of the report."""
     period_str = f"{date_from.strftime('%B %d, %Y')}  –  {date_to.strftime('%B %d, %Y')}"
 
     service_label = {
@@ -404,31 +384,18 @@ def _header_table(styles, date_from: date, date_to: date, service_filter: Option
     }.get(service_filter, "All Services")
 
     header_content = [
-        [
-            Paragraph("BARANGAY KIOSK FINANCIAL STATEMENT", styles["brgy_name"]),
-        ],
-        [
-            Paragraph("Barangay Poblacion I, Amadeo, Cavite  ·  Kiosk System", styles["brgy_sub"]),
-        ],
-        [
-            Paragraph(f"Report Coverage: {service_label}", styles["report_title"]),
-        ],
-        [
-            Paragraph(f"Period: {period_str}", styles["report_period"]),
-        ],
-        [
-            Paragraph(
-                f"Generated: {datetime.now().strftime('%B %d, %Y  %I:%M %p')}",
-                styles["report_period"],
-            )
-        ],
+        [Paragraph("BARANGAY KIOSK FINANCIAL STATEMENT", styles["brgy_name"])],
+        [Paragraph("Barangay Poblacion I, Amadeo, Cavite  ·  Kiosk System", styles["brgy_sub"])],
+        [Paragraph(f"Report Coverage: {service_label}", styles["report_title"])],
+        [Paragraph(f"Period: {period_str}", styles["report_period"])],
+        [Paragraph(f"Generated: {datetime.now().strftime('%B %d, %Y  %I:%M %p')}", styles["report_period"])],
     ]
 
     t = Table([[row[0]] for row in header_content], colWidths=[CONTENT_W])
     t.setStyle(TableStyle([
-        ("BACKGROUND",  (0, 0), (-1, -1), PRIMARY),
-        ("TOPPADDING",  (0, 0), (-1,  0), 16),
-        ("BOTTOMPADDING", (0, -1), (-1, -1), 16),
+        ("BACKGROUND",   (0, 0), (-1, -1), PRIMARY),
+        ("TOPPADDING",   (0, 0), (-1,  0), 16),
+        ("BOTTOMPADDING",(0,-1), (-1, -1), 16),
         ("LEFTPADDING",  (0, 0), (-1, -1), 14),
         ("RIGHTPADDING", (0, 0), (-1, -1), 14),
         ("TOPPADDING",   (0, 1), (-1, -2), 1),
@@ -438,10 +405,6 @@ def _header_table(styles, date_from: date, date_to: date, service_filter: Option
 
 
 def _summary_card(styles, label: str, collected: Decimal, pending: Decimal, extra: dict = None) -> Table:
-    """
-    Renders a single summary card with collected / pending / optional extra rows.
-    Returns a Table so it can be used inside a KeepTogether block.
-    """
     rows = [
         [
             Paragraph(label, ParagraphStyle(
@@ -494,22 +457,21 @@ def _summary_card(styles, label: str, collected: Decimal, pending: Decimal, extr
                          Paragraph(f"₱ {row_value:,.2f}", val_style)])
 
     half_w = (CONTENT_W - 6) / 2
-
     t = Table(rows, colWidths=[half_w * 0.55, half_w * 0.45])
     t.setStyle(TableStyle(ts))
     return t
 
 
 def _transaction_table_docs(styles, transactions: list) -> Table:
-    """Document requests table."""
+    """Transaction table for Document Services."""
     header = [
-        Paragraph("TXN #",         styles["table_header"]),
-        Paragraph("Resident",       styles["table_header"]),
-        Paragraph("Document Type",  styles["table_header"]),
-        Paragraph("Status",         styles["table_header"]),
-        Paragraph("Payment",        styles["table_header"]),
-        Paragraph("Amount",         styles["table_header"]),
-        Paragraph("Date",           styles["table_header"]),
+        Paragraph("TXN #",        styles["table_header"]),
+        Paragraph("Resident",      styles["table_header"]),
+        Paragraph("Document Type", styles["table_header"]),
+        Paragraph("Status",        styles["table_header"]),
+        Paragraph("Payment",       styles["table_header"]),
+        Paragraph("Amount",        styles["table_header"]),
+        Paragraph("Date",          styles["table_header"]),
     ]
 
     col_w = [
@@ -523,23 +485,23 @@ def _transaction_table_docs(styles, transactions: list) -> Table:
     ]
 
     data = [header]
-    for i, tx in enumerate(transactions):
+    for tx in transactions:
         pay_style = styles["pill_paid"] if tx["payment_status"] == "paid" else styles["pill_unpaid"]
         data.append([
-            Paragraph(tx["transaction_no"],  styles["table_cell"]),
-            Paragraph(tx["resident_name"],   styles["table_cell"]),
-            Paragraph(tx["document_type"],   styles["table_cell"]),
-            Paragraph(tx["status"],          styles["table_cell_center"]),
-            Paragraph(tx["payment_status"].title(), pay_style),
-            Paragraph(f"₱ {tx['amount']:,.2f}", styles["table_cell_right"]),
-            Paragraph(tx["date"],            styles["table_cell_center"]),
+            Paragraph(tx["transaction_no"],            styles["table_cell"]),
+            Paragraph(tx["resident_name"],             styles["table_cell"]),
+            Paragraph(tx["document_type"],             styles["table_cell"]),
+            Paragraph(tx["status"],                    styles["table_cell_center"]),
+            Paragraph(tx["payment_status"].title(),    pay_style),
+            Paragraph(f"₱ {tx['amount']:,.2f}",        styles["table_cell_right"]),
+            Paragraph(tx["date"],                      styles["table_cell_center"]),
         ])
 
     return _styled_table(data, col_w)
 
 
 def _transaction_table_id(styles, transactions: list) -> Table:
-    """ID Application table."""
+    """Transaction table for I.D Application Services."""
     header = [
         Paragraph("TXN #",    styles["table_header"]),
         Paragraph("Resident", styles["table_header"]),
@@ -562,19 +524,19 @@ def _transaction_table_id(styles, transactions: list) -> Table:
     for tx in transactions:
         pay_style = styles["pill_paid"] if tx["payment_status"] == "paid" else styles["pill_unpaid"]
         data.append([
-            Paragraph(tx["transaction_no"],  styles["table_cell"]),
-            Paragraph(tx["resident_name"],   styles["table_cell"]),
-            Paragraph(tx["status"],          styles["table_cell_center"]),
-            Paragraph(tx["payment_status"].title(), pay_style),
-            Paragraph(f"₱ {tx['amount']:,.2f}", styles["table_cell_right"]),
-            Paragraph(tx["date"],            styles["table_cell_center"]),
+            Paragraph(tx["transaction_no"],            styles["table_cell"]),
+            Paragraph(tx["resident_name"],             styles["table_cell"]),
+            Paragraph(tx["status"],                    styles["table_cell_center"]),
+            Paragraph(tx["payment_status"].title(),    pay_style),
+            Paragraph(f"₱ {tx['amount']:,.2f}",        styles["table_cell_right"]),
+            Paragraph(tx["date"],                      styles["table_cell_center"]),
         ])
 
     return _styled_table(data, col_w)
 
 
 def _transaction_table_equipment(styles, transactions: list) -> Table:
-    """Equipment requests table."""
+    """Transaction table for Equipment Borrowing."""
     header = [
         Paragraph("TXN #",    styles["table_header"]),
         Paragraph("Resident", styles["table_header"]),
@@ -611,13 +573,13 @@ def _transaction_table_equipment(styles, transactions: list) -> Table:
             pay_style = styles["pill_unpaid"]
 
         data.append([
-            Paragraph(tx["transaction_no"],  styles["table_cell"]),
-            Paragraph(tx["resident_name"],   styles["table_cell"]),
-            Paragraph(tx["items"],           styles["table_cell"]),
-            Paragraph(tx["borrow_date"],     styles["table_cell_center"]),
-            Paragraph(tx["return_date"],     styles["table_cell_center"]),
-            Paragraph(tx["status"],          styles["table_cell_center"]),
-            Paragraph(pay_label,             pay_style),
+            Paragraph(tx["transaction_no"], styles["table_cell"]),
+            Paragraph(tx["resident_name"],  styles["table_cell"]),
+            Paragraph(tx["items"],          styles["table_cell"]),
+            Paragraph(tx["borrow_date"],    styles["table_cell_center"]),
+            Paragraph(tx["return_date"],    styles["table_cell_center"]),
+            Paragraph(tx["status"],         styles["table_cell_center"]),
+            Paragraph(pay_label,            pay_style),
             Paragraph(f"₱ {tx['amount']:,.2f}", styles["table_cell_right"]),
         ])
 
@@ -625,6 +587,7 @@ def _transaction_table_equipment(styles, transactions: list) -> Table:
 
 
 def _styled_table(data: list, col_w: list) -> Table:
+    """Apply the shared table style (header + alternating row backgrounds + grid)."""
     t = Table(data, colWidths=col_w, repeatRows=1)
     t.setStyle(TableStyle([
         # Header row
@@ -641,14 +604,12 @@ def _styled_table(data: list, col_w: list) -> Table:
         # Grid
         ("GRID",          (0, 0), (-1,-1),  0.4, BORDER),
         ("LINEBELOW",     (0, 0), (-1, 0),  1,   SECONDARY),
-        # Valign
         ("VALIGN",        (0, 0), (-1,-1),  "MIDDLE"),
     ]))
     return t
 
 
 def _section_total_row(styles, label: str, collected: Decimal, pending: Decimal) -> Table:
-    """Right-aligned totals row below each section table."""
     data = [[
         Paragraph(f"{label} — Total Collected:", styles["total_label"]),
         Paragraph(f"₱ {collected:,.2f}", styles["total_value"]),
@@ -673,7 +634,7 @@ def _section_total_row(styles, label: str, collected: Decimal, pending: Decimal)
 
 def _grand_total_banner(styles, total: Decimal, label: str = "GRAND TOTAL COLLECTED") -> Table:
     data = [[
-        Paragraph(label, styles["grand_total_label"]),
+        Paragraph(label,              styles["grand_total_label"]),
         Paragraph(f"₱ {total:,.2f}", styles["grand_total_value"]),
     ]]
     t = Table(data, colWidths=[CONTENT_W * 0.6, CONTENT_W * 0.4])
@@ -701,7 +662,7 @@ def _empty_notice(styles, message: str) -> Paragraph:
 
 
 def _page_footer(canvas, doc):
-    """Draws page number and disclaimer at the bottom of each page."""
+    """Draw the page footer with a disclaimer and page number."""
     canvas.saveState()
     canvas.setFont("Helvetica", 7)
     canvas.setFillColor(MUTED_TEXT)
@@ -715,9 +676,9 @@ def _page_footer(canvas, doc):
     canvas.restoreState()
 
 
-# ─────────────────────────────────────────────────────────────
-# PUBLIC ENTRY POINT
-# ─────────────────────────────────────────────────────────────
+# =================================================================================
+# REPORT ENTRY POINT
+# =================================================================================
 
 def generate_financial_statement_pdf(
     db: Session,
@@ -726,14 +687,9 @@ def generate_financial_statement_pdf(
     service_filter: Optional[str] = None,
 ) -> bytes:
     """
-    Build and return the financial statement as PDF bytes.
+    Build and return a PDF financial statement as bytes.
 
-    Parameters
-    ----------
-    db             : SQLAlchemy session
-    date_from      : Start of the report period (inclusive)
-    date_to        : End of the report period (inclusive)
-    service_filter : One of "documents", "id_services", "equipment", or None (all)
+    service_filter options: 'documents' | 'id_services' | 'equipment' | None (all)
     """
     styles = _build_styles()
     buf    = BytesIO()
@@ -751,7 +707,6 @@ def generate_financial_statement_pdf(
 
     story = []
 
-    # ── Banner ───────────────────────────────────────────────
     story.append(_header_table(styles, date_from, date_to, service_filter))
     story.append(Spacer(1, 10))
 
@@ -762,7 +717,6 @@ def generate_financial_statement_pdf(
     grand_collected = Decimal("0")
     grand_pending   = Decimal("0")
 
-    # ── DOCUMENT SERVICES ────────────────────────────────────
     if include_docs:
         doc_data = _get_document_data(db, date_from, date_to)
         grand_collected += doc_data["total_collected"]
@@ -782,7 +736,6 @@ def generate_financial_statement_pdf(
         else:
             story.append(_empty_notice(styles, "No document requests found for this period."))
 
-    # ── ID SERVICES ──────────────────────────────────────────
     if include_id:
         id_data = _get_id_application_data(db, date_from, date_to)
         grand_collected += id_data["total_collected"]
@@ -802,7 +755,6 @@ def generate_financial_statement_pdf(
         else:
             story.append(_empty_notice(styles, "No ID applications found for this period."))
 
-    # ── EQUIPMENT BORROWING ──────────────────────────────────
     if include_equip:
         eq_data = _get_equipment_data(db, date_from, date_to)
         grand_collected += eq_data["total_collected"]
@@ -827,12 +779,10 @@ def generate_financial_statement_pdf(
         else:
             story.append(_empty_notice(styles, "No equipment requests found for this period."))
 
-    # ── GRAND TOTAL ──────────────────────────────────────────
     story.append(Spacer(1, 14))
     story.append(HRFlowable(width=CONTENT_W, thickness=1.5, color=PRIMARY,
                             spaceAfter=8, spaceBefore=0))
 
-    # Collected / Pending summary row
     summary_data = [[
         Paragraph("Total Collected:", ParagraphStyle(
             "sc_label", fontName="Helvetica-Bold", fontSize=10, textColor=DARK_TEXT, alignment=TA_RIGHT,
@@ -852,19 +802,18 @@ def generate_financial_statement_pdf(
         colWidths=[CONTENT_W * 0.25, CONTENT_W * 0.25, CONTENT_W * 0.25, CONTENT_W * 0.25],
     )
     summary_row.setStyle(TableStyle([
-        ("BACKGROUND",    (0, 0), (-1, -1), colors.HexColor("#f0f4f8")),
-        ("TOPPADDING",    (0, 0), (-1, -1), 8),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
-        ("LEFTPADDING",   (0, 0), (-1, -1), 10),
-        ("RIGHTPADDING",  (0, 0), (-1, -1), 10),
-        ("BOX",           (0, 0), (-1, -1), 0.5, BORDER),
-        ("LINEBEFORE",    (2, 0), (2, -1),  0.5, BORDER),
-        ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
+        ("BACKGROUND",  (0, 0), (-1,-1), colors.HexColor("#f0f4f8")),
+        ("TOPPADDING",  (0, 0), (-1,-1), 8),
+        ("BOTTOMPADDING",(0,0), (-1,-1), 8),
+        ("LEFTPADDING", (0, 0), (-1,-1), 10),
+        ("RIGHTPADDING",(0, 0), (-1,-1), 10),
+        ("BOX",         (0, 0), (-1,-1), 0.5, BORDER),
+        ("LINEBEFORE",  (2, 0), (2, -1), 0.5, BORDER),
+        ("VALIGN",      (0, 0), (-1,-1), "MIDDLE"),
     ]))
     story.append(summary_row)
     story.append(Spacer(1, 6))
 
-    # Grand total banner
     story.append(_grand_total_banner(styles, grand_collected))
 
     story.append(Spacer(1, 10))

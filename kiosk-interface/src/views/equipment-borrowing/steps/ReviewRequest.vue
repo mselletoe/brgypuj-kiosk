@@ -1,4 +1,12 @@
 <script setup>
+/**
+ * @file views/equipment-borrowing/steps/ReviewRequest.vue
+ * @description Step 4 (final) of the equipment borrowing wizard.
+ * Displays a summary of the selected equipment, dates, borrower info,
+ * and total cost before submission. Handles request creation and shows
+ * a success modal with the transaction number on completion.
+ */
+
 import { ref, computed } from "vue";
 import ArrowBackButton from "@/components/shared/ArrowBackButton.vue";
 import Button from "@/components/shared/Button.vue";
@@ -8,10 +16,6 @@ import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { createEquipmentRequest } from "@/api/equipmentService";
 import { useAuthStore } from "@/stores/auth";
-
-const authStore = useAuthStore();
-const router = useRouter();
-const { t } = useI18n();
 
 const props = defineProps({
   selectedEquipment: Array,
@@ -23,11 +27,20 @@ const props = defineProps({
 
 const emit = defineEmits(["start-new-request"]);
 
+const authStore = useAuthStore();
+const router = useRouter();
+const { t } = useI18n();
+
+// =============================================================================
+// MODAL STATE
+// =============================================================================
 const showModal = ref(false);
 const showExitModal = ref(false);
-const isSubmitting = ref(false);
 const transactionNo = ref("");
 
+// =============================================================================
+// FORMATTERS
+// =============================================================================
 const formatCurrency = (value) => {
   if (!value) return "₱0";
   return `₱${parseFloat(value).toLocaleString()}`;
@@ -53,9 +66,11 @@ const totalCost = computed(() => {
   }, 0);
 });
 
-const handlePageBack = () => {
-  props.goBack("info");
-};
+// =============================================================================
+// SUBMISSION
+// =============================================================================
+
+const isSubmitting = ref(false)
 
 const handleSubmit = async () => {
   isSubmitting.value = true;
@@ -89,6 +104,12 @@ const handleSubmit = async () => {
   }
 };
 
+// =============================================================================
+// NAVIGATION
+// =============================================================================
+
+const handlePageBack = () => props.goBack('info')
+
 const handleDone = () => {
   router.push("/home");
 };
@@ -118,6 +139,8 @@ const handleNewRequest = () => {
 
 <template>
   <div class="flex flex-col w-full h-full">
+
+    <!-- HEADER -->
     <div class="flex items-center mb-6 gap-7 flex-shrink-0">
       <ArrowBackButton @click="handleBackClick" />
       <div>
@@ -132,13 +155,14 @@ const handleNewRequest = () => {
 
     <div class="flex-1 overflow-y-auto">
       <div class="flex gap-3 mb-4">
-        <div
-          class="w-1/2 bg-white rounded-2xl shadow-lg border border-gray-200 p-5"
-        >
+        <!-- LEFT PANEL -->
+        <div class="w-1/2 bg-white rounded-2xl shadow-lg border border-gray-200 p-5">
           <h3 class="text-2xl font-bold text-[#013C6D] flex items-center gap-2">
             <MagnifyingGlassIcon class="w-8 h-8" />
             {{ t('reviewRequest') }}
           </h3>
+
+          <!-- Selected equipment summary -->
           <div class="mt-4">
             <h4 class="text-lg font-bold text-[#013C6D]">{{ t('selectedItemsSummary') }}</h4>
             <ul class="mt-2 space-y-0">
@@ -152,6 +176,8 @@ const handleNewRequest = () => {
               </li>
             </ul>
           </div>
+
+          <!-- Borrowing period -->
           <div class="mt-6">
             <h4 class="text-lg font-bold text-[#013C6D]">{{ t('borrowingPeriod') }}</h4>
             <div
@@ -173,10 +199,11 @@ const handleNewRequest = () => {
           </div>
         </div>
 
+        <!-- RIGHT PANEL -->
         <div class="w-1/2 flex flex-col gap-3">
-          <div
-            class="bg-white rounded-2xl shadow-lg border border-gray-200 p-5"
-          >
+
+          <!-- Contact information -->
+          <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-5">
             <h3 class="text-2xl font-bold text-[#013C6D]">{{ t('contactInformation') }}</h3>
             <div class="mt-4 space-y-2">
               <div class="flex justify-between text-base">
@@ -199,9 +226,9 @@ const handleNewRequest = () => {
               </div>
             </div>
           </div>
-          <div
-            class="bg-[#EBF5FF] rounded-2xl shadow-lg border border-[#B0D7F8] p-5"
-          >
+
+          <!-- Total cost display -->
+          <div class="bg-[#EBF5FF] rounded-2xl shadow-lg border border-[#B0D7F8] p-5">
             <div class="flex justify-between text-2xl font-bold text-[#013C6D]">
               <span>{{ t('totalCost') }}</span>
               <span>{{ formatCurrency(totalCost) }}</span>
@@ -214,9 +241,8 @@ const handleNewRequest = () => {
       </div>
     </div>
 
-    <div
-      class="flex gap-6 mt-6 justify-between items-center bottom-0 flex-shrink-0"
-    >
+    <!-- FOOTER: BUTTONS -->
+    <div class="flex gap-6 mt-6 justify-between items-center bottom-0 flex-shrink-0">
       <Button
         @click="handlePageBack"
         variant="outline"

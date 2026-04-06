@@ -27,6 +27,10 @@ export function deleteDocumentType(id) {
   return api.delete(`/admin/documents/types/${id}`)
 }
 
+export function bulkDeleteDocumentTypes(ids) {
+  return api.post('/admin/documents/types/bulk-delete', ids)
+}
+
 // =================================================================================
 // DOCUMENT TEMPLATES
 // =================================================================================
@@ -144,7 +148,7 @@ export function updateDocumentRequirements(id, requirements) {
 // NOTIFY (SMS)
 // =================================================================================
 
-export function sendSms(phoneNumber, message) {
+export function notifyResident(phoneNumber, message) {
   return api.post('/admin/sms/send', {
     message,
     recipient_mode: 'specific',

@@ -1,9 +1,16 @@
 <script setup>
+/**
+ * @file views/feedback-and-reports/FeedbackAndReports.vue
+ * @description Admin view for managing resident feedback and reports.
+ * Organizes entries into two tabs (Feedbacks, Reports) driven by the route param.
+ * Provides shared toolbar actions (search, undo, delete, select all) that
+ * delegate to the active tab component via a template ref.
+ */
+
 import { ref, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { NTabs, NTabPane } from "naive-ui";
 import { TrashIcon, ArrowUturnLeftIcon } from "@heroicons/vue/24/outline";
-
 import PageTitle from "@/components/shared/PageTitle.vue";
 import FeedbackTab from "@/views/feedback-and-reports/subtabs/FeedbackTab.vue";
 import ReportsTab from "@/views/feedback-and-reports/subtabs/ReportsTab.vue";
@@ -11,12 +18,13 @@ import { useSearchSync } from "@/composables/useSearchSync";
 
 const route = useRoute();
 const router = useRouter();
-
 const searchQuery = ref("");
 useSearchSync(searchQuery);
 const activeTabRef = ref(null);
 
-/* ---------- TABS ---------- */
+// =============================================================================
+// TAB ROUTING
+// =============================================================================
 const tabMap = {
   feedbacks: FeedbackTab,
   reports: ReportsTab,
@@ -33,9 +41,10 @@ const currentTabComponent = computed(
   () => tabMap[activeTab.value] || FeedbackTab,
 );
 
-/* ---------- SELECTION STATE (FROM CHILD) ---------- */
+// =============================================================================
+// SELECTION STATE
+// =============================================================================
 const selectedCount = computed(() => activeTabRef.value?.selectedCount ?? 0);
-
 const totalCount = computed(() => activeTabRef.value?.totalCount ?? 0);
 
 const selectionState = computed(() => {
@@ -44,7 +53,6 @@ const selectionState = computed(() => {
   return "partial";
 });
 
-/* ---------- ACTIONS ---------- */
 const handleMainSelectToggle = () => {
   if (!activeTabRef.value) return;
 
@@ -55,6 +63,9 @@ const handleMainSelectToggle = () => {
   }
 };
 
+// =============================================================================
+// TOOLBAR ACTIONS
+// =============================================================================
 const triggerDelete = () => {
   if (!activeTabRef.value || selectedCount.value === 0) return;
   activeTabRef.value.bulkDelete?.();
@@ -67,9 +78,9 @@ const triggerUndo = () => {
 </script>
 
 <template>
-  <div
-    class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden"
-  >
+  <div class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden">
+
+    <!-- HEADER -->
     <div class="flex justify-between items-center mb-4">
       <div>
         <PageTitle title="Feedbacks and Reports" />

@@ -1,31 +1,11 @@
-/**
- * @file useAutoLogout.js
- * @description Tracks user inactivity and silently logs out the kiosk session
- * after the configured duration, redirecting to /idle.
- *
- * Exposes `secondsRemaining` so any component (e.g. Header.vue) can show
- * a live countdown like "Session will logout after 10s..."
- *
- * Usage in App.vue:
- *   useAutoLogout()
- *
- * Usage in Header.vue (or any component):
- *   import { useAutoLogout } from '@/composables/useAutoLogout'
- *   const { secondsRemaining } = useAutoLogout()
- *
- * NOTE: useAutoLogout() is a shared singleton — calling it multiple times
- * returns the same reactive state. The timer is only started once (in App.vue).
- */
-
 import { ref, watch, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { getKioskSettings } from '@/api/systemConfigService'
+import { useSystemConfigStore } from '@/stores/systemConfig'
 
-// Routes where the timer should NOT run
 const EXCLUDED_ROUTES = ['/idle', '/login', '/login-rfid', '/auth-pin']
 
-// ── Shared singleton state (module-level so all callers share the same refs) ──
 const secondsRemaining = ref(0)
 let logoutDuration     = 1800
 let timer              = null
@@ -36,18 +16,16 @@ export function useAutoLogout() {
   const router = useRouter()
   const route  = useRoute()
   const auth   = useAuthStore()
+  const systemConfigStore = useSystemConfigStore()
 
-  // ── Load duration from backend config ───────────────────────────────────
   async function loadConfig() {
     try {
       const config   = await getKioskSettings()
       logoutDuration = Math.max(config.auto_logout_duration ?? 1800, 10)
     } catch {
-      // Offline fallback — use default
     }
   }
 
-  // ── Timer ────────────────────────────────────────────────────────────────
   function clearTimer() {
     clearTimeout(timer)
     clearInterval(tickInterval)
@@ -65,12 +43,10 @@ export function useAutoLogout() {
 
     secondsRemaining.value = logoutDuration
 
-    // Tick every second to update the display
     tickInterval = setInterval(() => {
       if (secondsRemaining.value > 0) secondsRemaining.value -= 1
     }, 1000)
 
-    // Actual logout after full duration
     timer = setTimeout(performLogout, logoutDuration * 1000)
   }
 
@@ -79,7 +55,6 @@ export function useAutoLogout() {
     startTimer()
   }
 
-  // ── Logout ───────────────────────────────────────────────────────────────
   function performLogout() {
     clearTimer()
     secondsRemaining.value = 0
@@ -87,7 +62,6 @@ export function useAutoLogout() {
     router.replace('/idle')
   }
 
-  // ── Activity listeners ───────────────────────────────────────────────────
   const ACTIVITY_EVENTS = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click']
 
   function attachListeners() {
@@ -98,7 +72,6 @@ export function useAutoLogout() {
     ACTIVITY_EVENTS.forEach(e => window.removeEventListener(e, resetTimer))
   }
 
-  // ── Watchers ─────────────────────────────────────────────────────────────
   watch(() => route.path, () => startTimer())
 
   watch(
@@ -109,7 +82,15 @@ export function useAutoLogout() {
     }
   )
 
-  // ── Init — only run once from App.vue ────────────────────────────────────
+  watch(
+    () => systemConfigStore.config?.auto_logout_duration,
+    (newDuration) => {
+      if (newDuration == null) return
+      logoutDuration = Math.max(newDuration, 10)
+      startTimer() 
+    }
+  )
+
   if (!initialized) {
     initialized = true
     loadConfig().then(() => {

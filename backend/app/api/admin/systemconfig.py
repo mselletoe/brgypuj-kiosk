@@ -1,14 +1,9 @@
 """
-System Config Routes
---------------------
-GET   /admin/settings        → fetch full config (all tabs read from this)
-PATCH /admin/settings        → partial update (each tab sends only its fields)
-PUT   /admin/settings/logo   → upload brgy logo (multipart/form-data) — stored as bytes in DB
-GET   /admin/settings/logo   → serve brgy logo as raw image response
-DELETE /admin/settings/logo  → remove brgy logo
+app/api/admin/systemconfig.py
 
-All routes require a valid admin JWT.
-PATCH and logo mutation routes require superadmin.
+Router for barangay system configuration management.
+Handles reading and patching system settings, uploading, retrieving,
+and deleting the barangay logo, and broadcasting config changes to the kiosk.
 """
 
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, status
@@ -27,21 +22,20 @@ ALLOWED_IMAGE_TYPES = {"image/png", "image/jpeg", "image/webp", "image/svg+xml"}
 MAX_LOGO_SIZE_MB = 2
 
 
-# ── GET /admin/settings ───────────────────────────────────────────────────────
+# =================================================================================
+# SYSTEM CONFIGURATION
+# =================================================================================
 
 @router.get("", response_model=SystemConfigRead)
 def get_system_config(
     db: Session = Depends(get_db),
     current_admin: Admin = Depends(get_current_admin),
 ):
-    """Returns the full system config. Readable by any authenticated admin."""
     return get_config(db)
 
 
-# ── PATCH /admin/settings ─────────────────────────────────────────────────────
-
 @router.patch("", response_model=SystemConfigRead)
-async def patch_system_config(          # ← make async
+async def patch_system_config(
     data: SystemConfigUpdate,
     db: Session = Depends(get_db),
     current_admin: Admin = Depends(get_current_admin),
@@ -52,19 +46,22 @@ async def patch_system_config(          # ← make async
         apply_new_schedule()
 
     await ws_manager.broadcast_to_kiosk("config_updated", {
-        "brgy_name":           result.brgy_name,
-        "brgy_subname":        result.brgy_subname,
-        "has_logo":            result.has_logo,
-        "maintenance_mode":    result.maintenance_mode,
-        "maintenance_message": result.maintenance_message,
+        "brgy_name":            result.brgy_name,
+        "brgy_subname":         result.brgy_subname,
+        "has_logo":             result.has_logo,
+        "maintenance_mode":     result.maintenance_mode,
+        "maintenance_message":  result.maintenance_message,
+        "auto_logout_duration": result.auto_logout_duration,
     })
     return result
 
 
-# ── PUT /admin/settings/logo ──────────────────────────────────────────────────
+# =================================================================================
+# BARANGAY LOGO
+# =================================================================================
 
 @router.put("/logo", status_code=204)
-async def upload_brgy_logo(  
+async def upload_brgy_logo(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
     current_admin: Admin = Depends(get_current_admin),
@@ -84,17 +81,11 @@ async def upload_brgy_logo(
     await ws_manager.broadcast_to_kiosk("config_updated", {"has_logo": True})
 
 
-# ── GET /admin/settings/logo ──────────────────────────────────────────────────
-
 @router.get("/logo")
 def get_brgy_logo(
     db: Session = Depends(get_db),
     current_admin: Admin = Depends(get_current_admin),
 ):
-    """
-    Streams the barangay logo as a raw image response.
-    Returns 404 if no logo has been uploaded yet.
-    """
     config = get_config(db)
     if not config.brgy_logo:
         raise HTTPException(status_code=404, detail="No logo uploaded.")
@@ -102,10 +93,8 @@ def get_brgy_logo(
     return Response(content=config.brgy_logo, media_type=content_type)
 
 
-# ── DELETE /admin/settings/logo ───────────────────────────────────────────────
-
 @router.delete("/logo", status_code=204)
-async def delete_brgy_logo(      
+async def delete_brgy_logo(
     db: Session = Depends(get_db),
     current_admin: Admin = Depends(get_current_admin),
 ):

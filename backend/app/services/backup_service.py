@@ -1,8 +1,10 @@
 """
-Backup Scheduler
-----------------
-Uses APScheduler to run pg_dump at the schedule stored in system_config.
-Timezone is fixed to Asia/Manila (PH Time, UTC+8).
+app/services/backup_service.py
+ 
+Automated database backup service using APScheduler and pg_dump.
+Supports daily and weekly schedules configurable via the system config.
+Backups are stored in the configured BACKUP_DIR and pruned to the 30 most recent.
+All times are expressed in Asia/Manila (PH) timezone.
 """
 
 import os
@@ -10,6 +12,7 @@ import logging
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import urlparse
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -21,6 +24,7 @@ from app.core.config import settings
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Directory where backup .sql files are written
 BACKUP_DIR = Path(settings.BACKUP_DIR)
 BACKUP_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -30,8 +34,11 @@ _scheduler = BackgroundScheduler(timezone=PH_TIMEZONE)
 _JOB_ID = "auto_backup"
 
 
+# =================================================================================
+# INTERNAL HELPERS
+# =================================================================================
+
 def _parse_db_url(url: str) -> dict:
-    from urllib.parse import urlparse
     parsed = urlparse(url)
     return {
         "user":     parsed.username or "postgres",
@@ -42,8 +49,25 @@ def _parse_db_url(url: str) -> dict:
     }
 
 
+def _build_trigger(schedule: str, backup_time: str) -> CronTrigger:
+    try:
+        hour, minute = backup_time.split(":")
+    except (ValueError, AttributeError):
+        hour, minute = "2", "0"
+
+    if schedule == "daily":
+        return CronTrigger(hour=int(hour), minute=int(minute), timezone=PH_TIMEZONE)
+    elif schedule == "weekly":
+        return CronTrigger(day_of_week="mon", hour=int(hour), minute=int(minute), timezone=PH_TIMEZONE)
+    else:
+        return CronTrigger(hour=int(hour), minute=int(minute), timezone=PH_TIMEZONE)
+
+
+# =================================================================================
+# BACKUP EXECUTION
+# =================================================================================
+
 def _do_backup() -> None:
-    """Runs pg_dump and saves the result. Called by the scheduler."""
     print("✅ SCHEDULER FIRED", flush=True)
     logger.info("Scheduler triggered _do_backup()")
     db = SessionLocal()
@@ -84,7 +108,6 @@ def _do_backup() -> None:
         logger.info("Scheduled backup saved: %s", dest)
         set_last_backup(db)
 
-        # Prune old auto backups — keep last 30
         auto_files = sorted(BACKUP_DIR.glob("backup_auto_*.sql"), reverse=True)
         for old in auto_files[30:]:
             old.unlink(missing_ok=True)
@@ -96,24 +119,9 @@ def _do_backup() -> None:
         db.close()
 
 
-def _build_trigger(schedule: str, backup_time: str) -> CronTrigger:
-    """
-    Converts schedule + backup_time (HH:MM, PH time) into a CronTrigger.
-    The scheduler itself runs in Asia/Manila so no offset conversion needed.
-    """
-    try:
-        hour, minute = backup_time.split(":")
-    except (ValueError, AttributeError):
-        hour, minute = "2", "0"
-
-    if schedule == "daily":
-        return CronTrigger(hour=int(hour), minute=int(minute), timezone=PH_TIMEZONE)
-    elif schedule == "weekly":
-        return CronTrigger(day_of_week="mon", hour=int(hour), minute=int(minute), timezone=PH_TIMEZONE)
-    else:
-        # manual — job still exists but skips inside _do_backup
-        return CronTrigger(hour=int(hour), minute=int(minute), timezone=PH_TIMEZONE)
-
+# =================================================================================
+# SCHEDULER MANAGEMENT
+# =================================================================================
 
 def _reschedule() -> None:
     db = SessionLocal()
@@ -141,11 +149,9 @@ def _reschedule() -> None:
 
 
 def start_scheduler() -> None:
-    """Call on FastAPI startup."""
     _reschedule()
     _scheduler.start()
 
-    # Debug: show next run time
     job = _scheduler.get_job(_JOB_ID)
     if job:
         print(f"✅ Next backup scheduled at: {job.next_run_time}", flush=True)
@@ -156,14 +162,12 @@ def start_scheduler() -> None:
 
 
 def stop_scheduler() -> None:
-    """Call on FastAPI shutdown."""
     if _scheduler.running:
         _scheduler.shutdown(wait=False)
         logger.info("Backup scheduler stopped.")
 
 
 def apply_new_schedule() -> None:
-    """Call from settings PATCH endpoint after saving backup_schedule/backup_time."""
     if _scheduler.running:
         _reschedule()
         job = _scheduler.get_job(_JOB_ID)

@@ -1,9 +1,5 @@
 import api from './http';
 
-/**
- * Fetch FAQs for the kiosk
- * @returns {Promise<Array>} list of FAQs
- */
 const getKioskFAQs = async () => {
   try {
     const response = await api.get('/kiosk/faqs/kiosk');

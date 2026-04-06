@@ -1,15 +1,9 @@
 """
-Backup Router
--------------
-Endpoints:
-  POST  /admin/backup          – trigger a manual pg_dump → streams .sql to browser
-  GET   /admin/backup/history  – list saved backup files on disk (scheduled + manual copies)
-  GET   /admin/backup/download/{filename} – download a specific saved backup file
-  POST  /admin/backup/restore  – restore DB from an uploaded .sql file
-
-Scheduled backups are handled by backup_scheduler.py (APScheduler).
-Every successful backup (manual or scheduled) calls set_last_backup() to
-update last_backup_at in system_config.
+app/api/admin/backup.py
+ 
+Router for database backup and restore operations.
+Handles manual backup triggering, backup history listing,
+individual file downloads, and SQL restore uploads.
 """
 
 import os
@@ -29,16 +23,15 @@ from app.core.config import settings
 
 router = APIRouter(prefix="/backup")
 
-# ── Where scheduled backups are saved on the Pi ───────────────────────────────
 BACKUP_DIR = Path(settings.BACKUP_DIR)
 BACKUP_DIR.mkdir(parents=True, exist_ok=True)
 
+
+# =================================================================================
+# INTERNAL HELPERS
+# =================================================================================
+
 def _parse_db_url(url: str) -> dict:
-    """
-    Parse DATABASE_URL like:
-      postgresql://user:password@host:port/dbname
-    Returns dict with keys: user, password, host, port, dbname
-    """
     from urllib.parse import urlparse
     parsed = urlparse(url)
     return {
@@ -51,10 +44,6 @@ def _parse_db_url(url: str) -> dict:
 
 
 def _run_pg_dump(dest_path: Path) -> None:
-    """
-    Runs pg_dump and writes output to dest_path.
-    Raises RuntimeError on failure.
-    """
     db = _parse_db_url(settings.DATABASE_URL)
     env = os.environ.copy()
     env["PGPASSWORD"] = db["password"]
@@ -77,17 +66,15 @@ def _run_pg_dump(dest_path: Path) -> None:
         raise RuntimeError(f"pg_dump failed: {result.stderr.strip()}")
 
 
-# ── Manual backup → stream to browser ────────────────────────────────────────
+# =================================================================================
+# BACKUP OPERATIONS
+# =================================================================================
 
 @router.post("", status_code=200)
 def trigger_manual_backup(
     db: Session = Depends(get_db),
     _admin: Admin = Depends(get_current_admin),
 ):
-    """
-    Runs pg_dump, saves a copy to BACKUP_DIR, and streams the .sql
-    file directly to the admin's browser as a download.
-    """
     timestamp   = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
     filename    = f"backup_manual_{timestamp}.sql"
     saved_path  = BACKUP_DIR / filename
@@ -102,7 +89,6 @@ def trigger_manual_backup(
 
     set_last_backup(db)
 
-    # Stream the file to the browser
     def iterfile():
         with open(saved_path, "rb") as f:
             yield from f
@@ -117,22 +103,15 @@ def trigger_manual_backup(
     )
 
 
-# ── List saved backups (scheduled + manual copies on Pi) ─────────────────────
-
 @router.get("/history")
 def list_backup_history(
     _admin: Admin = Depends(get_current_admin),
 ):
-    """
-    Returns metadata for all .sql files saved in BACKUP_DIR,
-    newest first.
-    """
     files = sorted(BACKUP_DIR.glob("backup_*.sql"), reverse=True)
     history = []
     for f in files:
         stat = f.stat()
         size_bytes = stat.st_size
-        # Human-readable size
         if size_bytes >= 1_048_576:
             size_str = f"{size_bytes / 1_048_576:.1f} MB"
         elif size_bytes >= 1024:
@@ -140,10 +119,8 @@ def list_backup_history(
         else:
             size_str = f"{size_bytes} B"
 
-        # Extract type from filename: backup_manual_... or backup_auto_...
         btype = "auto" if "_auto_" in f.name else "manual"
 
-        # mtime as aware UTC datetime
         mtime = datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc)
 
         history.append({
@@ -152,23 +129,21 @@ def list_backup_history(
             "size":     size_str,
             "size_bytes": size_bytes,
             "created_at": mtime.isoformat(),
-            "status":   "success",   # only successful dumps are saved
+            "status":   "success", 
         })
 
     return history
 
 
-# ── Download a specific saved backup ─────────────────────────────────────────
+# =================================================================================
+# DOWNLOAD & RESTORE
+# =================================================================================
 
 @router.get("/download/{filename}")
 def download_backup(
     filename: str,
     _admin: Admin = Depends(get_current_admin),
 ):
-    """
-    Streams a specific saved backup file to the browser.
-    """
-    # Security: prevent path traversal
     safe = BACKUP_DIR / Path(filename).name
     if not safe.exists() or not safe.is_file():
         raise HTTPException(status_code=404, detail="Backup file not found.")
@@ -180,17 +155,11 @@ def download_backup(
     )
 
 
-# ── Restore from uploaded .sql file ──────────────────────────────────────────
-
 @router.post("/restore", status_code=200)
 async def restore_backup(
     file: UploadFile = File(...),
     _admin: Admin = Depends(get_current_admin),
 ):
-    """
-    Accepts a .sql file upload and runs psql to restore it.
-    ⚠️  This drops and recreates all data — use with caution.
-    """
     if not file.filename.endswith(".sql"):
         raise HTTPException(status_code=400, detail="Only .sql files are accepted.")
 

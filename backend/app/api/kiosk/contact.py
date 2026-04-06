@@ -1,3 +1,11 @@
+"""
+app/api/kiosk/contact.py
+
+Router for kiosk contact information display.
+Returns the barangay's emergency numbers, office hours, and support details.
+Falls back to sensible defaults if no contact record has been configured.
+"""
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.api.deps import get_db
@@ -11,7 +19,6 @@ router = APIRouter(prefix="/contact")
 def get_contact(db: Session = Depends(get_db)):
     contact = db.query(ContactInformation).first()
     if not contact:
-        # return sensible defaults if admin hasn't saved yet
         return ContactInformation(
             id=1,
             emergency_number="911",

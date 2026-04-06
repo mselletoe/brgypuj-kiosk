@@ -1,9 +1,11 @@
 """
-Feedback Administration API
----------------------------
-Provides management endpoints for viewing and managing feedback submissions
-within the administrative dashboard.
+app/api/admin/feedback.py
+ 
+Router for resident feedback management.
+Handles listing all submitted feedback entries and
+individual or bulk deletion by admin.
 """
+
 from fastapi import APIRouter, Depends, HTTPException, status, Body
 from sqlalchemy.orm import Session
 from app.api.deps import get_db
@@ -17,17 +19,14 @@ from app.services.feedback_service import (
 router = APIRouter(prefix="/feedbacks")
 
 
-# =========================================================
-# FEEDBACK MANAGEMENT
-# =========================================================
+# =================================================================================
+# INTERNAL HELPERS
+# =================================================================================
 
 def _format_feedback_for_admin(feedback):
-    """Helper to format feedback with resident data"""
-    # Get the active RFID UID if resident exists
     rfid_display = "Guest Mode"
     
     if feedback.resident:
-        # Get the active RFID from the relationship
         active_rfid = next(
             (rfid.rfid_uid for rfid in feedback.resident.rfids if rfid.is_active),
             None
@@ -48,24 +47,25 @@ def _format_feedback_for_admin(feedback):
     }
 
 
+# =================================================================================
+# FEEDBACK RECORDS
+# =================================================================================
+
 @router.get(
     "",
     response_model=list[FeedbackAdminOut],
 )
 def list_feedbacks(db: Session = Depends(get_db)):
-    """
-    Lists all feedback submissions for administrative review.
-    Includes both resident and guest feedback.
-    """
     feedbacks = get_all_feedbacks(db)
     return [_format_feedback_for_admin(fb) for fb in feedbacks]
 
 
+# =================================================================================
+# DELETION
+# =================================================================================
+
 @router.delete("/{feedback_id}")
 def delete_feedback_record(feedback_id: int, db: Session = Depends(get_db)):
-    """
-    Deletes a specific feedback record.
-    """
     success = delete_feedback(db, feedback_id)
     if not success:
         raise HTTPException(status_code=404, detail="Feedback not found")
@@ -74,9 +74,5 @@ def delete_feedback_record(feedback_id: int, db: Session = Depends(get_db)):
 
 @router.post("/bulk-delete")
 def bulk_delete_feedback_records(ids: list[int] = Body(...), db: Session = Depends(get_db)):
-    """
-    Bulk delete operation for multiple feedback records.
-    Returns count of successfully deleted records.
-    """
     deleted_count = bulk_delete_feedbacks(db, ids)
     return {"detail": f"{deleted_count} feedbacks deleted"}

@@ -1,8 +1,8 @@
 """
-Transaction History API - Kiosk Endpoints
-------------------------------------------
-Resident-facing endpoint to view their unified transaction history
-across Document Requests, Equipment Requests, and RFID Activities.
+app/api/kiosk/transaction.py
+
+Router for kiosk transaction history.
+Allows residents to view their past document and equipment request history.
 """
 
 from fastapi import APIRouter, Depends
@@ -19,14 +19,4 @@ router = APIRouter(prefix="/transactions")
     response_model=list[TransactionHistoryOut]
 )
 def get_my_transaction_history(resident_id: int, db: Session = Depends(get_db)):
-    """
-    **Kiosk:** Retrieve the unified transaction history for a resident.
-
-    Returns all completed or rejected transactions across:
-    - Document Requests
-    - Equipment Requests
-    - RFID Activities (once enabled)
-
-    Results are ordered by most recent first.
-    """
     return get_transaction_history(db, resident_id)

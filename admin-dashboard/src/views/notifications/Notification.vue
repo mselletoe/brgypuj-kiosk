@@ -19,12 +19,10 @@ const searchQuery       = ref('')
 const showFilterPopover = ref(false)
 const selectedIds       = ref([])
 
-// ── Fetch persisted notifications on mount ────────────────────────────────────
 onMounted(() => {
   notifStore.fetchNotifications()
 })
 
-// ── Filter state ──────────────────────────────────────────────────────────────
 const filterState = ref({
   status: null,
   type:   null,
@@ -52,10 +50,8 @@ const handleFilterClear = () => {
   filterState.value = { status: null, type: null }
 }
 
-// ── Data — from Pinia store ───────────────────────────────────────────────────
 const notifications = computed(() => notifStore.notifications)
 
-// ── Filtering ─────────────────────────────────────────────────────────────────
 const filteredNotifications = computed(() => {
   const q = searchQuery.value.toLowerCase()
   return notifications.value.filter((n) => {
@@ -69,7 +65,6 @@ const filteredNotifications = computed(() => {
   })
 })
 
-// ── Selection ─────────────────────────────────────────────────────────────────
 const totalCount    = computed(() => filteredNotifications.value.length)
 const selectedCount = computed(() => selectedIds.value.length)
 
@@ -89,7 +84,6 @@ function handleMainSelectToggle() {
 
 watch(searchQuery, () => { selectedIds.value = [] })
 
-// ── Actions ───────────────────────────────────────────────────────────────────
 function markSelectedAsRead() {
   if (!selectedIds.value.length) return
   notifStore.markAllRead(selectedIds.value)
@@ -109,7 +103,6 @@ function markRowAsRead(row) {
   notifStore.markRead(row.id)
 }
 
-// ── Type meta ─────────────────────────────────────────────────────────────────
 const typeMeta = {
   Document:    { dot: 'bg-blue-500',   badge: 'bg-blue-50 text-blue-700 border-blue-200' },
   Equipment:   { dot: 'bg-orange-500', badge: 'bg-orange-50 text-orange-700 border-orange-200' },
@@ -117,8 +110,6 @@ const typeMeta = {
   'ID Services': { dot: 'bg-green-500', badge: 'bg-green-50 text-green-700 border-green-200' },
 }
 
-// ── Row navigation ────────────────────────────────────────────────────────────
-// ws event names that belong to ID Services and go to /feedback-and-reports/reports
 const REPORT_EVENTS = new Set(['new_lost_card_report'])
 
 function navigateToRow(row) {
@@ -133,7 +124,6 @@ function navigateToRow(row) {
       router.push('/feedback-and-reports/feedbacks')
       break
     case 'ID Services':
-      // Lost card reports go to the Reports tab; Apply ID goes to document-requests
       if (REPORT_EVENTS.has(row.event)) {
         router.push('/feedback-and-reports/reports')
       } else {
@@ -143,7 +133,6 @@ function navigateToRow(row) {
   }
 }
 
-// ── NDataTable columns ────────────────────────────────────────────────────────
 const columns = computed(() => [
   {
     key: 'select',
