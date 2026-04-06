@@ -1,27 +1,8 @@
-"""
-Financial Statement Service
------------------------------
-Aggregates financial data from Document Requests, ID Applications,
-and Equipment Borrowing Requests and renders a professional PDF
-report that admins can download and forward to the treasurer.
-
-Usage
------
-  from app.services.financial_service import generate_financial_statement_pdf
-
-  pdf_bytes = generate_financial_statement_pdf(
-      db,
-      date_from=date(2025, 1, 1),
-      date_to=date(2025, 12, 31),
-      service_filter=None,   # or "documents" / "id_services" / "equipment"
-  )
-"""
-
 from datetime import date, datetime
 from decimal import Decimal
 from io import BytesIO
 from typing import Optional
-
+from sqlalchemy.orm import Session
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 from reportlab.lib.pagesizes import A4
@@ -36,15 +17,14 @@ from reportlab.platypus import (
     TableStyle,
     KeepTogether,
 )
-from sqlalchemy.orm import Session
+from app.models.document import DocumentRequest
+from app.models.equipment import EquipmentRequest
 
-# ─────────────────────────────────────────────────────────────
-# COLOR PALETTE  (matches a professional government document look)
-# ─────────────────────────────────────────────────────────────
+
 PRIMARY     = colors.HexColor("#03335C")
-SECONDARY   = colors.HexColor("#2563eb")   # accent blue
-LIGHT_BG    = colors.HexColor("#f0f4f8")   # alternating row fill
-BORDER      = colors.HexColor("#cbd5e1")   # table border
+SECONDARY   = colors.HexColor("#2563eb") 
+LIGHT_BG    = colors.HexColor("#f0f4f8") 
+BORDER      = colors.HexColor("#cbd5e1")
 GREEN       = colors.HexColor("#16a34a")
 RED         = colors.HexColor("#dc2626")
 GOLD        = colors.HexColor("#ca8a04")
@@ -52,10 +32,6 @@ DARK_TEXT   = colors.HexColor("#1e293b")
 MUTED_TEXT  = colors.HexColor("#64748b")
 WHITE       = colors.white
 
-
-# ─────────────────────────────────────────────────────────────
-# STYLES
-# ─────────────────────────────────────────────────────────────
 
 def _build_styles():
     base = getSampleStyleSheet()
@@ -199,17 +175,7 @@ def _build_styles():
     }
 
 
-# ─────────────────────────────────────────────────────────────
-# DATA AGGREGATION
-# ─────────────────────────────────────────────────────────────
-
 def _get_document_data(db: Session, date_from: date, date_to: date) -> dict:
-    """
-    Pulls paid Document Requests (excluding ID Applications) within the date range.
-    Only Released + Paid rows count as actual income.
-    """
-    from app.models.document import DocumentRequest
-
     dt_from = datetime.combine(date_from, datetime.min.time())
     dt_to   = datetime.combine(date_to,   datetime.max.time())
 
@@ -218,7 +184,7 @@ def _get_document_data(db: Session, date_from: date, date_to: date) -> dict:
         .filter(
             DocumentRequest.requested_at >= dt_from,
             DocumentRequest.requested_at <= dt_to,
-            DocumentRequest.doctype_id.isnot(None),   # exclude ID Applications
+            DocumentRequest.doctype_id.isnot(None),
         )
         .order_by(DocumentRequest.requested_at.asc())
         .all()
@@ -262,11 +228,6 @@ def _get_document_data(db: Session, date_from: date, date_to: date) -> dict:
 
 
 def _get_id_application_data(db: Session, date_from: date, date_to: date) -> dict:
-    """
-    Pulls ID Application rows (doctype_id IS NULL) within the date range.
-    """
-    from app.models.document import DocumentRequest
-
     dt_from = datetime.combine(date_from, datetime.min.time())
     dt_to   = datetime.combine(date_to,   datetime.max.time())
 
@@ -275,7 +236,7 @@ def _get_id_application_data(db: Session, date_from: date, date_to: date) -> dic
         .filter(
             DocumentRequest.requested_at >= dt_from,
             DocumentRequest.requested_at <= dt_to,
-            DocumentRequest.doctype_id.is_(None),    # only ID Applications
+            DocumentRequest.doctype_id.is_(None), 
         )
         .order_by(DocumentRequest.requested_at.asc())
         .all()
@@ -317,11 +278,6 @@ def _get_id_application_data(db: Session, date_from: date, date_to: date) -> dic
 
 
 def _get_equipment_data(db: Session, date_from: date, date_to: date) -> dict:
-    """
-    Pulls Equipment Borrowing Requests within the date range.
-    """
-    from app.models.equipment import EquipmentRequest
-
     dt_from = datetime.combine(date_from, datetime.min.time())
     dt_to   = datetime.combine(date_to,   datetime.max.time())
 
@@ -384,17 +340,12 @@ def _get_equipment_data(db: Session, date_from: date, date_to: date) -> dict:
     }
 
 
-# ─────────────────────────────────────────────────────────────
-# PDF BUILDING HELPERS
-# ─────────────────────────────────────────────────────────────
-
 PAGE_W, PAGE_H = A4
 MARGIN = 18 * mm
 CONTENT_W = PAGE_W - 2 * MARGIN
 
 
 def _header_table(styles, date_from: date, date_to: date, service_filter: Optional[str]) -> Table:
-    """Renders the navy-blue banner at the top of the report."""
     period_str = f"{date_from.strftime('%B %d, %Y')}  –  {date_to.strftime('%B %d, %Y')}"
 
     service_label = {
@@ -438,10 +389,7 @@ def _header_table(styles, date_from: date, date_to: date, service_filter: Option
 
 
 def _summary_card(styles, label: str, collected: Decimal, pending: Decimal, extra: dict = None) -> Table:
-    """
-    Renders a single summary card with collected / pending / optional extra rows.
-    Returns a Table so it can be used inside a KeepTogether block.
-    """
+
     rows = [
         [
             Paragraph(label, ParagraphStyle(
@@ -501,7 +449,6 @@ def _summary_card(styles, label: str, collected: Decimal, pending: Decimal, extr
 
 
 def _transaction_table_docs(styles, transactions: list) -> Table:
-    """Document requests table."""
     header = [
         Paragraph("TXN #",         styles["table_header"]),
         Paragraph("Resident",       styles["table_header"]),
@@ -574,7 +521,6 @@ def _transaction_table_id(styles, transactions: list) -> Table:
 
 
 def _transaction_table_equipment(styles, transactions: list) -> Table:
-    """Equipment requests table."""
     header = [
         Paragraph("TXN #",    styles["table_header"]),
         Paragraph("Resident", styles["table_header"]),
@@ -648,7 +594,6 @@ def _styled_table(data: list, col_w: list) -> Table:
 
 
 def _section_total_row(styles, label: str, collected: Decimal, pending: Decimal) -> Table:
-    """Right-aligned totals row below each section table."""
     data = [[
         Paragraph(f"{label} — Total Collected:", styles["total_label"]),
         Paragraph(f"₱ {collected:,.2f}", styles["total_value"]),
@@ -701,7 +646,6 @@ def _empty_notice(styles, message: str) -> Paragraph:
 
 
 def _page_footer(canvas, doc):
-    """Draws page number and disclaimer at the bottom of each page."""
     canvas.saveState()
     canvas.setFont("Helvetica", 7)
     canvas.setFillColor(MUTED_TEXT)
@@ -715,26 +659,12 @@ def _page_footer(canvas, doc):
     canvas.restoreState()
 
 
-# ─────────────────────────────────────────────────────────────
-# PUBLIC ENTRY POINT
-# ─────────────────────────────────────────────────────────────
-
 def generate_financial_statement_pdf(
     db: Session,
     date_from: date,
     date_to: date,
     service_filter: Optional[str] = None,
 ) -> bytes:
-    """
-    Build and return the financial statement as PDF bytes.
-
-    Parameters
-    ----------
-    db             : SQLAlchemy session
-    date_from      : Start of the report period (inclusive)
-    date_to        : End of the report period (inclusive)
-    service_filter : One of "documents", "id_services", "equipment", or None (all)
-    """
     styles = _build_styles()
     buf    = BytesIO()
 
@@ -751,7 +681,6 @@ def generate_financial_statement_pdf(
 
     story = []
 
-    # ── Banner ───────────────────────────────────────────────
     story.append(_header_table(styles, date_from, date_to, service_filter))
     story.append(Spacer(1, 10))
 
@@ -762,7 +691,6 @@ def generate_financial_statement_pdf(
     grand_collected = Decimal("0")
     grand_pending   = Decimal("0")
 
-    # ── DOCUMENT SERVICES ────────────────────────────────────
     if include_docs:
         doc_data = _get_document_data(db, date_from, date_to)
         grand_collected += doc_data["total_collected"]
@@ -782,7 +710,6 @@ def generate_financial_statement_pdf(
         else:
             story.append(_empty_notice(styles, "No document requests found for this period."))
 
-    # ── ID SERVICES ──────────────────────────────────────────
     if include_id:
         id_data = _get_id_application_data(db, date_from, date_to)
         grand_collected += id_data["total_collected"]
@@ -802,7 +729,6 @@ def generate_financial_statement_pdf(
         else:
             story.append(_empty_notice(styles, "No ID applications found for this period."))
 
-    # ── EQUIPMENT BORROWING ──────────────────────────────────
     if include_equip:
         eq_data = _get_equipment_data(db, date_from, date_to)
         grand_collected += eq_data["total_collected"]
@@ -827,12 +753,10 @@ def generate_financial_statement_pdf(
         else:
             story.append(_empty_notice(styles, "No equipment requests found for this period."))
 
-    # ── GRAND TOTAL ──────────────────────────────────────────
     story.append(Spacer(1, 14))
     story.append(HRFlowable(width=CONTENT_W, thickness=1.5, color=PRIMARY,
                             spaceAfter=8, spaceBefore=0))
 
-    # Collected / Pending summary row
     summary_data = [[
         Paragraph("Total Collected:", ParagraphStyle(
             "sc_label", fontName="Helvetica-Bold", fontSize=10, textColor=DARK_TEXT, alignment=TA_RIGHT,
@@ -864,7 +788,6 @@ def generate_financial_statement_pdf(
     story.append(summary_row)
     story.append(Spacer(1, 6))
 
-    # Grand total banner
     story.append(_grand_total_banner(styles, grand_collected))
 
     story.append(Spacer(1, 10))

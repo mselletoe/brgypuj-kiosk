@@ -21,6 +21,7 @@ from app.schemas.equipment import (
     EquipmentAutofillData,
 )
 from app.services.transaction_service import record_equipment_transaction
+from app.services.resident_service import get_resident_autofill_data
 
 
 # =================================================================================
@@ -143,8 +144,6 @@ def get_available_equipment(db: Session):
 
 
 def get_equipment_autofill_data(db: Session, resident_id: int) -> EquipmentAutofillData:
-    from app.services.resident_service import get_resident_autofill_data
-    
     resident_data = get_resident_autofill_data(db, resident_id)
     
     if not resident_data:
@@ -218,8 +217,6 @@ def create_equipment_request(
 
 
 def get_kiosk_request_history(db: Session, resident_id: int):
-    from sqlalchemy.orm import joinedload
-    
     return (
         db.query(EquipmentRequest)
         .options(
@@ -359,8 +356,6 @@ def bulk_delete_equipment_inventory(db: Session, ids: list[int]):
 # ADMIN — EQUIPMENT REQUESTS
 # =================================================================================
 def get_all_equipment_requests(db: Session):
-    from sqlalchemy.orm import joinedload
-    
     return (
         db.query(EquipmentRequest)
         .options(
@@ -373,8 +368,6 @@ def get_all_equipment_requests(db: Session):
 
 
 def get_equipment_request_by_id(db: Session, request_id: int):
-    from sqlalchemy.orm import joinedload
-    
     return (
         db.query(EquipmentRequest)
         .options(

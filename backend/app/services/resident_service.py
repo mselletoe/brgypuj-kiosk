@@ -15,10 +15,6 @@ from app.schemas.resident import (
 from typing import List, Optional, Dict
 
 
-# ============================================================================
-# Helper Functions
-# ============================================================================
-
 def calculate_age(birthdate: date) -> int:
     today = date.today()
     age = today.year - birthdate.year
@@ -77,10 +73,6 @@ def build_full_address(address: Address) -> str:
 
 
 def _get_brgy_id_fields(resident: Resident) -> dict:
-    """
-    Returns brgy_id_number and brgy_id_expiration_date from the resident's
-    active BarangayID row. Assumes barangay_ids is already eagerly loaded.
-    """
     active_brgy_id = next(
         (b for b in resident.barangay_ids if b.is_active),
         None
@@ -94,10 +86,6 @@ def _get_brgy_id_fields(resident: Resident) -> dict:
         ),
     }
 
-
-# ============================================================================
-# CRUD Operations - READ
-# ============================================================================
 
 def get_all_residents_list(db: Session) -> List[Dict]:
     residents = (
@@ -234,10 +222,10 @@ def get_resident_detail(db: Session, resident_id: int) -> Optional[Dict]:
             "rfid_uid": rfid_card.rfid_uid,
             "is_active": rfid_card.is_active,
             "created_at": rfid_card.created_at.isoformat(),
-            "expiration_date": rfid_card.expiration_date,   # included for completeness
+            "expiration_date": rfid_card.expiration_date,
         } if rfid_card else None,
 
-        # Barangay ID Info — active card only              ← NEW
+        # Barangay ID Info — active card only
         **_get_brgy_id_fields(resident),
 
         # Timestamps
@@ -306,10 +294,6 @@ def get_resident_autofill_data(db: Session, resident_id: int) -> Optional[dict]:
         "rfid_uid": active_rfid.rfid_uid if active_rfid else None,
     }
 
-
-# ============================================================================
-# CRUD Operations - CREATE
-# ============================================================================
 
 def create_resident(db: Session, resident_data: ResidentCreate) -> Resident:
     residency_start_date = resident_data.residency_start_date or date.today()
@@ -388,10 +372,6 @@ def create_resident(db: Session, resident_data: ResidentCreate) -> Resident:
             detail="Database integrity error. Please check your input data."
         )
 
-
-# ============================================================================
-# CRUD Operations - UPDATE
-# ============================================================================
 
 def update_resident(db: Session, resident_id: int, resident_data: ResidentUpdate) -> Resident:
     resident = get_resident_by_id(db, resident_id)
@@ -475,10 +455,6 @@ def update_resident_rfid(db: Session, resident_id: int, rfid_data: ResidentRFIDU
     return target_rfid
 
 
-# ============================================================================
-# CRUD Operations - DELETE
-# ============================================================================
-
 def delete_resident(db: Session, resident_id: int) -> bool:
     resident = get_resident_by_id(db, resident_id)
     if not resident:
@@ -495,10 +471,6 @@ def delete_resident(db: Session, resident_id: int) -> bool:
             detail="Cannot delete resident. They may have related records that prevent deletion."
         )
 
-
-# ============================================================================
-# Utility Functions
-# ============================================================================
 
 def get_all_puroks(db: Session) -> List[Purok]:
     return db.query(Purok).order_by(Purok.purok_name).all()

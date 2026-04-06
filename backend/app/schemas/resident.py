@@ -3,7 +3,6 @@ from datetime import date
 from typing import Optional
 
 class ResidentBase(BaseModel):
-    """Base schema with common resident fields"""
     first_name: str = Field(..., min_length=1, max_length=128)
     middle_name: Optional[str] = Field(None, max_length=128)
     last_name: str = Field(..., min_length=1, max_length=128)
@@ -14,12 +13,7 @@ class ResidentBase(BaseModel):
     phone_number: Optional[str] = Field(None, max_length=15)
 
 
-# ============================================================================
-# Request Schemas (Input)
-# ============================================================================
-
 class AddressCreate(BaseModel):
-    """Schema for creating a new address"""
     house_no_street: str = Field(..., min_length=1, max_length=255)
     purok_id: int = Field(..., gt=0)
     barangay: str = Field(default="Poblacion I", max_length=64)
@@ -29,17 +23,13 @@ class AddressCreate(BaseModel):
 
 
 class ResidentRFIDCreate(BaseModel):
-    """Schema for creating/registering an RFID card"""
     rfid_uid: str = Field(..., min_length=1, max_length=16)
     is_active: bool = Field(default=True)
     expiration_date: Optional[date] = None
 
 
 class ResidentCreate(ResidentBase):
-    """Schema for creating a new resident with address and RFID"""
-    residency_start_date: Optional[date] = None  # Defaults to today in service layer
-    
-    # Nested objects
+    residency_start_date: Optional[date] = None  
     address: AddressCreate
     rfid: Optional[ResidentRFIDCreate] = None
     photo: Optional[bytes] = None
@@ -50,7 +40,7 @@ class ResidentCreate(ResidentBase):
         from datetime import timezone, timedelta
         if v is None:
             return v
-        pht_today = (date.today())  # server runs in Asia/Manila per your logs
+        pht_today = (date.today()) 
         if v > pht_today:
             raise ValueError('Residency start date cannot be in the future')
         return v
@@ -86,7 +76,6 @@ class ResidentUpdate(BaseModel):
 
 
 class AddressUpdate(BaseModel):
-    """Schema for updating address information"""
     house_no_street: Optional[str] = Field(None, min_length=1, max_length=255)
     purok_id: Optional[int] = Field(None, gt=0)
     barangay: Optional[str] = Field(None, max_length=64)
@@ -96,17 +85,12 @@ class AddressUpdate(BaseModel):
 
 
 class ResidentRFIDUpdate(BaseModel):
-    """Schema for updating RFID information"""
     rfid_uid: Optional[str] = Field(None, min_length=1, max_length=16)
     is_active: Optional[bool] = None
     expiration_date: Optional[date] = None
 
-# ============================================================================
-# Response Schemas (Output)
-# ============================================================================
 
 class PurokResponse(BaseModel):
-    """Schema for Purok information in responses"""
     id: int
     purok_name: str
     
@@ -114,7 +98,6 @@ class PurokResponse(BaseModel):
 
 
 class AddressResponse(BaseModel):
-    """Schema for address information in responses"""
     id: int
     house_no_street: str
     purok_id: int
@@ -129,7 +112,6 @@ class AddressResponse(BaseModel):
 
 
 class ResidentRFIDResponse(BaseModel):
-    """Schema for RFID information in responses"""
     id: int
     rfid_uid: str
     is_active: bool
@@ -150,11 +132,6 @@ class ResidentListItem(BaseModel):
 
 
 class ResidentDetailResponse(BaseModel):
-    """
-    Complete resident information for detailed view.
-    Includes all personal info, address, and RFID details.
-    """
-    # Basic Info
     id: int
     first_name: str
     middle_name: Optional[str] = None
@@ -162,71 +139,50 @@ class ResidentDetailResponse(BaseModel):
     suffix: Optional[str] = None
     full_name: str
     gender: str
-    birthdate: str  # Formatted date
+    birthdate: str 
     age: int
-    photo: Optional[str] = None        # base64-encoded string
+    photo: Optional[str] = None    
     
-    # Contact Info
     email: Optional[str] = None
     phone_number: Optional[str] = None
     
-    # Residency Info
-    residency_start_date: str  # Formatted date
+    residency_start_date: str 
     years_of_residency: int
-    residency_months: int = 0         # Remaining months after full years
-    residency_label: str = ""         # e.g. "2 years, 4 months" or "7 months"
+    residency_months: int = 0  
+    residency_label: str = ""  
     
-    # Address Info (current address only)
     current_address: Optional[AddressResponse] = None
     
-    # RFID Info (active RFID only)
     active_rfid: Optional[ResidentRFIDResponse] = None
 
-    # Barangay ID Info
     brgy_id_number:          Optional[str] = None
-    brgy_id_expiration_date: Optional[str] = None       # ISO date string "YYYY-MM-DD"
+    brgy_id_expiration_date: Optional[str] = None  
     
-    # Timestamps
     registered_at: str
     
     model_config = {"from_attributes": True}
 
 
 class ResidentDropdownItem(BaseModel):
-    """
-    Minimal schema for dropdown selections (e.g., Create Account page).
-    Only includes ID and full name.
-    """
     id: int
     full_name: str
     
     model_config = {"from_attributes": True}
 
 
-# ============================================================================
-# Autofill Schema (for forms)
-# ============================================================================
-
 class ResidentAutofillOut(BaseModel):
-    """
-    Comprehensive resident data for form autofill.
-    All fields are optional to handle incomplete resident profiles.
-    """
-    # Personal Information
     full_name: str
     first_name: str
     middle_name: Optional[str] = None
     last_name: str
     suffix: Optional[str] = None
     gender: str
-    birthdate: str  # Formatted as MM/DD/YYYY
+    birthdate: str 
     age: int
     
-    # Contact Information
     email: Optional[str] = None
     phone_number: Optional[str] = None
     
-    # Address Information
     unit_blk_street: Optional[str] = None
     purok_name: Optional[str] = None
     barangay: Optional[str] = None
@@ -235,11 +191,9 @@ class ResidentAutofillOut(BaseModel):
     region: Optional[str] = None
     full_address: Optional[str] = None
     
-    # Residency Information
     years_residency: int
-    residency_start_date: str  # Formatted as MM/DD/YYYY
+    residency_start_date: str 
     
-    # RFID Information
     rfid_uid: Optional[str] = None
     
     model_config = {

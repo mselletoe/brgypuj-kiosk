@@ -37,9 +37,6 @@ def _generate_blotter_no(db: Session) -> str:
 
 
 def _validate_resident(db: Session, resident_id: int) -> Resident:
-    """
-    Ensures the linked resident exists in the database.
-    """
     resident = db.query(Resident).filter(Resident.id == resident_id).first()
     if not resident:
         raise HTTPException(
@@ -50,7 +47,6 @@ def _validate_resident(db: Session, resident_id: int) -> Resident:
 
 
 def _get_full_name(resident) -> str:
-    """Returns the full name of a resident."""
     return " ".join(filter(None, [
         resident.first_name,
         resident.middle_name,
@@ -82,10 +78,6 @@ def _get_resident_address(db: Session, resident_id: int) -> str | None:
     ])
     return ", ".join(parts) or None
 
-
-# -------------------------------------------------
-# Service Functions
-# -------------------------------------------------
 
 def get_all_blotter_records(db: Session) -> list[BlotterRecord]:
     return (
@@ -131,7 +123,6 @@ def has_blotter_record_as_respondent(db: Session, resident_id: int) -> bool:
 
 
 def resolve_blotter_record(db: Session, blotter_id: int) -> BlotterRecord | None:
-    from datetime import datetime
 
     record = _get_record(db, blotter_id)
     if not record:

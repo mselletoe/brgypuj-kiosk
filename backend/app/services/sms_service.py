@@ -1,30 +1,3 @@
-"""
-app/services/sms_service.py
-──────────────────────────────────────────────────────────────────────────────
-Business logic for the SMS Announcement feature.
-SMS delivery is handled by sms_gateway.py (A7670E serial modem).
-
-Recipient resolution
-────────────────────
-  groups   → query Resident + Address + ResidentRFID based on group rules
-  puroks   → query Resident joined through Address by purok_id
-  specific → use the phone numbers supplied directly
-
-Group definitions
-──────────────────
-  female    → gender == 'female'
-  male      → gender == 'male'
-  adult     → calculated age >= 18  (birthdate <= today - 18 years)
-  youth     → age in [15, 30]
-  senior    → age >= 60             (birthdate <= today - 60 years)
-  with_rfid → has at least one active ResidentRFID row
-
-SMS gateway
-───────────
-  Replace _dispatch_sms() with your actual gateway SDK call
-  (e.g. Semaphore, Vonage, Twilio, etc.).
-"""
-
 from datetime import date
 from typing import List, Optional, Dict, Any
 
@@ -45,17 +18,12 @@ from app.schemas.sms import (
 )
 
 
-# ============================================================================
-# Internal helpers
-# ============================================================================
-
 def _age_cutoff(years: int) -> date:
-    """Return the latest birthdate that makes a person exactly `years` old today."""
     today = date.today()
     try:
         return today.replace(year=today.year - years)
     except ValueError:
-        return today.replace(year=today.year - years, day=28)  # Feb 29 edge-case
+        return today.replace(year=today.year - years, day=28)
 
 
 def _collect_phone_numbers_by_groups(db: Session, groups: List[str]) -> List[str]:
@@ -114,7 +82,6 @@ def _collect_phone_numbers_by_puroks(db: Session, purok_ids: List[int]) -> List[
 
 
 def _resolve_phone_numbers(db: Session, payload: SMSRequest) -> List[str]:
-    """Return a deduplicated list of phone numbers for the given payload."""
     mode = payload.recipient_mode
 
     if mode == RecipientMode.groups:
@@ -147,17 +114,8 @@ def _resolve_phone_numbers(db: Session, payload: SMSRequest) -> List[str]:
     )
 
 
-# ============================================================================
-# Population count helpers  (ALL residents, regardless of phone number)
-# Used by get_recipient_count for single-group / single-purok card badges.
-# ============================================================================
 
 def _count_residents_by_group(db: Session, group: str) -> int:
-    """
-    Count ALL residents that belong to a group, regardless of whether they
-    have a phone number.  This gives the UI card an accurate population figure
-    rather than just the SMS-able subset.
-    """
     q = db.query(func.count(Resident.id))
 
     if group == ResidentGroup.female:
@@ -189,17 +147,13 @@ def _count_residents_by_group(db: Session, group: str) -> int:
 
 
 def _count_residents_by_purok(db: Session, purok_id: int) -> int:
-    """
-    Count ALL residents whose current address belongs to the given purok,
-    regardless of whether they have a phone number.
-    """
     return (
         db.query(func.count(Resident.id))
         .join(
             Address,
             and_(
                 Address.resident_id == Resident.id,
-                Address.is_current == True,  # noqa: E712
+                Address.is_current == True,
             ),
         )
         .filter(Address.purok_id == purok_id)
@@ -208,18 +162,7 @@ def _count_residents_by_purok(db: Session, purok_id: int) -> int:
     )
 
 
-# ============================================================================
-# SMS Gateway stub — replace with real gateway SDK
-# ============================================================================
-
 def _dispatch_sms(phone_numbers: List[str], message: str) -> Dict[str, Any]:
-    """
-    Send SMS via the A7670E serial modem (sms_gateway.py).
-
-    Returns a dict with keys: sent (int), failed (int), failures (List[str]).
-    Raises HTTPException if the modem itself cannot be opened, so the caller
-    surfaces a clear error to the frontend instead of logging a silent zero.
-    """
     try:
         gateway = get_gateway()
         return gateway.send_bulk(phone_numbers, message)
@@ -230,7 +173,6 @@ def _dispatch_sms(phone_numbers: List[str], message: str) -> Dict[str, Any]:
         )
 
 
-# Human-readable labels for each group enum value
 _GROUP_LABELS: Dict[str, str] = {
     ResidentGroup.female:    "Female",
     ResidentGroup.male:      "Male",
@@ -241,23 +183,7 @@ _GROUP_LABELS: Dict[str, str] = {
 }
 
 
-# ============================================================================
-# Public service functions
-# ============================================================================
-
 def get_recipient_count(db: Session, payload: SMSRequest) -> RecipientCountResponse:
-    """
-    Dry-run: resolve recipients and return the count WITHOUT sending anything.
-    Used by the /preview endpoint so the frontend can show "X recipients".
-
-    Card-badge behaviour (single group or purok selected):
-      → counts ALL residents in that group/purok (ignores phone_number),
-        so the UI card shows real population figures.
-
-    Selection-badge behaviour (multiple groups/puroks selected):
-      → counts only SMS-able residents (have a phone number), because
-        that is the actual number of messages that would be sent.
-    """
     group_labels: Optional[List[str]] = None
     purok_names:  Optional[List[str]] = None
     count: int = 0
@@ -271,10 +197,8 @@ def get_recipient_count(db: Session, payload: SMSRequest) -> RecipientCountRespo
         group_labels = [_GROUP_LABELS.get(g, g) for g in payload.groups]
 
         if len(payload.groups) == 1:
-            # Single-group → total population count for the card badge
             count = _count_residents_by_group(db, payload.groups[0])
         else:
-            # Multi-group selection → deduplicated SMS-able count
             count = len(_collect_phone_numbers_by_groups(db, payload.groups))
 
     elif payload.recipient_mode == RecipientMode.puroks:
@@ -287,10 +211,8 @@ def get_recipient_count(db: Session, payload: SMSRequest) -> RecipientCountRespo
         purok_names = [p.purok_name for p in puroks]
 
         if len(payload.purok_ids) == 1:
-            # Single-purok → total population count for the card badge
             count = _count_residents_by_purok(db, payload.purok_ids[0])
         else:
-            # Multi-purok selection → deduplicated SMS-able count
             count = len(_collect_phone_numbers_by_puroks(db, payload.purok_ids))
 
     elif payload.recipient_mode == RecipientMode.specific:
@@ -316,7 +238,6 @@ def get_recipient_count(db: Session, payload: SMSRequest) -> RecipientCountRespo
 
 
 def send_sms_announcement(db: Session, payload: SMSRequest) -> SMSSendResponse:
-    """Resolve recipients, dispatch SMS, and log the blast."""
     phone_numbers = _resolve_phone_numbers(db, payload)
 
     if not phone_numbers:
@@ -327,7 +248,6 @@ def send_sms_announcement(db: Session, payload: SMSRequest) -> SMSSendResponse:
 
     result = _dispatch_sms(phone_numbers, payload.message)
 
-    # Build a human-readable mode label for the audit log
     if payload.recipient_mode == RecipientMode.groups and payload.groups:
         mode_label = ", ".join(_GROUP_LABELS.get(g, g) for g in payload.groups)
     elif payload.recipient_mode == RecipientMode.puroks and payload.purok_ids:
@@ -357,7 +277,6 @@ def send_sms_announcement(db: Session, payload: SMSRequest) -> SMSSendResponse:
 
 
 def get_sms_history(db: Session, limit: int = 20) -> List[SMSHistoryItem]:
-    """Return the most recent SMS blasts for the history panel."""
     logs = (
         db.query(SMSLog)
         .order_by(SMSLog.sent_at.desc())

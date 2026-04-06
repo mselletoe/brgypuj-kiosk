@@ -12,7 +12,7 @@ import tempfile
 import os
 import platform
 from io import BytesIO
-from datetime import datetime
+from datetime import datetime, date
 from sqlalchemy.orm import Session, joinedload
 from fastapi import HTTPException, status
 from docxtpl import DocxTemplate
@@ -232,7 +232,6 @@ def _check_clean_blotter(db: Session, resident_id: int) -> bool:
 
 
 def _check_min_residency(resident: Resident, years: int = 0, months: int = 0) -> bool:
-    from datetime import date
     if not resident.residency_start_date:
         return False
     today = date.today()
@@ -569,8 +568,6 @@ def _get_request(db: Session, request_id: int):
 
 
 def get_all_document_requests(db: Session):
-    from sqlalchemy.orm import joinedload
-
     return (
         db.query(DocumentRequest)
         .options(
@@ -583,8 +580,6 @@ def get_all_document_requests(db: Session):
 
 
 def get_document_request_by_id(db: Session, request_id: int,):
-    from sqlalchemy.orm import joinedload
-    
     return (
         db.query(DocumentRequest)
         .options(
