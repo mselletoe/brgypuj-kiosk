@@ -39,7 +39,7 @@ const routes = [
     path: "/",
     component: AdminLayout,
     redirect: "/overview",
-    meta: { requiresAuth: false },
+    meta: { requiresAuth: true },
     children: [
       { path: "overview", component: Overview },
 

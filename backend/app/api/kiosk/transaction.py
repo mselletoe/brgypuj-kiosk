@@ -1,3 +1,10 @@
+"""
+app/api/kiosk/transaction.py
+
+Router for kiosk transaction history.
+Allows residents to view their past document and equipment request history.
+"""
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.api.deps import get_db

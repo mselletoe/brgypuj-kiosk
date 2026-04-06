@@ -1,3 +1,10 @@
+"""
+app/api/kiosk/systemconfig.py
+
+Router for kiosk system configuration access.
+Exposes the barangay name, subname, and logo for display on the kiosk UI.
+"""
+
 from fastapi import APIRouter, Depends
 from fastapi.responses import Response
 from sqlalchemy.orm import Session

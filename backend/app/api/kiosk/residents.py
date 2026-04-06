@@ -1,3 +1,10 @@
+"""
+app/api/kiosk/residents.py
+
+Router for kiosk resident data access.
+Provides resident profile data for form auto-fill on the kiosk.
+"""
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.api.deps import get_db

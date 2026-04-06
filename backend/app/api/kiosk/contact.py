@@ -1,3 +1,11 @@
+"""
+app/api/kiosk/contact.py
+
+Router for kiosk contact information display.
+Returns the barangay's emergency numbers, office hours, and support details.
+Falls back to sensible defaults if no contact record has been configured.
+"""
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.api.deps import get_db

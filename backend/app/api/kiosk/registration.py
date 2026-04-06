@@ -1,3 +1,13 @@
+"""
+app/api/kiosk/registration.py
+
+Router for kiosk RFID card registration.
+Handles the full registration flow: checking if a card is new,
+verifying the admin passcode, listing approved ID applications,
+and linking the scanned card to a resident record.
+Broadcasts a notification to admin clients after a successful link.
+"""
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -21,47 +31,45 @@ from app.services.registration_service import (
 router = APIRouter(prefix="/rfid-registration")
 
 
+# =================================================================================
+# RFID STATUS CHECK
+# =================================================================================
+
 @router.get(
     "/check/{rfid_uid}",
     response_model=RFIDStatusResponse,
-    summary="Check if RFID UID is new or already registered",
-    description=(
-        "Called immediately after a card is scanned on the Kiosk. "
-        "Returns is_new=true if the UID has never been registered, "
-        "triggering the admin passcode → Register flow instead of normal auth."
-    ),
 )
 def check_rfid(rfid_uid: str, db: Session = Depends(get_db)):
     return check_rfid_status(db, rfid_uid)
 
 
+# =================================================================================
+# ADMIN PASSCODE
+# =================================================================================
+
 @router.post(
     "/verify-passcode",
     response_model=AdminPasscodeResponse,
-    summary="Validate admin passcode before Register screen",
-    description=(
-        "The kiosk prompts for an admin passcode when a new RFID is detected. "
-        "Returns valid=true if the passcode matches the configured value. "
-        "The frontend should only navigate to /register on valid=true."
-    ),
 )
 def check_passcode(payload: AdminPasscodeRequest):
     return verify_admin_passcode(payload.passcode)
 
 
+# =================================================================================
+# APPROVED ID APPLICATIONS
+# =================================================================================
+
 @router.get(
     "/approved-applications",
     response_model=list[ApprovedIDApplication],
-    summary="List approved ID applications awaiting RFID linking",
-    description=(
-        "Returns all ID Application DocumentRequests that have been Approved "
-        "and have not yet been linked to an RFID card. "
-        "Displayed in the Register screen's left panel as selectable transaction cards."
-    ),
 )
 def get_approved_applications(db: Session = Depends(get_db)):
     return get_approved_id_applications(db)
 
+
+# =================================================================================
+# RFID LINKING
+# =================================================================================
 
 @router.post("/link", response_model=LinkRFIDResponse, status_code=status.HTTP_201_CREATED)
 async def link_rfid(payload: LinkRFIDRequest, db: Session = Depends(get_db)):

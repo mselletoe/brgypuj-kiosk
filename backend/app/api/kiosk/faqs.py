@@ -1,3 +1,10 @@
+"""
+app/api/kiosk/faqs.py
+
+Router for kiosk-facing FAQ display.
+Returns the list of frequently asked questions for residents to browse.
+"""
+
 from fastapi import APIRouter, Depends, status, HTTPException
 from sqlalchemy.orm import Session
 from app.schemas.faqs import FAQKioskOut
