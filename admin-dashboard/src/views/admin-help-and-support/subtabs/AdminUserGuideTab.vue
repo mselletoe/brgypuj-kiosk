@@ -464,7 +464,7 @@ function parseText(text) {
           <span class="gbadge gbadge-outline">Dashboard Only</span>
           <span class="gbadge gbadge-outline">{{ guideModules.length }} Modules</span>
         </div>
-        <h1 class="guide-hero-title">Admin User<br /><span class="guide-hero-accent">Guide</span></h1>
+        <h1 class="guide-hero-title">Admin User <span class="guide-hero-accent">Guide</span></h1>
         <p class="guide-hero-sub">Complete reference for operating the Barangay Kiosk Admin Dashboard</p>
       </div>
     </div>

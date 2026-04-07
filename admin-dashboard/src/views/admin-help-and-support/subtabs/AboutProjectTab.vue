@@ -35,7 +35,7 @@ import {
         <div class="hero-badges">
           <span class="badge">
             <span class="badge-dot"></span>
-            PUP Thesis Project
+            PUP CPE Thesis Project
           </span>
           <span class="badge badge-outline">2025-2026</span>
           <span class="badge badge-outline">Poblacion I, Amadeo, Cavite</span>
@@ -43,9 +43,9 @@ import {
 
         <h1 class="hero-title">
           RFID-Enabled Barangay<br />
-          <span class="hero-title-accent">Transaction Kiosk</span>
+          <span class="hero-title-accent">Transaction Kiosk System</span>
         </h1>
-        <p class="hero-sub">with SMS Notification System</p>
+        <p class="hero-sub">with SMS Notification</p>
 
         <p class="hero-desc">
           A self-service platform designed to modernize barangay transactions through RFID authentication,
@@ -53,7 +53,7 @@ import {
         </p>
 
         <div class="hero-tags">
-          <span v-for="tag in ['Vue.js','FastAPI','Raspberry Pi 4 Model B','RFID Reader','GSM Module','PostgreSQL','Local LAN']"
+          <span v-for="tag in ['Vue.js','FastAPI','Raspberry Pi 4 Model B','RFID Reader','SIMCOM A7670E','PostgreSQL','Local LAN']"
                 :key="tag" class="hero-tag">{{ tag }}</span>
         </div>
       </div>
@@ -137,7 +137,7 @@ import {
         <div v-for="(c, i) in [
           { name:'Kiosk Unit',      sub:'Raspberry Pi 4 Model B + Touchscreen',   icon:'computer', color:'blue'   },
           { name:'RFID Reader',     sub:'13.56 MHz Contactless', icon:'wifi',     color:'violet' },
-          { name:'GSM Module',      sub:'SIM800L — SMS dispatch',          icon:'phone',    color:'emerald'},
+          { name:'4G LTE module',      sub:'SIMCOM A7670E LTE Cat 1 Module',          icon:'phone',    color:'emerald'},
           { name:'Admin Dashboard', sub:'This interface · LAN-connected',  icon:'desktop',  color:'amber'  },
         ]" :key="c.name" class="comp-card" :class="'comp-card--'+c.color" :style="`animation-delay:${0.25+i*0.07}s`">
           <div class="comp-num">0{{ i+1 }}</div>
