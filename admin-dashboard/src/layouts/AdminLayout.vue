@@ -5,6 +5,7 @@ import Drawer from "@/components/Drawer.vue";
 import Header from "@/components/Header.vue";
 import logo from "@/assets/logo.png";
 import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/vue/24/solid";
+import sideLogo from "@/assets/Pob1Logo.svg";
 
 const isSidebarOpen = ref(false);
 const route = useRoute();
@@ -42,10 +43,10 @@ const isOverview = computed(
         class="h-[120px] flex items-center justify-center px-4 transition-all duration-300"
       >
         <img
-          :src="logo"
+          :src="isSidebarOpen ? logo : sideLogo"
           alt="Logo"
           class="object-contain transition-all duration-300 mt-3"
-          :class="isSidebarOpen ? 'h-[130px] w-[130px]' : 'h-[40px] w-[40px]'"
+          :class="isSidebarOpen ? 'h-[130px] w-[130px]' : 'h-[50px] w-[50px]'"
         />
       </div>
 
