@@ -12,18 +12,16 @@ const props = defineProps({
 
 const selectedDoughnutView = ref("documents");
 const chartColors = [
-  "#8B5CF6",
-  "#EC4899",
-  "#3B82F6",
-  "#10B981",
-  "#F59E0B",
-  "#14B8A6",
-  "#F43F5E",
+  "#8B5CF6", "#EC4899", "#3B82F6", "#10B981",
+  "#F59E0B", "#14B8A6", "#F43F5E",
 ];
 
 // --- Custom Dropdown Logic ---
 const isDropdownOpen = ref(false);
 const dropdownRef = ref(null);
+const doughnutRef = ref(null);
+const chartContainerRef = ref(null);
+let resizeObserver = null;
 
 const dropdownOptions = [
   { value: "documents", label: "By Document Type" },
@@ -31,8 +29,7 @@ const dropdownOptions = [
 ];
 
 const selectedDropdownLabel = computed(() => {
-  return dropdownOptions.find((opt) => opt.value === selectedDoughnutView.value)
-    ?.label;
+  return dropdownOptions.find((opt) => opt.value === selectedDoughnutView.value)?.label;
 });
 
 const selectOption = (value) => {
@@ -46,10 +43,27 @@ const handleClickOutside = (event) => {
   }
 };
 
-onMounted(() => document.addEventListener("click", handleClickOutside));
-onBeforeUnmount(() =>
-  document.removeEventListener("click", handleClickOutside),
-);
+onMounted(() => {
+  document.addEventListener("click", handleClickOutside);
+
+  if (chartContainerRef.value) {
+    resizeObserver = new ResizeObserver(() => {
+      const chartInstance = doughnutRef.value?.chart;
+      if (chartInstance) {
+        chartInstance.resize();
+      }
+    });
+    resizeObserver.observe(chartContainerRef.value);
+  }
+});
+
+onBeforeUnmount(() => {
+  document.removeEventListener("click", handleClickOutside);
+  if (resizeObserver) {
+    resizeObserver.disconnect();
+    resizeObserver = null;
+  }
+});
 // ------------------------------
 
 const doughnutChartOptions = {
@@ -87,8 +101,7 @@ const rawEquipCounts = computed(() => {
     if (e.items && e.items.length > 0) {
       e.items.forEach((item) => {
         const itemName = item.item_name || "Unknown Item";
-        equipTypesCount[itemName] =
-          (equipTypesCount[itemName] || 0) + item.quantity;
+        equipTypesCount[itemName] = (equipTypesCount[itemName] || 0) + item.quantity;
       });
     }
   });
@@ -102,9 +115,9 @@ const doughnutChartData = computed(() => {
   const isDoc = selectedDoughnutView.value === "documents";
   const targetData = isDoc ? rawDocCounts.value : rawEquipCounts.value;
 
-  let finalLabels = Array.of("No Data");
-  let finalData = Array.of(1);
-  let finalColors = Array.of("#f3f4f6");
+  let finalLabels = ["No Data"];
+  let finalData = [1];
+  let finalColors = ["#f3f4f6"];
 
   if (targetData.labels && targetData.labels.length > 0) {
     finalLabels = targetData.labels;
@@ -114,20 +127,18 @@ const doughnutChartData = computed(() => {
 
   return {
     labels: finalLabels,
-    datasets: Array.of({
+    datasets: [{
       data: finalData,
       backgroundColor: finalColors,
       borderWidth: 0,
       hoverOffset: 6,
-    }),
+    }],
   };
 });
 </script>
 
 <template>
-  <div
-    class="lg:col-span-1 bg-white rounded-[24px] p-6 shadow-sm border border-gray-100 flex flex-col h-full"
-  >
+  <div class="lg:col-span-1 bg-white rounded-[24px] p-6 shadow-sm border border-gray-100 flex flex-col">
     <div class="mb-2 px-1 flex flex-col items-center text-center">
       <h2 class="text-xl font-bold text-gray-800 tracking-tight">
         Requests Breakdown
@@ -145,14 +156,8 @@ const doughnutChartData = computed(() => {
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
           >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M19 9l-7 7-7-7"
-            ></path>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
           </svg>
         </button>
 
@@ -166,7 +171,7 @@ const doughnutChartData = computed(() => {
         >
           <div
             v-if="isDropdownOpen"
-            class="absolute z-50 left-1/2 -translate-x-1/2 mt-2 w-48 rounded-xl bg-white shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] ring-1 ring-black ring-opacity-5 focus:outline-none overflow-hidden"
+            class="absolute z-50 left-1/2 -translate-x-1/2 mt-2 w-48 rounded-xl bg-white shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] ring-1 ring-black ring-opacity-5 overflow-hidden"
           >
             <div class="py-1">
               <button
@@ -174,11 +179,9 @@ const doughnutChartData = computed(() => {
                 :key="option.value"
                 @click="selectOption(option.value)"
                 class="block w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase tracking-widest transition-colors"
-                :class="
-                  option.value === selectedDoughnutView
-                    ? 'bg-blue-50 text-blue-600'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                "
+                :class="option.value === selectedDoughnutView
+                  ? 'bg-blue-50 text-blue-600'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'"
               >
                 {{ option.label }}
               </button>
@@ -188,10 +191,9 @@ const doughnutChartData = computed(() => {
       </div>
     </div>
 
-    <div class="flex-1 w-full relative mt-2">
-      <div class="absolute inset-0 pb-4">
-        <Doughnut :data="doughnutChartData" :options="doughnutChartOptions" />
-      </div>
+    <!-- Fixed height container observed by ResizeObserver -->
+    <div ref="chartContainerRef" class="w-full mt-2" style="height: 260px; position: relative;">
+      <Doughnut ref="doughnutRef" :data="doughnutChartData" :options="doughnutChartOptions" />
     </div>
   </div>
 </template>

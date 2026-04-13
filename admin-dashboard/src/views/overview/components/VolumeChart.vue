@@ -11,14 +11,7 @@ import {
   LinearScale,
 } from "chart.js";
 
-ChartJS.register(
-  Title,
-  Tooltip,
-  Legend,
-  BarElement,
-  CategoryScale,
-  LinearScale,
-);
+ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale);
 
 const props = defineProps({
   docsList: { type: Array, required: true },
@@ -26,6 +19,9 @@ const props = defineProps({
 });
 
 const selectedTimeScale = ref("monthly");
+const barRef = ref(null);
+const chartContainerRef = ref(null);
+let resizeObserver = null;
 
 // --- Custom Dropdown Logic ---
 const isDropdownOpen = ref(false);
@@ -39,8 +35,7 @@ const dropdownOptions = [
 ];
 
 const selectedDropdownLabel = computed(() => {
-  return dropdownOptions.find((opt) => opt.value === selectedTimeScale.value)
-    ?.label;
+  return dropdownOptions.find((opt) => opt.value === selectedTimeScale.value)?.label;
 });
 
 const selectOption = (value) => {
@@ -54,10 +49,28 @@ const handleClickOutside = (event) => {
   }
 };
 
-onMounted(() => document.addEventListener("click", handleClickOutside));
-onBeforeUnmount(() =>
-  document.removeEventListener("click", handleClickOutside),
-);
+onMounted(() => {
+  document.addEventListener("click", handleClickOutside);
+
+  // Watch container size and force chart to resize with it
+  if (chartContainerRef.value) {
+    resizeObserver = new ResizeObserver(() => {
+      const chartInstance = barRef.value?.chart;
+      if (chartInstance) {
+        chartInstance.resize();
+      }
+    });
+    resizeObserver.observe(chartContainerRef.value);
+  }
+});
+
+onBeforeUnmount(() => {
+  document.removeEventListener("click", handleClickOutside);
+  if (resizeObserver) {
+    resizeObserver.disconnect();
+    resizeObserver = null;
+  }
+});
 // ------------------------------
 
 const chartOptions = {
@@ -104,11 +117,7 @@ const chartData = computed(() => {
       labels[6 - i] = d.toLocaleDateString("en-US", { weekday: "short" });
     }
 
-    const todayStart = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate(),
-    );
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
     const processItem = (itemDateStr, countsArray) => {
       const d = new Date(itemDateStr);
@@ -116,18 +125,11 @@ const chartData = computed(() => {
       const itemStart = new Date(d.getFullYear(), d.getMonth(), d.getDate());
       const diffTime = todayStart.getTime() - itemStart.getTime();
       const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-
-      if (diffDays >= 0 && diffDays < 7) {
-        countsArray[6 - diffDays]++;
-      }
+      if (diffDays >= 0 && diffDays < 7) countsArray[6 - diffDays]++;
     };
 
-    props.docsList.forEach((d) =>
-      processItem(d.created_at || d.requested_at, docCounts),
-    );
-    props.equipsList.forEach((e) =>
-      processItem(e.requested_at || e.created_at, equipCounts),
-    );
+    props.docsList.forEach((d) => processItem(d.created_at || d.requested_at, docCounts));
+    props.equipsList.forEach((e) => processItem(e.requested_at || e.created_at, equipCounts));
   } else if (selectedTimeScale.value === "this_month") {
     labels = ["Week 1", "Week 2", "Week 3", "Week 4", "Week 5"];
     docCounts = Array(5).fill(0);
@@ -138,63 +140,31 @@ const chartData = computed(() => {
 
     const processItemMonth = (itemDateStr, countsArray) => {
       const d = new Date(itemDateStr);
-      if (
-        !isNaN(d) &&
-        d.getMonth() === currentMonth &&
-        d.getFullYear() === currentYear
-      ) {
+      if (!isNaN(d) && d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
         const weekIndex = Math.min(Math.floor((d.getDate() - 1) / 7), 4);
         countsArray[weekIndex]++;
       }
     };
 
-    props.docsList.forEach((d) =>
-      processItemMonth(d.created_at || d.requested_at, docCounts),
-    );
-    props.equipsList.forEach((e) =>
-      processItemMonth(e.requested_at || e.created_at, equipCounts),
-    );
+    props.docsList.forEach((d) => processItemMonth(d.created_at || d.requested_at, docCounts));
+    props.equipsList.forEach((e) => processItemMonth(e.requested_at || e.created_at, equipCounts));
   } else if (selectedTimeScale.value === "monthly") {
-    labels = [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec",
-    ];
+    labels = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
     docCounts = Array(12).fill(0);
     equipCounts = Array(12).fill(0);
     const currentYear = now.getFullYear();
 
     props.docsList.forEach((d) => {
       const dDate = new Date(d.created_at || d.requested_at);
-      if (!isNaN(dDate) && dDate.getFullYear() === currentYear) {
-        docCounts[dDate.getMonth()]++;
-      }
+      if (!isNaN(dDate) && dDate.getFullYear() === currentYear) docCounts[dDate.getMonth()]++;
     });
-
     props.equipsList.forEach((e) => {
       const eDate = new Date(e.requested_at || e.created_at);
-      if (!isNaN(eDate) && eDate.getFullYear() === currentYear) {
-        equipCounts[eDate.getMonth()]++;
-      }
+      if (!isNaN(eDate) && eDate.getFullYear() === currentYear) equipCounts[eDate.getMonth()]++;
     });
   } else if (selectedTimeScale.value === "yearly") {
     const currentYear = now.getFullYear();
-    labels = [
-      currentYear - 4,
-      currentYear - 3,
-      currentYear - 2,
-      currentYear - 1,
-      currentYear,
-    ].map(String);
+    labels = [currentYear - 4, currentYear - 3, currentYear - 2, currentYear - 1, currentYear].map(String);
     docCounts = Array(5).fill(0);
     equipCounts = Array(5).fill(0);
 
@@ -205,7 +175,6 @@ const chartData = computed(() => {
         if (yearDiff >= 0 && yearDiff < 5) docCounts[4 - yearDiff]++;
       }
     });
-
     props.equipsList.forEach((e) => {
       const eDate = new Date(e.requested_at || e.created_at);
       if (!isNaN(eDate)) {
@@ -216,7 +185,7 @@ const chartData = computed(() => {
   }
 
   return {
-    labels: labels,
+    labels,
     datasets: [
       {
         label: "Documents",
@@ -239,16 +208,12 @@ const chartData = computed(() => {
 
 <template>
   <div
-    class="lg:col-span-2 bg-white rounded-[24px] p-6 shadow-sm border border-gray-100 flex flex-col h-full"
+    class="lg:col-span-2 bg-white rounded-[24px] p-6 shadow-sm border border-gray-100 flex flex-col"
   >
-    <div class="mb-8 px-1 flex items-center justify-between">
+    <div class="mb-6 px-1 flex items-center justify-between">
       <div>
-        <h2 class="text-xl font-bold text-gray-800 tracking-tight">
-          Request Volume
-        </h2>
-        <p
-          class="text-xs font-semibold text-gray-400 uppercase tracking-widest mt-1"
-        >
+        <h2 class="text-xl font-bold text-gray-800 tracking-tight">Request Volume</h2>
+        <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mt-1">
           Transaction Trends
         </p>
       </div>
@@ -265,14 +230,8 @@ const chartData = computed(() => {
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
           >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M19 9l-7 7-7-7"
-            ></path>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
           </svg>
         </button>
 
@@ -286,7 +245,7 @@ const chartData = computed(() => {
         >
           <div
             v-if="isDropdownOpen"
-            class="absolute right-0 z-50 mt-2 w-44 origin-top-right rounded-xl bg-white shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] ring-1 ring-black ring-opacity-5 focus:outline-none overflow-hidden"
+            class="absolute right-0 z-50 mt-2 w-44 origin-top-right rounded-xl bg-white shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] ring-1 ring-black ring-opacity-5 overflow-hidden"
           >
             <div class="py-1">
               <button
@@ -294,11 +253,7 @@ const chartData = computed(() => {
                 :key="option.value"
                 @click="selectOption(option.value)"
                 class="block w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase tracking-widest transition-colors"
-                :class="
-                  option.value === selectedTimeScale
-                    ? 'bg-blue-50 text-blue-600'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                "
+                :class="option.value === selectedTimeScale ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'"
               >
                 {{ option.label }}
               </button>
@@ -308,10 +263,9 @@ const chartData = computed(() => {
       </div>
     </div>
 
-    <div class="flex-1 w-full px-1 relative">
-      <div class="absolute inset-0">
-        <Bar :data="chartData" :options="chartOptions" />
-      </div>
+    <!-- Container observed by ResizeObserver; fixed height keeps the chart practical -->
+    <div ref="chartContainerRef" class="w-full" style="height: 260px; position: relative;">
+      <Bar ref="barRef" :data="chartData" :options="chartOptions" />
     </div>
   </div>
 </template>

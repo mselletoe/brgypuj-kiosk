@@ -86,7 +86,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="flex flex-col w-full gap-8 animate-fade-in overflow-x-clip">
+  <div class="flex flex-col w-full gap-8 animate-fade-in overflow-x-clip px-2 sm:px-4 md:px-0">
     <template v-if="!isLoading">
       <!-- Header -->
       <div class="section-row" style="animation-delay: 0s">
@@ -105,12 +105,11 @@ onMounted(() => {
 
         <!-- Charts: grid-cols-3 so VolumeChart spans 2, BreakdownChart spans 1 -->
         <div
-          class="section-row grid grid-cols-3 gap-6"
+          class="section-row grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch"
           style="
             animation-delay: 0.16s;
             grid-column: 1;
             grid-row: 2;
-            height: 380px;
           "
         >
           <VolumeChart :docsList="rawDocsList" :equipsList="rawEquipsList" />
@@ -119,7 +118,7 @@ onMounted(() => {
 
         <!-- Top Requested -->
         <div
-          class="section-row grid gap-6 top-req-grid"
+          class="section-row grid grid-cols-1 sm:grid-cols-2 gap-6 top-req-grid"
           style="animation-delay: 0.24s; grid-column: 1; grid-row: 3"
         >
           <TopRequestedDocs :docsList="rawDocsList" />
@@ -172,7 +171,7 @@ onMounted(() => {
 @media (min-width: 1100px) {
   .overview-grid {
     grid-template-columns: 1fr 370px;
-    grid-template-rows: auto 380px auto;
+    grid-template-rows: auto auto auto;
   }
 
   .top-req-grid {
@@ -225,5 +224,11 @@ onMounted(() => {
 }
 .animate-fade-in {
   animation: fadeIn 0.5s ease-out forwards;
+}
+@media (max-width: 1099px) {
+  .sidebar-col {
+    grid-column: 1 !important;
+    grid-row: auto !important;
+  }
 }
 </style>
