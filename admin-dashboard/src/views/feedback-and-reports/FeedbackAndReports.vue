@@ -78,106 +78,106 @@ const triggerUndo = () => {
 </script>
 
 <template>
-  <div class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden">
+  <div class="flex flex-col p-4 sm:p-6 bg-white rounded-md w-full h-full overflow-hidden">
 
     <!-- HEADER -->
-    <div class="flex justify-between items-center mb-4">
-      <div>
+    <div class="grid grid-cols-1 md:grid-cols-[1fr_auto] items-center gap-4 mb-4">
+
+      <!-- TITLE -->
+      <div class="min-w-0">
         <PageTitle title="Feedbacks and Reports" />
         <p class="text-sm text-gray-500 mt-1">Manage feedbacks and reports</p>
       </div>
 
-      <div class="flex items-center gap-3">
+      <!-- CONTROLS -->
+      <div class="flex flex-nowrap items-center justify-start md:justify-end gap-3 w-full">
+
+        <!-- SEARCH -->
         <input
           v-model="searchQuery"
           type="text"
           placeholder="Search"
-          class="border border-gray-200 text-gray-700 rounded-md py-2 px-3 w-[250px] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-gray-400"
+          class="border border-gray-200 text-gray-700 rounded-md py-2 px-3 flex-1 md:flex-none md:w-[180px] lg:w-[250px] min-w-0 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-gray-400"
         />
 
-        <button
-          v-if="activeTab === 'reports'"
-          @click="triggerUndo"
-          :disabled="selectionState === 'none'"
-          :class="[
-            selectionState === 'none'
-              ? 'opacity-50 cursor-not-allowed'
-              : 'hover:bg-orange-50',
-          ]"
-          class="p-2 border border-orange-400 rounded-lg transition-colors"
-        >
-          <ArrowUturnLeftIcon class="w-5 h-5 text-orange-500" />
-        </button>
+        <!-- ACTION BUTTONS -->
+        <div class="flex items-center gap-2 sm:gap-3">
 
-        <div class="relative group inline-block">
-          <button
-            @click="triggerDelete"
-            :disabled="selectionState === 'none'"
-            :class="[
-              selectionState === 'none'
-                ? 'opacity-50 cursor-not-allowed'
-                : 'hover:bg-red-50',
-            ]"
-            class="p-2 border border-red-400 rounded-lg transition-colors"
-          >
-            <TrashIcon class="w-5 h-5 text-red-500" />
-          </button>
-          <div
-            class="absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 ease-in-out bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded whitespace-nowrap shadow-md z-50"
-          >
-            Delete
-          </div>
-        </div>
-
-        <div class="relative group inline-block">
-          <div
-            class="flex items-center border rounded-lg overflow-hidden"
-            :class="
-              selectionState !== 'none' ? 'border-blue-600' : 'border-gray-400'
-            "
-          >
+          <!-- UNDO (Reports tab only) -->
+          <div v-if="activeTab === 'reports'" class="relative group inline-block">
             <button
-              @click="handleMainSelectToggle"
-              class="p-2 hover:bg-gray-50 flex items-center"
+              @click="triggerUndo"
+              :disabled="selectionState === 'none'"
+              :class="[
+                selectionState === 'none'
+                  ? 'opacity-50 cursor-not-allowed'
+                  : 'hover:bg-orange-50 cursor-pointer',
+              ]"
+              class="p-2 border border-orange-400 rounded-lg transition-colors"
             >
-              <div
-                class="w-5 h-5 border rounded flex items-center justify-center"
-                :class="
-                  selectionState !== 'none'
-                    ? 'bg-blue-600 border-blue-600'
-                    : 'border-gray-400'
-                "
+              <ArrowUturnLeftIcon class="w-5 h-5 text-orange-500" />
+            </button>
+            <div class="absolute hidden sm:block -bottom-8 left-1/2 -translate-x-1/2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded whitespace-nowrap shadow-md z-50">
+              Undo
+            </div>
+          </div>
+
+          <!-- DELETE -->
+          <div class="relative group inline-block">
+            <button
+              @click="triggerDelete"
+              :disabled="selectionState === 'none'"
+              :class="[
+                selectionState === 'none'
+                  ? 'opacity-50 cursor-not-allowed'
+                  : 'hover:bg-red-50',
+              ]"
+              class="p-2 border border-red-400 rounded-lg transition-colors"
+            >
+              <TrashIcon class="w-5 h-5 text-red-500" />
+            </button>
+            <div class="absolute hidden sm:block -bottom-8 left-1/2 -translate-x-1/2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded whitespace-nowrap shadow-md z-50">
+              Delete
+            </div>
+          </div>
+
+          <!-- SELECT ALL -->
+          <div class="relative group inline-block">
+            <div
+              class="flex items-center border rounded-lg"
+              :class="selectionState !== 'none' ? 'border-blue-600' : 'border-gray-400'"
+            >
+              <button
+                @click="handleMainSelectToggle"
+                class="p-2 hover:bg-gray-50 rounded-lg flex items-center"
               >
                 <div
-                  v-if="selectionState === 'partial'"
-                  class="w-2 h-0.5 bg-white"
-                />
-                <svg
-                  v-if="selectionState === 'all'"
-                  class="w-3 h-3 text-white"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
+                  class="w-5 h-5 border rounded flex items-center justify-center"
+                  :class="selectionState !== 'none' ? 'bg-blue-600 border-blue-600' : 'border-gray-400'"
                 >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="4"
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-              </div>
-            </button>
-            <div
-              class="absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 ease-in-out bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded whitespace-nowrap shadow-md z-50"
-            >
+                  <div v-if="selectionState === 'partial'" class="w-2 h-0.5 bg-white"></div>
+                  <svg
+                    v-if="selectionState === 'all'"
+                    class="w-3 h-3 text-white"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7"/>
+                  </svg>
+                </div>
+              </button>
+            </div>
+            <div class="absolute hidden sm:block -bottom-8 left-1/2 -translate-x-1/2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded whitespace-nowrap shadow-md z-50">
               Select All
             </div>
           </div>
+
         </div>
       </div>
     </div>
 
+    <!-- TABS -->
     <div class="flex justify-between items-center border-b border-gray-200">
       <n-tabs v-model:value="activeTab" type="line" animated class="flex-grow">
         <n-tab-pane name="feedbacks" tab="Feedbacks" />
@@ -185,7 +185,8 @@ const triggerUndo = () => {
       </n-tabs>
     </div>
 
-    <div class="overflow-y-auto h-[calc(100vh-260px)] pr-2 pt-2">
+    <!-- CONTENT -->
+    <div class="overflow-y-auto h-[calc(100vh-320px)] sm:h-[calc(100vh-260px)] pr-2 pt-2">
       <keep-alive>
         <component
           :is="currentTabComponent"
@@ -195,5 +196,6 @@ const triggerUndo = () => {
         />
       </keep-alive>
     </div>
+
   </div>
 </template>
