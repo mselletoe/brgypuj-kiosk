@@ -1,10 +1,3 @@
-"""
-System Log Model
-----------------
-Stores all auditable events across the kiosk and admin interfaces.
-Each record captures who did what, from where, and the outcome.
-"""
-
 from sqlalchemy import Column, Integer, String, Text, DateTime, Enum as SAEnum
 from sqlalchemy.sql import func
 import enum
