@@ -1,25 +1,16 @@
 <script setup>
-/**
- * @file Finance.vue
- * @description Financial statement export tab for System Settings.
- * Accessible by all admin roles (Admin & Superadmin).
- * Drop into: @/views/settings/system-settings/FinancialStatement.vue
- */
-
 import { ref, computed } from "vue";
 import { NDatePicker, useMessage } from "naive-ui";
 import { exportFinancialStatement } from "@/api/financeService";
 
 const message = useMessage();
 
-// ── State ─────────────────────────────────────────────────────────────────────
-const dateRange    = ref(null);   // [startMs, endMs] — Naive UI daterange format
-const service      = ref(null);   // null | "documents" | "id_services" | "equipment"
+const dateRange    = ref(null); 
+const service      = ref(null);
 const isExporting  = ref(false);
 const lastExported = ref(null);
 const exportError  = ref(null);
 
-// ── Service options ───────────────────────────────────────────────────────────
 const serviceOptions = [
   { label: "All Services",        value: null,          dot: "bg-blue-500"   },
   { label: "Document Services",   value: "documents",   dot: "bg-purple-500" },
@@ -27,7 +18,6 @@ const serviceOptions = [
   { label: "Equipment Borrowing", value: "equipment",   dot: "bg-amber-500"  },
 ];
 
-// ── Computed ──────────────────────────────────────────────────────────────────
 const canExport = computed(() =>
   dateRange.value?.[0] && dateRange.value?.[1]
 );
@@ -48,7 +38,6 @@ const previewTo = computed(() =>
     : "—"
 );
 
-// ── Date presets ──────────────────────────────────────────────────────────────
 const presets = [
   { label: "This Month",   key: "this_month"   },
   { label: "Last Month",   key: "last_month"   },
@@ -73,7 +62,6 @@ function applyPreset(key) {
   dateRange.value = [ms(start), ms(end)];
 }
 
-// ── Export ────────────────────────────────────────────────────────────────────
 async function handleExport() {
   if (!canExport.value || isExporting.value) return;
 

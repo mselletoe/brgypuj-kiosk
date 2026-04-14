@@ -1,9 +1,4 @@
 <script setup>
-/**
- * @file SystemPreferences.vue
- * @description Default View, Maintenance Mode, and Clear Logs settings.
- * Reads from GET /admin/settings on mount; saves via PATCH /admin/settings.
- */
 import { ref, onMounted } from "vue";
 import { NButton, NSwitch, NSelect, NModal, NSpin, useMessage } from "naive-ui";
 import { getSystemConfig, updateSystemConfig } from "@/api/systemConfigService";
@@ -12,7 +7,6 @@ const message = useMessage();
 const loading = ref(true);
 const saving  = ref(false);
 
-// ── Default View ──────────────────────────────────────────────────────────────
 const defaultView = ref("dashboard");
 const viewOptions = [
   { label: "Dashboard Overview", value: "dashboard"         },
@@ -22,22 +16,18 @@ const viewOptions = [
   { label: "Equipment Requests", value: "equipment"         },
 ];
 
-// ── Maintenance Mode ──────────────────────────────────────────────────────────
 const maintenanceEnabled = ref(false);
 const maintenanceMessage = ref(
   "The system is currently undergoing scheduled maintenance. Please try again later."
 );
 const showMaintenanceConfirm = ref(false);
-// Holds the pending toggle value while the confirm modal is open
 const pendingMaintenanceValue = ref(false);
 
 const toggleMaintenance = (newVal) => {
   if (newVal === true) {
-    // Turning ON → ask for confirmation first
     pendingMaintenanceValue.value  = true;
     showMaintenanceConfirm.value   = true;
   } else {
-    // Turning OFF → apply immediately
     applyMaintenance(false);
   }
 };
@@ -67,7 +57,6 @@ const applyMaintenance = async (enabled) => {
   }
 };
 
-// Save the message text separately (for when admin edits message while mode is already on)
 const saveMaintenanceMessage = async () => {
   saving.value = true;
   try {
@@ -80,7 +69,6 @@ const saveMaintenanceMessage = async () => {
   }
 };
 
-// ── Clear Logs ────────────────────────────────────────────────────────────────
 const showClearLogsConfirm   = ref(false);
 const clearAuditLogs         = ref(true);
 const clearSystemLogs        = ref(true);
@@ -97,11 +85,9 @@ const confirmClearLogs = () => {
     message.warning("No log type selected.");
     return;
   }
-  // TODO: wire to clear-logs API endpoint when available
   message.success(`${targets.join(" and ")} older than ${clearLogsOlderThanDays.value} days cleared.`);
 };
 
-// ── Save Default View ─────────────────────────────────────────────────────────
 const savePreferences = async () => {
   saving.value = true;
   try {
@@ -114,7 +100,6 @@ const savePreferences = async () => {
   }
 };
 
-// ── Load on mount ─────────────────────────────────────────────────────────────
 onMounted(async () => {
   try {
     const config = await getSystemConfig();

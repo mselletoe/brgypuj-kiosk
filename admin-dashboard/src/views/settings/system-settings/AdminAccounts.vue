@@ -1,17 +1,4 @@
 <script setup>
-/**
- * @file AdminAccounts.vue
- * @description Superadmin-only tab for managing all admin accounts.
- *
- * Features:
- *  - Table: avatar/photo, full name, username, role badge, status, created date, actions
- *  - Online indicator (presence tracked via a shared online-admins store/composable)
- *  - Inline role selector (admin ↔ superadmin)
- *  - Activate / Deactivate toggle with confirmation
- *  - Delete with confirmation
- *  - Add Account modal (wraps POST /admin/auth/register)
- *  - Search filter
- */
 import { ref, computed, onMounted } from 'vue'
 import { NModal, NSelect, useMessage, NSpin } from 'naive-ui'
 import { useAdminAuthStore } from '@/stores/auth'
@@ -25,32 +12,26 @@ import {
 import { registerAdmin } from '@/api/authService'
 import { fetchResidentsDropdown } from '@/api/authService'
 
-// ── store / message ──────────────────────────────────────────────────────────
 const authStore  = useAdminAuthStore()
 const message    = useMessage()
 
-// ── state ────────────────────────────────────────────────────────────────────
 const accounts      = ref([])
-const photoCache    = ref({})          // { adminId: objectUrl | null }
+const photoCache    = ref({}) 
 const loading       = ref(false)
 const searchQuery   = ref('')
 
-// Add-account modal
 const showAddModal    = ref(false)
 const addLoading      = ref(false)
-const residents       = ref([])        // dropdown options
+const residents       = ref([])  
 const newAccount      = ref({ resident_id: null, username: '', password: '', position: '', system_role: 'admin' })
 
-// Confirmation modal
 const confirmModal    = ref({ show: false, title: '', message: '', action: null, danger: false })
 
-// Role options for the inline select and the add modal
 const roleOptions = [
   { label: 'Admin',       value: 'admin' },
   { label: 'Super Admin', value: 'superadmin' },
 ]
 
-// ── computed ─────────────────────────────────────────────────────────────────
 const filteredAccounts = computed(() => {
   const q = searchQuery.value.toLowerCase().trim()
   if (!q) return accounts.value
@@ -67,7 +48,6 @@ const residentOptions = computed(() =>
   residents.value.map(r => ({ label: r.full_name, value: r.id })),
 )
 
-// ── helpers ───────────────────────────────────────────────────────────────────
 const isSelf = (adminId) => adminId === authStore.admin?.id
 
 const roleBadgeClass = (role) =>
@@ -104,12 +84,10 @@ const formatDate = (iso) => {
   })
 }
 
-// ── data loading ──────────────────────────────────────────────────────────────
 const loadAccounts = async () => {
   loading.value = true
   try {
     accounts.value = await getAllAdmins()
-    // Lazy-load photos in background
     accounts.value.forEach(async (acc) => {
       if (acc.has_photo && photoCache.value[acc.id] === undefined) {
         photoCache.value[acc.id] = await getAdminAccountPhotoUrl(acc.id)
@@ -136,7 +114,6 @@ onMounted(() => {
   loadAccounts()
 })
 
-// ── confirmation helper ───────────────────────────────────────────────────────
 const confirm = ({ title, msg, danger = false, action }) => {
   confirmModal.value = { show: true, title, message: msg, action, danger }
 }
@@ -147,7 +124,6 @@ const runConfirmedAction = async () => {
   confirmModal.value.show = false
 }
 
-// ── actions ───────────────────────────────────────────────────────────────────
 const toggleStatus = (acc) => {
   const toActive = !acc.is_active
   confirm({
@@ -181,7 +157,6 @@ const changeRole = (acc, newRole) => {
         acc.system_role = res.system_role
         message.success(res.detail)
       } catch (e) {
-        // Revert optimistic UI by reloading
         message.error(e.response?.data?.detail || 'Failed to update role.')
         await loadAccounts()
       }
@@ -206,7 +181,6 @@ const removeAccount = (acc) => {
   })
 }
 
-// ── add account ───────────────────────────────────────────────────────────────
 const openAddModal = async () => {
   newAccount.value = { resident_id: null, username: '', password: '', position: '', system_role: 'admin' }
   showAddModal.value = true

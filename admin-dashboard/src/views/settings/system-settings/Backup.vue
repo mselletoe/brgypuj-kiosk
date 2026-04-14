@@ -1,8 +1,4 @@
 <script setup>
-/**
- * @file Backup.vue
- * @description Backup settings tab — wired to the real backend.
- */
 import { ref, computed, onMounted } from "vue";
 import { NButton, NSwitch, NSelect, NModal, NTimePicker, useMessage } from "naive-ui";
 import { getSystemConfig, updateSystemConfig } from "@/api/systemConfigService";
@@ -15,7 +11,6 @@ import {
 
 const message = useMessage();
 
-// ── State ─────────────────────────────────────────────────────────────────────
 const loading          = ref(true);
 const savingSettings   = ref(false);
 const isBackingUp      = ref(false);
@@ -23,7 +18,7 @@ const historyLoading   = ref(false);
 
 const autoBackupEnabled = ref(false);
 const backupFrequency   = ref("daily");
-const backupTime        = ref("02:00");   // stored as "HH:MM" string
+const backupTime        = ref("02:00"); 
 
 const backupHistory = ref([]);
 
@@ -39,9 +34,6 @@ const frequencyOptions = [
   { label: "Daily",  value: "daily"  },
   { label: "Weekly", value: "weekly" },
 ];
-
-// ── NTimePicker computed — same pattern as your announcement component ────────
-// NTimePicker uses a ms timestamp; backend/state uses "HH:MM"
 
 const timeTimestamp = computed({
   get() {
@@ -59,8 +51,6 @@ const timeTimestamp = computed({
     backupTime.value = `${h}:${m}`;
   },
 });
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
 
 const formattedLastBackup = computed(() => {
   if (!lastBackupAt.value) return "Never";
@@ -93,8 +83,6 @@ const formatTime = (iso) => {
   return d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
 };
 
-// ── Load on mount ─────────────────────────────────────────────────────────────
-
 const loadConfig = async () => {
   const config = await getSystemConfig();
   if (config) {
@@ -122,8 +110,6 @@ onMounted(async () => {
   loading.value = false;
 });
 
-// ── Save schedule settings ────────────────────────────────────────────────────
-
 const saveSettings = async () => {
   savingSettings.value = true;
   try {
@@ -140,8 +126,6 @@ const saveSettings = async () => {
     savingSettings.value = false;
   }
 };
-
-// ── Manual backup → triggers browser download ────────────────────────────────
 
 const runManualBackup = async () => {
   isBackingUp.value = true;
@@ -177,8 +161,6 @@ const runManualBackup = async () => {
   }
 };
 
-// ── Download a saved backup ───────────────────────────────────────────────────
-
 const handleDownload = async (backup) => {
   try {
     const response = await downloadBackupFile(backup.filename);
@@ -193,8 +175,6 @@ const handleDownload = async (backup) => {
     message.error("Download failed.");
   }
 };
-
-// ── Restore ───────────────────────────────────────────────────────────────────
 
 const openRestoreModal = (backup) => {
   restoreTarget.value    = backup;
