@@ -1,11 +1,4 @@
 <script setup>
-/**
- * @file views/requests/document-requests/DocumentRequests.vue
- * @description Parent layout for Document Requests. 
- * Manages search, global filters (date, type, payment), and tab navigation.
- * Orchestrates bulk actions (Undo/Delete) by calling methods exposed by sub-tabs.
- */
-
 import { ref, computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {
@@ -38,9 +31,6 @@ useSearchSync(searchQuery);
 
 const tabRef = ref(null);
 
-// =============================================================================
-// TAB ROUTING
-// =============================================================================
 const tabMap = {
   pending: PendingTab,
   approved: ApprovedTab,
@@ -61,9 +51,6 @@ const currentTabComponent = computed(() => {
 
 const isPendingTab = computed(() => activeTab.value === "pending");
 
-// =============================================================================
-// FILTER STATE
-// =============================================================================
 const showFilterPopover = ref(false);
 const documentTypeOptions = ref([]);
 
@@ -95,9 +82,6 @@ const hasActiveFilters = computed(() => {
   );
 });
 
-// =============================================================================
-// SELECTION STATE
-// =============================================================================
 const selectionState = computed(() => {
   const count = tabRef.value?.selectedCount || 0;
   const total = tabRef.value?.totalCount || 0;
@@ -115,9 +99,6 @@ const handleMainSelectToggle = () => {
   }
 };
 
-// =============================================================================
-// ACTIONS
-// =============================================================================
 const triggerUndo = () => {
   if (isPendingTab.value) return;
   tabRef.value?.bulkUndo();
@@ -125,9 +106,6 @@ const triggerUndo = () => {
 
 const triggerDelete = () => tabRef.value?.bulkDelete();
 
-// =============================================================================
-// LIFECYCLE
-// =============================================================================
 onMounted(async () => {
   try {
     const { data } = await getDocumentTypes();
@@ -147,25 +125,31 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div
-    class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden"
-  >
-    <div class="flex justify-between items-center mb-4">
-      <div>
+  <div class="flex flex-col p-4 sm:p-6 bg-white rounded-md w-full h-full overflow-hidden">
+
+    <!-- HEADER -->
+    <div class="grid grid-cols-1 md:grid-cols-[1fr_auto] items-center gap-4 mb-4">
+
+      <!-- TITLE -->
+      <div class="min-w-0">
         <PageTitle title="Document Requests" />
         <p class="text-sm text-gray-500 mt-1">
           Manage Document Requests submitted by residents
         </p>
       </div>
 
-      <div class="flex items-center gap-3">
+      <!-- CONTROLS -->
+      <div class="flex flex-nowrap items-center justify-start md:justify-end gap-3 w-full">
+
+        <!-- SEARCH -->
         <input
           v-model="searchQuery"
           type="text"
           placeholder="Search"
-          class="border border-gray-200 text-gray-700 rounded-md py-2 px-3 w-[250px] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-gray-400"
+          class="border border-gray-200 text-gray-700 rounded-md py-2 px-3 flex-1 md:flex-none md:w-[180px] lg:w-[250px] min-w-0 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-gray-400"
         />
 
+        <!-- FILTER -->
         <n-popover
           v-model:show="showFilterPopover"
           trigger="click"
@@ -176,23 +160,22 @@ onMounted(async () => {
           <template #trigger>
             <button
               :class="[
-                'flex items-center px-4 py-2 border rounded-lg text-sm font-medium transition-colors',
+                'flex items-center justify-center px-3 py-2 border rounded-lg text-sm font-medium transition-colors w-auto',
                 hasActiveFilters
                   ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'
                   : 'border-gray-300 text-gray-700 hover:bg-gray-50',
               ]"
             >
-              <FunnelIcon
-                class="w-5 h-5 mr-2"
+             <FunnelIcon
+                class="w-5 h-5 lg:mr-2"
                 :class="hasActiveFilters ? 'text-white' : 'text-gray-500'"
               />
-              Filter
+              <span class="hidden lg:inline">Filter</span>
             </button>
           </template>
 
-          <div
-            class="w-[270px] max-h-[500px] bg-white rounded-lg overflow-hidden flex flex-col"
-          >
+          <!-- POPOVER -->
+          <div class="w-[270px] max-h-[500px] bg-white rounded-lg overflow-hidden flex flex-col">
             <div class="p-4 border-b border-gray-200">
               <h3 class="text-[16px] font-semibold text-gray-800">
                 Filter Document Requests
@@ -201,45 +184,22 @@ onMounted(async () => {
 
             <div class="overflow-y-auto px-6 py-4 space-y-4 flex-1">
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2"
-                  >Requested Date</label
-                >
-                <n-date-picker
-                  v-model:value="filterState.requestedDate"
-                  type="date"
-                  clearable
-                  class="w-full"
-                  format="dd/MM/yyyy"
-                  placeholder="Start date"
-                />
+                <label class="block text-sm font-medium text-gray-700 mb-2">Requested Date</label>
+                <n-date-picker v-model:value="filterState.requestedDate" type="date" clearable class="w-full" />
               </div>
 
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2"
-                  >Document Type</label
-                >
-                <n-select
-                  v-model:value="filterState.documentType"
-                  :options="documentTypeOptions"
-                  placeholder="All Document Types"
-                />
+                <label class="block text-sm font-medium text-gray-700 mb-2">Document Type</label>
+                <n-select v-model:value="filterState.documentType" :options="documentTypeOptions" />
               </div>
 
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2"
-                  >Payment Status</label
-                >
-                <n-select
-                  v-model:value="filterState.paymentStatus"
-                  :options="paymentStatusOptions"
-                  placeholder="All Status"
-                />
+                <label class="block text-sm font-medium text-gray-700 mb-2">Payment Status</label>
+                <n-select v-model:value="filterState.paymentStatus" :options="paymentStatusOptions" />
               </div>
             </div>
 
-            <div
-              class="flex justify-end space-x-2 p-4 border-t border-gray-200"
-            >
+            <div class="flex justify-end space-x-2 p-4 border-t border-gray-200">
               <n-button @click="handleFilterClear" class="px-6" secondary>
                 Clear
               </n-button>
@@ -247,112 +207,105 @@ onMounted(async () => {
           </div>
         </n-popover>
 
-        <div class="relative group inline-block">
-          <button
-            @click="triggerUndo"
-            :disabled="selectionState === 'none' || isPendingTab"
-            :class="[
-              selectionState === 'none' || isPendingTab
-                ? 'opacity-50 cursor-not-allowed'
-                : 'hover:bg-orange-50 cursor-pointer',
-            ]"
-            class="p-2 border border-orange-400 rounded-lg transition-colors"
-          >
-            <ArrowUturnLeftIcon class="w-5 h-5 text-orange-500" />
-          </button>
-          <div
-            class="absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 ease-in-out bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded whitespace-nowrap shadow-md z-50"
-          >
-            Undo
-          </div>
-        </div>
+        <!-- ACTION BUTTONS -->
+        <div class="flex items-center gap-2 sm:gap-3">
 
-        <div class="relative group inline-block">
-          <button
-            @click="triggerDelete"
-            :disabled="selectionState === 'none'"
-            :class="[
-              selectionState === 'none'
-                ? 'opacity-50 cursor-not-allowed'
-                : 'hover:bg-red-50',
-            ]"
-            class="p-2 border border-red-400 rounded-lg transition-colors"
-          >
-            <TrashIcon class="w-5 h-5 text-red-500" />
-          </button>
-          <div
-            class="absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 ease-in-out bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded whitespace-nowrap shadow-md z-50"
-          >
-            Delete
-          </div>
-        </div>
-
-        <div class="relative group inline-block">
-          <div
-            class="flex items-center border rounded-lg"
-            :class="
-              selectionState !== 'none' ? 'border-blue-600' : 'border-gray-400'
-            "
-          >
+          <!-- UNDO -->
+          <div class="relative group inline-block">
             <button
-              @click="handleMainSelectToggle"
-              class="p-2 hover:bg-gray-50 rounded-lg flex items-center"
+              @click="triggerUndo"
+              :disabled="selectionState === 'none' || isPendingTab"
+              :class="[
+                selectionState === 'none' || isPendingTab
+                  ? 'opacity-50 cursor-not-allowed'
+                  : 'hover:bg-orange-50 cursor-pointer',
+              ]"
+              class="p-2 border border-orange-400 rounded-lg transition-colors"
             >
-              <div
-                class="w-5 h-5 border rounded flex items-center justify-center"
-                :class="
-                  selectionState !== 'none'
-                    ? 'bg-blue-600 border-blue-600'
-                    : 'border-gray-400'
-                "
+              <ArrowUturnLeftIcon class="w-5 h-5 text-orange-500" />
+            </button>
+            <div class="absolute hidden sm:block -bottom-8 left-1/2 -translate-x-1/2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded whitespace-nowrap shadow-md z-50">
+              Undo
+            </div>
+          </div>
+
+          <!-- DELETE -->
+          <div class="relative group inline-block">
+            <button
+              @click="triggerDelete"
+              :disabled="selectionState === 'none'"
+              :class="[
+                selectionState === 'none'
+                  ? 'opacity-50 cursor-not-allowed'
+                  : 'hover:bg-red-50',
+              ]"
+              class="p-2 border border-red-400 rounded-lg transition-colors"
+            >
+              <TrashIcon class="w-5 h-5 text-red-500" />
+            </button>
+            <div class="absolute hidden sm:block -bottom-8 left-1/2 -translate-x-1/2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded whitespace-nowrap shadow-md z-50">
+              Delete
+            </div>
+          </div>
+
+          <!-- SELECT ALL -->
+          <div class="relative group inline-block">
+            <div
+              class="flex items-center border rounded-lg"
+              :class="selectionState !== 'none' ? 'border-blue-600' : 'border-gray-400'"
+            >
+              <button
+                @click="handleMainSelectToggle"
+                class="p-2 hover:bg-gray-50 rounded-lg flex items-center"
               >
                 <div
-                  v-if="selectionState === 'partial'"
-                  class="w-2 h-0.5 bg-white"
-                ></div>
-                <svg
-                  v-if="selectionState === 'all'"
-                  class="w-3 h-3 text-white"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
+                  class="w-5 h-5 border rounded flex items-center justify-center"
+                  :class="selectionState !== 'none'
+                    ? 'bg-blue-600 border-blue-600'
+                    : 'border-gray-400'"
                 >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="4"
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-              </div>
-            </button>
+                  <div v-if="selectionState === 'partial'" class="w-2 h-0.5 bg-white"></div>
+                  <svg
+                    v-if="selectionState === 'all'"
+                    class="w-3 h-3 text-white"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7"/>
+                  </svg>
+                </div>
+              </button>
+            </div>
+            <div class="absolute hidden sm:block -bottom-8 left-1/2 -translate-x-1/2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded whitespace-nowrap shadow-md z-50">
+              Select All
+            </div>
           </div>
-          <div
-            class="absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 ease-in-out bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded whitespace-nowrap shadow-md z-50"
-          >
-            Select All
-          </div>
+
         </div>
       </div>
     </div>
 
-    <div class="flex items-center border-b border-gray-200">
+    <!-- TABS -->
+    <div class="flex flex-col sm:flex-row sm:items-center gap-2 border-b border-gray-200">
       <n-tabs v-model:value="activeTab" type="line" animated class="flex-grow">
         <n-tab-pane name="pending" tab="Pending" />
         <n-tab-pane name="approved" tab="Approved" />
         <n-tab-pane name="released" tab="Released" />
         <n-tab-pane name="rejected" tab="Rejected" />
       </n-tabs>
+
       <router-link
         :to="{ path: '/system-settings', query: { section: 'financial-statement' } }"
-        class="inline-flex items-center gap-1 text-xs text-blue-500 hover:text-blue-700 hover:underline whitespace-nowrap pb-2 transition-colors"
+        class="inline-flex items-center gap-1 text-xs text-blue-500 hover:text-blue-700 hover:underline whitespace-nowrap pb-2 sm:pb-0 sm:ml-auto"
       >
         <InformationCircleIcon class="w-3.5 h-3.5 shrink-0" />
         Export Financial Statement
       </router-link>
     </div>
 
-    <div class="overflow-y-auto h-[calc(100vh-260px)] pr-2 pt-2 relative">
+    <!-- CONTENT -->
+    <div class="overflow-y-auto h-[calc(100vh-320px)] sm:h-[calc(100vh-260px)] pr-2 pt-2 relative">
       <keep-alive>
         <component
           :is="currentTabComponent"
@@ -363,5 +316,6 @@ onMounted(async () => {
         />
       </keep-alive>
     </div>
+
   </div>
 </template>
