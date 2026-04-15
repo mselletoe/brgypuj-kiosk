@@ -239,124 +239,97 @@ onMounted(fetchActualInventory);
 </script>
 
 <template>
-  <div class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden">
+  <div class="flex flex-col p-4 sm:p-6 bg-white rounded-md w-full h-full overflow-hidden">
 
-    <!-- ─ HEADER ─────────────────────────────────────────────── -->
-    <div class="flex mb-6 items-center justify-between">
-      <div>
+    <!-- HEADER -->
+    <div class="grid grid-cols-1 md:grid-cols-[1fr_auto] items-start gap-4 mb-6">
+
+      <!-- TITLE -->
+      <div class="min-w-0">
         <PageTitle title="Equipment Inventory Management" />
         <p class="text-sm text-gray-500 mt-1">
           Track community assets, update stock levels, and set rental rates.
         </p>
       </div>
 
-      <div class="flex items-center gap-3">
-        <!-- Search -->
+      <!-- CONTROLS -->
+      <div class="flex flex-nowrap items-center justify-start md:justify-end gap-3 w-full">
+
+        <!-- SEARCH -->
         <input
           v-model="searchQuery"
           type="text"
           placeholder="Search"
-          class="border border-gray-200 text-gray-700 rounded-md py-2 px-3 w-[250px] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-gray-400"
+          class="border border-gray-200 text-gray-700 rounded-md py-2 px-3 flex-1 md:flex-none md:w-[180px] lg:w-[250px] min-w-0 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-gray-400"
         />
 
-        <!-- Delete -->
-        <div class="relative group inline-block">
-          <button
-            @click="requestBulkDelete"
-            :disabled="selectionState === 'none'"
-            class="p-2 border border-red-400 rounded-lg transition-colors"
-            :class="
-              selectionState === 'none'
-                ? 'opacity-50 cursor-not-allowed'
-                : 'hover:bg-red-50'
-            "
-          >
-            <TrashIcon class="w-5 h-5 text-red-500" />
-          </button>
-          <div
-            class="absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 ease-in-out bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded whitespace-nowrap shadow-md z-50"
-          >
-            Delete
-          </div>
-        </div>
+        <!-- ACTION BUTTONS -->
+        <div class="flex items-center gap-2 sm:gap-3">
 
-        <!-- Select -->
-        <div class="relative group inline-block">
-          <div
-            class="flex items-center border rounded-lg overflow-hidden transition-colors"
-            :class="
-              selectionState !== 'none' ? 'border-blue-600' : 'border-gray-400'
-            "
-          >
+          <!-- DELETE -->
+          <div class="relative group inline-block">
             <button
-              @click="handleMainSelectToggle"
-              class="p-2 hover:bg-gray-50 flex items-center"
+              @click="requestBulkDelete"
+              :disabled="selectionState === 'none'"
+              class="p-2 border border-red-400 rounded-lg transition-colors"
+              :class="selectionState === 'none' ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-50'"
             >
-              <div
-                class="w-5 h-5 border rounded flex items-center justify-center transition-colors"
-                :class="
-                  selectionState !== 'none'
-                    ? 'bg-blue-600 border-blue-600'
-                    : 'border-gray-400'
-                "
+              <TrashIcon class="w-5 h-5 text-red-500" />
+            </button>
+            <div class="absolute hidden sm:block -bottom-8 left-1/2 -translate-x-1/2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded whitespace-nowrap shadow-md z-50">
+              Delete
+            </div>
+          </div>
+
+          <!-- SELECT ALL -->
+          <div class="relative group inline-block">
+            <div
+              class="flex items-center border rounded-lg overflow-hidden transition-colors"
+              :class="selectionState !== 'none' ? 'border-blue-600' : 'border-gray-400'"
+            >
+              <button
+                @click="handleMainSelectToggle"
+                class="p-2 hover:bg-gray-50 flex items-center"
               >
                 <div
-                  v-if="selectionState === 'partial'"
-                  class="w-2 h-0.5 bg-white"
-                ></div>
-                <CheckIcon
-                  v-if="selectionState === 'all'"
-                  class="w-3 h-3 text-white"
-                />
-              </div>
-            </button>
-            <div
-              class="absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 ease-in-out bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded whitespace-nowrap shadow-md z-50"
-            >
+                  class="w-5 h-5 border rounded flex items-center justify-center transition-colors"
+                  :class="selectionState !== 'none' ? 'bg-blue-600 border-blue-600' : 'border-gray-400'"
+                >
+                  <div v-if="selectionState === 'partial'" class="w-2 h-0.5 bg-white"></div>
+                  <CheckIcon v-if="selectionState === 'all'" class="w-3 h-3 text-white" />
+                </div>
+              </button>
+            </div>
+            <div class="absolute hidden sm:block -bottom-8 left-1/2 -translate-x-1/2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded whitespace-nowrap shadow-md z-50">
               Select All
             </div>
           </div>
-        </div>
 
-        <!-- Add -->
-        <button
-          @click="startCreate"
-          class="px-4 py-2 bg-blue-600 text-white rounded-md font-medium text-sm hover:bg-blue-700 transition flex items-center gap-2"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="h-5 w-5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
+          <!-- ADD -->
+          <button
+            @click="startCreate"
+            class="px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-md font-medium text-sm hover:bg-blue-700 transition flex items-center gap-2 whitespace-nowrap"
           >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 4v16m8-8H4"
-            />
-          </svg>
-          Add
-        </button>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            <span class="hidden sm:inline">Add</span>
+          </button>
+
+        </div>
       </div>
     </div>
 
-    <!-- ─ MAIN ─────────────────────────────────────────────── -->
+    <!-- MAIN -->
     <div class="flex-1 overflow-y-auto pr-2 flex flex-col">
 
-      <!-- Loading state -->
-      <div
-        v-if="isLoading"
-        class="flex-1 flex flex-col items-center justify-center gap-4"
-      >
-        <div
-          class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"
-        ></div>
+      <!-- LOADING -->
+      <div v-if="isLoading" class="flex-1 flex flex-col items-center justify-center gap-4">
+        <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
         <p class="text-gray-500 font-medium">Loading equipment inventory...</p>
       </div>
 
-      <!-- Inventory Items -->
+      <!-- INVENTORY GRID -->
       <div
         v-else-if="localInventory.length"
         class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-6"
@@ -376,30 +349,25 @@ onMounted(fetchActualInventory);
         />
       </div>
 
-      <!-- Empty state -->
+      <!-- EMPTY STATE -->
       <div
         v-if="!isLoading && !localInventory.length"
         class="h-full flex flex-col items-center justify-center flex-1"
       >
         <NEmpty description="Your inventory is currently empty">
           <template #extra>
-            <NButton type="primary" @click="startCreate">
-              Add Equipment
-            </NButton>
+            <NButton type="primary" @click="startCreate">Add Equipment</NButton>
           </template>
         </NEmpty>
       </div>
+
     </div>
   </div>
 
-  <!-- ─ MODALS ─────────────────────────────────────────────── -->
+  <!-- MODALS -->
   <ConfirmModal
     :show="showDeleteModal"
-    :title="
-      isBulkDelete
-        ? `Delete ${selectedIds.length} item(s)?`
-        : 'Delete this item?'
-    "
+    :title="isBulkDelete ? `Delete ${selectedIds.length} item(s)?` : 'Delete this item?'"
     confirm-text="Delete"
     cancel-text="Cancel"
     @confirm="confirmDelete"
