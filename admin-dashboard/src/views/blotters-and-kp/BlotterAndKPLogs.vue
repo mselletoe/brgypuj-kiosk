@@ -590,231 +590,176 @@ const modalTitle = computed(() => {
 </script>
 
 <template>
-  <div
-    class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden"
-  >
-    <div class="flex mb-6 items-center justify-between">
-      <div>
+  <div class="flex flex-col p-4 sm:p-6 bg-white rounded-md w-full h-full overflow-hidden">
+
+    <!-- HEADER -->
+    <div class="grid grid-cols-1 md:grid-cols-[1fr_auto] items-center gap-4 mb-6">
+
+      <!-- TITLE -->
+      <div class="min-w-0">
         <PageTitle title="Blotter and KP Logs" />
-        <p class="text-sm text-gray-500 mt-1">
-          Manage Blotter and KP logs for residents
-        </p>
+        <p class="text-sm text-gray-500 mt-1">Manage Blotter and KP logs for residents</p>
       </div>
 
-      <div class="flex items-center gap-3">
+      <!-- CONTROLS -->
+      <div class="flex flex-nowrap items-center justify-start md:justify-end gap-3 w-full">
+
+        <!-- SEARCH -->
         <input
           v-model="searchQuery"
           type="text"
           placeholder="Search"
-          class="border border-gray-200 text-gray-700 rounded-md py-2 px-3 w-[250px] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-gray-400"
+          class="border border-gray-200 text-gray-700 rounded-md py-2 px-3 flex-1 md:flex-none md:w-[180px] lg:w-[250px] min-w-0 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-gray-400"
         />
 
-        <NPopover
-          v-model:show="showFilterPopover"
-          trigger="click"
-          placement="bottom-end"
-          :show-arrow="false"
-          style="padding: 0"
-        >
-          <template #trigger>
+        <!-- ACTION BUTTONS -->
+        <div class="flex items-center gap-2 sm:gap-3">
+
+          <!-- FILTER POPOVER -->
+          <NPopover
+            v-model:show="showFilterPopover"
+            trigger="click"
+            placement="bottom-end"
+            :show-arrow="false"
+            style="padding: 0"
+          >
+            <template #trigger>
+              <button
+                :class="[
+                  'flex items-center px-3 py-2 border rounded-lg text-sm font-medium transition-colors',
+                  hasActiveFilters
+                    ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'
+                    : 'border-gray-300 text-gray-700 hover:bg-gray-50',
+                ]"
+              >
+                <FunnelIcon
+                  class="w-5 h-5 sm:mr-2"
+                  :class="hasActiveFilters ? 'text-white' : 'text-gray-500'"
+                />
+                <span class="hidden sm:inline">Filter</span>
+              </button>
+            </template>
+
+            <div class="w-[270px] bg-white rounded-lg overflow-hidden flex flex-col">
+              <div class="p-4 border-b border-gray-200">
+                <h3 class="text-[16px] font-semibold text-gray-800">Filter Blotter Records</h3>
+              </div>
+              <div class="px-6 py-4 space-y-4 flex-1">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Incident Type</label>
+                  <NSelect v-model:value="filterState.incidentType" :options="incidentTypeFilterOptions" placeholder="All Incident Types" />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                  <NSelect v-model:value="filterState.status" :options="statusFilterOptions" placeholder="All Statuses" />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Incident Date Range</label>
+                  <NDatePicker
+                    v-model:value="filterState.incidentDateRange"
+                    type="daterange"
+                    clearable
+                    class="w-full"
+                    format="dd/MM/yyyy"
+                    :placeholder="['Start date', 'End date']"
+                  />
+                </div>
+              </div>
+              <div class="flex justify-end space-x-2 p-4 border-t border-gray-200">
+                <NButton @click="handleFilterClear" secondary>Clear</NButton>
+              </div>
+            </div>
+          </NPopover>
+
+          <!-- DELETE -->
+          <div class="relative group inline-block">
             <button
-              :class="[
-                'flex items-center px-4 py-2 border rounded-lg text-sm font-medium transition-colors',
-                hasActiveFilters
-                  ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'
-                  : 'border-gray-300 text-gray-700 hover:bg-gray-50',
-              ]"
+              @click="requestBulkDelete"
+              :disabled="selectionState === 'none'"
+              class="p-2 border border-red-400 rounded-lg transition-colors"
+              :class="selectionState === 'none' ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-50'"
             >
-              <FunnelIcon
-                class="w-5 h-5 mr-2"
-                :class="hasActiveFilters ? 'text-white' : 'text-gray-500'"
-              />
-              Filter
+              <TrashIcon class="w-5 h-5 text-red-500" />
             </button>
-          </template>
-
-          <div
-            class="w-[270px] bg-white rounded-lg overflow-hidden flex flex-col"
-          >
-            <div class="p-4 border-b border-gray-200">
-              <h3 class="text-[16px] font-semibold text-gray-800">
-                Filter Blotter Records
-              </h3>
+            <div class="absolute hidden sm:block -bottom-8 left-1/2 -translate-x-1/2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded whitespace-nowrap shadow-md z-50">
+              Delete
             </div>
+          </div>
 
-            <div class="px-6 py-4 space-y-4 flex-1">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2"
-                  >Incident Type</label
-                >
-                <NSelect
-                  v-model:value="filterState.incidentType"
-                  :options="incidentTypeFilterOptions"
-                  placeholder="All Incident Types"
-                />
-              </div>
-
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2"
-                  >Status</label
-                >
-                <NSelect
-                  v-model:value="filterState.status"
-                  :options="statusFilterOptions"
-                  placeholder="All Statuses"
-                />
-              </div>
-
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2"
-                  >Incident Date Range</label
-                >
-                <NDatePicker
-                  v-model:value="filterState.incidentDateRange"
-                  type="daterange"
-                  clearable
-                  class="w-full"
-                  format="dd/MM/yyyy"
-                  :placeholder="['Start date', 'End date']"
-                />
-              </div>
-            </div>
-
+          <!-- SELECT ALL -->
+          <div class="relative group inline-block">
             <div
-              class="flex justify-end space-x-2 p-4 border-t border-gray-200"
+              class="flex items-center border rounded-lg overflow-hidden transition-colors"
+              :class="selectionState !== 'none' ? 'border-blue-600' : 'border-gray-400'"
             >
-              <NButton @click="handleFilterClear" secondary>Clear</NButton>
-            </div>
-          </div>
-        </NPopover>
-
-        <div class="relative group inline-block">
-          <button
-            @click="requestBulkDelete"
-            :disabled="selectionState === 'none'"
-            class="p-2 border border-red-400 rounded-lg transition-colors"
-            :class="
-              selectionState === 'none'
-                ? 'opacity-50 cursor-not-allowed'
-                : 'hover:bg-red-50'
-            "
-          >
-            <TrashIcon class="w-5 h-5 text-red-500" />
-          </button>
-          <div
-            class="absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 ease-in-out bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded whitespace-nowrap shadow-md z-50"
-          >
-            Delete
-          </div>
-        </div>
-
-        <div class="relative group inline-block">
-          <div
-            class="flex items-center border rounded-lg overflow-hidden transition-colors"
-            :class="
-              selectionState !== 'none' ? 'border-blue-600' : 'border-gray-400'
-            "
-          >
-            <button
-              @click="handleMainSelectToggle"
-              class="p-2 hover:bg-gray-50 flex items-center"
-            >
-              <div
-                class="w-5 h-5 border rounded flex items-center justify-center transition-colors"
-                :class="
-                  selectionState !== 'none'
-                    ? 'bg-blue-600 border-blue-600'
-                    : 'border-gray-400'
-                "
+              <button
+                @click="handleMainSelectToggle"
+                class="p-2 hover:bg-gray-50 flex items-center"
               >
                 <div
-                  v-if="selectionState === 'partial'"
-                  class="w-2 h-0.5 bg-white"
-                ></div>
-                <CheckIcon
-                  v-if="selectionState === 'all'"
-                  class="w-3 h-3 text-white"
-                />
-              </div>
-            </button>
+                  class="w-5 h-5 border rounded flex items-center justify-center transition-colors"
+                  :class="selectionState !== 'none' ? 'bg-blue-600 border-blue-600' : 'border-gray-400'"
+                >
+                  <div v-if="selectionState === 'partial'" class="w-2 h-0.5 bg-white"></div>
+                  <CheckIcon v-if="selectionState === 'all'" class="w-3 h-3 text-white" />
+                </div>
+              </button>
+            </div>
+            <div class="absolute hidden sm:block -bottom-8 left-1/2 -translate-x-1/2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded whitespace-nowrap shadow-md z-50">
+              Select All
+            </div>
           </div>
-          <div
-            class="absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 ease-in-out bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded whitespace-nowrap shadow-md z-50"
-          >
-            Select All
-          </div>
-        </div>
 
-        <button
-          @click="openAddModal"
-          class="px-4 py-2 bg-blue-600 text-white rounded-md font-medium text-sm hover:bg-blue-700 transition flex items-center gap-2"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="h-5 w-5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
+          <!-- ADD -->
+          <button
+            @click="openAddModal"
+            class="px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-md font-medium text-sm hover:bg-blue-700 transition flex items-center gap-2 whitespace-nowrap"
           >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 4v16m8-8H4"
-            />
-          </svg>
-          Add
-        </button>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            <span class="hidden sm:inline">Add</span>
+          </button>
+
+        </div>
       </div>
     </div>
 
-    <div
-      v-if="loading"
-      class="flex-1 flex flex-col items-center justify-center gap-4"
-    >
-      <div
-        class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"
-      ></div>
+    <!-- LOADING -->
+    <div v-if="loading" class="flex-1 flex flex-col items-center justify-center gap-4">
+      <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
       <p class="text-gray-500 font-medium">Loading blotter records...</p>
     </div>
 
     <template v-else>
+
+      <!-- TABLE -->
       <div
         v-if="blotters.length > 0"
         class="flex-1 overflow-y-auto bg-white rounded-lg border border-gray-200"
       >
-        <n-data-table
-          :columns="columns"
-          :data="filteredBlotters"
-          :bordered="false"
-        />
+        <n-data-table :columns="columns" :data="filteredBlotters" :bordered="false" />
       </div>
 
-      <div
-        v-else
-        class="h-full flex flex-col items-center justify-center flex-1"
-      >
+      <!-- EMPTY STATE -->
+      <div v-else class="h-full flex flex-col items-center justify-center flex-1">
         <NEmpty description="No blotter records yet">
           <template #extra>
-            <NButton type="primary" @click="openAddModal"> Add Record </NButton>
+            <NButton type="primary" @click="openAddModal">Add Record</NButton>
           </template>
         </NEmpty>
       </div>
+
     </template>
 
-    <NModal
-      :show="showBlotterModal"
-      @update:show="handleModalClose"
-      :mask-closable="false"
-    >
+    <!-- BLOTTER MODAL -->
+    <NModal :show="showBlotterModal" @update:show="handleModalClose" :mask-closable="false">
       <div
-        class="w-[820px] max-h-[90vh] overflow-hidden bg-white rounded-xl shadow-lg flex flex-col"
+        class="w-[820px] max-w-[95vw] max-h-[90vh] overflow-hidden bg-white rounded-xl shadow-lg flex flex-col"
         role="dialog"
         aria-modal="true"
       >
-        <div
-          class="flex items-center justify-between px-6 py-4 border-b bg-gray-50"
-        >
+        <div class="flex items-center justify-between px-6 py-4 border-b bg-gray-50">
           <div class="flex items-center gap-3">
             <h2 class="text-lg font-semibold text-gray-800">{{ modalTitle }}</h2>
             <NTag
@@ -826,68 +771,39 @@ const modalTitle = computed(() => {
               {{ formData.status === "resolved" ? "Resolved" : "Active" }}
             </NTag>
           </div>
-          <button
-            @click="handleModalClose"
-            class="p-1 rounded hover:bg-gray-200 transition"
-          >
+          <button @click="handleModalClose" class="p-1 rounded hover:bg-gray-200 transition">
             <XMarkIcon class="w-6 h-6 text-gray-500" />
           </button>
         </div>
 
         <div class="px-6 py-5 overflow-y-auto space-y-5">
-          <div class="grid grid-cols-3 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1.5"
-                >Blotter No.</label
-              >
-              <n-input
-                :value="
-                  modalMode === 'view' ? formData.blotter_no : 'Auto-generated'
-                "
-                :disabled="true"
-              />
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">Blotter No.</label>
+              <n-input :value="modalMode === 'view' ? formData.blotter_no : 'Auto-generated'" :disabled="true" />
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1.5"
-                >Date</label
-              >
-              <NDatePicker
-                v-model:value="formData.date"
-                type="date"
-                placeholder="Select Date"
-                class="w-full"
-              />
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">Date</label>
+              <NDatePicker v-model:value="formData.date" type="date" placeholder="Select Date" class="w-full" />
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1.5"
-                >Time</label
-              >
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">Time</label>
               <n-input v-model:value="formData.time" placeholder="e.g. 14:30" />
             </div>
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1.5"
-              >Place of Incident</label
-            >
-            <n-input
-              v-model:value="formData.incident_place"
-              placeholder="Location of the incident"
-            />
+            <label class="block text-sm font-medium text-gray-700 mb-1.5">Place of Incident</label>
+            <n-input v-model:value="formData.incident_place" placeholder="Location of the incident" />
           </div>
 
+          <!-- COMPLAINANT -->
           <div class="border-t pt-4">
-            <p
-              class="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3"
-            >
-              Complainant (Nagreklamo)
-            </p>
+            <p class="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">Complainant (Nagreklamo)</p>
             <div class="mb-3">
               <label class="block text-sm font-medium text-gray-700 mb-1.5">
                 Registered Resident
-                <span class="text-gray-400 font-normal"
-                  >(optional — select to auto-fill)</span
-                >
+                <span class="text-gray-400 font-normal">(optional — select to auto-fill)</span>
               </label>
               <NSelect
                 v-model:value="formData.complainant_id"
@@ -898,53 +814,29 @@ const modalTitle = computed(() => {
                 @update:value="handleComplainantSelect"
               />
             </div>
-            <div class="grid grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1.5"
-                  >Full Name <span class="text-red-500">*</span></label
-                >
-                <n-input
-                  v-model:value="formData.complainant_name"
-                  placeholder="Full Name"
-                  :disabled="!!formData.complainant_id"
-                />
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Full Name <span class="text-red-500">*</span></label>
+                <n-input v-model:value="formData.complainant_name" placeholder="Full Name" :disabled="!!formData.complainant_id" />
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1.5"
-                  >Age</label
-                >
-                <n-input
-                  v-model:value="formData.complainant_age"
-                  placeholder="Age"
-                  type="number"
-                  :disabled="!!formData.complainant_id"
-                />
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Age</label>
+                <n-input v-model:value="formData.complainant_age" placeholder="Age" type="number" :disabled="!!formData.complainant_id" />
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1.5"
-                  >Address</label
-                >
-                <n-input
-                  v-model:value="formData.complainant_address"
-                  placeholder="Address"
-                  :disabled="!!formData.complainant_id"
-                />
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Address</label>
+                <n-input v-model:value="formData.complainant_address" placeholder="Address" :disabled="!!formData.complainant_id" />
               </div>
             </div>
           </div>
 
+          <!-- RESPONDENT -->
           <div class="border-t pt-4">
-            <p
-              class="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3"
-            >
-              Respondent (Inireklamo)
-            </p>
+            <p class="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">Respondent (Inireklamo)</p>
             <div class="mb-3">
               <label class="block text-sm font-medium text-gray-700 mb-1.5">
                 Registered Resident
-                <span class="text-gray-400 font-normal"
-                  >(optional — select to auto-fill)</span
-                >
+                <span class="text-gray-400 font-normal">(optional — select to auto-fill)</span>
               </label>
               <NSelect
                 v-model:value="formData.respondent_id"
@@ -955,94 +847,46 @@ const modalTitle = computed(() => {
                 @update:value="handleRespondentSelect"
               />
             </div>
-            <div class="grid grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1.5"
-                  >Full Name</label
-                >
-                <n-input
-                  v-model:value="formData.respondent_name"
-                  placeholder="Full Name"
-                  :disabled="!!formData.respondent_id"
-                />
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Full Name</label>
+                <n-input v-model:value="formData.respondent_name" placeholder="Full Name" :disabled="!!formData.respondent_id" />
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1.5"
-                  >Age</label
-                >
-                <n-input
-                  v-model:value="formData.respondent_age"
-                  placeholder="Age"
-                  type="number"
-                  :disabled="!!formData.respondent_id"
-                />
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Age</label>
+                <n-input v-model:value="formData.respondent_age" placeholder="Age" type="number" :disabled="!!formData.respondent_id" />
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1.5"
-                  >Address</label
-                >
-                <n-input
-                  v-model:value="formData.respondent_address"
-                  placeholder="Address"
-                  :disabled="!!formData.respondent_id"
-                />
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Address</label>
+                <n-input v-model:value="formData.respondent_address" placeholder="Address" :disabled="!!formData.respondent_id" />
               </div>
             </div>
           </div>
 
+          <!-- INCIDENT DETAILS -->
           <div class="border-t pt-4">
-            <p
-              class="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3"
-            >
-              Incident Details
-            </p>
+            <p class="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">Incident Details</p>
             <div class="mb-4">
-              <label class="block text-sm font-medium text-gray-700 mb-1.5"
-                >Type of Incident</label
-              >
-              <NSelect
-                v-model:value="formData.incident_type"
-                :options="incidentTypeOptions"
-                placeholder="Select Type"
-              />
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">Type of Incident</label>
+              <NSelect v-model:value="formData.incident_type" :options="incidentTypeOptions" placeholder="Select Type" />
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1.5"
-                >Narrative of Events</label
-              >
-              <n-input
-                v-model:value="formData.narrative"
-                type="textarea"
-                placeholder="Describe what happened..."
-                :rows="4"
-              />
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">Narrative of Events</label>
+              <n-input v-model:value="formData.narrative" type="textarea" placeholder="Describe what happened..." :rows="4" />
             </div>
           </div>
 
+          <!-- RECORD INFORMATION -->
           <div class="border-t pt-4">
-            <p
-              class="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3"
-            >
-              Record Information
-            </p>
-            <div class="grid grid-cols-2 gap-4">
+            <p class="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">Record Information</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1.5"
-                  >Recorded By</label
-                >
-                <n-input
-                  v-model:value="formData.recorded_by"
-                  placeholder="Name of officer"
-                />
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Recorded By</label>
+                <n-input v-model:value="formData.recorded_by" placeholder="Name of officer" />
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1.5"
-                  >Contact No.</label
-                >
-                <n-input
-                  v-model:value="formData.contact_no"
-                  placeholder="09XXXXXXXXX"
-                />
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Contact No.</label>
+                <n-input v-model:value="formData.contact_no" placeholder="09XXXXXXXXX" />
               </div>
             </div>
           </div>
@@ -1050,17 +894,12 @@ const modalTitle = computed(() => {
 
         <div class="flex justify-end gap-3 px-6 py-4 border-t">
           <NButton @click="handleModalClose" :disabled="saving">Cancel</NButton>
-          <NButton
-            type="primary"
-            @click="handleSave"
-            :loading="saving"
-            :disabled="saving"
-            >Save</NButton
-          >
+          <NButton type="primary" @click="handleSave" :loading="saving" :disabled="saving">Save</NButton>
         </div>
       </div>
     </NModal>
 
+    <!-- CONFIRM MODALS -->
     <ConfirmModal
       :show="showDeleteModal"
       :title="`Delete ${selectedIds.length} record(s)?`"
@@ -1084,9 +923,7 @@ const modalTitle = computed(() => {
           <span class="font-semibold text-green-700">clean record</span> status,
           provided they have no other active blotter records as respondent.
         </p>
-        <p class="text-sm text-gray-500 mt-2">
-          You can re-open this record at any time if needed.
-        </p>
+        <p class="text-sm text-gray-500 mt-2">You can re-open this record at any time if needed.</p>
       </template>
     </ConfirmModal>
 
@@ -1106,5 +943,6 @@ const modalTitle = computed(() => {
         </p>
       </template>
     </ConfirmModal>
+
   </div>
 </template>
