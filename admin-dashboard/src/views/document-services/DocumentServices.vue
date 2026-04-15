@@ -7,7 +7,7 @@
  * The Barangay ID is managed separately in a collapsible panel.
  */
 
-import { ref, onMounted, h, computed, watch } from "vue";
+import { ref, onMounted, onUnmounted, h, computed, watch } from "vue";
 import {
   NDataTable,
   NInput,
@@ -54,6 +54,12 @@ import { getIDTemplatePreviewUrl, } from "@/api/idService";
 import { useSearchSync } from "@/composables/useSearchSync";
 
 const message = useMessage();
+
+// =============================================================================
+// WINDOW WIDTH — reactive, drives mobile layout in render functions
+// =============================================================================
+const windowWidth = ref(window.innerWidth);
+function onResize() { windowWidth.value = window.innerWidth; }
 
 // =============================================================================
 // DOCUMENT TYPES — STATE
@@ -140,7 +146,6 @@ async function fetchServices() {
   try {
     const { data } = await getDocumentTypes();
 
-    // Isolate the ID application type into its own managed state
     const idType = data.find((d) => !!d.is_id_application);
     if (idType) {
       idDocType.value = {
@@ -157,7 +162,6 @@ async function fetchServices() {
       idLocalPrice.value = Number(idType.price) ?? 0;
     }
 
-    // All remaining types populate the main data table
     services.value = data
       .filter((d) => !d.is_id_application)
       .map((d) => ({
@@ -374,24 +378,24 @@ async function toggleAvailability(service) {
 // DOCUMENT TYPES — DELETE
 // =============================================================================
 function requestDelete(id) {
-  deleteTargetId.value = id
-  isBulkDelete.value   = false
-  showDeleteModal.value = true
+  deleteTargetId.value = id;
+  isBulkDelete.value = false;
+  showDeleteModal.value = true;
 }
 
 function bulkDelete() {
-  if (!selectedIds.value.length) return
-  isBulkDelete.value   = true
-  showDeleteModal.value = true
+  if (!selectedIds.value.length) return;
+  isBulkDelete.value = true;
+  showDeleteModal.value = true;
 }
 
 async function confirmDelete() {
   try {
     if (isBulkDelete.value) {
-      await bulkDeleteDocumentTypes(selectedIds.value)
-      services.value = services.value.filter((s) => !selectedIds.value.includes(s.id))
-      message.success(`${selectedIds.value.length} service(s) deleted.`)
-      selectedIds.value = []
+      await bulkDeleteDocumentTypes(selectedIds.value);
+      services.value = services.value.filter((s) => !selectedIds.value.includes(s.id));
+      message.success(`${selectedIds.value.length} service(s) deleted.`);
+      selectedIds.value = [];
     } else {
       await deleteDocumentType(deleteTargetId.value);
       services.value = services.value.filter((s) => s.id !== deleteTargetId.value);
@@ -406,8 +410,8 @@ async function confirmDelete() {
 }
 
 function cancelDelete() {
-  showDeleteModal.value = false
-  deleteTargetId.value  = null
+  showDeleteModal.value = false;
+  deleteTargetId.value = null;
 }
 
 // =============================================================================
@@ -473,8 +477,8 @@ async function saveFields(updatedFields, serviceId) {
 }
 
 function editRequirements(service) {
-  editingReqService.value = service
-  showReqModal.value      = true
+  editingReqService.value = service;
+  showReqModal.value = true;
 }
 
 async function saveRequirements(updatedRequirements, serviceId) {
@@ -501,126 +505,174 @@ function iconBtn({ onClick, icon, colorClass, tooltip }) {
   ]);
 }
 
-const columns = computed(() => [
-  {
-    title: "", key: "select", width: 40,
-    render(row) {
-      return h(NCheckbox, {
-        checked: selectedIds.value.includes(row.id),
-        onUpdateChecked(checked) {
-          if (checked) { if (!selectedIds.value.includes(row.id)) selectedIds.value.push(row.id); }
-          else { selectedIds.value = selectedIds.value.filter((id) => id !== row.id); }
-        },
-      });
+const columns = computed(() => {
+  // Phone only (< 640px): compact 2-row grid. Tablet/desktop: original single row.
+  const isMobile = windowWidth.value < 850;
+
+  return [
+    {
+      title: "", key: "select", width: 40,
+      render(row) {
+        return h(NCheckbox, {
+          checked: selectedIds.value.includes(row.id),
+          onUpdateChecked(checked) {
+            if (checked) { if (!selectedIds.value.includes(row.id)) selectedIds.value.push(row.id); }
+            else { selectedIds.value = selectedIds.value.filter((id) => id !== row.id); }
+          },
+        });
+      },
     },
-  },
-  {
-    title: "Name", key: "request_type_name",
-    render(row) {
-      if (editingId.value === row.id) return h(NInput, { value: row.request_type_name, onUpdateValue(v) { row.request_type_name = v; } });
-      return row.request_type_name;
+    {
+      title: "Name", key: "request_type_name",
+      render(row) {
+        if (editingId.value === row.id) return h(NInput, { value: row.request_type_name, onUpdateValue(v) { row.request_type_name = v; } });
+        return row.request_type_name;
+      },
     },
-  },
-  {
-    title: "Price", key: "price", width: 120,
-    render(row) {
-      if (editingId.value === row.id) return h(NInput, { value: row.price, type: "number", onUpdateValue(v) { row.price = Number(v); } });
-      return `₱${parseFloat(row.price).toFixed(2)}`;
+    {
+      title: "Price", key: "price", width: 120,
+      render(row) {
+        if (editingId.value === row.id) return h(NInput, { value: row.price, type: "number", onUpdateValue(v) { row.price = Number(v); } });
+        return `₱${parseFloat(row.price).toFixed(2)}`;
+      },
     },
-  },
-  {
-    title: "Status", key: "status", width: 140,
-    render(row) {
-      return h("button", {
-        onClick: () => toggleAvailability(row),
-        class: `px-3 py-1 rounded-full text-xs font-medium cursor-pointer transition ${row.available ? "bg-green-100 text-green-800 hover:bg-green-200" : "bg-gray-100 text-gray-800 hover:bg-gray-200"}`,
-      }, row.available ? "Available" : "Not Available");
+    {
+      title: "Status", key: "status", width: 140,
+      render(row) {
+        return h("button", {
+          onClick: () => toggleAvailability(row),
+          class: `px-3 py-1 rounded-full text-xs font-medium cursor-pointer transition ${row.available ? "bg-green-100 text-green-800 hover:bg-green-200" : "bg-gray-100 text-gray-800 hover:bg-gray-200"}`,
+        }, row.available ? "Available" : "Not Available");
+      },
     },
-  },
-  {
-    title: "Actions", key: "actions", width: 280,
-    render(row) {
-      if (editingId.value === row.id) {
-        return h("div", { class: "flex gap-2" }, [
-          h(NButton, { type: "success", size: "small", onClick: () => updateService(row) }, { default: () => "Save" }),
-          h(NButton, { type: "default", size: "small", onClick: () => (editingId.value = null) }, { default: () => "Cancel" }),
-        ]);
-      }
-      return h("div", { class: "flex gap-1 items-center" }, [
-        iconBtn({ onClick: () => (editingId.value = row.id), icon: PencilSquareIcon, colorClass: "text-orange-500 hover:bg-orange-50", tooltip: "Edit" }),
-        iconBtn({ onClick: () => requestDelete(row.id), icon: TrashIcon, colorClass: "text-red-500 hover:bg-red-50", tooltip: "Delete" }),
-        iconBtn({ onClick: () => editFields(row), icon: ListBulletIcon, colorClass: "text-blue-500 hover:bg-blue-50", tooltip: "Fields" }),
-        iconBtn({ onClick: () => editRequirements(row), icon: ClipboardDocumentListIcon, colorClass: "text-purple-500 hover:bg-purple-50", tooltip: "Requirements" }),
-        iconBtn({
-          onClick: () => handleUploadTemplate(row),
-          icon: ArrowUpTrayIcon,
-          colorClass: row.has_template ? "text-yellow-500 hover:bg-yellow-50" : "text-blue-600 hover:bg-blue-100",
-          tooltip: row.has_template ? "Replace Template" : "Upload Template",
-        }),
-        row.has_template ? iconBtn({ onClick: () => handleDownload(row), icon: ArrowDownTrayIcon, colorClass: "text-green-500 hover:bg-green-50", tooltip: "Download Template" }) : null,
-      ].filter(Boolean));
+    {
+      title: "Actions",
+      key: "actions",
+      width: isMobile ? 120 : 280,
+      render(row) {
+        if (editingId.value === row.id) {
+          return h("div", { class: "flex gap-2" }, [
+            h(NButton, { type: "success", size: "small", onClick: () => updateService(row) }, { default: () => "Save" }),
+            h(NButton, { type: "default", size: "small", onClick: () => (editingId.value = null) }, { default: () => "Cancel" }),
+          ]);
+        }
+
+        const btns = [
+          iconBtn({ onClick: () => (editingId.value = row.id), icon: PencilSquareIcon, colorClass: "text-orange-500 hover:bg-orange-50", tooltip: "Edit" }),
+          iconBtn({ onClick: () => requestDelete(row.id), icon: TrashIcon, colorClass: "text-red-500 hover:bg-red-50", tooltip: "Delete" }),
+          iconBtn({ onClick: () => editFields(row), icon: ListBulletIcon, colorClass: "text-blue-500 hover:bg-blue-50", tooltip: "Fields" }),
+          iconBtn({ onClick: () => editRequirements(row), icon: ClipboardDocumentListIcon, colorClass: "text-purple-500 hover:bg-purple-50", tooltip: "Requirements" }),
+          iconBtn({
+            onClick: () => handleUploadTemplate(row),
+            icon: ArrowUpTrayIcon,
+            colorClass: row.has_template ? "text-yellow-500 hover:bg-yellow-50" : "text-blue-600 hover:bg-blue-100",
+            tooltip: row.has_template ? "Replace Template" : "Upload Template",
+          }),
+          row.has_template
+            ? iconBtn({ onClick: () => handleDownload(row), icon: ArrowDownTrayIcon, colorClass: "text-green-500 hover:bg-green-50", tooltip: "Download Template" })
+            : null,
+        ].filter(Boolean);
+
+        // Mobile: 3-per-row grid → natural 2-row layout
+        // Tablet/desktop: original single flex row
+        const containerStyle = isMobile
+          ? { display: "grid", gridTemplateColumns: "repeat(3, auto)", gap: "2px", justifyContent: "start" }
+          : { display: "flex", alignItems: "center", gap: "4px", flexWrap: "nowrap" };
+
+        return h("div", { style: containerStyle }, btns);
+      },
     },
-  },
-]);
+  ];
+});
 
 // =============================================================================
 // LIFECYCLE
 // =============================================================================
-onMounted(fetchServices);
+onMounted(() => {
+  fetchServices();
+  window.addEventListener("resize", onResize);
+});
+
+onUnmounted(() => {
+  window.removeEventListener("resize", onResize);
+});
 </script>
 
 <template>
-  <div class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden animate-fade-in">
+  <div class="flex flex-col p-4 sm:p-6 bg-white rounded-md w-full h-full overflow-hidden animate-fade-in">
 
     <!-- ─ HEADER ─────────────────────────────────────────────── -->
-    <div class="flex mb-6 items-center justify-between">
+    <div class="grid grid-cols-1 md:grid-cols-[1fr_auto] items-center gap-4 mb-6">
 
       <!-- Page Title -->
-      <div>
+      <div class="min-w-0">
         <PageTitle title="Document Services Management" />
         <p class="text-sm text-gray-500 mt-1">
           Create, edit, and configure official barangay document templates and pricing.
         </p>
       </div>
 
-      <div class="flex items-center gap-3">
+      <!-- CONTROLS -->
+      <div class="flex flex-nowrap items-center justify-start md:justify-end gap-3 w-full">
+
         <!-- Search -->
-        <input v-model="searchQuery" type="text" placeholder="Search"
-          class="border border-gray-200 text-gray-700 rounded-md py-2 px-3 w-[250px] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-gray-400" />
-        
-        <!-- Delete -->
-        <div class="relative group inline-block">
-          <button @click="bulkDelete" :disabled="selectionState === 'none'"
-            class="p-2 border border-red-400 rounded-lg transition-colors"
-            :class="selectionState === 'none' ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-50'">
-            <TrashIcon class="w-5 h-5 text-red-500" />
-          </button>
-          <div class="absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded whitespace-nowrap shadow-md z-50">Delete</div>
-        </div>
+        <input
+          v-model="searchQuery"
+          type="text"
+          placeholder="Search"
+          class="border border-gray-200 text-gray-700 rounded-md py-2 px-3 flex-1 md:flex-none md:w-[180px] lg:w-[250px] min-w-0 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-gray-400"
+        />
 
-        <!-- Select -->
-        <div class="relative group inline-block">
-          <div class="flex items-center border rounded-lg overflow-hidden transition-colors"
-            :class="selectionState !== 'none' ? 'border-blue-600' : 'border-gray-400'">
-            <button @click="handleMainSelectToggle" class="p-2 hover:bg-gray-50 flex items-center">
-              <div class="w-5 h-5 border rounded flex items-center justify-center transition-colors"
-                :class="selectionState !== 'none' ? 'bg-blue-600 border-blue-600' : 'border-gray-400'">
-                <div v-if="selectionState === 'partial'" class="w-2 h-0.5 bg-white"></div>
-                <CheckIcon v-if="selectionState === 'all'" class="w-3 h-3 text-white" />
-              </div>
+        <div class="flex items-center gap-2 sm:gap-3">
+
+          <!-- Delete -->
+          <div class="relative group inline-block">
+            <button
+              @click="bulkDelete"
+              :disabled="selectionState === 'none'"
+              class="p-2 border border-red-400 rounded-lg transition-colors"
+              :class="selectionState === 'none' ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-50'"
+            >
+              <TrashIcon class="w-5 h-5 text-red-500" />
             </button>
+            <div class="absolute hidden sm:block -bottom-8 left-1/2 -translate-x-1/2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded whitespace-nowrap shadow-md z-50">
+              Delete
+            </div>
           </div>
-          <div class="absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded whitespace-nowrap shadow-md z-50">Select All</div>
-        </div>
 
-        <!-- Add -->
-        <button @click="showAddForm = true"
-          class="px-4 py-2 bg-blue-600 text-white rounded-md font-medium text-sm hover:bg-blue-700 transition flex items-center gap-2">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-          </svg>
-          Add
-        </button>
+          <!-- Select All -->
+          <div class="relative group inline-block">
+            <div
+              class="flex items-center border rounded-lg overflow-hidden transition-colors"
+              :class="selectionState !== 'none' ? 'border-blue-600' : 'border-gray-400'"
+            >
+              <button @click="handleMainSelectToggle" class="p-2 hover:bg-gray-50 flex items-center">
+                <div
+                  class="w-5 h-5 border rounded flex items-center justify-center transition-colors"
+                  :class="selectionState !== 'none' ? 'bg-blue-600 border-blue-600' : 'border-gray-400'"
+                >
+                  <div v-if="selectionState === 'partial'" class="w-2 h-0.5 bg-white"></div>
+                  <CheckIcon v-if="selectionState === 'all'" class="w-3 h-3 text-white" />
+                </div>
+              </button>
+            </div>
+            <div class="absolute hidden sm:block -bottom-8 left-1/2 -translate-x-1/2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded whitespace-nowrap shadow-md z-50">
+              Select All
+            </div>
+          </div>
+
+          <!-- Add -->
+          <button
+            @click="showAddForm = true"
+            class="px-4 py-2 bg-blue-600 text-white rounded-md font-medium text-sm hover:bg-blue-700 transition flex items-center gap-2 whitespace-nowrap"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            <span class="hidden sm:inline">Add</span>
+          </button>
+
+        </div>
       </div>
     </div>
 
@@ -636,39 +688,43 @@ onMounted(fetchServices);
       <div class="mb-4 rounded-xl border border-indigo-200 bg-indigo-50/60 overflow-hidden">
 
         <!-- Panel toggle header -->
-        <button @click="idPanelOpen = !idPanelOpen"
-          class="w-full flex items-center justify-between px-5 py-4 hover:bg-indigo-50 transition">
-          <div class="flex items-center gap-3">
+        <button
+          @click="idPanelOpen = !idPanelOpen"
+          class="w-full flex items-center justify-between px-4 sm:px-5 py-4 hover:bg-indigo-50 transition"
+        >
+          <div class="flex items-center gap-3 min-w-0">
             <div class="flex items-center justify-center w-9 h-9 rounded-lg bg-indigo-600 text-white flex-shrink-0">
               <IdentificationIcon class="w-5 h-5" />
             </div>
-            <div class="text-left">
+            <div class="text-left min-w-0">
               <div class="flex items-center gap-2">
                 <span class="text-sm font-semibold text-indigo-900">Barangay I.D</span>
               </div>
-              <p class="text-xs text-indigo-500 mt-0.5">Manage your Barangay I.D fields, price and requirements.</p>
+              <p class="text-xs text-indigo-500 mt-0.5 hidden sm:block">Manage your Barangay I.D fields, price and requirements.</p>
             </div>
           </div>
-          <div class="flex items-center gap-3">
-            <span class="text-xs px-2.5 py-1 rounded-full font-medium"
-              :class="idHasTemplate ? 'bg-green-100 text-green-700 border border-green-300' : 'bg-amber-100 text-amber-700 border border-amber-300'">
+          <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+            <span
+              class="text-xs px-2 sm:px-2.5 py-1 rounded-full font-medium hidden sm:inline-flex"
+              :class="idHasTemplate ? 'bg-green-100 text-green-700 border border-green-300' : 'bg-amber-100 text-amber-700 border border-amber-300'"
+            >
               {{ idHasTemplate ? '✓ Template Uploaded' : '⚠ No Template' }}
             </span>
-            <span class="text-xs text-green-700 font-bold">Fee: ₱{{ parseFloat(idLocalPrice).toFixed(2) }}</span>
-            <ChevronDownIcon class="w-4 h-4 text-indigo-400 transition-transform duration-200" :class="idPanelOpen ? 'rotate-180' : ''" />
+            <span class="text-xs text-green-700 font-bold whitespace-nowrap">Fee: ₱{{ parseFloat(idLocalPrice).toFixed(2) }}</span>
+            <ChevronDownIcon class="w-4 h-4 text-indigo-400 transition-transform duration-200 flex-shrink-0" :class="idPanelOpen ? 'rotate-180' : ''" />
           </div>
         </button>
 
         <!-- Panel body -->
         <div v-if="idPanelOpen" class="border-t border-indigo-200 bg-white">
-          <div class="p-5 flex gap-6 items-stretch">
+          <div class="p-4 sm:p-5 flex flex-col gap-4">
 
-            <!-- Col 1: Template -->
-            <div class="flex-1 min-w-0 flex flex-col">
+            <!-- Row 1: Template upload/preview (full width) -->
+            <div class="w-full">
               <template v-if="!idHasTemplate">
-                <NUpload :custom-request="handleIDFileUpload" :show-file-list="false" accept=".docx" :disabled="idUploading" class="flex-1">
-                  <NUploadDragger class="h-full">
-                    <div class="flex flex-col items-center justify-center h-full py-8 gap-2">
+                <NUpload :custom-request="handleIDFileUpload" :show-file-list="false" accept=".docx" :disabled="idUploading" class="w-full">
+                  <NUploadDragger class="w-full">
+                    <div class="flex flex-col items-center justify-center py-8 gap-2">
                       <NSpin v-if="idUploading" />
                       <template v-else>
                         <CloudArrowUpIcon class="w-8 h-8 text-gray-400" />
@@ -680,24 +736,31 @@ onMounted(fetchServices);
                 </NUpload>
               </template>
               <template v-else>
-                <div class="flex items-center gap-4 p-4 bg-gray-50 border border-gray-200 rounded-lg h-full">
+                <div class="flex items-center gap-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
                   <div class="flex items-center justify-center w-14 h-16 bg-white border border-blue-200 rounded-md shadow-sm flex-shrink-0 relative">
                     <DocumentTextIcon class="w-7 h-7 text-blue-400" />
                     <span class="absolute bottom-1 text-[9px] font-bold text-blue-500 tracking-wide uppercase">docx</span>
                   </div>
                   <div class="flex-1 min-w-0">
                     <p class="text-sm font-semibold text-gray-800 truncate">brgy_id_template.docx</p>
-                    <div class="flex items-center gap-2 mt-3">
-                      <button @click="showIdPreviewModal = true"
-                        class="flex items-center gap-1.5 text-xs font-medium text-indigo-600 border border-indigo-300 hover:bg-indigo-50 px-3 py-1.5 rounded-md transition">
+                    <div class="flex flex-wrap items-center gap-2 mt-3">
+                      <button
+                        @click="showIdPreviewModal = true"
+                        class="flex items-center gap-1.5 text-xs font-medium text-indigo-600 border border-indigo-300 hover:bg-indigo-50 px-3 py-1.5 rounded-md transition"
+                      >
                         <EyeIcon class="w-3.5 h-3.5" />Preview
                       </button>
-                      <button @click="handleIDReplaceTemplate" :disabled="idUploading"
-                        class="flex items-center gap-1.5 text-xs font-medium text-gray-600 border border-gray-300 hover:bg-gray-50 px-3 py-1.5 rounded-md transition disabled:opacity-50">
+                      <button
+                        @click="handleIDReplaceTemplate"
+                        :disabled="idUploading"
+                        class="flex items-center gap-1.5 text-xs font-medium text-gray-600 border border-gray-300 hover:bg-gray-50 px-3 py-1.5 rounded-md transition disabled:opacity-50"
+                      >
                         <NSpin v-if="idUploading" :size="12" /><ArrowPathIcon v-else class="w-3.5 h-3.5" />Replace
                       </button>
-                      <button @click="handleIDDownloadTemplate"
-                        class="flex items-center gap-1.5 text-xs font-medium text-green-600 border border-green-300 hover:bg-green-50 px-3 py-1.5 rounded-md transition">
+                      <button
+                        @click="handleIDDownloadTemplate"
+                        class="flex items-center gap-1.5 text-xs font-medium text-green-600 border border-green-300 hover:bg-green-50 px-3 py-1.5 rounded-md transition"
+                      >
                         <ArrowDownTrayIcon class="w-3.5 h-3.5" />Download
                       </button>
                     </div>
@@ -706,41 +769,52 @@ onMounted(fetchServices);
               </template>
             </div>
 
-            <!-- Col 2: Modals -->
-            <div class="flex flex-col gap-3 w-52 flex-shrink-0 justify-center">
-              <button @click="showIdFieldModal = true"
-                class="flex h-full items-center gap-2 text-sm text-blue-600 border border-blue-200 hover:bg-blue-50 px-3 py-2 rounded-lg transition w-full text-left">
+            <!-- Row 2: Fields + Requirements + Price -->
+            <div class="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-3 sm:gap-4 items-stretch">
+
+              <!-- Form Fields -->
+              <button
+                @click="showIdFieldModal = true"
+                class="flex items-center gap-2 text-sm text-blue-600 border border-blue-200 hover:bg-blue-50 px-3 py-3 rounded-lg transition w-full text-left"
+              >
                 <ListBulletIcon class="w-4 h-4 flex-shrink-0" />
                 <span class="flex-1">Form Fields</span>
                 <span class="text-xs bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full font-medium">{{ idDocType?.fields?.length ?? 0 }}</span>
               </button>
-              <button @click="showIdReqModal = true"
-                class="flex h-full items-center gap-2 text-sm text-purple-600 border border-purple-200 hover:bg-purple-50 px-3 py-2 rounded-lg transition w-full text-left">
+
+              <!-- Requirements -->
+              <button
+                @click="showIdReqModal = true"
+                class="flex items-center gap-2 text-sm text-purple-600 border border-purple-200 hover:bg-purple-50 px-3 py-3 rounded-lg transition w-full text-left"
+              >
                 <ClipboardDocumentListIcon class="w-4 h-4 flex-shrink-0" />
                 <span class="flex-1">Requirements</span>
                 <span class="text-xs bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded-full font-medium">{{ idDocType?.requirements?.length ?? 0 }}</span>
               </button>
-            </div>
 
-            <!-- Col 3: Price -->
-            <div class="flex flex-col w-36 flex-shrink-0 justify-center gap-2">
-              <label class="text-xs font-medium text-gray-500 block">Application Fee (₱)</label>
-              <NInput v-model:value="idLocalPrice" type="number" size="small" :min="0" :step="0.01" placeholder="0.00" />
-              <button class="px-3 py-1 border border-blue-600 text-blue-600 rounded-md font-medium text-xs hover:bg-blue-50 transition text-center" @click="idSavePrice">
-                Save
-              </button>
-            </div>
+              <!-- Price + Save -->
+              <div class="flex flex-row sm:flex-col gap-2 items-end sm:items-stretch sm:w-36">
+                <label class="text-xs font-medium text-gray-500 hidden sm:block">Application Fee (₱)</label>
+                <NInput v-model:value="idLocalPrice" type="number" size="small" :min="0" :step="0.01" placeholder="0.00" class="flex-1 sm:flex-none" />
+                <button
+                  class="px-3 py-1.5 border border-blue-600 text-blue-600 rounded-md font-medium text-xs hover:bg-blue-50 transition text-center whitespace-nowrap"
+                  @click="idSavePrice"
+                >
+                  Save Fee
+                </button>
+              </div>
 
+            </div>
           </div>
         </div>
       </div>
 
       <!-- ── REGULAR DOCUMENT TYPES ─────────────────────────────────────── -->
-      <div v-if="showAddForm" class="bg-[#F0F5FF] p-6 mb-3 rounded-lg border border-[#0957FF] relative">
+      <div v-if="showAddForm" class="bg-[#F0F5FF] p-4 sm:p-6 mb-3 rounded-lg border border-[#0957FF] relative">
         <button @click="showAddForm = false" class="absolute top-4 right-4 p-1 hover:bg-gray-200 rounded">
           <XMarkIcon class="w-5 h-5 text-gray-600" />
         </button>
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pr-8 sm:pr-0">
           <div>
             <label class="block text-sm text-gray-600 mb-1">Document Name</label>
             <n-input v-model:value="newService.request_type_name" placeholder="Enter name" />
@@ -753,7 +827,7 @@ onMounted(fetchServices);
             <label class="block text-sm text-gray-600 mb-1">Price (₱)</label>
             <n-input v-model:value="newService.price" type="number" placeholder="0.00" min="0" step="0.01" />
           </div>
-          <div class="flex items-end">
+          <div class="flex items-center sm:items-end pb-1">
             <NCheckbox v-model:checked="newService.available">Available for Residents</NCheckbox>
           </div>
         </div>
@@ -763,10 +837,115 @@ onMounted(fetchServices);
         </div>
       </div>
 
-      <!-- ── DOCUMENT TYPES TABLE ─────────────────────────────────────── -->
-      <div v-if="services.length > 0 || showAddForm" class="overflow-y-auto bg-white rounded-lg border border-gray-200 flex-1">
-        <n-data-table :columns="columns" :data="filteredServices" :bordered="false" />
-      </div>
+      <!-- ── DOCUMENT TYPES TABLE (tablet/desktop) ──────────────────────── -->
+      <template v-if="services.length > 0 || showAddForm">
+        <!-- Table: hidden on mobile -->
+        <div class="hidden md:block overflow-x-auto overflow-y-auto bg-white rounded-lg border border-gray-200 flex-1 min-w-0">
+          <n-data-table
+            :columns="columns"
+            :data="filteredServices"
+            :bordered="false"
+            :scroll-x="640"
+          />
+        </div>
+
+        <!-- Cards: mobile only (< 640px) -->
+        <div class="md:hidden flex flex-col gap-3 overflow-y-auto flex-1">
+          <div
+            v-for="row in filteredServices"
+            :key="row.id"
+            class="bg-white rounded-lg border border-gray-200 p-4 flex flex-col gap-3"
+          >
+            <!-- Card header: checkbox + name + availability pill -->
+            <div class="flex items-start gap-3">
+              <NCheckbox
+                :checked="selectedIds.includes(row.id)"
+                @update:checked="(v) => { if (v) { if (!selectedIds.includes(row.id)) selectedIds.push(row.id); } else { selectedIds = selectedIds.filter(id => id !== row.id); } }"
+                class="mt-0.5 flex-shrink-0"
+              />
+              <div class="flex-1 min-w-0">
+                <!-- Editing: show input -->
+                <n-input
+                  v-if="editingId === row.id"
+                  :value="row.request_type_name"
+                  @update:value="(v) => { row.request_type_name = v; }"
+                  size="small"
+                  class="mb-1"
+                />
+                <p v-else class="text-sm font-semibold text-gray-800 leading-tight">{{ row.request_type_name }}</p>
+              </div>
+              <!-- Availability toggle pill -->
+              <button
+                @click="toggleAvailability(row)"
+                :class="row.available ? 'bg-green-100 text-green-800 hover:bg-green-200' : 'bg-gray-100 text-gray-800 hover:bg-gray-200'"
+                class="px-2.5 py-1 rounded-full text-xs font-medium flex-shrink-0 transition"
+              >
+                {{ row.available ? 'Available' : 'Unavailable' }}
+              </button>
+            </div>
+
+            <!-- Price row -->
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-gray-400 w-10">Price</span>
+              <n-input
+                v-if="editingId === row.id"
+                :value="row.price"
+                type="number"
+                @update:value="(v) => { row.price = Number(v); }"
+                size="small"
+                class="flex-1"
+              />
+              <span v-else class="text-sm font-medium text-gray-700">₱{{ parseFloat(row.price).toFixed(2) }}</span>
+            </div>
+
+            <!-- Action buttons: 3-per-row grid -->
+            <div class="border-t border-gray-100 pt-3">
+              <template v-if="editingId === row.id">
+                <div class="flex gap-2">
+                  <NButton type="success" size="small" @click="updateService(row)" class="flex-1">Save</NButton>
+                  <NButton size="small" @click="editingId = null" class="flex-1">Cancel</NButton>
+                </div>
+              </template>
+              <template v-else>
+                <div class="flex items-center gap-1">
+                  <!-- Edit -->
+                  <button @click="editingId = row.id" class="p-2 text-orange-500 hover:bg-orange-50 rounded transition flex items-center justify-center">
+                    <PencilSquareIcon class="w-5 h-5" />
+                  </button>
+                  <!-- Delete -->
+                  <button @click="requestDelete(row.id)" class="p-2 text-red-500 hover:bg-red-50 rounded transition flex items-center justify-center">
+                    <TrashIcon class="w-5 h-5" />
+                  </button>
+                  <!-- Fields -->
+                  <button @click="editFields(row)" class="p-2 text-blue-500 hover:bg-blue-50 rounded transition flex items-center justify-center">
+                    <ListBulletIcon class="w-5 h-5" />
+                  </button>
+                  <!-- Requirements -->
+                  <button @click="editRequirements(row)" class="p-2 text-purple-500 hover:bg-purple-50 rounded transition flex items-center justify-center">
+                    <ClipboardDocumentListIcon class="w-5 h-5" />
+                  </button>
+                  <!-- Upload/Replace Template -->
+                  <button
+                    @click="handleUploadTemplate(row)"
+                    :class="row.has_template ? 'text-yellow-500 hover:bg-yellow-50' : 'text-blue-600 hover:bg-blue-100'"
+                    class="p-2 rounded transition flex items-center justify-center"
+                  >
+                    <ArrowUpTrayIcon class="w-5 h-5" />
+                  </button>
+                  <!-- Download Template -->
+                  <button
+                    v-if="row.has_template"
+                    @click="handleDownload(row)"
+                    class="p-2 text-green-500 hover:bg-green-50 rounded transition flex items-center justify-center"
+                  >
+                    <ArrowDownTrayIcon class="w-5 h-5" />
+                  </button>
+                </div>
+              </template>
+            </div>
+          </div>
+        </div>
+      </template>
 
       <!-- Empty state -->
       <div v-else class="h-full flex flex-col items-center justify-center flex-1">
@@ -816,24 +995,26 @@ onMounted(fetchServices);
 
   <ConfirmModal
     :show="showDeleteModal"
-    :title="isBulkDelete ? `Delete ${selectedIds.length} service(s)?` : 'Delete this service?'" 
-    confirm-text="Delete" 
-    cancel-text="Cancel" 
-    @confirm="confirmDelete" 
-    @cancel="cancelDelete" 
+    :title="isBulkDelete ? `Delete ${selectedIds.length} service(s)?` : 'Delete this service?'"
+    confirm-text="Delete"
+    cancel-text="Cancel"
+    @confirm="confirmDelete"
+    @cancel="cancelDelete"
   />
 
   <NModal :show="showIdPreviewModal" @update:show="showIdPreviewModal = false" :mask-closable="true">
-    <div class="bg-white rounded-xl shadow-xl flex flex-col overflow-hidden" style="width: 860px; height: 90vh;">
-      <div class="flex items-center justify-between px-5 py-3 border-b bg-gray-50 flex-shrink-0">
-        <div class="flex items-center gap-2">
-          <DocumentTextIcon class="w-4 h-4 text-indigo-500" />
-          <span class="text-sm font-semibold text-gray-700">Template Preview</span>
-          <span class="text-xs text-gray-400">· brgy_id_template.docx</span>
+    <div class="bg-white rounded-xl shadow-xl flex flex-col overflow-hidden" style="width: min(860px, 95vw); height: 90vh;">
+      <div class="flex items-center justify-between px-4 sm:px-5 py-3 border-b bg-gray-50 flex-shrink-0">
+        <div class="flex items-center gap-2 min-w-0">
+          <DocumentTextIcon class="w-4 h-4 text-indigo-500 flex-shrink-0" />
+          <span class="text-sm font-semibold text-gray-700 truncate">Template Preview</span>
+          <span class="text-xs text-gray-400 hidden sm:inline whitespace-nowrap">· brgy_id_template.docx</span>
         </div>
-        <div class="flex items-center gap-2">
-          <button @click="handleIDDownloadTemplate"
-            class="flex items-center gap-1.5 text-xs font-medium text-green-600 border border-green-300 hover:bg-green-50 px-2.5 py-1 rounded-md transition">
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <button
+            @click="handleIDDownloadTemplate"
+            class="flex items-center gap-1.5 text-xs font-medium text-green-600 border border-green-300 hover:bg-green-50 px-2.5 py-1 rounded-md transition"
+          >
             <ArrowDownTrayIcon class="w-3.5 h-3.5" />Download
           </button>
           <button @click="showIdPreviewModal = false" class="p-1 rounded hover:bg-gray-200 transition">
