@@ -229,74 +229,97 @@ const deleteModalMessage = computed(() => {
 </script>
 
 <template>
-  <div class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden">
-    <div class="flex justify-between items-center mb-4">
-      <div>
+  <div class="flex flex-col p-4 sm:p-6 bg-white rounded-md w-full h-full overflow-hidden">
+
+    <!-- HEADER -->
+    <div class="grid grid-cols-1 md:grid-cols-[1fr_auto] items-start gap-4 mb-4">
+
+      <!-- TITLE -->
+      <div class="min-w-0">
         <PageTitle title="Kiosk Announcements" />
         <p class="text-sm text-gray-500 mt-1">
           Create and schedule public notices for the community information kiosks.
         </p>
       </div>
-      
-      <div class="flex items-center gap-3">
+
+      <!-- CONTROLS -->
+      <div class="flex flex-nowrap items-center justify-start md:justify-end gap-3 w-full">
+
+        <!-- SEARCH -->
         <input
           v-model="searchQuery"
           type="text"
           placeholder="Search"
-          class="border border-gray-200 text-gray-700 rounded-md py-2 px-3 w-[250px] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-gray-400"
+          class="border border-gray-200 text-gray-700 rounded-md py-2 px-3 flex-1 md:flex-none md:w-[180px] lg:w-[250px] min-w-0 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-gray-400"
         />
 
-        <button 
-          @click="bulkDelete"
-          :disabled="selectionState === 'none'"
-          :class="[selectionState === 'none' ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-50']"
-          class="p-2 border border-red-400 rounded-lg transition-colors"
-        >
-          <TrashIcon class="w-5 h-5 text-red-500" />
-        </button>
+        <!-- ACTION BUTTONS -->
+        <div class="flex items-center gap-2 sm:gap-3">
 
-        <div class="flex items-center border rounded-lg overflow-hidden"
-          :class="selectionState !== 'none' ? 'border-blue-600' : 'border-gray-400'"
-        >
-          <button 
-            @click="handleMainSelectToggle"
-            class="p-2 hover:bg-gray-50 flex items-center"
-          >
-            <div class="w-5 h-5 border rounded flex items-center justify-center" 
-                 :class="selectionState !== 'none' ? 'bg-blue-600 border-blue-600' : 'border-gray-400'">
-              <div v-if="selectionState === 'partial'" class="w-2 h-0.5 bg-white"></div>
-              <svg v-if="selectionState === 'all'" class="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7" />
-              </svg>
+          <!-- DELETE -->
+          <div class="relative group inline-block">
+            <button
+              @click="bulkDelete"
+              :disabled="selectionState === 'none'"
+              :class="[selectionState === 'none' ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-50']"
+              class="p-2 border border-red-400 rounded-lg transition-colors"
+            >
+              <TrashIcon class="w-5 h-5 text-red-500" />
+            </button>
+            <div class="absolute hidden sm:block -bottom-8 left-1/2 -translate-x-1/2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded whitespace-nowrap shadow-md z-50">
+              Delete
             </div>
-          </button>
-        </div>
+          </div>
 
-        <button
-          @click="startCreate"
-          :disabled="loading || creatingNew"
-          class="px-4 py-2 bg-blue-600 text-white rounded-md font-medium text-sm hover:bg-blue-700 transition flex items-center gap-2"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="h-5 w-5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
+          <!-- SELECT ALL -->
+          <div class="relative group inline-block">
+            <div
+              class="flex items-center border rounded-lg overflow-hidden transition-colors"
+              :class="selectionState !== 'none' ? 'border-blue-600' : 'border-gray-400'"
+            >
+              <button
+                @click="handleMainSelectToggle"
+                class="p-2 hover:bg-gray-50 flex items-center"
+              >
+                <div
+                  class="w-5 h-5 border rounded flex items-center justify-center transition-colors"
+                  :class="selectionState !== 'none' ? 'bg-blue-600 border-blue-600' : 'border-gray-400'"
+                >
+                  <div v-if="selectionState === 'partial'" class="w-2 h-0.5 bg-white"></div>
+                  <svg v-if="selectionState === 'all'" class="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+              </button>
+            </div>
+            <div class="absolute hidden sm:block -bottom-8 left-1/2 -translate-x-1/2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded whitespace-nowrap shadow-md z-50">
+              Select All
+            </div>
+          </div>
+
+          <!-- ADD -->
+          <button
+            @click="startCreate"
+            :disabled="loading || creatingNew"
+            class="px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-md font-medium text-sm hover:bg-blue-700 transition flex items-center gap-2 whitespace-nowrap"
           >
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M12 4v16m8-8H4" />
-          </svg>
-          Add
-        </button>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            <span class="hidden sm:inline">Add</span>
+          </button>
+
+        </div>
       </div>
     </div>
 
+    <!-- LOADING (initial) -->
     <div v-if="loading && !announcements.length" class="flex-1 flex flex-col items-center justify-center gap-4">
       <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
       <p class="text-gray-500 font-medium">Loading announcements...</p>
     </div>
 
+    <!-- CONTENT -->
     <div v-else class="flex-1 overflow-y-auto pr-2 pt-2">
       <div
         v-if="announcements.length || creatingNew"
@@ -334,27 +357,29 @@ const deleteModalMessage = computed(() => {
         />
       </div>
 
+      <!-- EMPTY STATE -->
       <div v-else class="h-full flex flex-col items-center justify-center">
         <NEmpty description="No announcements yet">
           <template #extra>
-            <NButton type="primary" @click="startCreate">
-              Create Announcement
-            </NButton>
+            <NButton type="primary" @click="startCreate">Create Announcement</NButton>
           </template>
         </NEmpty>
       </div>
     </div>
 
-    <div 
-      v-if="loading && announcements.length" 
+    <!-- LOADING OVERLAY (while updating) -->
+    <div
+      v-if="loading && announcements.length"
       class="fixed inset-0 bg-black bg-opacity-10 flex items-center justify-center z-50"
     >
       <div class="bg-white rounded-lg p-4 shadow-xl">
         <NSpin size="large" />
       </div>
     </div>
+
   </div>
 
+  <!-- MODAL -->
   <ConfirmModal
     :show="showDeleteModal"
     :title="deleteModalTitle"
