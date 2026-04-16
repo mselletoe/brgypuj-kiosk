@@ -331,10 +331,10 @@ function formatRelativeTime(isoString) {
 </script>
 
 <template>
-  <div class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden">
+  <div class="flex flex-col p-3 sm:p-4 lg:p-6 bg-white rounded-md w-full h-full overflow-hidden">
 
     <!-- Header -->
-    <div class="flex items-start justify-between mb-6 flex-shrink-0">
+    <div class="flex items-start justify-between mb-4 sm:mb-6 flex-shrink-0">
       <div>
         <PageTitle title="SMS Announcements" />
         <p class="text-sm text-gray-500 mt-1">Send targeted messages to specific resident groups</p>
@@ -344,7 +344,7 @@ function formatRelativeTime(isoString) {
     <!-- Success Banner -->
     <transition name="banner-slide">
       <div v-if="sentSuccess"
-        class="mb-4 flex-shrink-0 bg-green-50 border-l-4 border-green-500 px-5 py-3 rounded-r-xl shadow-sm flex items-center gap-3">
+        class="mb-4 flex-shrink-0 bg-green-50 border-l-4 border-green-500 px-4 sm:px-5 py-3 rounded-r-xl shadow-sm flex items-center gap-3">
         <svg class="w-5 h-5 text-green-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
         </svg>
@@ -358,7 +358,7 @@ function formatRelativeTime(isoString) {
     <!-- Error Banner -->
     <transition name="banner-slide">
       <div v-if="errorMessage"
-        class="mb-4 flex-shrink-0 bg-red-50 border-l-4 border-red-500 px-5 py-3 rounded-r-xl shadow-sm flex items-center justify-between gap-3">
+        class="mb-4 flex-shrink-0 bg-red-50 border-l-4 border-red-500 px-4 sm:px-5 py-3 rounded-r-xl shadow-sm flex items-center justify-between gap-3">
         <div class="flex items-center gap-3">
           <svg class="w-5 h-5 text-red-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
@@ -373,21 +373,21 @@ function formatRelativeTime(isoString) {
       </div>
     </transition>
 
-    <!-- Body -->
-    <div class="flex gap-6 flex-1 min-h-0 overflow-hidden">
+    <!-- Body: stacks vertically on mobile/tablet, side-by-side on desktop -->
+    <div class="flex flex-col lg:flex-row gap-4 sm:gap-6 flex-1 min-h-0 overflow-y-auto lg:overflow-hidden">
 
       <!-- LEFT column -->
-      <div class="flex flex-col gap-6 flex-1 min-w-0 overflow-y-auto pr-1">
+      <div class="flex flex-col gap-4 sm:gap-6 flex-1 min-w-0 lg:overflow-y-auto lg:pr-1">
 
         <!-- Recipients Card -->
-        <div class="bg-white rounded-xl p-8 shadow-sm border border-gray-200 flex-shrink-0">
-          <div class="mb-6 flex items-start justify-between">
+        <div class="bg-white rounded-xl p-4 sm:p-6 lg:p-8 shadow-sm border border-gray-200 flex-shrink-0">
+          <div class="mb-4 sm:mb-6 flex items-start justify-between gap-2">
             <div>
-              <h2 class="text-xl font-bold text-gray-800 tracking-tight">Recipients</h2>
+              <h2 class="text-lg sm:text-xl font-bold text-gray-800 tracking-tight">Recipients</h2>
               <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mt-1">Select who receives this message</p>
             </div>
             <div :class="[
-              'flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[11px] font-bold uppercase tracking-widest transition-all',
+              'flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg border text-[11px] font-bold uppercase tracking-widest transition-all shrink-0',
               recipientCount > 0 ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-gray-50 border-gray-200 text-gray-400'
             ]">
               <svg v-if="isResolvingCount" class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -402,8 +402,8 @@ function formatRelativeTime(isoString) {
             </div>
           </div>
 
-          <!-- Mode tabs -->
-          <div class="flex gap-2 mb-6">
+          <!-- Mode tabs: wrap on mobile -->
+          <div class="flex gap-1.5 sm:gap-2 mb-4 sm:mb-6">
             <button
               v-for="tab in [
                 { id: 'groups',   label: 'Groups'           },
@@ -413,7 +413,7 @@ function formatRelativeTime(isoString) {
               :key="tab.id"
               @click="switchMode(tab.id)"
               :class="[
-                'flex-1 py-1.5 px-3 rounded-lg text-[11px] font-bold uppercase tracking-widest border transition-all',
+                'flex-1 py-1.5 px-1.5 sm:px-3 rounded-lg text-[10px] sm:text-[11px] font-bold uppercase tracking-widest border transition-all',
                 recipientMode === tab.id
                   ? 'bg-blue-600 text-white border-blue-600'
                   : 'text-gray-500 border-gray-200 bg-gray-50 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-700'
@@ -421,7 +421,7 @@ function formatRelativeTime(isoString) {
             >{{ tab.label }}</button>
           </div>
 
-          <!-- Groups grid -->
+          <!-- Groups grid: 1 col on mobile, 2 col on sm+ -->
           <div v-if="recipientMode === 'groups'">
             <div class="flex items-center justify-between mb-3 h-5">
               <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest">Resident Groups</p>
@@ -430,12 +430,12 @@ function formatRelativeTime(isoString) {
                 Clear
               </button>
             </div>
-            <div class="grid grid-cols-2 gap-2">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <button
                 v-for="g in groups" :key="g.id"
                 @click="toggleGroup(g.id)"
                 :class="[
-                  'relative overflow-hidden flex items-center justify-between p-4 rounded-xl border-2 text-left transition-all group',
+                  'relative overflow-hidden flex items-center justify-between p-3 sm:p-4 rounded-xl border-2 text-left transition-all group',
                   selectedGroups.includes(g.id)
                     ? groupColorMap[g.color].border + ' ' + groupColorMap[g.color].bg
                     : 'border-gray-100 bg-white hover:bg-gray-50'
@@ -458,7 +458,7 @@ function formatRelativeTime(isoString) {
             </div>
           </div>
 
-          <!-- Puroks grid -->
+          <!-- Puroks grid: 1 col on mobile, 2 col on sm+ -->
           <div v-if="recipientMode === 'puroks'">
             <div class="flex items-center justify-between mb-3 h-5">
               <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest">Select Puroks</p>
@@ -467,12 +467,12 @@ function formatRelativeTime(isoString) {
                 Clear
               </button>
             </div>
-            <div class="grid grid-cols-2 gap-2">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <button
                 v-for="p in puroks" :key="p.id"
                 @click="togglePurok(p.id)"
                 :class="[
-                  'relative overflow-hidden flex items-center justify-between p-4 rounded-xl border-2 text-left transition-all group',
+                  'relative overflow-hidden flex items-center justify-between p-3 sm:p-4 rounded-xl border-2 text-left transition-all group',
                   selectedPuroks.includes(p.id)
                     ? purokColorList[p.color].border + ' ' + purokColorList[p.color].bg
                     : 'border-gray-100 bg-white hover:border-gray-200'
@@ -514,17 +514,17 @@ function formatRelativeTime(isoString) {
         </div>
 
         <!-- Compose Card -->
-        <div class="bg-white rounded-xl p-8 shadow-sm border border-gray-200 flex-shrink-0">
-          <div class="mb-6 flex items-start justify-between">
+        <div class="bg-white rounded-xl p-4 sm:p-6 lg:p-8 shadow-sm border border-gray-200 flex-shrink-0">
+          <div class="mb-4 sm:mb-6 flex items-start justify-between gap-2">
             <div>
-              <h2 class="text-xl font-bold text-gray-800 tracking-tight">Compose Message</h2>
+              <h2 class="text-lg sm:text-xl font-bold text-gray-800 tracking-tight">Compose Message</h2>
               <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mt-1">Write your announcement</p>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 shrink-0">
               <span :class="['text-[11px] font-bold uppercase tracking-widest', charCount > 480 ? 'text-red-500' : 'text-gray-400']">
                 {{ charCount }}/500
               </span>
-              <span class="text-[11px] font-bold text-gray-500 uppercase tracking-widest bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5">
+              <span class="text-[11px] font-bold text-gray-500 uppercase tracking-widest bg-gray-50 border border-gray-200 rounded-lg px-2 sm:px-3 py-1.5">
                 {{ smsPages }} SMS page{{ smsPages > 1 ? 's' : '' }}
               </span>
             </div>
@@ -535,7 +535,7 @@ function formatRelativeTime(isoString) {
             placeholder="Type your announcement message here..."
             rows="7"
             maxlength="500"
-            class="w-full border border-gray-200 rounded-xl p-4 text-sm text-gray-700 resize-none focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-gray-400 bg-gray-50 leading-relaxed"
+            class="w-full border border-gray-200 rounded-xl p-3 sm:p-4 text-sm text-gray-700 resize-none focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-gray-400 bg-gray-50 leading-relaxed"
           ></textarea>
 
           <div class="mt-3 h-1 bg-gray-100 rounded-full overflow-hidden">
@@ -552,7 +552,7 @@ function formatRelativeTime(isoString) {
 
           <!-- Progress panel (visible while sending) -->
           <transition name="banner-slide">
-            <div v-if="isSending" class="bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex flex-col gap-3">
+            <div v-if="isSending" class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 sm:p-5 flex flex-col gap-3">
 
               <!-- Header row -->
               <div class="flex items-center justify-between">
@@ -620,16 +620,16 @@ function formatRelativeTime(isoString) {
 
       </div>
 
-      <!-- RIGHT sidebar -->
-      <div class="w-72 shrink-0 flex flex-col gap-6 overflow-y-auto">
+      <!-- RIGHT sidebar: full-width on mobile/tablet, fixed-width column on desktop -->
+      <div class="w-full lg:w-72 lg:shrink-0 flex flex-col sm:flex-row lg:flex-col gap-4 sm:gap-6 lg:overflow-y-auto">
 
         <!-- Templates Card -->
-        <div class="bg-white rounded-xl p-8 shadow-sm border border-gray-200">
-          <div class="mb-6">
-            <h2 class="text-xl font-bold text-gray-800 tracking-tight">Templates</h2>
+        <div class="bg-white rounded-xl p-4 sm:p-6 lg:p-8 shadow-sm border border-gray-200 flex-1 lg:flex-none">
+          <div class="mb-4 sm:mb-6">
+            <h2 class="text-lg sm:text-xl font-bold text-gray-800 tracking-tight">Templates</h2>
             <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mt-1">Quick message starters</p>
           </div>
-          <div class="space-y-2">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2">
             <button
               v-for="t in templates" :key="t.label"
               @click="applyTemplate(t.text)"
@@ -642,9 +642,9 @@ function formatRelativeTime(isoString) {
         </div>
 
         <!-- History Card -->
-        <div class="bg-white rounded-xl p-8 shadow-sm border border-gray-200">
-          <div class="mb-6">
-            <h2 class="text-xl font-bold text-gray-800 tracking-tight">Recent Sends</h2>
+        <div class="bg-white rounded-xl p-4 sm:p-6 lg:p-8 shadow-sm border border-gray-200 flex-1 lg:flex-none">
+          <div class="mb-4 sm:mb-6">
+            <h2 class="text-lg sm:text-xl font-bold text-gray-800 tracking-tight">Recent Sends</h2>
             <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mt-1">Send History</p>
           </div>
 
