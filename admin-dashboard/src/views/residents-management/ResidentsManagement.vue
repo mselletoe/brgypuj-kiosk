@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, h, watch, onMounted } from "vue";
+import { ref, computed, h, watch, onMounted, onUnmounted } from "vue";
 import {
   NDataTable,
   NInput,
@@ -34,6 +34,12 @@ const currentResident = ref(null);
 const modalMode = ref("add");
 const showSingleDeleteModal = ref(false);
 const pendingDeleteId = ref(null);
+
+// =============================================================================
+// WINDOW WIDTH — reactive, drives mobile layout
+// =============================================================================
+const windowWidth = ref(window.innerWidth);
+function onResize() { windowWidth.value = window.innerWidth; }
 
 const filterState = ref({
   gender: null,
@@ -85,6 +91,7 @@ async function loadResidents() {
 
 onMounted(async () => {
   loadResidents();
+  window.addEventListener("resize", onResize);
   try {
     const data = await fetchPuroks();
     purokOptions.value = [
@@ -94,6 +101,10 @@ onMounted(async () => {
   } catch {
     // silently fail — filter will still work without puroks
   }
+});
+
+onUnmounted(() => {
+  window.removeEventListener("resize", onResize);
 });
 
 const filteredResidents = computed(() => {
@@ -214,6 +225,9 @@ async function confirmSingleDelete() {
   }
 }
 
+// =============================================================================
+// TABLE COLUMNS (desktop/tablet only)
+// =============================================================================
 const columns = computed(() => [
   {
     title: "",
@@ -276,7 +290,7 @@ const columns = computed(() => [
   {
     title: "Current Address",
     key: "current_address",
-    minWidth: 250,
+    minWidth: 200,
     render(row) {
       return row.current_address || "N/A";
     },
@@ -284,7 +298,7 @@ const columns = computed(() => [
   {
     title: "Actions",
     key: "actions",
-    width: 130,
+    width: 120,
     render(row) {
       return h("div", { class: "flex gap-2 items-center" }, [
         h(
@@ -307,208 +321,230 @@ const columns = computed(() => [
 </script>
 
 <template>
-  <div
-    class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden"
-  >
-    <div class="flex mb-6 items-center justify-between">
-      <div>
+  <div class="flex flex-col p-4 sm:p-6 bg-white rounded-md w-full h-full overflow-hidden">
+
+    <!-- HEADER -->
+    <div class="grid grid-cols-1 md:grid-cols-[1fr_auto] items-center gap-4 mb-4">
+
+      <!-- TITLE -->
+      <div class="min-w-0">
         <PageTitle title="Residents Information Management" />
         <p class="text-sm text-gray-500 mt-1">Manage Residents Information</p>
       </div>
 
-      <div class="flex items-center gap-3">
+      <!-- CONTROLS -->
+      <div class="flex flex-nowrap items-center justify-start md:justify-end gap-3 w-full">
+
+        <!-- SEARCH -->
         <input
           v-model="searchQuery"
           type="text"
           placeholder="Search"
-          class="border border-gray-200 text-gray-700 rounded-md py-2 px-3 w-[250px] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-gray-400"
+          class="border border-gray-200 text-gray-700 rounded-md py-2 px-3 flex-1 md:flex-none md:w-[180px] lg:w-[250px] min-w-0 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-gray-400"
         />
 
-        <!-- Filter Popover -->
-        <NPopover
-          v-model:show="showFilterPopover"
-          trigger="click"
-          placement="bottom-end"
-          :show-arrow="false"
-          style="padding: 0"
-        >
-          <template #trigger>
+        <div class="flex items-center gap-2 sm:gap-3">
+
+          <!-- FILTER -->
+          <NPopover
+            v-model:show="showFilterPopover"
+            trigger="click"
+            placement="bottom-end"
+            :show-arrow="false"
+            style="padding: 0"
+          >
+            <template #trigger>
+              <button
+                :class="[
+                  'flex items-center px-3 py-2 border rounded-lg text-sm font-medium transition-colors',
+                  hasActiveFilters
+                    ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'
+                    : 'border-gray-300 text-gray-700 hover:bg-gray-50',
+                ]"
+              >
+                <FunnelIcon
+                  class="w-5 h-5 sm:mr-2"
+                  :class="hasActiveFilters ? 'text-white' : 'text-gray-500'"
+                />
+                <span class="hidden sm:inline">Filter</span>
+              </button>
+            </template>
+
+            <div class="w-[270px] bg-white rounded-lg overflow-hidden flex flex-col">
+              <div class="p-4 border-b border-gray-200">
+                <h3 class="text-[16px] font-semibold text-gray-800">Filter Residents</h3>
+              </div>
+              <div class="px-6 py-4 space-y-4 flex-1">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Gender</label>
+                  <NSelect v-model:value="filterState.gender" :options="genderOptions" placeholder="All Genders" />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Purok</label>
+                  <NSelect v-model:value="filterState.purokId" :options="purokOptions" placeholder="All Puroks" />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">RFID Status</label>
+                  <NSelect v-model:value="filterState.rfidStatus" :options="rfidStatusOptions" placeholder="All Statuses" />
+                </div>
+              </div>
+              <div class="flex justify-end space-x-2 p-4 border-t border-gray-200">
+                <NButton @click="handleFilterClear" secondary>Clear</NButton>
+              </div>
+            </div>
+          </NPopover>
+
+          <!-- DELETE -->
+          <div class="relative group inline-block">
             <button
+              @click="requestBulkDelete"
+              :disabled="selectionState === 'none'"
               :class="[
-                'flex items-center px-4 py-2 border rounded-lg text-sm font-medium transition-colors',
-                hasActiveFilters
-                  ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'
-                  : 'border-gray-300 text-gray-700 hover:bg-gray-50',
+                selectionState === 'none'
+                  ? 'opacity-50 cursor-not-allowed'
+                  : 'hover:bg-red-50 cursor-pointer',
               ]"
+              class="p-2 border border-red-400 rounded-lg transition-colors"
             >
-              <FunnelIcon
-                class="w-5 h-5 mr-2"
-                :class="hasActiveFilters ? 'text-white' : 'text-gray-500'"
-              />
-              Filter
+              <TrashIcon class="w-5 h-5 text-red-500" />
             </button>
-          </template>
-
-          <div
-            class="w-[270px] bg-white rounded-lg overflow-hidden flex flex-col"
-          >
-            <div class="p-4 border-b border-gray-200">
-              <h3 class="text-[16px] font-semibold text-gray-800">
-                Filter Residents
-              </h3>
+            <div class="absolute hidden sm:block -bottom-8 left-1/2 -translate-x-1/2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded whitespace-nowrap shadow-md z-50">
+              Delete
             </div>
+          </div>
 
-            <div class="px-6 py-4 space-y-4 flex-1">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2"
-                  >Gender</label
-                >
-                <NSelect
-                  v-model:value="filterState.gender"
-                  :options="genderOptions"
-                  placeholder="All Genders"
-                />
-              </div>
-
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2"
-                  >Purok</label
-                >
-                <NSelect
-                  v-model:value="filterState.purokId"
-                  :options="purokOptions"
-                  placeholder="All Puroks"
-                />
-              </div>
-
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2"
-                  >RFID Status</label
-                >
-                <NSelect
-                  v-model:value="filterState.rfidStatus"
-                  :options="rfidStatusOptions"
-                  placeholder="All Statuses"
-                />
-              </div>
-            </div>
-
+          <!-- SELECT ALL -->
+          <div class="relative group inline-block">
             <div
-              class="flex justify-end space-x-2 p-4 border-t border-gray-200"
+              class="flex items-center border rounded-lg"
+              :class="selectionState !== 'none' ? 'border-blue-600' : 'border-gray-400'"
             >
-              <NButton @click="handleFilterClear" secondary>Clear</NButton>
-            </div>
-          </div>
-        </NPopover>
-
-        <!-- Delete -->
-        <div class="relative group inline-block">
-          <button
-            @click="requestBulkDelete"
-            :disabled="selectionState === 'none'"
-            class="p-2 border border-red-400 rounded-lg transition-colors"
-            :class="
-              selectionState === 'none'
-                ? 'opacity-50 cursor-not-allowed'
-                : 'hover:bg-red-50'
-            "
-          >
-            <TrashIcon class="w-5 h-5 text-red-500" />
-          </button>
-          <div
-            class="absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 ease-in-out bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded whitespace-nowrap shadow-md z-50"
-          >
-            Delete
-          </div>
-        </div>
-
-        <!-- Select All -->
-        <div class="relative group inline-block">
-          <div
-            class="flex items-center border rounded-lg overflow-hidden transition-colors"
-            :class="
-              selectionState !== 'none' ? 'border-blue-600' : 'border-gray-400'
-            "
-          >
-            <button
-              @click="handleMainSelectToggle"
-              class="p-2 hover:bg-gray-50 flex items-center"
-            >
-              <div
-                class="w-5 h-5 border rounded flex items-center justify-center transition-colors"
-                :class="
-                  selectionState !== 'none'
-                    ? 'bg-blue-600 border-blue-600'
-                    : 'border-gray-400'
-                "
+              <button
+                @click="handleMainSelectToggle"
+                class="p-2 hover:bg-gray-50 rounded-lg flex items-center"
               >
                 <div
-                  v-if="selectionState === 'partial'"
-                  class="w-2 h-0.5 bg-white"
-                ></div>
-                <CheckIcon
-                  v-if="selectionState === 'all'"
-                  class="w-3 h-3 text-white"
-                />
-              </div>
-            </button>
+                  class="w-5 h-5 border rounded flex items-center justify-center"
+                  :class="selectionState !== 'none' ? 'bg-blue-600 border-blue-600' : 'border-gray-400'"
+                >
+                  <div v-if="selectionState === 'partial'" class="w-2 h-0.5 bg-white"></div>
+                  <CheckIcon v-if="selectionState === 'all'" class="w-3 h-3 text-white" />
+                </div>
+              </button>
+            </div>
+            <div class="absolute hidden sm:block -bottom-8 left-1/2 -translate-x-1/2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded whitespace-nowrap shadow-md z-50">
+              Select All
+            </div>
           </div>
-          <div
-            class="absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 ease-in-out bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded whitespace-nowrap shadow-md z-50"
-          >
-            Select All
-          </div>
-        </div>
 
-        <button
-          @click="openAddModal"
-          class="px-4 py-2 bg-blue-600 text-white rounded-md font-medium text-sm hover:bg-blue-700 transition flex items-center gap-2"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="h-5 w-5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
+          <!-- REGISTER -->
+          <button
+            @click="openAddModal"
+            class="flex items-center gap-2 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-md font-medium text-sm hover:bg-blue-700 transition whitespace-nowrap"
           >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-            />
-          </svg>
-          Register
-        </button>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+            <span class="hidden sm:inline">Register</span>
+          </button>
+
+        </div>
       </div>
     </div>
 
-    <div
-      v-if="loading"
-      class="flex-1 flex flex-col items-center justify-center gap-4"
-    >
-      <div
-        class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"
-      ></div>
+    <!-- LOADING -->
+    <div v-if="loading" class="flex-1 flex flex-col items-center justify-center gap-4">
+      <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
       <p class="text-gray-500 font-medium">Loading residents...</p>
     </div>
 
     <template v-else>
-      <div
-        v-if="residents.length > 0"
-        class="flex-1 overflow-y-auto bg-white rounded-lg border border-gray-200"
-      >
-        <n-data-table
-          :columns="columns"
-          :data="filteredResidents"
-          :bordered="false"
-        />
-      </div>
 
-      <div
-        v-else
-        class="h-full flex flex-col items-center justify-center flex-1"
-      >
+      <template v-if="residents.length > 0">
+
+        <!-- TABLE — tablet/desktop (md+) -->
+        <div class="hidden min-[950px]:block overflow-x-auto overflow-y-auto bg-white rounded-lg border border-gray-200 flex-1 min-w-0">
+          <n-data-table
+            :columns="columns"
+            :data="filteredResidents"
+            :bordered="false"
+            :scroll-x="640"
+          />
+        </div>
+
+        <!-- CARDS — mobile only -->
+        <div class="min-[950px]:hidden flex flex-col gap-3 overflow-y-auto flex-1">
+          <div
+            v-for="(row, index) in filteredResidents"
+            :key="row.id"
+            class="bg-white rounded-lg border border-gray-200 p-4 flex flex-col gap-3"
+          >
+            <!-- Card header: checkbox + index + name -->
+            <div class="flex items-start gap-3">
+              <NCheckbox
+                :checked="selectedIds.includes(row.id)"
+                @update:checked="(v) => {
+                  if (v) { if (!selectedIds.includes(row.id)) selectedIds.push(row.id); }
+                  else { selectedIds = selectedIds.filter(id => id !== row.id); }
+                }"
+                class="mt-0.5 flex-shrink-0"
+              />
+              <div class="flex-1 min-w-0">
+                <p class="text-xs text-gray-400 mb-0.5">#{{ index + 1 }}</p>
+                <p class="text-sm font-semibold text-gray-800 leading-tight">{{ row.full_name }}</p>
+              </div>
+              <!-- RFID badge -->
+              <span
+                v-if="row.rfid_no && row.rfid_no !== 'Inactive'"
+                class="text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full flex-shrink-0"
+              >
+                {{ row.rfid_no }}
+              </span>
+              <span
+                v-else-if="row.rfid_no === 'Inactive'"
+                class="text-xs font-medium text-red-700 bg-red-100 px-2 py-0.5 rounded-full flex-shrink-0"
+              >
+                Inactive
+              </span>
+              <span v-else class="text-xs text-gray-400 flex-shrink-0">No RFID</span>
+            </div>
+
+            <!-- Details rows -->
+            <div class="flex flex-col gap-1.5 text-sm">
+              <div class="flex gap-2">
+                <span class="text-gray-400 w-24 flex-shrink-0">Phone</span>
+                <span class="text-gray-700">{{ row.phone_number || 'N/A' }}</span>
+              </div>
+              <div class="flex gap-2">
+                <span class="text-gray-400 w-24 flex-shrink-0">Address</span>
+                <span class="text-gray-700 break-words min-w-0">{{ row.current_address || 'N/A' }}</span>
+              </div>
+            </div>
+
+            <!-- Action buttons -->
+            <div class="border-t border-gray-100 pt-3 flex items-center gap-2">
+              <NButton
+                type="info"
+                size="small"
+                @click="openViewModal(row)"
+                class="flex-1"
+              >
+                View
+              </NButton>
+              <button
+                @click="handleDeleteSingle(row.id)"
+                class="p-1.5 text-red-500 hover:bg-red-50 rounded transition"
+              >
+                <TrashIcon class="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </template>
+
+      <!-- EMPTY STATE -->
+      <div v-else class="h-full flex flex-col items-center justify-center flex-1">
         <NEmpty description="No residents registered yet">
           <template #extra>
             <NButton type="primary" @click="openAddModal">
@@ -517,6 +553,7 @@ const columns = computed(() => [
           </template>
         </NEmpty>
       </div>
+
     </template>
 
     <ResidentModal
@@ -543,10 +580,7 @@ const columns = computed(() => [
       confirm-text="Delete"
       cancel-text="Cancel"
       @confirm="confirmSingleDelete"
-      @cancel="
-        showSingleDeleteModal = false;
-        pendingDeleteId = null;
-      "
+      @cancel="showSingleDeleteModal = false; pendingDeleteId = null;"
     />
   </div>
 </template>
