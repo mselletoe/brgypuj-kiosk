@@ -147,7 +147,7 @@ const handleSelect = (key) => {
                     transition-all duration-300 ease-in-out
                     bg-[#013C6D] text-[#E5F5FF] text-xs px-2 py-1 rounded
                     whitespace-nowrap shadow-md z-50">
-          Help and Support
+          System Guide
         </div>
       </div>
 
