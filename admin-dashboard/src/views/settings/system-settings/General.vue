@@ -23,9 +23,8 @@ const uploadingLogo = ref(false);
 const brgyName     = ref("");
 const brgySubtitle = ref("");
 const logoUrl      = ref(null);
-let   logoBlobUrl  = null;   // held separately so we can revoke it
+let   logoBlobUrl  = null;
 
-// ── Load ──────────────────────────────────────────────────────────────────────
 onMounted(async () => {
   const config = await getSystemConfig();
   if (config) {
@@ -44,7 +43,6 @@ onUnmounted(() => {
   if (logoBlobUrl) URL.revokeObjectURL(logoBlobUrl);
 });
 
-// ── Save Info ─────────────────────────────────────────────────────────────────
 const saveInfo = async () => {
   if (!brgyName.value.trim()) {
     message.warning("Barangay name cannot be empty.");
@@ -64,7 +62,6 @@ const saveInfo = async () => {
   }
 };
 
-// ── Logo Upload ───────────────────────────────────────────────────────────────
 const handleUploadLogo = () => {
   const input = document.createElement("input");
   input.type   = "file";
@@ -86,7 +83,6 @@ const handleUploadLogo = () => {
     uploadingLogo.value = true;
     try {
       await uploadBrgyLogo(file);
-      // Build a local blob URL immediately — no round-trip needed
       if (logoBlobUrl) URL.revokeObjectURL(logoBlobUrl);
       logoBlobUrl   = URL.createObjectURL(file);
       logoUrl.value = logoBlobUrl;
@@ -115,7 +111,6 @@ const handleRemoveLogo = async () => {
   }
 };
 
-// Derive initials for the avatar fallback
 const initials = () => {
   const parts = brgyName.value.trim().split(/\s+/).filter(Boolean);
   if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();

@@ -7,7 +7,7 @@ class TransactionHistory(Base):
     __tablename__ = "transaction_history"
 
     id = Column(Integer, primary_key=True)
-    transaction_type = Column(                                          # ← ADD THIS
+    transaction_type = Column(                                
         String(20),
         CheckConstraint("transaction_type IN ('document', 'equipment', 'rfid')"),
         nullable=False,

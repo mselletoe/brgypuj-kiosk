@@ -1,11 +1,4 @@
 <script setup>
-/**
- * @file SecuritySettings.vue
- * @description Security settings tab — wired to backend via PATCH /admin/settings.
- *
- * auto_logout_duration is stored in seconds on the backend.
- * The UI splits it into minutes + seconds inputs and converts on save/load.
- */
 import { ref, computed, onMounted } from 'vue'
 import { NButton, NSwitch, NSpin, useMessage } from 'naive-ui'
 import { getSystemConfig, updateSystemConfig } from '@/api/systemConfigService'
@@ -14,32 +7,25 @@ const message = useMessage()
 const loading = ref(true)
 const saving  = ref(false)
 
-// ── RFID Expiration ───────────────────────────────────────────────────────────
-// UI works in months; backend stores days. Conversion happens on load & save.
-const rfidExpirationMonths = ref(12)   // displayed in UI (months)
-const rfidReminderDays     = ref(30)   // days before expiry to notify resident
+const rfidExpirationMonths = ref(12) 
+const rfidReminderDays     = ref(30)
 
-// ── Auto-Logout (stored as seconds in DB; UI splits into mins + secs) ─────────
 const autoLogoutEnabled = ref(true)
 const autoLogoutMins    = ref(30)
 const autoLogoutSecs    = ref(0)
 
-// Converts the two UI fields → single seconds value for the API
 const autoLogoutDuration = computed(() =>
   autoLogoutMins.value * 60 + autoLogoutSecs.value
 )
 
-// ── Failed Login Lockout ──────────────────────────────────────────────────────
 const lockoutEnabled    = ref(true)
 const maxFailedAttempts = ref(5)
 const lockoutMinutes    = ref(15)
 
-// ── Load from backend ─────────────────────────────────────────────────────────
 onMounted(async () => {
   try {
     const config = await getSystemConfig()
 
-    // Backend stores days; UI shows months — convert on load
     const expiryDays             = config.rfid_expiry_days    ?? 365
     rfidExpirationMonths.value   = Math.round(expiryDays / 30)
     rfidReminderDays.value       = config.rfid_reminder_days  ?? 30
@@ -47,7 +33,6 @@ onMounted(async () => {
     lockoutMinutes.value    = config.lockout_minutes     ?? 15
     lockoutEnabled.value    = maxFailedAttempts.value > 0
 
-    // Split stored seconds back into mins + secs for the UI
     const totalSecs      = config.auto_logout_duration ?? 1800
     autoLogoutEnabled.value = totalSecs > 0
     autoLogoutMins.value = Math.floor(totalSecs / 60)
@@ -59,9 +44,7 @@ onMounted(async () => {
   }
 })
 
-// ── Save ──────────────────────────────────────────────────────────────────────
 const saveSettings = async () => {
-  // Validate
   if (autoLogoutEnabled.value && autoLogoutDuration.value < 10) {
     message.warning('Auto-logout duration must be at least 10 seconds.')
     return
@@ -74,7 +57,7 @@ const saveSettings = async () => {
   saving.value = true
   try {
     await updateSystemConfig({
-      rfid_expiry_days:     rfidExpirationMonths.value * 30,  // convert months → days
+      rfid_expiry_days:     rfidExpirationMonths.value * 30,
       rfid_reminder_days:   rfidReminderDays.value,
       auto_logout_duration: autoLogoutEnabled.value ? autoLogoutDuration.value : 0,
       max_failed_attempts:  lockoutEnabled.value ? maxFailedAttempts.value : 0,
@@ -88,7 +71,6 @@ const saveSettings = async () => {
   }
 }
 
-// ── Reset ─────────────────────────────────────────────────────────────────────
 const resetDefaults = () => {
   rfidExpirationMonths.value  = 12
   rfidReminderDays.value      = 30
@@ -101,7 +83,6 @@ const resetDefaults = () => {
   message.info('Reset to defaults — click Save to apply.')
 }
 
-// ── Computed preview strings ──────────────────────────────────────────────────
 const autoLogoutPreview = computed(() => {
   const m = autoLogoutMins.value
   const s = autoLogoutSecs.value
@@ -110,8 +91,6 @@ const autoLogoutPreview = computed(() => {
   if (s === 0) return `${m} min`
   return `${m} min ${s}s`
 })
-
-
 </script>
 
 <template>

@@ -4,11 +4,6 @@ from app.db.base import Base
 
 
 class SMSLog(Base):
-    """
-    Persists every SMS blast so the frontend can show 'Recent Sends'.
-    The actual delivery to the SMS gateway is handled in the service layer;
-    this table is purely an audit / history log.
-    """
     __tablename__ = "sms_logs"
 
     id         = Column(Integer, primary_key=True)

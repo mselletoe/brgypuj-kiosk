@@ -1,10 +1,4 @@
 <script setup>
-/**
- * @file AccountSettings.vue
- * @description Admin account settings page — Profile and Security tabs wired to the backend.
- * Superadmins also see a "Linked Resident" section to relink their account to any resident.
- */
-
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import {
   NTabs,
@@ -33,7 +27,6 @@ import { useAdminAuthStore } from '@/stores/auth'
 const message = useMessage()
 const auth = useAdminAuthStore()
 
-// ── Confirm Modal ─────────────────────────────────────────────────────────────
 const showConfirmModal = ref(false)
 const confirmTitle     = ref('Are you sure?')
 const confirmAction    = ref(null)
@@ -53,7 +46,6 @@ const handleCancel = () => {
   confirmAction.value    = null
 }
 
-// ── UI State ──────────────────────────────────────────────────────────────────
 const activeTab      = ref('Profile')
 const loadingProfile = ref(false)
 const savingProfile  = ref(false)
@@ -61,24 +53,20 @@ const savingPassword = ref(false)
 const uploadingPhoto = ref(false)
 const relinking      = ref(false)
 
-// ── Profile ───────────────────────────────────────────────────────────────────
 const fullName    = ref('')
 const profileData = ref({ username: '', position: '' })
 const photoUrl    = ref(null)
 let   photoBlobUrl = null
 
-// ── Linked Resident (superadmin only) ─────────────────────────────────────────
-const residentOptions    = ref([])   // [{ label: 'First Last', value: id }]
+const residentOptions    = ref([]) 
 const selectedResidentId = ref(null)
 
-// ── Security ──────────────────────────────────────────────────────────────────
 const securityData = ref({
   currentPassword: '',
   newPassword:     '',
   confirmPassword: '',
 })
 
-// ── Password strength ─────────────────────────────────────────────────────────
 const passwordStrength = computed(() => {
   const pw = securityData.value.newPassword
   if (!pw) return { label: '', color: '', width: '0%' }
@@ -96,7 +84,6 @@ const passwordStrength = computed(() => {
   return levels[score - 1] ?? levels[0]
 })
 
-// ── Lifecycle ─────────────────────────────────────────────────────────────────
 onMounted(async () => {
   loadingProfile.value = true
   try {
@@ -117,10 +104,9 @@ onMounted(async () => {
 
     if (auth.isSuperAdmin) {
       residentOptions.value = residents.map(r => ({
-        label: r.full_name,   // ResidentDropdownItem shape from the backend
+        label: r.full_name, 
         value: r.id,
       }))
-      // Pre-select the currently linked resident
       selectedResidentId.value = data.resident_id ?? null
     }
   } catch {
@@ -134,7 +120,6 @@ onUnmounted(() => {
   if (photoBlobUrl) URL.revokeObjectURL(photoBlobUrl)
 })
 
-// ── Handlers ──────────────────────────────────────────────────────────────────
 const handleSaveProfile = async () => {
   savingProfile.value = true
   try {
@@ -223,7 +208,6 @@ const handleChangePassword = async () => {
   }
 }
 
-// Initials fallback
 const initials = computed(() => {
   const parts = fullName.value.trim().split(' ').filter(Boolean)
   if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
