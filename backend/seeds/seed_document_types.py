@@ -123,7 +123,7 @@ def seed_document_types(db):
 
         # ── PWD / Senior / Solo Parent ────────────────────────────────
         dict(
-            doctype_name="PWD_Senior_Solo Parent",
+            doctype_name="PWD_Senior_Solo_Parent",
             price=0,
             is_available=True,
             is_id_application=False,
