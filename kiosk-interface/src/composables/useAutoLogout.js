@@ -6,11 +6,14 @@ import { useSystemConfigStore } from '@/stores/systemConfig'
 
 const EXCLUDED_ROUTES = ['/idle', '/login', '/login-rfid', '/auth-pin']
 
+// Routes where the timer should NOT run (unauthenticated active use)
+const UNAUTHENTICATED_ACTIVE_ROUTES = ['/login', '/login-rfid', '/auth-pin']
+
 const secondsRemaining = ref(0)
-let logoutDuration     = 1800
-let timer              = null
-let tickInterval       = null
-let initialized        = false
+let logoutDuration = 1800
+let timer          = null
+let tickInterval   = null
+let initialized    = false
 
 export function useAutoLogout() {
   const router = useRouter()
@@ -22,8 +25,7 @@ export function useAutoLogout() {
     try {
       const config   = await getKioskSettings()
       logoutDuration = Math.max(config.auto_logout_duration ?? 1800, 10)
-    } catch {
-    }
+    } catch {}
   }
 
   function clearTimer() {
@@ -33,10 +35,17 @@ export function useAutoLogout() {
     tickInterval = null
   }
 
+  // ✅ Unified guard: only run the timer for authenticated users
+  //    on non-excluded routes. Guests browsing login/pin screens are
+  //    active users — never time them out.
+  function shouldRunTimer() {
+    return auth.isAuthenticated && !EXCLUDED_ROUTES.includes(route.path)
+  }
+
   function startTimer() {
     clearTimer()
 
-    if (EXCLUDED_ROUTES.includes(route.path) || !auth.isAuthenticated) {
+    if (!shouldRunTimer()) {
       secondsRemaining.value = 0
       return
     }
@@ -51,7 +60,7 @@ export function useAutoLogout() {
   }
 
   function resetTimer() {
-    if (EXCLUDED_ROUTES.includes(route.path) || !auth.isAuthenticated) return
+    if (!shouldRunTimer()) return
     startTimer()
   }
 
@@ -87,7 +96,8 @@ export function useAutoLogout() {
     (newDuration) => {
       if (newDuration == null) return
       logoutDuration = Math.max(newDuration, 10)
-      startTimer() 
+      // ✅ Only restart the timer if the user is actually in a timed session
+      if (shouldRunTimer()) startTimer()
     }
   )
 
