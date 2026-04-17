@@ -75,7 +75,7 @@ seed_database() {
 import sys
 sys.path.insert(0, '/app')
 
-from seeds.run_all import seed_all
+from seeds.seed_all import seed_all
 
 try:
     seed_all()
