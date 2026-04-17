@@ -6,16 +6,18 @@ Residents seeded from real Poblacion Uno data.
 Rules:
 - 50 residents total, real names/birthdates/addresses from source list
 - Only Residents + Address records are created
+- First 41 residents are assigned real RFID card UIDs
 """
 
 import random
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timezone, timedelta
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 
 from seeds.utils import rand_historic_date, DEPLOY_START, DEPLOY_END
 
-from app.models.resident import Resident, Address, Purok
+from app.models.resident import Resident, Address, Purok, ResidentRFID
+from app.services.systemconfig_service import get_config
 
 # Must match the pwd_context in auth.py and resident_service.py
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -76,6 +78,53 @@ RESIDENTS_DATA = [
     ("LEA A. OPEÑA", "1990-03-05", "037 Bulboc Road"),
     ("MIALYN D. CABALLERO", "1974-02-22", "053 Bulboc Road"),
     ("MARLYN L. CADAG", "1976-09-23", "002 Bulboc Road"),
+]
+
+# 41 real RFID UIDs assigned in order to the first 41 residents.
+# The remaining 9 residents are intentionally left without a card —
+# they will appear in the approved applications list for future linking.
+RFID_UIDS = [
+    "1226449623",
+    "0229509657",
+    "229509657",
+    "1226497191",
+    "1225987975",
+    "0230705209",
+    "0239376761",
+    "0238558057",
+    "0230632009",
+    "0228850297",
+    "0229175033",
+    "0238980073",
+    "0238873865",
+    "0233336521",
+    "0239417241",
+    "0229235145",
+    "0229576025",
+    "1225961687",
+    "0239104185",
+    "0239784137",
+    "0622493687",
+    "0608404439",
+    "0608357223",
+    "1226499911",
+    "0609630199",
+    "1226283287",
+    "1226783399",
+    "1226651367",
+    "1226715175",
+    "1226568295",
+    "0609606583",
+    "0629191799",
+    "1224966199",
+    "0629866151",
+    "0863533495",
+    "0629471351",
+    "0629932215",
+    "0863367655",
+    "0863698791",
+    "0629412871",
+    "0621004439",
 ]
 
 
@@ -148,9 +197,18 @@ def seed_residents(db: Session):
         return
 
     puroks = _get_puroks(db)
+
+    try:
+        config = get_config(db)
+        expiry_days = config.rfid_expiry_days
+    except Exception:
+        expiry_days = 3 * 365
+
+    expiration_date = date.today() + timedelta(days=expiry_days)
+
     residents_created = []
 
-    for full_name, bdate_str, street in RESIDENTS_DATA:
+    for index, (full_name, bdate_str, street) in enumerate(RESIDENTS_DATA):
         name = _parse_name(full_name)
         gender = _infer_gender(full_name.split()[0])
         birthdate = date.fromisoformat(bdate_str)
@@ -176,13 +234,7 @@ def seed_residents(db: Session):
             email=f"{name['first_name'].lower()}.{name['last_name'].lower().replace(' ', '')}"
                   f"{random.randint(10, 999)}@gmail.com",
             phone_number=f"09{random.randint(100000000, 999999999)}",
-
-            # FIX: was hashlib.sha256("0000".encode()).hexdigest() — a SHA-256 hex
-            # string, which is not a valid bcrypt hash. passlib's verify() would
-            # throw an exception on it, making _resident_has_real_pin() unreliable
-            # for seeded residents. Now matches resident_service.py exactly.
             rfid_pin=pwd_context.hash("0000"),
-
             registered_at=reg_dt,
         )
 
@@ -202,12 +254,25 @@ def seed_residents(db: Session):
             is_current=True,
             created_at=reg_dt,
         )
-
         db.add(address)
+
+        # Assign an RFID card to the first 41 residents
+        if index < len(RFID_UIDS):
+            rfid = ResidentRFID(
+                resident_id=resident.id,
+                rfid_uid=RFID_UIDS[index],
+                is_active=True,
+                expiration_date=expiration_date,
+                created_at=datetime.now(),
+            )
+            db.add(rfid)
+
         residents_created.append(resident)
 
     db.commit()
 
-    print(f"  ↳ Inserted {len(residents_created)} residents only")
+    rfid_count = len(RFID_UIDS)
+    print(f"  ↳ Inserted {len(residents_created)} residents "
+          f"({rfid_count} with RFID cards, {len(residents_created) - rfid_count} without)")
 
     return residents_created

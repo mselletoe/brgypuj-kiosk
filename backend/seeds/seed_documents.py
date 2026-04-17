@@ -52,51 +52,129 @@ def _fake_date_fields(dt: datetime) -> dict:
 
 def _sample_form_data(doctype_name: str, resident, issued_at: datetime) -> dict:
     full_name = f"{resident.first_name} {resident.middle_name or ''} {resident.last_name}".strip()
-
     age = (date.today().year - resident.birthdate.year) if resident.birthdate else ""
+    yr_res = str(random.randint(1, 20))
 
     base = {
         # ── Identity ─────────────────────────────
-        "full_name": full_name,
-        "first_name": resident.first_name,
+        "full_name":   full_name,
+        "first_name":  resident.first_name,
         "middle_name": resident.middle_name or "",
-        "last_name": resident.last_name,
-        "suffix": resident.suffix or "",
+        "last_name":   resident.last_name,
+        "suffix":      resident.suffix or "",
 
         # ── Personal info ────────────────────────
-        "gender": resident.gender,
+        "gender":    resident.gender,
         "birthdate": resident.birthdate.strftime("%B %d, %Y") if resident.birthdate else "",
-        "age": age,
+        "age":       age,
 
         # ── Contact ──────────────────────────────
-        "email": resident.email,
+        "email":        resident.email,
         "phone_number": resident.phone_number,
 
-        # ── Address (FULL MAPPING SUPPORT) ───────
+        # ── Address ──────────────────────────────
         "unit_blk_street": "",
-        "purok_name": "",
-        "barangay": "Poblacion Uno",
-        "municipality": "Amadeo",
-        "province": "Cavite",
-        "region": "Region IV-A",
-        "full_address": "Poblacion Uno, Amadeo, Cavite",
+        "house_no":        str(random.randint(1, 999)),
+        "address":         f"Purok {random.randint(1, 5)}, Poblacion Uno, Amadeo, Cavite",
+        "purok":           f"Purok {random.randint(1, 5)}",
+        "purok_name":      f"Purok {random.randint(1, 5)}",
+        "brgy":            "Poblacion Uno",
+        "barangay":        "Poblacion Uno",
+        "city":            "Amadeo",
+        "municipality":    "Amadeo",
+        "prov":            "Cavite",
+        "province":        "Cavite",
+        "region":          "Region IV-A",
+        "full_address":    "Poblacion Uno, Amadeo, Cavite",
 
         # ── Residency ────────────────────────────
-        "years_residency": str(random.randint(1, 20)),
+        "yr_res":              yr_res,
+        "years_residency":     yr_res,
         "residency_start_date": resident.residency_start_date.strftime("%B %d, %Y"),
 
-        # ── RFID (IMPORTANT FIX) ──────────────────
+        # ── RFID ─────────────────────────────────
         "rfid_uid": getattr(resident.rfids[0], "rfid_uid", "") if resident.rfids else "",
 
-        # ── Date override fields ──────────────────
-        "date_today": issued_at.strftime("%B %d, %Y"),
-        "day": issued_at.strftime("%d"),
-        "month": issued_at.strftime("%B"),
-        "year": issued_at.strftime("%Y"),
+        # ── Date fields ──────────────────────────
+        "date_today":  issued_at.strftime("%B %d, %Y"),
+        "day":         _ordinal(issued_at.day),
+        "month":       issued_at.strftime("%B"),
+        "year":        issued_at.strftime("%Y"),
         "issued_date": issued_at.strftime("%B %d, %Y"),
     }
 
+    # ── Per-doctype specific fields ───────────────────────────────
+    name = doctype_name.strip().lower()
+
+    if "indigency" in name:
+        base.update({
+            "purpose": random.choice([
+                "Subsistence Burial Assistance",
+                "Medical Assistance",
+                "Financial Assistance",
+                "Educational Assistance",
+            ]),
+        })
+
+    elif "clearance" in name and "good moral" not in name and "construction" not in name:
+        base.update({
+            "purpose": random.choice([
+                "Employment",
+                "Bank Account",
+                "LTOPF",
+            ]),
+        })
+
+    elif "good moral" in name:
+        base.update({
+            "purpose": random.choice([
+                "Employment",
+                "Bank Account",
+                "LTOPF",
+            ]),
+        })
+
+    elif "construction" in name:
+        start = issued_at.replace(day=1)
+        end_day = random.randint(15, 28)
+        base.update({
+            "other_purpose": random.choice([
+                "Construction of Commercial Bldg.",
+                "Construction of Residential House",
+                "Road Construction",
+                "Electric Construction",
+                "Water Supply Installation",
+                "Construction of Perimeter Fence",
+            ]),
+            "month_day1": start.strftime("%B %d, %Y"),
+            "month_day2": start.replace(day=end_day).strftime("%B %d, %Y"),
+        })
+
+    elif "pwd" in name or "senior" in name:
+        base.update({
+            "purpose": random.choice([
+                "PWD",
+                "Solo Parent",
+                "Senior Citizen",
+            ]),
+        })
+
+    elif "job seeker" in name:
+        # All fields already in base (house_no, age, purok, brgy, city, prov, yr_res)
+        pass
+
+    elif "residency" in name:
+        base.update({
+            "purpose": random.choice([
+                "For school enrollment",
+                "For employment purposes",
+                "For bank requirements",
+                "For NBI clearance",
+            ]),
+        })
+
     return base
+
 
 def _generate_transaction_no(db: Session) -> str:
     while True:
@@ -149,9 +227,6 @@ def _try_generate_pdf(doc_type: DocumentType, form_data: dict, requested_at: dat
                 form_data=form_data,
             )
 
-        # _save_request_pdf needs the transaction_no but we call it
-        # after flush() so we pass a placeholder and rename, OR we
-        # generate the no first — handled by caller passing it in.
         return pdf_bytes  # return raw bytes; caller saves after flush
 
     except Exception as e:
