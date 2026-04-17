@@ -10,14 +10,14 @@ from sqlalchemy.orm import sessionmaker
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql://admin:admin7890@localhost:5432/kioskdb"
+    "postgresql://admin:admin7890@db:5432/kioskdb"
 )
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine)
 
 
-def run():
+def seed_all():
     db = SessionLocal()
     try:
         print("=" * 60)
@@ -52,7 +52,6 @@ def run():
         seed_audit(db)
         seed_admin(db)
         seed_transactions(db)
-        
 
         print("\n✅  All seeds completed successfully.")
 
@@ -65,4 +64,4 @@ def run():
 
 
 if __name__ == "__main__":
-    run()
+    seed_all()
