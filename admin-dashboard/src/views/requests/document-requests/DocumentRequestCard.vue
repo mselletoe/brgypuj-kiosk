@@ -40,7 +40,7 @@ const props = defineProps({
   },
   requestFor: {
     type: String,
-    default: null   // only set for I.D Applications
+    default: null
   },
   rfidNo: {
     type: String,
@@ -106,17 +106,13 @@ const saveNotes = async () => {
   try {
     const { data } = await updateNotes(props.id, notes.value)
     originalNotes.value = data.notes || ''
-    
-    // Emit success event
     emit('notes-updated', {
       requestId: props.id,
       notes: data.notes
     })
-    
     showNotesPopover.value = false
   } catch (error) {
     console.error('Failed to save notes:', error)
-    // Optionally show error notification here
   } finally {
     isSavingNotes.value = false
   }
@@ -240,11 +236,9 @@ const handleButtonClick = (buttonId, btn) => {
     emit('update:isPaid', !props.isPaid);
     return;
   }
-  
   if (btn && isButtonDisabled(btn)) {
     return;
   }
-  
   emit('button-click', {
     action: buttonId,
     requestId: props.id,
@@ -255,114 +249,96 @@ const handleButtonClick = (buttonId, btn) => {
 </script>
 
 <template>
-  <div 
-    class="rounded-lg border-l-[6px] border p-5 flex items-start gap-4 transition-all relative"
+  <div
+    class="rounded-lg border-l-[6px] border transition-all relative"
     :class="[
       accentColorClass,
       isSelected ? 'border-[#0957FF] ring-1 ring-[#0957FF]/10 shadow-sm bg-[#F0F5FF]' : 'border-[#CCCCCC] bg-white'
     ]"
   >
-    <!-- Transaction Number -->
-    <div class="flex flex-col items-center justify-center space-y-1">
-      <div 
-        class="flex justify-center border rounded px-4 py-1 min-w-[90px]"
-        :class="badgeColorClass"
-      >
-        <div class="text-lg font-bold leading-tight">{{ transactionNo }}</div>        
-      </div>
-      <div class="text-[9px] text-gray-400 font-medium">Transaction No.</div>
-    </div>
 
-    <!-- Details -->
-    <div class="flex-1 flex flex-col gap-3">
-      <!-- Request List -->
-      <h3 class="text-xl font-bold text-slate-800 leading-none">
-        {{ requestType }}
-      </h3>
-      
-      <!-- Request Details -->
-      <div class="flex gap-16">
+    <!-- =====================================================
+         MOBILE / TABLET  (hidden on xl and above)
+         ===================================================== -->
+    <div class="min-[1015px]:hidden p-4 flex flex-col gap-3">
 
-        <!-- Column 1 -->
-        <div class="flex flex-col gap-3">
-          <!-- Full Name -->
-          <div class="flex flex-col">
-            <span class="text-[11px] text-gray-400 font-medium">Request from</span>
-            <span class="text-sm text-slate-700 font-bold">
-              {{ requester.firstName }} {{ requester.middleName }} {{ requester.lastName }}
-            </span>
+      <!-- Row 1: Badge · Title · Checkbox · Payment -->
+      <div class="flex items-start gap-3">
+        <div class="flex flex-col items-center shrink-0">
+          <div
+            class="flex justify-center border rounded px-3 py-1 min-w-[80px]"
+            :class="badgeColorClass"
+          >
+            <span class="text-base font-bold leading-tight">{{ transactionNo }}</span>
+          </div>
+          <span class="text-[9px] text-gray-400 font-medium mt-0.5">Transaction No.</span>
+        </div>
+
+        <div class="flex-1 flex flex-col gap-1 min-w-0">
+          <div class="flex items-start justify-between gap-2">
+            <h3 class="text-base font-bold text-slate-800 leading-tight">{{ requestType }}</h3>
+            <input
+              type="checkbox"
+              :checked="isSelected"
+              @change="$emit('update:selected', $event.target.checked)"
+              class="w-4 h-4 mt-0.5 border-gray-300 rounded accent-[#0957FF] cursor-pointer shrink-0"
+            />
           </div>
 
-          <!-- RFID No. -->
-          <div class="flex flex-col">
-            <span class="text-[11px] text-gray-400 font-medium">RFID No.</span>
-            <span 
-              class="text-sm font-bold" 
-              :class="rfidNo === 'Guest Mode' ? 'text-orange-500' : 'text-blue-600'"
+          <div v-if="amount" class="flex items-center gap-2 flex-wrap">
+            <button
+              v-if="status === 'pending'"
+              @click="handleButtonClick('payment')"
+              :class="[
+                'px-2 py-0.5 rounded text-[10px] font-bold uppercase transition-colors whitespace-nowrap',
+                isPaid ? 'bg-green-100 text-[#09AA44]' : 'bg-gray-200 text-gray-500'
+              ]"
             >
-              {{ rfidNo }}
-            </span>
-          </div>          
-        </div>
-
-        <div class="flex flex-col gap-3">
-          <!-- Requested Date -->
-          <div class="flex flex-col">
-            <span class="text-[11px] text-gray-400 font-medium">Requested on</span>
-            <span class="text-sm text-slate-700 font-bold">{{ requestedOn }}</span>
-          </div>
-
-          <!-- Request For (ID Applications only) -->
-          <div v-if="requestFor" class="flex flex-col">
-            <span class="text-[11px] text-gray-400 font-medium">Request for</span>
-            <span class="text-sm text-slate-700 font-bold">{{ requestFor }}</span>
+              {{ isPaid ? 'Paid' : 'Mark as Paid' }}
+            </button>
+            <div
+              v-else-if="isPaid"
+              class="px-2 py-0.5 bg-green-100 text-[#09AA44] rounded text-[10px] font-bold uppercase"
+            >
+              Paid
+            </div>
+            <div class="text-lg font-black text-[#09AA44] flex items-center">
+              <span class="text-base mr-0.5">₱</span>{{ amount }}
+            </div>
           </div>
         </div>
-
-      </div>
-    </div>
-
-    <!-- Buttons -->
-    <div class="flex flex-col items-end gap-4 min-w-fit">
-
-      <!-- Checkbox -->
-      <div class="flex items-center gap-3">
-        <input 
-          type="checkbox" 
-          :checked="isSelected"
-          @change="$emit('update:selected', $event.target.checked)"
-          class="w-4 h-4 border-gray-300 rounded accent-[#0957FF] cursor-pointer"
-        />
       </div>
 
-      <!-- Payment Status -->
-      <div v-if="amount" class="flex items-center gap-3">
-        <button
-          v-if="status === 'pending'"
-          @click="handleButtonClick('payment')"
-          :class="[
-            'px-2 py-0.5 rounded text-[10px] font-bold uppercase transition-colors',
-            isPaid ? 'bg-green-100 text-[#09AA44]' : 'bg-gray-200 text-gray-500'
-          ]"
-        >
-          {{ isPaid ? 'Paid' : 'Mark as Paid' }}
-        </button>
-        <div 
-          v-else-if="isPaid" 
-          class="px-2 py-0.5 bg-green-100 text-[#09AA44] rounded text-[10px] font-bold uppercase"
-        >
-          Paid
+      <!-- Row 2: Details 2-col grid -->
+      <div class="grid grid-cols-2 gap-x-4 gap-y-2">
+        <div class="flex flex-col">
+          <span class="text-[10px] text-gray-400 font-medium">Request from</span>
+          <span class="text-sm text-slate-700 font-bold leading-snug">
+            {{ requester.firstName }} {{ requester.middleName }} {{ requester.lastName }}
+          </span>
         </div>
-
-        <div class="text-2xl font-black text-[#09AA44] flex items-center">
-          <span class="text-lg mr-1">₱</span> {{ amount }}
+        <div class="flex flex-col">
+          <span class="text-[10px] text-gray-400 font-medium">RFID No.</span>
+          <span
+            class="text-sm font-bold leading-snug"
+            :class="rfidNo === 'Guest Mode' ? 'text-orange-500' : 'text-blue-600'"
+          >
+            {{ rfidNo }}
+          </span>
+        </div>
+        <div class="flex flex-col">
+          <span class="text-[10px] text-gray-400 font-medium">Requested on</span>
+          <span class="text-sm text-slate-700 font-bold leading-snug">{{ requestedOn }}</span>
+        </div>
+        <div v-if="requestFor" class="flex flex-col">
+          <span class="text-[10px] text-gray-400 font-medium">Request for</span>
+          <span class="text-sm text-slate-700 font-bold leading-snug">{{ requestFor }}</span>
         </div>
       </div>
 
-      <!-- Action Buttons -->
-      <div class="flex items-center gap-2">
+      <!-- Row 3: Action buttons — wraps into 2 rows on small screens -->
+      <div class="flex items-center gap-2 border-t border-gray-100 pt-2 w-full flex-wrap">
         <template v-for="btn in visibleButtons" :key="btn.id">
-          <!-- Notes Button -->
           <n-popover
             v-if="btn.id === 'notes'"
             trigger="click"
@@ -372,13 +348,12 @@ const handleButtonClick = (buttonId, btn) => {
           >
             <template #trigger>
               <button
-                :class="[getButtonClass(btn), 'px-4']"
+                :class="[getButtonClass(btn), 'px-4 shrink-0 flex-1 min-w-fit']"
                 class="h-9 rounded-md text-sm font-semibold flex items-center justify-center"
               >
                 {{ btn.label }}
               </button>
             </template>
-
             <div class="flex w-72 p-1 gap-3 items-center">
               <n-spin :show="isLoadingNotes" size="small" class="flex-1">
                 <n-input
@@ -401,15 +376,13 @@ const handleButtonClick = (buttonId, btn) => {
               </n-button>
             </div>
           </n-popover>
-
-          <!-- Other Buttons -->
           <button
             v-else
             @click="handleButtonClick(btn.id, btn)"
             :disabled="isButtonDisabled(btn)"
             :class="[
               getButtonClass(btn),
-              ['delete', 'undo'].includes(btn.id) ? 'w-9 px-0' : 'px-4'
+              ['delete', 'undo'].includes(btn.id) ? 'w-9 shrink-0 px-0' : 'px-4 flex-1 min-w-fit'
             ]"
             class="h-9 rounded-md text-sm font-semibold transition-all flex items-center justify-center"
           >
@@ -419,5 +392,146 @@ const handleButtonClick = (buttonId, btn) => {
         </template>
       </div>
     </div>
+
+    <!-- =====================================================
+         DESKTOP  (hidden below xl) — original layout, untouched
+         ===================================================== -->
+    <div class="hidden min-[1015px]:flex items-start gap-4 p-5">
+
+      <!-- Transaction Number -->
+      <div class="flex flex-col items-center justify-center space-y-1">
+        <div
+          class="flex justify-center border rounded px-4 py-1 min-w-[90px]"
+          :class="badgeColorClass"
+        >
+          <div class="text-lg font-bold leading-tight">{{ transactionNo }}</div>
+        </div>
+        <div class="text-[9px] text-gray-400 font-medium">Transaction No.</div>
+      </div>
+
+      <!-- Details -->
+      <div class="flex-1 flex flex-col gap-3">
+        <h3 class="text-xl font-bold text-slate-800 leading-none">
+          {{ requestType }}
+        </h3>
+        <div class="flex gap-16">
+          <div class="flex flex-col gap-3">
+            <div class="flex flex-col">
+              <span class="text-[11px] text-gray-400 font-medium">Request from</span>
+              <span class="text-sm text-slate-700 font-bold">
+                {{ requester.firstName }} {{ requester.middleName }} {{ requester.lastName }}
+              </span>
+            </div>
+            <div class="flex flex-col">
+              <span class="text-[11px] text-gray-400 font-medium">RFID No.</span>
+              <span
+                class="text-sm font-bold"
+                :class="rfidNo === 'Guest Mode' ? 'text-orange-500' : 'text-blue-600'"
+              >
+                {{ rfidNo }}
+              </span>
+            </div>
+          </div>
+          <div class="flex flex-col gap-3">
+            <div class="flex flex-col">
+              <span class="text-[11px] text-gray-400 font-medium">Requested on</span>
+              <span class="text-sm text-slate-700 font-bold">{{ requestedOn }}</span>
+            </div>
+            <div v-if="requestFor" class="flex flex-col">
+              <span class="text-[11px] text-gray-400 font-medium">Request for</span>
+              <span class="text-sm text-slate-700 font-bold">{{ requestFor }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Buttons -->
+      <div class="flex flex-col items-end gap-4 min-w-fit">
+        <div class="flex items-center gap-3">
+          <input
+            type="checkbox"
+            :checked="isSelected"
+            @change="$emit('update:selected', $event.target.checked)"
+            class="w-4 h-4 border-gray-300 rounded accent-[#0957FF] cursor-pointer"
+          />
+        </div>
+        <div v-if="amount" class="flex items-center gap-3">
+          <button
+            v-if="status === 'pending'"
+            @click="handleButtonClick('payment')"
+            :class="[
+              'px-2 py-0.5 rounded text-[10px] font-bold uppercase transition-colors',
+              isPaid ? 'bg-green-100 text-[#09AA44]' : 'bg-gray-200 text-gray-500'
+            ]"
+          >
+            {{ isPaid ? 'Paid' : 'Mark as Paid' }}
+          </button>
+          <div
+            v-else-if="isPaid"
+            class="px-2 py-0.5 bg-green-100 text-[#09AA44] rounded text-[10px] font-bold uppercase"
+          >
+            Paid
+          </div>
+          <div class="text-2xl font-black text-[#09AA44] flex items-center">
+            <span class="text-lg mr-1">₱</span> {{ amount }}
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <template v-for="btn in visibleButtons" :key="btn.id">
+            <n-popover
+              v-if="btn.id === 'notes'"
+              trigger="click"
+              placement="bottom-end"
+              v-model:show="showNotesPopover"
+              :show-arrow="false"
+            >
+              <template #trigger>
+                <button
+                  :class="[getButtonClass(btn), 'px-4']"
+                  class="h-9 rounded-md text-sm font-semibold flex items-center justify-center"
+                >
+                  {{ btn.label }}
+                </button>
+              </template>
+              <div class="flex w-72 p-1 gap-3 items-center">
+                <n-spin :show="isLoadingNotes" size="small" class="flex-1">
+                  <n-input
+                    v-model:value="notes"
+                    type="textarea"
+                    size="medium"
+                    placeholder="Add notes..."
+                    class="h-9"
+                    :disabled="isLoadingNotes"
+                  />
+                </n-spin>
+                <n-button
+                  size="small"
+                  type="primary"
+                  @click="saveNotes"
+                  :disabled="!hasUnsavedChanges || isSavingNotes"
+                  :loading="isSavingNotes"
+                >
+                  Save
+                </n-button>
+              </div>
+            </n-popover>
+            <button
+              v-else
+              @click="handleButtonClick(btn.id, btn)"
+              :disabled="isButtonDisabled(btn)"
+              :class="[
+                getButtonClass(btn),
+                ['delete', 'undo'].includes(btn.id) ? 'w-9 px-0' : 'px-4'
+              ]"
+              class="h-9 rounded-md text-sm font-semibold transition-all flex items-center justify-center"
+            >
+              {{ btn.label }}
+              <component v-if="!btn.label" :is="btn.icon" class="w-5 h-5" />
+            </button>
+          </template>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
