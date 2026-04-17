@@ -1,11 +1,12 @@
 <script setup>
 import { onMounted, onUnmounted } from 'vue'
-import { useAutoLogout } from '@/composables/useAutoLogout'
 import { useSystemConfigStore } from '@/stores/systemConfig'
 import { useWebSocket } from '@/composables/useWebSocket'
 import { storeToRefs } from 'pinia'
 
-useAutoLogout()
+// ❌ Removed auto logout
+// import { useAutoLogout } from '@/composables/useAutoLogout'
+// useAutoLogout()
 
 const { connect } = useWebSocket()
 connect()
@@ -46,7 +47,6 @@ onUnmounted(() => {
     </div>
   </Transition>
 
-  <!-- Normal kiosk UI — KeepAlive caches pages so they don't remount on every navigation -->
   <router-view v-if="!maintenanceMode" v-slot="{ Component, route }">
     <KeepAlive :max="5" :exclude="['CameraPhase', 'ApplyID']">
       <component :is="Component" :key="route.path" />

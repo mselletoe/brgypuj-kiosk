@@ -1,6 +1,6 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ArrowLeftIcon, SignalIcon } from '@heroicons/vue/24/solid'
 import { LockClosedIcon } from '@heroicons/vue/24/outline'
@@ -12,6 +12,7 @@ import { loginByRfid } from '@/api/authService'
 import { checkRfidStatus } from '@/api/registrationService'
 
 const router       = useRouter()
+const route        = useRoute()
 const authStore    = useAuthStore()
 const rfidRegStore = useRfidRegistrationStore()
 const { t } = useI18n()
@@ -24,6 +25,8 @@ const isProcessing  = ref(false)
 const hiddenInput   = ref(null)
 let inputBuffer = ''
 let timeout     = null
+
+const MIN_UID_LENGTH = 4
 
 // =============================================================================
 // LOCKOUT STATE
@@ -121,7 +124,6 @@ const authenticateRFID = async (uid) => {
       return
     }
 
-    // Replace native alert() with shared modal
     isProcessing.value = false
     showErrorModal.value = true
   }
@@ -132,14 +134,16 @@ const handleRFIDInput = async (event) => {
 
   if (event.key === 'Enter') {
     const uid = inputBuffer.trim()
-    if (uid) await authenticateRFID(uid)
+    if (uid.length >= MIN_UID_LENGTH) {
+      await authenticateRFID(uid)
+    }
     inputBuffer = ''
   } else if (/^[0-9A-Za-z]$/.test(event.key)) {
     inputBuffer += event.key
   }
 
   clearTimeout(timeout)
-  timeout = setTimeout(() => { inputBuffer = '' }, 200)
+  timeout = setTimeout(() => { inputBuffer = '' }, 500)
 }
 
 const handleManualLogin = async () => {
@@ -163,6 +167,21 @@ onUnmounted(() => {
   clearTimeout(timeout)
   clearInterval(lockoutInterval)
 })
+
+watch(
+  () => route.path,
+  async (newPath) => {
+    if (newPath !== '/login-rfid') {
+      resetScanner()
+      window.removeEventListener('keydown', handleRFIDInput)
+    } else {
+      resetScanner()
+      window.addEventListener('keydown', handleRFIDInput)
+      await nextTick()
+      hiddenInput.value?.focus()
+    }
+  }
+)
 </script>
 
 <template>
@@ -212,13 +231,6 @@ onUnmounted(() => {
           <h2 class="text-3xl font-semibold text-[#295B83] mt-8">{{ t('processing') }}</h2>
           <p class="text-lg text-gray-500 mt-2">{{ t('keepCard') }}</p>
         </div>
-      </div>
-
-      <!-- Dev mode -->
-      <div v-if="isDevMode && !isProcessing && !isLocked" class="mt-6 w-80">
-        <p class="text-sm text-gray-400 text-center mb-2">{{ t('devMode') }}</p>
-        <input v-model="manualUID" type="text" :placeholder="t('enterRFIDUID')" class="border border-gray-300 p-2 w-full rounded text-center" />
-        <button @click="handleManualLogin" class="mt-2 w-full bg-[#1B5886] text-white py-2 rounded hover:bg-[#164a70]">{{ t('login') }}</button>
       </div>
 
       <input ref="hiddenInput" v-model="scannedUID" type="text" class="absolute opacity-0 pointer-events-none" />

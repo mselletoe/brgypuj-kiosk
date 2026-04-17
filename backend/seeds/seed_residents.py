@@ -9,13 +9,16 @@ Rules:
 """
 
 import random
-import hashlib
 from datetime import date, datetime, timezone
 from sqlalchemy.orm import Session
+from passlib.context import CryptContext
 
 from seeds.utils import rand_historic_date, DEPLOY_START, DEPLOY_END
 
 from app.models.resident import Resident, Address, Purok
+
+# Must match the pwd_context in auth.py and resident_service.py
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 # ─────────────────────────────────────────────────────────────
@@ -174,8 +177,11 @@ def seed_residents(db: Session):
                   f"{random.randint(10, 999)}@gmail.com",
             phone_number=f"09{random.randint(100000000, 999999999)}",
 
-            # default PIN
-            rfid_pin=hashlib.sha256("0000".encode()).hexdigest(),
+            # FIX: was hashlib.sha256("0000".encode()).hexdigest() — a SHA-256 hex
+            # string, which is not a valid bcrypt hash. passlib's verify() would
+            # throw an exception on it, making _resident_has_real_pin() unreliable
+            # for seeded residents. Now matches resident_service.py exactly.
+            rfid_pin=pwd_context.hash("0000"),
 
             registered_at=reg_dt,
         )

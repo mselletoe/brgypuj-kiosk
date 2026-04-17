@@ -7,8 +7,8 @@
  * Any click on the screen resets the countdown.
  */
 
-import { ref, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { disableTouchToStart } from '@/composables/touchToStart'
 import { useSystemConfig } from '@/composables/useSystemConfig'
@@ -17,6 +17,7 @@ import { SignalIcon } from '@heroicons/vue/24/solid'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 const { brgyName, brgySubname, resolvedLogoUrl } = useSystemConfig()
 const { t } = useI18n()
@@ -42,12 +43,22 @@ const continueAsGuest = () => {
 // =============================================================================
 // INACTIVITY COUNTDOWN
 // =============================================================================
+const stopCountdown = () => {
+  if (timerInterval) {
+    clearInterval(timerInterval)
+    timerInterval = null
+  }
+}
+
 const startCountdown = () => {
-  if (timerInterval) clearInterval(timerInterval)
+  stopCountdown()
   timeLeft.value = 10
   timerInterval = setInterval(() => {
     timeLeft.value--
-    if (timeLeft.value <= 0) { clearInterval(timerInterval); router.replace('/idle') }
+    if (timeLeft.value <= 0) {
+      stopCountdown()
+      router.replace('/idle')
+    }
   }, 1000)
 }
 
@@ -56,8 +67,25 @@ const resetTimer = () => startCountdown()
 // =============================================================================
 // LIFECYCLE
 // =============================================================================
-onMounted(() => { mountTime = Date.now(); startCountdown() })
-onUnmounted(() => { if (timerInterval) clearInterval(timerInterval) })
+onMounted(() => {
+  mountTime = Date.now()
+  startCountdown()
+})
+
+// KeepAlive keeps this component alive even when navigating away, so
+// onUnmounted never fires and timerInterval keeps running — causing it to
+// redirect to /idle while the user is on /login-rfid or /auth-pin.
+// Watching the route and stopping the countdown when we leave /login fixes this.
+watch(
+  () => route.path,
+  (newPath) => {
+    if (newPath !== '/login') stopCountdown()
+    else startCountdown()
+  }
+)
+
+// Still clean up on true unmount (e.g. if KeepAlive max is exceeded)
+onUnmounted(() => stopCountdown())
 </script>
 
 <template>
