@@ -1,18 +1,11 @@
 <script setup>
-/**
- * @file views/auth/ScanRFID.vue
- * @description Kiosk RFID scan screen. Listens for hardware scanner input via
- * keyboard events and authenticates the scanned card. Routes new cards to
- * registration and existing cards to PIN entry. Includes lockout enforcement
- * and a dev-mode manual UID input for testing.
- */
-
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ArrowLeftIcon, SignalIcon } from '@heroicons/vue/24/solid'
 import { LockClosedIcon } from '@heroicons/vue/24/outline'
 import Button from '@/components/shared/Button.vue'
+import Modal from '@/components/shared/Modal.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useRfidRegistrationStore } from '@/stores/registration'
 import { loginByRfid } from '@/api/authService'
@@ -59,6 +52,17 @@ function startLockoutCountdown(seconds) {
       resetScanner()
     }
   }, 1000)
+}
+
+// =============================================================================
+// ERROR MODAL STATE
+// =============================================================================
+const showErrorModal = ref(false)
+
+const dismissErrorModal = () => {
+  showErrorModal.value = false
+  resetScanner()
+  router.replace('/login')
 }
 
 // =============================================================================
@@ -117,8 +121,9 @@ const authenticateRFID = async (uid) => {
       return
     }
 
-    alert('Invalid or inactive RFID card.')
-    resetScanner()
+    // Replace native alert() with shared modal
+    isProcessing.value = false
+    showErrorModal.value = true
   }
 }
 
@@ -162,6 +167,22 @@ onUnmounted(() => {
 
 <template>
   <div class="h-screen w-screen bg-gradient-to-br from-[#003A6B] to-[#89CFF1] flex justify-center items-center font-poppins">
+
+    <!-- ── ERROR MODAL OVERLAY ──────────────────────────────────────────── -->
+    <div
+      v-if="showErrorModal"
+      class="absolute inset-0 z-50 flex items-center justify-center bg-black/60"
+    >
+      <Modal
+        type="error"
+        :title="t('Inactive RFID')"
+        :message="t('Please seek assistance from the barangay staff to activate your card')"
+        :show-secondary-button="false"
+        :primary-button-text="t('Okay')"
+        @primary-click="dismissErrorModal"
+      />
+    </div>
+
     <div class="bg-white w-[974px] h-[550px] rounded-lg shadow-2xl relative flex flex-col justify-center items-center p-8">
 
       <!-- ── LOCKOUT STATE ──────────────────────────────────────────────── -->
