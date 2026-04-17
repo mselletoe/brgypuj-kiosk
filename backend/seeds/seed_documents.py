@@ -29,7 +29,7 @@ from datetime import datetime, date
 from seeds.utils import rand_dt, progression, DEPLOY_START, DEPLOY_END
 
 from app.models.document import DocumentType, DocumentRequest
-from app.models.resident import Resident
+from app.models.resident import Resident, ResidentRFID
 
 
 # ── Helpers ──────────────────────────────────────────────────────
@@ -170,7 +170,12 @@ def seed_documents(db: Session):
     templated_doc_types     = [dt for dt in all_doc_types if dt.file]
     templateless_doc_types  = [dt for dt in all_doc_types if not dt.file]
 
-    residents = db.query(Resident).all()
+    residents = (
+        db.query(Resident)
+        .join(Resident.rfids)
+        .filter(ResidentRFID.is_active == True)
+        .all()
+    )
 
     if not all_doc_types:
         print("  ↳ No document types found — skipping.")

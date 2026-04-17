@@ -36,8 +36,10 @@ def run():
         from seeds.seed_audit import seed_audit
         from seeds.seed_transactions import seed_transactions
         from seeds.seed_admin import seed_admin
+        from seeds.seed_puroks import seed_puroks
 
         # ── ORDER MATTERS ─────────────────────────────
+        seed_puroks(db)
         seed_residents(db)
         seed_document_types(db)   # REQUIRED FIRST
         seed_announcements(db)
@@ -50,6 +52,7 @@ def run():
         seed_audit(db)
         seed_admin(db)
         seed_transactions(db)
+        
 
         print("\n✅  All seeds completed successfully.")
 

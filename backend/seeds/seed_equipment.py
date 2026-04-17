@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from seeds.utils import rand_dt, progression, DEPLOY_START, DEPLOY_END
 from app.models.equipment import EquipmentInventory, EquipmentRequest, EquipmentRequestItem
-from app.models.resident import Resident
+from app.models.resident import Resident, ResidentRFID
 
 
 # ── Inventory catalogue ──────────────────────────────────────────
@@ -76,7 +76,12 @@ def seed_equipment(db: Session):
         print(f"  ↳ Inventory: {existing_inv} items already exist — skipping inventory insert.")
 
     inventory = db.query(EquipmentInventory).all()
-    residents = db.query(Resident).all()
+    residents = (
+        db.query(Resident)
+        .join(Resident.rfids)
+        .filter(ResidentRFID.is_active == True)
+        .all()
+    )
 
     if not residents:
         print("  ↳ No residents found — skipping equipment requests.")

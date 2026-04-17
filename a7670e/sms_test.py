@@ -132,4 +132,4 @@ def send_sms(message, recipient=DEFAULT_RECIPIENT):
 # RUN
 # ─────────────────────────────────────────
 if __name__ == "__main__":
-    send_sms("SMS API Test 39")
+    send_sms("SMS API Test 76")
