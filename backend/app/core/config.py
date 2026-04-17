@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     BACKUP_DIR: str = "./backups/barangay"
 
     # SMS Gateway (A7670E)
-    SMS_PORT:        str   = "COM12"
+    SMS_PORT:        str   = "/dev/ttyUSB1"
     SMS_BAUD:        int   = 115200
     SMS_SMSC:        str   = "+639180000101"
     SMS_RETRIES:     int   = 3
