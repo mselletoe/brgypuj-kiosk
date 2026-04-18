@@ -33,10 +33,6 @@ services:
         condition: service_healthy
     volumes:
       - backend-docs:/app/generated_docs
-    devices:
-      - /dev/ttyUSB1:/dev/ttyUSB1
-    group_add:
-      - dialout
     networks:
       - kiosk-network
 

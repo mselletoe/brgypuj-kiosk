@@ -7,7 +7,7 @@ from datetime import datetime
 # ─────────────────────────────────────────
 PORT = "COM12"
 BAUD = 115200
-DEFAULT_RECIPIENT = "+639452017662"
+DEFAULT_RECIPIENT = "+639152893228"
 READ_DELAY = 1
 
 
@@ -132,4 +132,4 @@ def send_sms(message, recipient=DEFAULT_RECIPIENT):
 # RUN
 # ─────────────────────────────────────────
 if __name__ == "__main__":
-    send_sms("SMS API Test 76")
+    send_sms("SMS API Test 432")

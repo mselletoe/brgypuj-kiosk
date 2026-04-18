@@ -102,7 +102,7 @@ class A7670EGateway:
                 _ts(), attempt, self.retries, number,
             )
 
-            ser.reset_input_buffer()
+            ser.reset_input_buffer()   # ← add this
             ser.reset_output_buffer()
 
             _send_at(ser, f'AT+CMGS="{number}"', wait=4)
