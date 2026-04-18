@@ -4,6 +4,8 @@ import { useAuthStore } from "@/stores/auth";
 import VueDatePicker from "@vuepic/vue-datepicker";
 import "@vuepic/vue-datepicker/dist/main.css";
 import { DocumentTextIcon } from "@heroicons/vue/24/outline";
+import { ref, nextTick } from "vue";
+import Keyboard from "@/components/shared/Keyboard.vue";
 
 const props = defineProps({
   idFields: Array,
@@ -20,6 +22,64 @@ const emit = defineEmits(["update:detailsForm", "update:useManualEntry"]);
 const { t } = useI18n();
 const authStore = useAuthStore();
 
+// =============================================================================
+// ON-SCREEN KEYBOARD
+// =============================================================================
+const showKeyboard = ref(false);
+const activeInput = ref(null);
+
+const focusInput = (elementId, fieldName) => {
+  activeInput.value = fieldName;
+  showKeyboard.value = true;
+
+  nextTick(() => {
+    const el = document.getElementById(elementId);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  });
+};
+
+const handleKeyboardKeyPress = (char) => {
+  if (!activeInput.value) return;
+  const current = props.detailsForm[activeInput.value] ?? "";
+  updateField(activeInput.value, current + char);
+};
+
+const handleKeyboardDelete = () => {
+  if (!activeInput.value) return;
+  const current = props.detailsForm[activeInput.value] ?? "";
+  updateField(activeInput.value, current.slice(0, -1));
+};
+
+const handleKeyboardEnter = () => {
+  showKeyboard.value = false;
+  activeInput.value = null;
+};
+
+const handleKeyboardHide = () => {
+  showKeyboard.value = false;
+  activeInput.value = null;
+};
+
+const handleKeyboardTab = () => {
+  if (!activeInput.value || !props.idFields) return;
+  const currentIndex = props.idFields.findIndex(
+    (f) => f.name === activeInput.value
+  );
+  const next = props.idFields[currentIndex + 1];
+  if (next) {
+    activeInput.value = next.name;
+    nextTick(() => {
+      const el = document.getElementById(`field-${next.name}`);
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  }
+};
+
+// =============================================================================
+// FORM
+// =============================================================================
 function updateField(fieldName, value) {
   emit("update:detailsForm", { ...props.detailsForm, [fieldName]: value });
 }
@@ -39,7 +99,11 @@ function updateField(fieldName, value) {
         {{ t("reviewIDInfo") }}
       </p>
 
-      <div class="flex-1 overflow-y-auto pr-1 min-h-0 custom-scroll px-1 pt-1">
+      <!-- Padding-bottom applied here so bottom fields scroll above the keyboard -->
+      <div
+        class="flex-1 overflow-y-auto pr-1 min-h-0 custom-scroll px-1 pt-1"
+        :class="{ 'content-with-keyboard': showKeyboard }"
+      >
         <!-- Loading autofill -->
         <div
           v-if="isFetchingAutofill"
@@ -90,39 +154,53 @@ function updateField(fieldName, value) {
                 <span v-if="field.required" class="text-red-600">*</span>
               </label>
 
+              <!-- Textarea -->
               <textarea
                 v-if="field.type === 'textarea'"
+                :id="`field-${field.name}`"
                 :value="detailsForm[field.name]"
                 @input="updateField(field.name, $event.target.value)"
+                @focus="focusInput(`field-${field.name}`, field.name)"
                 :disabled="!useManualEntry && !!autofillMap[field.name]"
                 :placeholder="field.label"
+                :readonly="activeInput !== field.name"
                 class="w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm transition-shadow focus:outline-none focus:ring-2 focus:ring-[#013C6D] disabled:bg-gray-50 disabled:text-gray-400 resize-none"
                 rows="2"
               ></textarea>
 
-              <VueDatePicker
+              <!-- Date picker -->
+              <div
                 v-else-if="field.type === 'date'"
-                :model-value="detailsForm[field.name]"
-                @update:model-value="updateField(field.name, $event)"
-                :enable-time-picker="false"
-                :disabled="
-                  (!useManualEntry && !!autofillMap[field.name]) || isSubmitting
-                "
-                auto-apply
-                teleport-center
-                format="MM/dd/yyyy"
-                :max-date="new Date()"
-                :placeholder="field.label"
-                :ui="{ input: 'dp-match-input' }"
-              />
+                :id="`field-${field.name}`"
+              >
+                <VueDatePicker
+                  :model-value="detailsForm[field.name]"
+                  @update:model-value="updateField(field.name, $event)"
+                  :enable-time-picker="false"
+                  :disabled="
+                    (!useManualEntry && !!autofillMap[field.name]) ||
+                    isSubmitting
+                  "
+                  auto-apply
+                  teleport-center
+                  format="MM/dd/yyyy"
+                  :max-date="new Date()"
+                  :placeholder="field.label"
+                  :ui="{ input: 'dp-match-input' }"
+                />
+              </div>
 
+              <!-- Text / Number input -->
               <input
                 v-else
+                :id="`field-${field.name}`"
                 :value="detailsForm[field.name]"
                 @input="updateField(field.name, $event.target.value)"
+                @focus="focusInput(`field-${field.name}`, field.name)"
                 :disabled="!useManualEntry && !!autofillMap[field.name]"
                 :type="field.type === 'number' ? 'number' : 'text'"
                 :placeholder="field.label"
+                readonly
                 class="w-full h-[48px] px-4 py-3 border border-gray-300 rounded-xl shadow-sm transition-shadow focus:outline-none focus:ring-2 focus:ring-[#013C6D] disabled:bg-gray-50 disabled:text-gray-400"
               />
 
@@ -138,9 +216,46 @@ function updateField(fieldName, value) {
       </div>
     </div>
   </div>
+
+  <!-- On-screen keyboard with slide-up + fade transition -->
+  <Transition name="slide-up">
+    <Keyboard
+      v-if="showKeyboard"
+      @key-press="handleKeyboardKeyPress"
+      @delete="handleKeyboardDelete"
+      @enter="handleKeyboardEnter"
+      @tab="handleKeyboardTab"
+      @hide-keyboard="handleKeyboardHide"
+      class="fixed bottom-0 w-full"
+    />
+  </Transition>
 </template>
 
 <style scoped>
+/* Applied to the inner scroll container so padding extends scrollable space */
+.content-with-keyboard {
+  padding-bottom: 100px;
+  transition: padding-bottom 0.3s ease-out;
+}
+
+/* Slide-up + fade transition */
+.slide-up-enter-active {
+  transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+}
+.slide-up-leave-active {
+  transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+}
+.slide-up-enter-from,
+.slide-up-leave-to {
+  transform: translateY(100%);
+  opacity: 0;
+}
+.slide-up-enter-to,
+.slide-up-leave-from {
+  transform: translateY(0);
+  opacity: 1;
+}
+
 .custom-scroll::-webkit-scrollbar {
   width: 6px;
 }

@@ -336,7 +336,7 @@ const cancelExit = () => {
 
 <style scoped>
 .content-with-keyboard {
-  padding-bottom: 210px;
+  padding-bottom: 100px;
   transition: padding-bottom 0.3s ease-out;
 }
 .slide-up-enter-active,
