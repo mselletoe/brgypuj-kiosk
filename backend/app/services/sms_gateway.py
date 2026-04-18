@@ -101,7 +101,11 @@ class A7670EGateway:
                 "%s Attempt %d/%d → %s",
                 _ts(), attempt, self.retries, number,
             )
-            _send_at(ser, f'AT+CMGS="{number}"', wait=2)
+
+            ser.reset_input_buffer()
+            ser.reset_output_buffer()
+
+            _send_at(ser, f'AT+CMGS="{number}"', wait=4)
             ser.write((message + chr(26)).encode())  
 
             deadline = time.time() + self.send_wait
