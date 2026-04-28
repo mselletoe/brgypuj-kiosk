@@ -233,6 +233,13 @@ watch(
         </div>
       </div>
 
+      <!-- Dev mode -->
+      <div v-if="isDevMode && !isProcessing && !isLocked" class="mt-6 w-80">
+        <p class="text-sm text-gray-400 text-center mb-2">{{ t('devMode') }}</p>
+        <input v-model="manualUID" type="text" :placeholder="t('enterRFIDUID')" class="border border-gray-300 p-2 w-full rounded text-center" />
+        <button @click="handleManualLogin" class="mt-2 w-full bg-[#1B5886] text-white py-2 rounded hover:bg-[#164a70]">{{ t('login') }}</button>
+      </div>
+      
       <input ref="hiddenInput" v-model="scannedUID" type="text" class="absolute opacity-0 pointer-events-none" />
 
       <Button @click="goBack" class="absolute bottom-8 left-8 w-auto px-3 text-[14px] rounded-[40px] h-[40px]" variant="outline">
