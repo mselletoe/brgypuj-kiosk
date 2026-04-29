@@ -24,12 +24,12 @@ const announcements = ref([])
 const loading = ref(true)
 const error = ref(null)
 
-const fetchAnnouncements = async () => {
+const fetchAnnouncements = async (isInitial = false) => {
   try {
     loading.value = true; error.value = null
     const data = await getActiveAnnouncements()
     announcements.value = data
-    if (announcements.value.length > 0) startSlider()
+    if (isInitial && announcements.value.length > 0) startSlider()
   } catch (err) {
     console.error('Failed to fetch announcements:', err)
     error.value = 'Unable to load announcements. Please try again later.'
@@ -90,10 +90,11 @@ const prevSlide = () => {
 // LIFECYCLE
 // =============================================================================
 onMounted(() => {
-  fetchAnnouncements()
+  fetchAnnouncements(true)
   const pollInterval = setInterval(fetchAnnouncements, 300000)
   onBeforeUnmount(() => clearInterval(pollInterval))
 })
+
 onBeforeUnmount(() => { if (autoSlide) clearInterval(autoSlide) })
 </script>
 
@@ -131,25 +132,25 @@ onBeforeUnmount(() => { if (autoSlide) clearInterval(autoSlide) })
       <div class="relative z-10 h-full flex flex-col">
         <!-- ─ HEADER: LOGO AND NAME ─────────────────────────────────────────────── -->
         <div class="flex items-center gap-4 p-6">
-          <img v-if="resolvedLogoUrl" :src="resolvedLogoUrl" class="w-[90px] h-[90px] min-w-[90px] object-cover rounded-full" />
+          <img v-if="resolvedLogoUrl" :src="resolvedLogoUrl" class="w-[85px] h-[85px] min-w-[85px] object-cover rounded-full" />
           <div>
             <h2 class="text-white text-[15px] font-bold leading-tight">{{ brgyName }}</h2>
             <p class="text-white text-[15px] opacity-90 -mt-1">{{ brgySubname }}</p>
-            <h3 class="text-white text-[30px] font-bold leading-tight">{{ $t('brgyAnnouncements') }}</h3>
+            <h3 class="text-white text-[25px] font-bold leading-tight">{{ $t('brgyAnnouncements') }}</h3>
           </div>
         </div>
 
         <!-- ─ ANNOUNCEMENT CONTENT ─────────────────────────────────────────────── -->
         <div class="flex-1 flex items-center px-20">
           <transition name="fade" mode="out-in">
-            <div v-if="announcements.length" :key="current" class="max-w-[60%]">
+            <div v-if="announcements.length" :key="current">
               <!-- Title -->
-              <h1 class="text-white font-extrabold text-[70px] tracking-tight leading-[1.05] drop-shadow-lg">
+              <h1 class="text-white font-extrabold text-[65px] tracking-tight leading-[1.05] drop-shadow-lg">
                 {{ announcements[current]?.title }}
               </h1>
 
               <!-- Description -->
-              <p v-if="announcements[current]?.description" class="text-white text-[20px] mt-3 opacity-90 leading-[1.4] max-w-[90%]">
+              <p v-if="announcements[current]?.description" class="text-white text-[20px] mt-3 opacity-90 leading-[1.4]">
                 {{ announcements[current]?.description }}
               </p>
 
