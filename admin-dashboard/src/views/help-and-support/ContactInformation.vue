@@ -1,4 +1,9 @@
 <script setup>
+/**
+ * @file ContactInformation.vue
+ * @description Admin interface for managing barangay contact information.
+ * Fully connected to backend via contactService.
+ */
 import { ref, onMounted } from "vue";
 import { useMessage, NInput, NForm, NFormItem, NCard } from "naive-ui";
 import {
@@ -8,7 +13,7 @@ import {
   InformationCircleIcon,
 } from "@heroicons/vue/24/outline";
 import PageTitle from "@/components/shared/PageTitle.vue";
-import axios from "axios";
+import contactService from "@/api/contactService";
 
 const message = useMessage();
 const isSaving = ref(false);
@@ -24,9 +29,13 @@ const contactData = ref({
   tech_support: "",
 });
 
+// ======================================
+// Fetch contact from backend
+// ======================================
 const loadContact = async () => {
+  isLoading.value = true;
   try {
-    const { data } = await axios.get("/admin/contact");
+    const data = await contactService.getContact();
     contactData.value = {
       emergency_number: data.emergency_number,
       emergency_desc: data.emergency_desc,
@@ -37,33 +46,38 @@ const loadContact = async () => {
       tech_support: data.tech_support,
     };
   } catch (err) {
-    console.error(err);
+    console.error("Failed to load contact information:", err);
     message.error("Failed to load contact information.");
   } finally {
     isLoading.value = false;
   }
 };
 
+// ======================================
+// Save handler
+// ======================================
 const handleSave = async () => {
   isSaving.value = true;
   try {
-    await axios.put("/admin/contact", contactData.value);
+    const updated = await contactService.updateContact(contactData.value);
+    Object.assign(contactData.value, updated);
     message.success("Contact information updated successfully.");
   } catch (err) {
-    console.error(err);
+    console.error("Failed to update contact information:", err);
     message.error("Failed to update contact information.");
   } finally {
     isSaving.value = false;
   }
 };
 
-onMounted(loadContact);
+onMounted(() => loadContact());
 </script>
 
 <template>
   <div
     class="flex flex-col p-6 bg-white rounded-md w-full h-full overflow-hidden animate-fade-in"
   >
+    <!-- Header -->
     <div class="flex mb-6 items-center justify-between shrink-0">
       <div>
         <PageTitle title="Contact Information" />
@@ -76,9 +90,9 @@ onMounted(loadContact);
       <div class="flex items-center gap-3">
         <button
           @click="handleSave"
-          :disabled="isSaving"
+          :disabled="isSaving || isLoading"
           class="px-4 py-2 bg-blue-600 text-white rounded-md font-medium text-sm hover:bg-blue-700 transition flex items-center gap-2"
-          :class="{ 'opacity-50 cursor-not-allowed': isSaving }"
+          :class="{ 'opacity-50 cursor-not-allowed': isSaving || isLoading }"
         >
           <svg
             v-if="!isSaving"
@@ -121,10 +135,23 @@ onMounted(loadContact);
       </div>
     </div>
 
-    <div class="overflow-y-auto flex-1 pr-2 pb-6">
+    <!-- Loading -->
+    <div
+      v-if="isLoading"
+      class="flex-1 flex flex-col items-center justify-center gap-4"
+    >
+      <div
+        class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"
+      ></div>
+      <p class="text-gray-500 font-medium">Loading contact information...</p>
+    </div>
+
+    <!-- Form -->
+    <div v-else class="overflow-y-auto flex-1 pr-2 pb-6">
       <n-form :model="contactData" size="large">
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div class="flex flex-col gap-6">
+            <!-- Emergency Contacts -->
             <n-card
               class="shadow-sm rounded-xl border-t-4 border-t-[#D32F2F] bg-[#FFF0F1]/20"
             >
@@ -152,6 +179,7 @@ onMounted(loadContact);
               </div>
             </n-card>
 
+            <!-- Barangay Office -->
             <n-card class="shadow-sm rounded-xl border-t-4 border-t-[#013C6D]">
               <div class="flex items-center gap-2 mb-4 text-[#013C6D]">
                 <ChatBubbleBottomCenterTextIcon class="w-6 h-6" />
@@ -187,6 +215,7 @@ onMounted(loadContact);
           </div>
 
           <div class="flex flex-col gap-6">
+            <!-- Visit Us -->
             <n-card class="shadow-sm rounded-xl border-t-4 border-t-[#013C6D]">
               <div class="flex items-center gap-2 mb-4 text-[#013C6D]">
                 <HomeIcon class="w-6 h-6" />
@@ -202,6 +231,7 @@ onMounted(loadContact);
               </n-form-item>
             </n-card>
 
+            <!-- Technical Support -->
             <n-card class="shadow-sm rounded-xl border-t-4 border-t-gray-500">
               <div class="flex items-center gap-2 mb-4 text-gray-700">
                 <InformationCircleIcon class="w-6 h-6" />

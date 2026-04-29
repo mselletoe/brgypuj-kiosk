@@ -6,8 +6,8 @@ import {
   HomeIcon,
   InformationCircleIcon,
 } from "@heroicons/vue/24/outline";
-import axios from "axios";
 import { useI18n } from "vue-i18n";
+import contactService from "@/api/contactService";
 
 const contact = ref({
   emergency_number: "",
@@ -24,8 +24,7 @@ const { t } = useI18n();
 
 onMounted(async () => {
   try {
-    const { data } = await axios.get("/kiosk/contact");
-    contact.value = data;
+    contact.value = await contactService.getKioskContact();
   } catch (err) {
     console.error("Failed to load contact info:", err);
   } finally {
