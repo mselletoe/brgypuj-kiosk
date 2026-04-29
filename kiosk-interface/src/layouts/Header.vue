@@ -84,9 +84,13 @@ const exitKiosk = () => { showExitModal.value = true; };
 const cancelExit = () => { showExitModal.value = false; showExitBtn.value = false; };
 const confirmExit = async () => {
   try {
-    await fetch('http://localhost:9999/exit', { method: 'POST' });
+    const res = await fetch('http://localhost:9999/exit', { method: 'POST' });
+    if (!res.ok) throw new Error('Server responded with error');
   } catch {
-    window.close();
+    // Fallback 1: close the window (works if opened via window.open or Electron)
+    try { window.close(); } catch {}
+    // Fallback 2: redirect to idle screen (always works)
+    router.push('/idle');
   }
 };
 </script>
