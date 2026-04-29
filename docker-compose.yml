@@ -35,7 +35,13 @@ services:
       - backend-docs:/app/generated_docs
     networks:
       - kiosk-network
-
+      
+    devices:
+      - /dev/ttyUSB1:/dev/ttyUSB1
+    privileged: true
+    environment:
+      - SMS_PORT=/dev/ttyUSB1
+  
   admin-dashboard:
     build:
       context: ./admin-dashboard

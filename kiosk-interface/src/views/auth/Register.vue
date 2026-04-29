@@ -180,7 +180,7 @@ onMounted(() => {
         </div>
 
         <!-- Transaction grid -->
-        <div v-else class="grid grid-cols-4 gap-4 overflow-y-auto pr-1">
+        <div v-else class="grid grid-cols-3 gap-4 overflow-y-auto pr-1">
           <button
             v-for="app in applications"
             :key="app.document_request_id"
