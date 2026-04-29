@@ -7,12 +7,13 @@
  * using a field mapping that matches resident profile data to form field names.
  */
 
-import { ref, watch } from 'vue'
+import { ref, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import VueDatePicker from '@vuepic/vue-datepicker'
 import '@vuepic/vue-datepicker/dist/main.css'
 import { CalendarIcon, ChevronDownIcon } from '@heroicons/vue/24/outline'
 import { LockClosedIcon } from '@heroicons/vue/24/solid'
+import Keyboard from '@/components/shared/Keyboard.vue'
 
 const props = defineProps({
   config: Object,
@@ -192,10 +193,63 @@ const selectOption = (fieldName, option) => {
   openDropdown.value = null
   errors.value[fieldName] = ''
 }
+
+// =============================================================================
+// ON-SCREEN KEYBOARD
+// =============================================================================
+const showKeyboard = ref(false)
+const activeFieldName = ref(null)
+const activeFieldType = ref(null) // 'input' | 'textarea'
+
+const openKeyboard = (fieldName, fieldType, elementId) => {
+  openDropdown.value = null
+  activeFieldName.value = fieldName
+  activeFieldType.value = fieldType
+  showKeyboard.value = true
+
+  nextTick(() => {
+    const el = elementId ? document.getElementById(elementId) : null
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  })
+}
+
+const hideKeyboard = () => {
+  showKeyboard.value = false
+  activeFieldName.value = null
+  activeFieldType.value = null
+}
+
+const handleKeyPress = (char) => {
+  if (!activeFieldName.value) return
+  const current = formData.value[activeFieldName.value] ?? ''
+  formData.value[activeFieldName.value] = current + char
+  errors.value[activeFieldName.value] = ''
+}
+
+const handleDelete = () => {
+  if (!activeFieldName.value) return
+  const current = String(formData.value[activeFieldName.value] ?? '')
+  formData.value[activeFieldName.value] = current.slice(0, -1)
+}
+
+const handleEnter = () => {
+  if (activeFieldType.value === 'textarea') {
+    const current = formData.value[activeFieldName.value] ?? ''
+    formData.value[activeFieldName.value] = current + '\n'
+  } else {
+    hideKeyboard()
+  }
+}
+
+const handleTab = () => {
+  hideKeyboard()
+}
 </script>
 
 <template>
-  <div class="space-y-5">
+  <div class="space-y-5" :class="{ 'content-with-keyboard': showKeyboard }">
 
     <div class="grid grid-cols-1 md:grid-cols gap-5">
       <div v-for="field in config.fields" :key="field.id || field.name" class="flex flex-col">
@@ -211,6 +265,7 @@ const selectOption = (fieldName, option) => {
 
         <input
           v-if="['text','email','tel','number'].includes(field.type)"
+          :id="`field-${field.name}`"
           v-model="formData[field.name]"
           :type="field.type"
           :placeholder="formatPlaceholder(field.placeholder, field.label, isPreFilled(field.name))"
@@ -221,6 +276,7 @@ const selectOption = (fieldName, option) => {
             isPreFilled(field.name) ? 'bg-gray-100 cursor-not-allowed text-gray-700' : 'bg-white',
             'w-full h-[48px] px-4 py-3 border rounded-xl shadow-sm transition-shadow focus:outline-none focus:ring-2 focus:ring-[#013C6D]'
           ]"
+          @focus="!isPreFilled(field.name) && !isSubmitting && openKeyboard(field.name, 'input', `field-${field.name}`)"
         />
 
         <VueDatePicker
@@ -243,6 +299,7 @@ const selectOption = (fieldName, option) => {
 
         <textarea
           v-else-if="field.type === 'textarea'"
+          :id="`field-${field.name}`"
           v-model="formData[field.name]"
           :placeholder="formatPlaceholder(field.placeholder, field.label, isPreFilled(field.name))"
           :readonly="isPreFilled(field.name) || props.isSubmitting"
@@ -252,6 +309,7 @@ const selectOption = (fieldName, option) => {
             isPreFilled(field.name) ? 'bg-gray-100 cursor-not-allowed text-gray-700' : 'bg-white',
             'w-full px-4 py-3 border rounded-xl shadow-sm transition-shadow focus:outline-none focus:ring-2 focus:ring-[#013C6D]'
           ]"
+          @focus="!isPreFilled(field.name) && !isSubmitting && openKeyboard(field.name, 'textarea', `field-${field.name}`)"
         ></textarea>
 
         <div
@@ -296,7 +354,34 @@ const selectOption = (fieldName, option) => {
       </div>
     </div>
   </div>
+
+  <Transition name="slide-up">
+    <Keyboard
+      v-if="showKeyboard"
+      @key-press="handleKeyPress"
+      @delete="handleDelete"
+      @enter="handleEnter"
+      @tab="handleTab"
+      @hide-keyboard="hideKeyboard"
+      :active-input-type="activeFieldType === 'textarea' ? 'textarea' : 'text'"
+    />
+  </Transition>
 </template>
+
+<style scoped>
+.content-with-keyboard {
+  padding-bottom: 210px;
+  transition: padding-bottom 0.3s ease-out;
+}
+.slide-up-enter-active,
+.slide-up-leave-active {
+  transition: transform 0.3s ease-out;
+}
+.slide-up-enter-from,
+.slide-up-leave-to {
+  transform: translateY(100%);
+}
+</style>
 
 <style>
 .dp-field.dp__input {

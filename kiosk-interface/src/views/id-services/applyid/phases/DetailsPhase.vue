@@ -4,6 +4,8 @@ import { useAuthStore } from "@/stores/auth";
 import VueDatePicker from "@vuepic/vue-datepicker";
 import "@vuepic/vue-datepicker/dist/main.css";
 import { DocumentTextIcon } from "@heroicons/vue/24/outline";
+import { ref, nextTick } from "vue";
+import Keyboard from "@/components/shared/Keyboard.vue";
 
 const props = defineProps({
   idFields: Array,
@@ -23,6 +25,54 @@ const authStore = useAuthStore();
 function updateField(fieldName, value) {
   emit("update:detailsForm", { ...props.detailsForm, [fieldName]: value });
 }
+
+const isFieldEditable = (field) => {
+  return props.useManualEntry || !props.autofillMap[field.name];
+};
+
+// =============================================================================
+// KEYBOARD
+// =============================================================================
+const showKeyboard = ref(false);
+const activeFieldName = ref(null);
+const activeFieldType = ref(null);
+
+const openKeyboard = (fieldName, fieldType, elementId) => {
+  activeFieldName.value = fieldName;
+  activeFieldType.value = fieldType;
+  showKeyboard.value = true;
+  nextTick(() => {
+    const el = elementId ? document.getElementById(elementId) : null;
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+  });
+};
+
+const hideKeyboard = () => {
+  showKeyboard.value = false;
+  activeFieldName.value = null;
+  activeFieldType.value = null;
+};
+
+const handleKeyPress = (char) => {
+  if (!activeFieldName.value) return;
+  const current = props.detailsForm[activeFieldName.value] ?? "";
+  updateField(activeFieldName.value, current + char);
+};
+
+const handleDelete = () => {
+  if (!activeFieldName.value) return;
+  const current = String(props.detailsForm[activeFieldName.value] ?? "");
+  updateField(activeFieldName.value, current.slice(0, -1));
+};
+
+const handleEnter = () => {
+  if (activeFieldType.value === "textarea") {
+    const current = props.detailsForm[activeFieldName.value] ?? "";
+    updateField(activeFieldName.value, current + "\n");
+  } else {
+    hideKeyboard();
+  }
+};
 </script>
 
 <template>
@@ -92,12 +142,15 @@ function updateField(fieldName, value) {
 
               <textarea
                 v-if="field.type === 'textarea'"
+                :id="`field-${field.name}`"
                 :value="detailsForm[field.name]"
                 @input="updateField(field.name, $event.target.value)"
                 :disabled="!useManualEntry && !!autofillMap[field.name]"
                 :placeholder="field.label"
                 class="w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm transition-shadow focus:outline-none focus:ring-2 focus:ring-[#013C6D] disabled:bg-gray-50 disabled:text-gray-400 resize-none"
                 rows="2"
+                @click="isFieldEditable(field) && !isSubmitting && openKeyboard(field.name, 'textarea', `field-${field.name}`)"
+                readonly
               ></textarea>
 
               <VueDatePicker
@@ -118,12 +171,15 @@ function updateField(fieldName, value) {
 
               <input
                 v-else
+                :id="`field-${field.name}`"
                 :value="detailsForm[field.name]"
                 @input="updateField(field.name, $event.target.value)"
                 :disabled="!useManualEntry && !!autofillMap[field.name]"
                 :type="field.type === 'number' ? 'number' : 'text'"
                 :placeholder="field.label"
                 class="w-full h-[48px] px-4 py-3 border border-gray-300 rounded-xl shadow-sm transition-shadow focus:outline-none focus:ring-2 focus:ring-[#013C6D] disabled:bg-gray-50 disabled:text-gray-400"
+                @click="isFieldEditable(field) && !isSubmitting && openKeyboard(field.name, 'input', `field-${field.name}`)"
+                readonly
               />
 
               <p
@@ -138,6 +194,16 @@ function updateField(fieldName, value) {
       </div>
     </div>
   </div>
+
+  <!-- Virtual Keyboard -->
+  <Keyboard
+    v-if="showKeyboard"
+    @key-press="handleKeyPress"
+    @delete="handleDelete"
+    @enter="handleEnter"
+    @tab="hideKeyboard"
+    @hide-keyboard="hideKeyboard"
+  />
 </template>
 
 <style scoped>

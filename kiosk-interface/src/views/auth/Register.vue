@@ -206,7 +206,7 @@ onMounted(() => {
           {{ t('selectTransactionFirst') }}
         </div>
 
-        <div v-else class="flex-1 flex flex-col gap-3 text-sm">
+        <div v-else class="flex-1 flex flex-col gap-3 text-sm overflow-y-auto pr-1">
           <div class="bg-white rounded-xl p-4 border border-[#B0D7F8] space-y-3">
             <div>
               <p class="text-xs text-gray-400 uppercase tracking-wide font-medium">{{ t('fullName') }}</p>
@@ -224,11 +224,6 @@ onMounted(() => {
               <p class="text-xs text-gray-400 uppercase tracking-wide font-medium">{{ t('transactionNo') }}</p>
               <p class="font-bold text-[#013C6D]">{{ selectedApp.transaction_no }}</p>
             </div>
-          </div>
-
-          <div class="bg-blue-100 rounded-xl p-3 border border-blue-300 text-center">
-            <p class="text-xs text-gray-500 font-medium">{{ t('rfidCardToLink') }}</p>
-            <p class="font-bold font-mono text-[#013C6D] text-base mt-0.5">{{ pendingUid }}</p>
           </div>
         </div>
       </div>
