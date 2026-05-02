@@ -3,6 +3,11 @@ seeds/seed_equipment.py
 
 Seeds equipment inventory items and borrowing requests
 with realistic status progressions within the deployment window.
+
+Resident restriction:
+    Only the 31 residents listed in TRANSACTION_RESIDENTS are used as
+    requestors. These are the real residents from the source data who
+    actually made document/equipment transactions.
 """
 
 import random
@@ -12,6 +17,83 @@ from sqlalchemy.orm import Session
 from seeds.utils import rand_dt, progression, DEPLOY_START, DEPLOY_END
 from app.models.equipment import EquipmentInventory, EquipmentRequest, EquipmentRequestItem
 from app.models.resident import Resident, ResidentRFID
+
+
+# ─────────────────────────────────────────────────────────────
+# Residents allowed to appear in equipment transactions.
+# Stored as (last_name, first_name_start) — matched
+# case-insensitively against the Resident table after seeding.
+# ─────────────────────────────────────────────────────────────
+
+TRANSACTION_RESIDENTS = [
+    ("Vibandor",   "Mylene"),
+    ("Angcaya",    "Joana"),
+    ("Delarmino",  "Chariel Althea"),
+    ("Bataclan",   "Jenna Rose"),
+    ("Angcaya",    "Ma. Monica Yinley"),      
+    ("Dela Rea",   "Justine Carl"),
+    ("Jamon",      "Alliah Mae"),
+    ("Plaganas",   "Maria Aleth"),
+    ("Gutierrez",  "Gillian Lou"),
+    ("Bayas",      "Allister Marvin"),
+    ("Angcaya",    "Micah Angelie"),
+    ("Cruz",       "Kenjie Ryle"),
+    ("Sipat",      "Marife"),
+    ("Ramos",      "Naomi Rose"),
+    ("Ramos",      "Winona Kylie"),
+    ("Barrera",    "Lourella"),
+    ("Dela Rea",   "Kristal Joy"),
+    ("Panganiban", "Arvin"),
+    ("Dela Rea",   "Carissa Mae"),
+    ("Dimayuga",   "Ghia Larize"),
+    ("Sumagui",    "Emil"),
+    ("Sumagui",    "Niel"),
+    ("Sumagui",    "Emmanuel"),
+    ("San Martin", "Bobby"),
+    ("Fresco",     "Veronica Anne"),
+    ("San Martin", "Franco"),
+    ("Mora",       "Mary Joy"),
+    ("Madera",     "Aubrey Rose"),
+    ("Bayot",      "Rochelle Ann"),
+    ("Villamor",   "Keith Beau Allen"),
+    ("Ambion",     "Johanne Alecs"),
+]
+
+
+def _get_transaction_residents(db: Session) -> list:
+    """
+    Return the subset of Resident ORM objects that match TRANSACTION_RESIDENTS.
+    Matching is done by last_name (exact, title-case) and the start of first_name
+    (covers compound first names like 'Ma. Monica Yinley').
+    Only residents with an active RFID card are included — consistent with how
+    the kiosk authenticates requestors.
+    """
+    all_residents = (
+        db.query(Resident)
+        .join(Resident.rfids)
+        .filter(ResidentRFID.is_active == True)
+        .all()
+    )
+
+    matched = []
+    for last, first_start in TRANSACTION_RESIDENTS:
+        last_norm  = last.strip().lower()
+        first_norm = first_start.strip().lower()
+        for r in all_residents:
+            if (
+                r.last_name.strip().lower() == last_norm
+                and r.first_name.strip().lower().startswith(first_norm)
+            ):
+                matched.append(r)
+                break  # one match per entry is enough
+
+    if not matched:
+        raise RuntimeError(
+            "No transaction-eligible residents found. "
+            "Run seed_residents first and make sure RFID cards are assigned."
+        )
+
+    return matched
 
 
 # ── Inventory catalogue ──────────────────────────────────────────
@@ -42,12 +124,11 @@ PURPOSES = [
 ]
 
 
-# ── NEW: Transaction نمبر generator ──────────────────────────────
 def _generate_transaction_no(db: Session) -> str:
     while True:
-        number = random.randint(1000, 9999)
+        number         = random.randint(1000, 9999)
         transaction_no = f"ER-{number}"
-        exists = db.query(EquipmentRequest).filter_by(transaction_no=transaction_no).first()
+        exists         = db.query(EquipmentRequest).filter_by(transaction_no=transaction_no).first()
         if not exists:
             return transaction_no
 
@@ -76,16 +157,15 @@ def seed_equipment(db: Session):
         print(f"  ↳ Inventory: {existing_inv} items already exist — skipping inventory insert.")
 
     inventory = db.query(EquipmentInventory).all()
-    residents = (
-        db.query(Resident)
-        .join(Resident.rfids)
-        .filter(ResidentRFID.is_active == True)
-        .all()
-    )
 
-    if not residents:
-        print("  ↳ No residents found — skipping equipment requests.")
+    # ── Restrict to the 31 real transaction residents ─────────────
+    try:
+        residents = _get_transaction_residents(db)
+    except RuntimeError as e:
+        print(f"  ↳ {e}")
         return
+
+    print(f"  ↳ Transaction-eligible residents loaded: {len(residents)}")
 
     existing_req = db.query(EquipmentRequest).count()
     if existing_req >= 10:
@@ -102,7 +182,7 @@ def seed_equipment(db: Session):
     ]
     statuses, weights = zip(*STATUS_WEIGHTS)
 
-    count = 0
+    count  = 0
     TARGET = 25
 
     for _ in range(TARGET):
@@ -115,7 +195,7 @@ def seed_equipment(db: Session):
         if borrow_end > DEPLOY_END:
             borrow_end = DEPLOY_END - timedelta(hours=1)
 
-        days = max(1, _days_between(borrow_start, borrow_end))
+        days   = max(1, _days_between(borrow_start, borrow_end))
         status = random.choices(statuses, weights=weights, k=1)[0]
 
         payment_status = "unpaid"
@@ -136,7 +216,6 @@ def seed_equipment(db: Session):
             for item, qty in zip(chosen_items, quantities)
         )
 
-        # ✅ FIX: Add transaction_no
         req = EquipmentRequest(
             transaction_no = _generate_transaction_no(db),
             resident_id    = resident.id,
@@ -155,7 +234,7 @@ def seed_equipment(db: Session):
         )
 
         db.add(req)
-        db.flush()  # keep this (needed for req.id)
+        db.flush()
 
         for item, qty in zip(chosen_items, quantities):
             req_item = EquipmentRequestItem(

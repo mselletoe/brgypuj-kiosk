@@ -3,6 +3,11 @@ seeds/seed_transactions.py
 
 Seeds TransactionHistory for completed/rejected document and equipment requests.
 Run AFTER seed_documents and seed_equipment so real request data exists.
+
+Resident restriction:
+    Standalone historical entries (seeded for volume) are restricted to the
+    same 31 transaction-eligible residents used in seed_documents and
+    seed_equipment — not drawn from the full resident pool.
 """
 
 import random
@@ -12,7 +17,67 @@ from seeds.utils import rand_dt, progression
 from app.models.transaction import TransactionHistory
 from app.models.document import DocumentRequest
 from app.models.equipment import EquipmentRequest
-from app.models.resident import Resident
+from app.models.resident import Resident, ResidentRFID
+
+
+# ─────────────────────────────────────────────────────────────
+# Same 31 transaction-eligible residents as the other seeders.
+# ─────────────────────────────────────────────────────────────
+
+TRANSACTION_RESIDENTS = [
+    ("Vibandor",   "Mylene"),
+    ("Angcaya",    "Joana"),
+    ("Delarmino",  "Chariel Althea"),
+    ("Bataclan",   "Jenna Rose"),
+    ("Angcaya",    "Ma."),
+    ("Dela Rea",   "Justine Carl"),
+    ("Jamon",      "Alliah Mae"),
+    ("Plaganas",   "Maria Aleth"),
+    ("Gutierrez",  "Gillian Lou"),
+    ("Bayas",      "Allister Marvin"),
+    ("Angcaya",    "Micah Angelie"),
+    ("Cruz",       "Kenjie Ryle"),
+    ("Sipat",      "Marife"),
+    ("Ramos",      "Naomi Rose"),
+    ("Ramos",      "Winona Kylie"),
+    ("Barrera",    "Lourella"),
+    ("Dela Rea",   "Kristal Joy"),
+    ("Panganiban", "Arvin"),
+    ("Dela Rea",   "Carissa Mae"),
+    ("Dimayuga",   "Ghia Larize"),
+    ("Sumagui",    "Emil"),
+    ("Sumagui",    "Niel"),
+    ("Sumagui",    "Emmanuel"),
+    ("San Martin", "Bobby"),
+    ("Fresco",     "Veronica Anne"),
+    ("San Martin", "Franco"),
+    ("Mora",       "Mary Joy"),
+    ("Madera",     "Aubrey Rose"),
+    ("Bayot",      "Rochelle Ann"),
+    ("Villamor",   "Keith Beau Allen"),
+    ("Ambion",     "Johanne Alecs"),
+]
+
+
+def _get_transaction_residents(db: Session) -> list:
+    all_residents = (
+        db.query(Resident)
+        .join(Resident.rfids)
+        .filter(ResidentRFID.is_active == True)
+        .all()
+    )
+    matched = []
+    for last, first_start in TRANSACTION_RESIDENTS:
+        last_norm  = last.strip().lower()
+        first_norm = first_start.strip().lower()
+        for r in all_residents:
+            if (
+                r.last_name.strip().lower() == last_norm
+                and r.first_name.strip().lower().startswith(first_norm)
+            ):
+                matched.append(r)
+                break
+    return matched
 
 
 def seed_transactions(db: Session):
@@ -70,7 +135,8 @@ def seed_transactions(db: Session):
         count += 1
 
     # ── Standalone historical entries (for volume) ────────────────
-    residents = db.query(Resident).all()
+    # Restricted to the 31 real transaction-eligible residents only.
+    residents = _get_transaction_residents(db)
     if residents:
         for _ in range(15):
             resident = random.choice(residents)
@@ -81,9 +147,12 @@ def seed_transactions(db: Session):
             th = TransactionHistory(
                 transaction_type = t_type,
                 transaction_name = random.choice([
-                    "Barangay Clearance", "Certificate of Indigency",
-                    "Certificate of Residency", "Plastic Chairs (set of 50)",
-                    "Sound System (PA Set)", "Barangay ID",
+                    "Barangay Clearance",
+                    "Certificate of Indigency",
+                    "Certificate of Residency",
+                    "Plastic Chairs (set of 50)",
+                    "Sound System (PA Set)",
+                    "Barangay ID",
                 ]),
                 transaction_no   = no,
                 resident_id      = resident.id,
@@ -93,6 +162,8 @@ def seed_transactions(db: Session):
             )
             db.add(th)
             count += 1
+    else:
+        print("  ⚠  No transaction-eligible residents found — standalone entries skipped.")
 
     db.commit()
     print(f"  ↳ Inserted {count} transaction history entries.")
