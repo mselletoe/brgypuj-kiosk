@@ -1,6 +1,6 @@
 """
 app/services/sms_gateway.py
- 
+
 Hardware SMS gateway driver for the A7670E GSM modem.
 Communicates via AT commands over a serial connection.
 Supports bulk sending with configurable retries, inter-message delays,
@@ -14,7 +14,7 @@ import time
 from datetime import datetime
 from typing import List, Dict, Any
 
-import serial 
+import serial
 
 from app.core.config import settings
 
@@ -58,6 +58,7 @@ def _signal_ok(ser: serial.Serial) -> bool:
 # =================================================================================
 # GATEWAY CLASS
 # =================================================================================
+
 class A7670EGateway:
     def __init__(
         self,
@@ -68,17 +69,16 @@ class A7670EGateway:
         send_wait:   float = None,
         inter_delay: float = None,
     ):
-        self.port = port or getattr(settings, "SMS_PORT", "/dev/ttyUSB1")
+        self.port        = port        or getattr(settings, "SMS_PORT",        "/dev/ttyUSB1")
         self.baud        = baud        or getattr(settings, "SMS_BAUD",        115200)
         self.smsc        = smsc        or getattr(settings, "SMS_SMSC",        "+639180000101")
         self.retries     = retries     or getattr(settings, "SMS_RETRIES",     3)
-        self.send_wait   = send_wait   or getattr(settings, "SMS_SEND_WAIT",   15.0)
+        self.send_wait   = send_wait   or getattr(settings, "SMS_SEND_WAIT",   30.0)
         self.inter_delay = inter_delay or getattr(settings, "SMS_INTER_DELAY", 5.0)
-
 
     def _open(self) -> serial.Serial:
         ser = serial.Serial(self.port, self.baud, timeout=5)
-        time.sleep(2) 
+        time.sleep(2)
 
         resp = _send_at(ser, "AT")
         if "OK" not in resp:
@@ -91,42 +91,81 @@ class A7670EGateway:
             raise RuntimeError(f"SIM not ready: {cpin.strip()}")
 
         _send_at(ser, "AT+CMGF=1")
-        _send_at(ser, f'AT+CSCA="{self.smsc}"')
+        # NOTE: Do NOT call AT+CSCA here.
+        # The SMSC is already correctly stored on the SIM (as Unicode hex).
+        # Overwriting it with a raw ASCII string corrupts it and causes send failures.
 
         return ser
 
     def _send_one(self, ser: serial.Serial, number: str, message: str) -> bool:
         for attempt in range(1, self.retries + 1):
-            log.info(
-                "%s Attempt %d/%d → %s",
-                _ts(), attempt, self.retries, number,
-            )
+            log.info("%s Attempt %d/%d → %s", _ts(), attempt, self.retries, number)
 
-            ser.reset_input_buffer()   # ← add this
+            ser.reset_input_buffer()
             ser.reset_output_buffer()
 
-            _send_at(ser, f'AT+CMGS="{number}"', wait=4)
-            ser.write((message + chr(26)).encode())  
+            # Step 1: Send AT+CMGS and wait explicitly for the '>' prompt.
+            # Do NOT use a fixed sleep — the prompt can arrive after a variable delay.
+            ser.write(f'AT+CMGS="{number}"\r\n'.encode())
 
+            prompt_buf      = ""
+            prompt_deadline = time.time() + 10  # up to 10s for '>'
+            got_prompt      = False
+
+            while time.time() < prompt_deadline:
+                if ser.inWaiting():
+                    prompt_buf += ser.read(ser.inWaiting()).decode(errors="ignore")
+                if ">" in prompt_buf:
+                    got_prompt = True
+                    break
+                time.sleep(0.2)
+
+            if not got_prompt:
+                log.warning(
+                    "%s No '>' prompt received for %s (attempt %d) — buffer: %r",
+                    _ts(), number, attempt, prompt_buf,
+                )
+                if attempt < self.retries:
+                    time.sleep(5)
+                continue
+
+            # Step 2: Send message body + Ctrl-Z (0x1A)
+            ser.write((message + chr(26)).encode())
+
+            # Step 3: Poll for +CMGS: confirmation.
+            # Do not bail on ERROR mid-stream — the modem sometimes echoes
+            # intermediate status lines containing "ERROR" before the final
+            # +CMGS: confirmation arrives.
             deadline = time.time() + self.send_wait
             buffer   = ""
+
             while time.time() < deadline:
                 if ser.inWaiting():
-                    buffer += ser.read(ser.inWaiting()).decode(errors="ignore")
+                    chunk   = ser.read(ser.inWaiting()).decode(errors="ignore")
+                    buffer += chunk
+                    log.debug("%s << %s", _ts(), chunk.strip())
+
                 if "+CMGS:" in buffer:
                     log.info("%s ✅ Sent to %s (attempt %d)", _ts(), number, attempt)
                     return True
-                if "ERROR" in buffer:
+
+                # Only treat ERROR as terminal once we've had enough time
+                # for +CMGS: to arrive (i.e. after at least 5 seconds of waiting).
+                if "ERROR" in buffer and (time.time() - (deadline - self.send_wait)) > 5:
+                    log.warning(
+                        "%s ERROR in buffer for %s (attempt %d): %r",
+                        _ts(), number, attempt, buffer.strip(),
+                    )
                     break
-                time.sleep(0.5)
+
+                time.sleep(0.3)
 
             log.warning("%s ❌ Attempt %d failed for %s", _ts(), attempt, number)
             if attempt < self.retries:
-                time.sleep(5) 
+                time.sleep(5)
 
         log.error("%s FAILED all %d attempts for %s", _ts(), self.retries, number)
         return False
-
 
     def send_bulk(
         self,
