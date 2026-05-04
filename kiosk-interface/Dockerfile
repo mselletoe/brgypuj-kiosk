@@ -3,11 +3,16 @@ FROM node:20-alpine AS build
 
 WORKDIR /app
 
+# Make sure devDependencies like vite are installed
+ENV NODE_ENV=development
+
 # Copy package files
 COPY package*.json ./
-RUN npm install
 
-# Copy source code and .env
+# If package-lock.json exists, this is better than npm install
+RUN npm ci --include=dev
+
+# Copy source code
 COPY . .
 
 # Build the app
