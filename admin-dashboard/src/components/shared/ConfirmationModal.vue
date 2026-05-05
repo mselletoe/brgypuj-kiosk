@@ -31,7 +31,7 @@ const emit = defineEmits(['confirm', 'cancel']);
   <Transition name="fade">
     <div 
       v-if="show" 
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+      class="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-50"
       @click.self="emit('cancel')"
     >
       <div class="bg-white rounded-2xl px-10 py-8 max-w-sm w-full shadow-xl transform transition-all flex flex-col items-center text-center">

@@ -28,6 +28,7 @@ from app.services.resident_service import (
     update_resident_address,
     update_resident_rfid,
     delete_resident,
+    reset_resident_pin,
     get_all_puroks
 )
 from app.api.deps import get_db
@@ -107,6 +108,16 @@ def update_resident_rfid_info(
 @router.delete("/{resident_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_resident_record(resident_id: int, db: Session = Depends(get_db)):
     delete_resident(db, resident_id)
+    return None
+
+
+@router.post("/{resident_id}/reset-pin", status_code=status.HTTP_204_NO_CONTENT)
+def reset_resident_pin_endpoint(resident_id: int, db: Session = Depends(get_db)):
+    """
+    Resets the resident's kiosk PIN back to '0000' and clears
+    any failed-attempt lockout.
+    """
+    reset_resident_pin(db, resident_id)
     return None
 
 

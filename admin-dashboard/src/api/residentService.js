@@ -64,3 +64,12 @@ export const fetchPuroks = async () => {
   const res = await api.get('/admin/residents/utils/puroks')
   return res.data
 }
+
+export const resetResidentPin = async (residentId) => {
+  await api.post(`/admin/residents/${residentId}/reset-pin`)
+}
+
+export const notifyResident = async (phone, message) => {
+  const res = await api.post('/admin/notify', { phone, message })
+  return res.data
+}

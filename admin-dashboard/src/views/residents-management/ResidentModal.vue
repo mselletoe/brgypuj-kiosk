@@ -14,13 +14,17 @@ import {
   useMessage
 } from 'naive-ui'
 import { XMarkIcon } from '@heroicons/vue/24/outline'
+import SMSModal from '@/components/shared/SendSMSModal.vue'
+import ConfirmModal from '@/components/shared/ConfirmationModal.vue'
 import { 
   fetchResidentDetail, 
   createResident, 
   updateResident,
   updateResidentAddress,
   updateResidentRFID,
-  fetchPuroks 
+  fetchPuroks,
+  resetResidentPin,
+  notifyResident
 } from '@/api/residentService'
 import { fetchResidentTransactionHistory } from '@/api/transactionService'
 import { fetchResidentBlotterRecords } from '@/api/blotterService'
@@ -479,6 +483,51 @@ async function handleSave() {
   }
 }
 
+// =============================================================================
+// RESET PIN
+// =============================================================================
+const resettingPin = ref(false)
+const showResetPinConfirm = ref(false)
+
+// Resident has a PIN only if they have an RFID assigned
+const hasPin = computed(() => {
+  return !!(residentDetails.value?.active_rfid?.rfid_uid || formData.value.rfid_uid)
+})
+
+async function handleResetPin() {
+  resettingPin.value = true
+  try {
+    await resetResidentPin(props.residentId)
+    message.success('PIN has been reset to 0000 and lockout cleared')
+  } catch (error) {
+    const errorMsg = error.response?.data?.detail || 'Failed to reset PIN'
+    message.error(errorMsg)
+  } finally {
+    resettingPin.value = false
+  }
+}
+
+// =============================================================================
+// SMS NOTIFY
+// =============================================================================
+const showSmsModal = ref(false)
+const smsRecipientName = ref('')
+const smsRecipientPhone = ref('')
+const smsDefaultMessage = ref('')
+
+function handleNotify() {
+  const firstName = residentDetails.value?.first_name || 'Resident'
+  const name = residentDetails.value?.full_name || 'Resident'
+  smsRecipientName.value = name
+  smsRecipientPhone.value = residentDetails.value?.phone_number || ''
+  smsDefaultMessage.value = `Hello ${firstName},\n\nYour Barangay Poblacion I kiosk PIN has been reset to 0000 by the barangay admin.\n\nPlease visit the kiosk and update your PIN at your earliest convenience.\n\nThank you!`
+  showSmsModal.value = true
+}
+
+async function handleSendSMS(smsData) {
+  await notifyResident(smsData.phone, smsData.message)
+}
+
 function handleClose() {
   emit('close')
 }
@@ -691,6 +740,38 @@ function handleClose() {
             </div>          
           </div>
 
+          <!-- PIN Management (view mode only) -->
+          <div v-if="mode === 'view' && residentDetails" class="flex flex-col gap-2 mb-3">
+            <span class="text-xs text-gray-500 font-medium uppercase tracking-wide">Kiosk PIN</span>
+            <div class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 bg-gray-50">
+              <div class="flex-1">
+                <p class="text-sm text-gray-700">
+                  <span v-if="!hasPin" class="text-gray-400 italic">No PIN — resident has no RFID assigned</span>
+                  <span v-else class="text-gray-600">Resets the resident's kiosk PIN back to <span class="font-mono font-semibold text-gray-800">0000</span> and clears any lockout.</span>
+                </p>
+              </div>
+              <div class="flex items-center gap-2 flex-shrink-0">
+                <NButton
+                  type="warning"
+                  size="small"
+                  :loading="resettingPin"
+                  :disabled="!hasPin || resettingPin"
+                  @click="showResetPinConfirm = true"
+                >
+                  Reset PIN
+                </NButton>
+                <NButton
+                  size="small"
+                  :disabled="!hasPin || !residentDetails.phone_number"
+                  :title="!hasPin ? 'No RFID assigned' : !residentDetails.phone_number ? 'No phone number on record' : 'Notify resident of PIN reset via SMS'"
+                  @click="handleNotify"
+                >
+                  Notify
+                </NButton>
+              </div>
+            </div>
+          </div>
+
           <hr class="bg-slate-300 my-5" />
 
           <div v-if="mode === 'view'">
@@ -728,7 +809,6 @@ function handleClose() {
         <NButton @click="handleClose" :disabled="saving">
           Cancel
         </NButton>
-
         <NButton
           type="primary"
           @click="handleSave"
@@ -740,4 +820,27 @@ function handleClose() {
       </div>
     </div>
   </NModal>
+
+  <!-- Reset PIN Confirm Modal -->
+  <Teleport to="body">
+    <ConfirmModal
+      :show="showResetPinConfirm"
+      title="Reset this resident's kiosk PIN to 0000 and clear any lockout?"
+      confirm-text="Yes, Reset"
+      cancel-text="Cancel"
+      confirm-button-class="bg-yellow-500 hover:bg-yellow-600"
+      @confirm="() => { showResetPinConfirm = false; handleResetPin() }"
+      @cancel="showResetPinConfirm = false"
+    />
+  </Teleport>
+
+  <!-- SMS Modal -->
+  <SMSModal
+    :show="showSmsModal"
+    :recipient-name="smsRecipientName"
+    :recipient-phone="smsRecipientPhone"
+    :default-message="smsDefaultMessage"
+    @update:show="(val) => (showSmsModal = val)"
+    @send="handleSendSMS"
+  />
 </template>

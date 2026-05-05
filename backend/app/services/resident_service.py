@@ -508,5 +508,19 @@ def delete_resident(db: Session, resident_id: int) -> bool:
         )
 
 
+def reset_resident_pin(db: Session, resident_id: int) -> bool:
+    resident = get_resident_by_id(db, resident_id)
+    if not resident:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Resident with ID {resident_id} not found"
+        )
+    resident.rfid_pin = "0000"
+    resident.failed_pin_attempts = 0
+    resident.locked_until = None
+    db.commit()
+    return True
+
+
 def get_all_puroks(db: Session) -> List[Purok]:
     return db.query(Purok).order_by(Purok.purok_name).all()
