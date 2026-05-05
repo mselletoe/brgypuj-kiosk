@@ -24,7 +24,7 @@ TRANSACTION_RESIDENTS = [
     ("Angcaya",    "Joana"),
     ("Delarmino",  "Chariel Althea"),
     ("Bataclan",   "Jenna Rose"),
-    ("Angcaya",    "Ma."),
+    ("Angcaya",    "Ma. Monica Yinley"),
     ("Dela Rea",   "Justine Carl"),
     ("Jamon",      "Alliah Mae"),
     ("Plaganas",   "Maria Aleth"),

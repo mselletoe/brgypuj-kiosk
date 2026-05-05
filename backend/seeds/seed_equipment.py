@@ -11,7 +11,7 @@ Resident restriction:
 """
 
 import random
-from datetime import timedelta
+from datetime import date, datetime, timedelta
 from sqlalchemy.orm import Session
 
 from seeds.utils import rand_dt, progression, DEPLOY_START, DEPLOY_END
@@ -58,6 +58,84 @@ TRANSACTION_RESIDENTS = [
     ("Villamor",   "Keith Beau Allen"),
     ("Ambion",     "Johanne Alecs"),
 ]
+
+# ─────────────────────────────────────────────────────────────
+# Earliest allowed request date per resident (last, first_start).
+# requested_at will be randomly set to this date OR up to 3 days
+# after it (still within DEPLOY_END), at a random time of day.
+# ─────────────────────────────────────────────────────────────
+
+RESIDENT_REQUEST_DATES: dict[tuple, date] = {
+    ("Vibandor",   "Mylene"):           date(2026, 3, 16),
+    ("Angcaya",    "Joana"):            date(2026, 3, 16),
+    ("Delarmino",  "Chariel Althea"):   date(2026, 3, 16),
+    ("Bataclan",   "Jenna Rose"):       date(2026, 3, 16),
+    ("Angcaya",    "Ma. Monica Yinley"):date(2026, 3, 17),
+    ("Dela Rea",   "Justine Carl"):     date(2026, 3, 20),
+    ("Jamon",      "Alliah Mae"):       date(2026, 3, 20),
+    ("Plaganas",   "Maria Aleth"):      date(2026, 3, 21),
+    ("Gutierrez",  "Gillian Lou"):      date(2026, 3, 21),
+    ("Bayas",      "Allister Marvin"):  date(2026, 3, 23),
+    ("Angcaya",    "Micah Angelie"):    date(2026, 3, 26),
+    ("Cruz",       "Kenjie Ryle"):      date(2026, 3, 26),
+    ("Sipat",      "Marife"):           date(2026, 3, 26),
+    ("Ramos",      "Naomi Rose"):       date(2026, 3, 28),
+    ("Ramos",      "Winona Kylie"):     date(2026, 3, 28),
+    ("Barrera",    "Lourella"):         date(2026, 3, 28),
+    ("Dela Rea",   "Kristal Joy"):      date(2026, 3, 30),
+    ("Panganiban", "Arvin"):            date(2026, 4,  1),
+    ("Dela Rea",   "Carissa Mae"):      date(2026, 4,  3),
+    ("Dimayuga",   "Ghia Larize"):      date(2026, 4,  3),
+    ("Sumagui",    "Emil"):             date(2026, 4,  4),
+    ("Sumagui",    "Niel"):             date(2026, 4,  4),
+    ("Sumagui",    "Emmanuel"):         date(2026, 4,  7),
+    ("San Martin", "Bobby"):            date(2026, 4,  8),
+    ("Fresco",     "Veronica Anne"):    date(2026, 4, 10),
+    ("San Martin", "Franco"):           date(2026, 4, 10),
+    ("Mora",       "Mary Joy"):         date(2026, 4, 10),
+    ("Madera",     "Aubrey Rose"):      date(2026, 4, 13),
+    ("Bayot",      "Rochelle Ann"):     date(2026, 4, 15),
+    ("Villamor",   "Keith Beau Allen"): date(2026, 4, 18),
+    ("Ambion",     "Johanne Alecs"):    date(2026, 4, 18),
+}
+
+
+def _resident_request_dt(resident) -> datetime:
+    """
+    Return a datetime for this resident's request.
+    The date is their assigned earliest date plus 0–3 random days
+    (capped at DEPLOY_END). The time is a random business-hours
+    moment (08:00–17:00).
+    """
+    last_norm  = resident.last_name.strip().lower()
+    first_norm = resident.first_name.strip().lower()
+
+    base_date: date | None = None
+    for (last, first_start), d in RESIDENT_REQUEST_DATES.items():
+        if (
+            last.strip().lower() == last_norm
+            and first_norm.startswith(first_start.strip().lower())
+        ):
+            base_date = d
+            break
+
+    if base_date is None:
+        # Fallback for any resident not explicitly listed
+        return rand_dt()
+
+    offset    = random.randint(0, 3)
+    target_dt = datetime(base_date.year, base_date.month, base_date.day) + timedelta(days=offset)
+    target_dt += timedelta(
+        hours=random.randint(8, 16),
+        minutes=random.randint(0, 59),
+        seconds=random.randint(0, 59),
+    )
+
+    # Never exceed the deployment window end
+    if target_dt > DEPLOY_END:
+        target_dt = DEPLOY_END - timedelta(minutes=random.randint(1, 60))
+
+    return target_dt
 
 
 def _get_transaction_residents(db: Session) -> list:
@@ -187,7 +265,7 @@ def seed_equipment(db: Session):
 
     for _ in range(TARGET):
         resident     = random.choice(residents)
-        requested_at = rand_dt()
+        requested_at = _resident_request_dt(resident)
 
         # Borrow window
         borrow_start = requested_at + timedelta(days=random.randint(1, 4))

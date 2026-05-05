@@ -1,12 +1,13 @@
 """
 Seed Admin Accounts
 -------------------
-Seeds two accounts on first deployment:
-  1. superadmin  — Barangay Captain    (full system access)
-  2. brgy_admin  — Barangay Secretary  (standard admin access)
+Seeds three accounts on first deployment:
+  1. superadmin   — Barangay Captain    (Joel A. Angcaya)       — full system access
+  2. sk_chairman  — SK Chairman         (Jelyn Mae D. Vibandor) — standard admin access
+  3. brgy_admin   — Barangay Secretary  (Ma. Judith B. Borja)   — standard admin access
 
-Both are linked to the first two generated residents.
-⚠️  Change both passwords immediately after first login.
+All are linked to their corresponding resident records.
+⚠️  Change all passwords immediately after first login.
 """
 from app.models.admin import Admin
 from app.models.resident import Resident
@@ -14,6 +15,10 @@ from passlib.context import CryptContext
 
 pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+# resident_index matches the order in RESIDENTS_DATA in seed_residents.py:
+#   0  → JOEL A. ANGCAYA
+#  29  → JELYN MAE D. VIBANDOR
+#  54  → MA. JUDITH B. BORJA
 ADMIN_ACCOUNTS = [
     {
         "username":       "superadmin",
@@ -23,11 +28,18 @@ ADMIN_ACCOUNTS = [
         "resident_index": 0,
     },
     {
+        "username":       "sk_chairman",
+        "password":       "admin123",
+        "position":       "SK Chairman",
+        "system_role":    "admin",
+        "resident_index": 29,
+    },
+    {
         "username":       "brgy_admin",
         "password":       "admin123",
         "position":       "Barangay Secretary",
         "system_role":    "admin",
-        "resident_index": 1,
+        "resident_index": 54,
     },
 ]
 
@@ -68,13 +80,14 @@ def seed_admin(db):
             db.commit()
             print(f"🌱 {seeded} admin account(s) seeded.\n")
 
-            print("   ┌──────────────────────────────────────────────────────┐")
-            print("   │  USERNAME      PASSWORD          ROLE                │")
-            print("   ├──────────────────────────────────────────────────────┤")
-            print("   │  superadmin    superadmin123     superadmin          │")
-            print("   │  brgy_admin    admin123          admin               │")
-            print("   └──────────────────────────────────────────────────────┘")
-            print("   ⚠️  Change both passwords on first login!")
+            print("   ┌──────────────────────────────────────────────────────────────────┐")
+            print("   │  USERNAME      PASSWORD          ROLE        POSITION            │")
+            print("   ├──────────────────────────────────────────────────────────────────┤")
+            print("   │  superadmin    superadmin123     superadmin  Barangay Captain     │")
+            print("   │  sk_chairman   admin123          admin       SK Chairman          │")
+            print("   │  brgy_admin    admin123          admin       Barangay Secretary   │")
+            print("   └──────────────────────────────────────────────────────────────────┘")
+            print("   ⚠️  Change all passwords on first login!")
 
     except Exception as e:
         db.rollback()

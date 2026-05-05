@@ -85,8 +85,8 @@ const triggerUndo = () => {
 
       <!-- TITLE -->
       <div class="min-w-0">
-        <PageTitle title="Feedbacks and Reports" />
-        <p class="text-sm text-gray-500 mt-1">Manage feedbacks and reports</p>
+        <PageTitle title="Feedback and Reports" />
+        <p class="text-sm text-gray-500 mt-1">Manage feedback and reports</p>
       </div>
 
       <!-- CONTROLS -->

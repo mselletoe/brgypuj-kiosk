@@ -4,7 +4,7 @@ seeds/seed_residents.py
 Residents seeded from real Poblacion Uno data.
 
 Rules:
-- 54 residents total (original 50 + 4 new from Excel rows 52-55)
+- 55 residents total (original 50 + 4 new from Excel rows 52-55 + 1 barangay official)
 - Birthdates sourced directly from the Excel file (converted from Excel serial dates)
 - Only Residents + Address records are created
 - First 41 original residents are assigned real RFID card UIDs
@@ -40,10 +40,11 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 # ─────────────────────────────────────────────────────────────
-# Source data (54 residents — 50 original + 4 new from Excel)
+# Source data (55 residents — 50 original + 4 new from Excel + 1 official)
 # Birthdates verified from the Excel file serial date column.
 # Mercy C. Dela Rea (row 45) had a #VALUE! error in Excel;
 # original seed date 1969-12-17 is retained for her.
+# Ma. Judith B. Borja added as Barangay Secretary (admin account).
 # ─────────────────────────────────────────────────────────────
 
 RESIDENTS_DATA = [
@@ -103,6 +104,8 @@ RESIDENTS_DATA = [
     ("GILLIAN LOU R. GUTIERREZ",       "1997-03-21", "152 A. Mabini St."),
     ("ALLISTER MARVIN G. BAYAS",       "2008-01-25", "139 A. Mabini St."),
     ("KEITH BEAU ALLEN Q. VILLAMOR",   "2004-01-12", "139 A. Mabini St."),
+    # ── Barangay official (Brgy Secretary) ─────────────────────
+    ("MA. JUDITH B. BORJA",            "1980-01-01", "001 A. Mabini St."),
 ]
 
 
@@ -210,7 +213,7 @@ def _infer_gender(first_name: str) -> str:
         "LOURELLA", "LUCIANA", "GINA", "KRISTAL", "CARISSA", "JELYN",
         "MYLENE", "CHARIEL", "JENNA", "ALLIAH", "MARIFE", "VERONICA",
         "AUBREY", "JULITA", "GRACE", "MARIA", "MERCY", "CHRISTINA",
-        "JOI-ANN", "LEA", "MIALYN", "MARLYN", "GILLIAN",
+        "JOI-ANN", "LEA", "MIALYN", "MARLYN", "GILLIAN", "JUDITH",
     }
     return "female" if first_name.upper().strip() in female_indicators else "male"
 
@@ -241,7 +244,7 @@ def seed_residents(db: Session):
     print("\n[residents] Seeding residents …")
 
     existing = db.query(Resident).count()
-    if existing >= 54:
+    if existing >= 55:
         print(f"  ↳ Skipped — {existing} residents already exist.")
         return
 
