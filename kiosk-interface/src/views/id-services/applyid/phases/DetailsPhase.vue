@@ -105,7 +105,7 @@ const handleEnter = () => {
 
         <template v-else>
           <!-- Manual override toggle (RFID users only) -->
-          <div v-if="authStore.rfidUid" class="mb-5 flex items-center gap-3">
+          <div v-if="authStore.isAuthenticated" class="mb-5 flex items-center gap-3">
             <input
               id="manualEntry"
               type="checkbox"

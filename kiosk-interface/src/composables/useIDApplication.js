@@ -178,21 +178,28 @@ export function useIDApplication() {
 
   async function proceedFromRequirements() {
     showRequirementsModal.value = false;
-    useManualEntry.value = !authStore.rfidUid;
     buildEmptyForm();
-    if (authStore.rfidUid && selectedResident.value?.resident_id) {
+
+    // Always attempt autofill if we have a resident ID
+    if (selectedResident.value?.resident_id) {
       isFetchingAutofill.value = true;
       try {
         const { data: autofill } = await getResidentAutofillData(
           selectedResident.value.resident_id,
         );
         applyAutofill(autofill);
+        // RFID users: lock fields (they can override via checkbox)
+        // Guest users: fields are pre-filled but stay editable
+        useManualEntry.value = !authStore.rfidUid;
       } catch {
-        useManualEntry.value = true;
+        useManualEntry.value = true; // fallback: manual for everyone on error
       } finally {
         isFetchingAutofill.value = false;
       }
+    } else {
+      useManualEntry.value = true;
     }
+
     try {
       const { data: idData } = await generateBrgyID();
       brgyIdNumber.value = idData.brgy_id_number;
