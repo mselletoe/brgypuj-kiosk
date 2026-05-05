@@ -35,10 +35,6 @@ const showToast = ref(false)
 const toastMessage = ref('')
 const isSuccess = ref(false)
 
-/**
- * Displays a temporary toast notification.
- * Auto-dismisses after 2 seconds.
- */
 const triggerToast = (message, success = false) => {
   toastMessage.value = message
   isSuccess.value = success
@@ -59,12 +55,14 @@ const showPin = ref(false)
 // =============================================================================
 const isLocked = ref(false)
 const lockoutSecondsLeft = ref(0)
+const lockoutTotalSeconds = ref(0)
 const attemptsLeft = ref(null)
 let lockoutInterval = null
 
 function startLockoutCountdown(seconds) {
   isLocked.value = true
   lockoutSecondsLeft.value = seconds
+  lockoutTotalSeconds.value = seconds
   clearInterval(lockoutInterval)
 
   lockoutInterval = setInterval(() => {
@@ -85,6 +83,14 @@ const lockoutDisplay = computed(() => {
   return m > 0
     ? `${m}m ${String(s).padStart(2, '0')}s`
     : `${s}s`
+})
+
+// Circle circumference for r=44: 2 * PI * 44 ≈ 276.46
+const CIRCUMFERENCE = 276.46
+const lockoutDashOffset = computed(() => {
+  if (lockoutTotalSeconds.value === 0) return CIRCUMFERENCE
+  const progress = lockoutSecondsLeft.value / lockoutTotalSeconds.value
+  return CIRCUMFERENCE * (1 - progress)
 })
 
 // =============================================================================
@@ -153,12 +159,6 @@ const onBackspace = () => {
 // =============================================================================
 // SUBMIT
 // =============================================================================
-/**
- * Handles PIN submission for all three modes:
- * - Admin mode: verifies the passcode and grants access to registration
- * - PIN setup: validates match and sets a new PIN for the resident
- * - PIN verify: authenticates the resident and confirms the RFID session
- */
 const submitPin = async () => {
   if (!isPinComplete.value || isLocked.value) return
 
@@ -233,7 +233,6 @@ onMounted(() => {
   if (!authStore.tempResident || !authStore.tempUid) { triggerToast(t('noSessionFound')); setTimeout(() => router.push('/login-rfid'), 1500) }
 })
 
-// Clear the lockout interval when the component is destroyed
 onUnmounted(() => clearInterval(lockoutInterval))
 </script>
 
@@ -270,7 +269,8 @@ onUnmounted(() => clearInterval(lockoutInterval))
       <div class="flex flex-1 flex-col items-center justify-center pl-12 border-l border-gray-200 relative">
 
         <!-- ─ LOCKOUT STATE ─────────────────────────────────────────────── -->
-        <div v-if="isLocked" class="flex flex-col items-center gap-6 text-center">
+        <div v-if="isLocked" class="flex flex-col items-center gap-5 text-center">
+          <!-- Countdown ring -->
           <div class="relative w-32 h-32">
             <svg class="w-full h-full -rotate-90" viewBox="0 0 100 100">
               <circle cx="50" cy="50" r="44" fill="none" stroke="#FEE2E2" stroke-width="8" />
@@ -280,8 +280,8 @@ onUnmounted(() => clearInterval(lockoutInterval))
                 stroke="#EF4444"
                 stroke-width="8"
                 stroke-linecap="round"
-                :stroke-dasharray="276.46"
-                :stroke-dashoffset="276.46 * (lockoutSecondsLeft / (lockoutSecondsLeft + 1))"
+                :stroke-dasharray="CIRCUMFERENCE"
+                :stroke-dashoffset="lockoutDashOffset"
                 class="transition-all duration-1000"
               />
             </svg>
@@ -289,9 +289,17 @@ onUnmounted(() => clearInterval(lockoutInterval))
               {{ lockoutDisplay }}
             </span>
           </div>
+          <!-- Message -->
           <div>
             <p class="text-xl font-semibold text-red-600">{{ t('accountLocked') }}</p>
-            <p class="text-sm text-gray-500 mt-1">{{ t('tooManyIncorrect') }}<br>{{ t('waitBeforeTrying') }}</p>
+            <p class="text-sm text-gray-500 mt-1 leading-relaxed">
+              {{ t('tooManyIncorrect') }}<br>{{ t('waitBeforeTrying') }}
+            </p>
+          </div>
+          <!-- Forgot PIN hint -->
+          <div class="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 max-w-[300px] text-center">
+            <LockClosedIcon class="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+            <p class="text-xs text-amber-700 leading-snug">{{ t('forgotPinLockout') }}</p>
           </div>
         </div>
 

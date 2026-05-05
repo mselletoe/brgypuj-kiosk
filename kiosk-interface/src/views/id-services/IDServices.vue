@@ -99,9 +99,9 @@ const goBack = () => router.push("/home");
             </div>
             <h2 class="text-3xl font-bold mb-3 tracking-tight">{{ $t('noActiveID') }}</h2>
             <p class="text-md text-blue-100 max-w-md leading-relaxed">{{ $t('guestModeMsg') }}</p>
-            <div class="mt-8 flex gap-2 items-center bg-white/10 px-6 py-2 rounded-full border border-white/20">
-              <div class="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
-              <span class="text-sm font-bold tracking-widest uppercase">{{ $t('applicationOpen') }}</span>
+            <div class="mt-8 flex gap-2 items-center bg-white/10 px-5 py-3 rounded-2xl border border-white/20 max-w-xs">
+              <LockClosedIcon class="w-5 h-5 text-yellow-300 flex-shrink-0" />
+              <span class="text-sm text-blue-100 leading-snug">{{ $t('forgotPinNote') }}</span>
             </div>
           </div>
         </div>
