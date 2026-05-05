@@ -61,7 +61,14 @@ const getItemQuantity = (equipment) => {
   return item ? item.quantity : 0;
 };
 
+// An item is out of stock when available_quantity hits 0 —
+// this happens immediately on submission (not on approval).
+const isOutOfStock = (equipment) => equipment.available === 0;
+
 const setQuantity = (equipment, newQuantity) => {
+  // Hard block: never allow interaction with a fully-depleted item
+  if (isOutOfStock(equipment)) return;
+
   if (newQuantity < 0) newQuantity = 0;
   if (newQuantity > equipment.available) {
     newQuantity = equipment.available;
@@ -115,6 +122,7 @@ const activeEquipment = ref(null);
 const quantityWarning = ref("");
 
 const openKeyboard = (equipment) => {
+  if (isOutOfStock(equipment)) return;
   activeEquipment.value = equipment;
   showKeyboard.value = true;
   quantityWarning.value = "";
@@ -219,18 +227,27 @@ onMounted(() => equipmentInventoryStore.fetchInventory());
           v-for="equipment in allEquipment"
           :key="equipment.id"
           :id="`item-${equipment.id}`"
-          class="bg-white rounded-2xl shadow-lg border border-gray-200 p-4 flex flex-col justify-between"
+          class="rounded-2xl shadow-lg border p-4 flex flex-col justify-between transition-all"
+          :class="isOutOfStock(equipment)
+            ? 'bg-gray-50 border-gray-200 opacity-60'
+            : 'bg-white border-gray-200'"
         >
           <div class="text-center">
-            <h1 class="text-2xl font-bold text-[#003A6B] truncate">
+            <h1
+              class="text-2xl font-bold truncate"
+              :class="isOutOfStock(equipment) ? 'text-gray-400' : 'text-[#003A6B]'"
+            >
               {{ equipment.name }}
             </h1>
             <div class="mt-2 text-sm">
               <div class="flex justify-between">
                 <span>{{ t('available') }}</span>
-                <span class="font-medium"
-                  >{{ equipment.available }}/{{ equipment.total }}</span
+                <span
+                  class="font-medium"
+                  :class="isOutOfStock(equipment) ? 'text-red-500' : ''"
                 >
+                  {{ equipment.available }}/{{ equipment.total }}
+                </span>
               </div>
               <div class="flex justify-between mt-1">
                 <span>{{ t('rate') }}</span>
@@ -238,8 +255,12 @@ onMounted(() => equipmentInventoryStore.fetchInventory());
                   {{ formatCurrency(equipment.rate) }}/{{ t('day') }}
                 </span>
               </div>
+              <!-- Out of stock badge -->
+              <p v-if="isOutOfStock(equipment)" class="text-red-500 font-semibold text-xs mt-2 uppercase tracking-wide">
+                Out of Stock
+              </p>
               <p
-                v-if="activeEquipment?.id === equipment.id && quantityWarning"
+                v-else-if="activeEquipment?.id === equipment.id && quantityWarning"
                 class="text-red-600 font-medium text-xs mt-1"
               >
                 {{ quantityWarning }}
@@ -252,17 +273,18 @@ onMounted(() => equipmentInventoryStore.fetchInventory());
               @click="decrement(equipment)"
               :class="[
                 'w-10 h-10 flex items-center justify-center rounded-lg transition-colors',
-                getItemQuantity(equipment) === 0
+                getItemQuantity(equipment) === 0 || isOutOfStock(equipment)
                   ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                   : 'bg-red-100 text-red-600 hover:bg-red-200',
               ]"
-              :disabled="getItemQuantity(equipment) === 0"
+              :disabled="getItemQuantity(equipment) === 0 || isOutOfStock(equipment)"
             >
               <MinusIcon class="w-6 h-6" />
             </button>
 
             <span
-              class="text-2xl font-bold w-12 text-center cursor-pointer hover:bg-gray-100 rounded-md"
+              class="text-2xl font-bold w-12 text-center rounded-md"
+              :class="isOutOfStock(equipment) ? 'text-gray-400 cursor-not-allowed' : 'cursor-pointer hover:bg-gray-100'"
               @click="openKeyboard(equipment)"
             >
               {{ getItemQuantity(equipment) }}
@@ -272,11 +294,11 @@ onMounted(() => equipmentInventoryStore.fetchInventory());
               @click="increment(equipment)"
               :class="[
                 'w-10 h-10 flex items-center justify-center rounded-lg transition-colors',
-                getItemQuantity(equipment) === equipment.available
+                getItemQuantity(equipment) === equipment.available || isOutOfStock(equipment)
                   ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                   : 'bg-green-100 text-green-600 hover:bg-green-200',
               ]"
-              :disabled="getItemQuantity(equipment) === equipment.available"
+              :disabled="getItemQuantity(equipment) === equipment.available || isOutOfStock(equipment)"
             >
               <PlusIcon class="w-6 h-6" />
             </button>

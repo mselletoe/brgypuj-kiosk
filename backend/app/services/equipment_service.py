@@ -553,10 +553,13 @@ def delete_equipment_request(db: Session, request_id: int):
     req = _get_request(db, request_id)
     if not req:
         return False
-    
+
+    # Only restore availability for statuses that still hold the inventory.
+    # "Returned" and "Rejected" already restored availability during their
+    # lifecycle transitions — restoring again would double-add stock.
     if req.status in ["Pending", "Approved", "Picked-Up"]:
         _update_equipment_availability(db, request_id, "increase")
-    
+
     db.delete(req)
     db.commit()
     return True
@@ -564,7 +567,7 @@ def delete_equipment_request(db: Session, request_id: int):
 
 def bulk_delete_equipment_requests(db: Session, ids: list[int]):
     requests = db.query(EquipmentRequest).filter(EquipmentRequest.id.in_(ids)).all()
-    
+
     for req in requests:
         if req.status in ["Pending", "Approved", "Picked-Up"]:
             _update_equipment_availability(db, req.id, "increase")

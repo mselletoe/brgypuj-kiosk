@@ -92,33 +92,28 @@ async function handleSave(formData) {
     return;
   }
 
-  if (formData.available < 0) {
-    message.warning("Available quantity cannot be negative.");
-    return;
-  }
-
-  if (formData.available > formData.total_owned) {
-    message.warning("Available quantity cannot be greater than total owned.");
-    return;
-  }
-
   if (formData.rental_rate < 0) {
     message.warning("Rental rate cannot be negative.");
     return;
   }
 
   try {
-    const apiPayload = {
-      name: formData.item_name.trim(),
-      total_quantity: formData.total_owned,
-      available_quantity: formData.available,
-      rate_per_day: formData.rental_rate,
-    };
-
     if (formData.isNew) {
+      const apiPayload = {
+        name: formData.item_name.trim(),
+        total_quantity: formData.total_owned,
+        // New item has no active requests yet, so available starts equal to total.
+        available_quantity: formData.total_owned,
+        rate_per_day: formData.rental_rate,
+      };
       await createEquipmentItem(apiPayload);
       message.success(`"${formData.item_name}" added to inventory!`);
     } else {
+      const apiPayload = {
+        name: formData.item_name.trim(),
+        total_quantity: formData.total_owned,
+        rate_per_day: formData.rental_rate,
+      };
       await updateEquipmentItem(formData.id, apiPayload);
       message.success(`Changes for "${formData.item_name}" saved!`);
     }

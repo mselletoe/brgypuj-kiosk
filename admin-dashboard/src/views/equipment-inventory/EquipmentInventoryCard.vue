@@ -26,6 +26,12 @@ watch(() => props.equipment, (newVal) => {
   form.value = { ...newVal };
 }, { deep: true });
 
+watch(() => form.value.total_owned, (newTotal) => {
+  if (form.value.available > newTotal) {
+    form.value.available = newTotal;
+  }
+});
+
 const handleToggle = () => {
   emit('toggle-select', props.equipment.id);
 };
@@ -100,11 +106,20 @@ const handleToggle = () => {
           <div class="grid grid-cols-2 gap-4">
             <div class="space-y-1">
               <label class="text-[10px] font-bold text-gray-400 uppercase">Total Owned</label>
-              <input v-model.number="form.total_owned" type="number" class="w-full p-2 border border-gray-200 rounded-md text-sm outline-none" />
+              <input v-model.number="form.total_owned" type="number" min="0" class="w-full p-2 border border-gray-200 rounded-md text-sm outline-none" />
             </div>
             <div class="space-y-1">
-              <label class="text-[10px] font-bold text-gray-400 uppercase">Available</label>
-              <input v-model.number="form.available" type="number" class="w-full p-2 border border-gray-200 rounded-md text-sm outline-none" />
+              <label class="text-[10px] font-bold text-gray-400 uppercase">
+                Available
+                <span class="normal-case text-gray-300 ml-1">(auto)</span>
+              </label>
+              <input
+                :value="form.available"
+                type="number"
+                readonly
+                title="Managed automatically by the system based on active requests"
+                class="w-full p-2 border border-gray-100 rounded-md text-sm bg-gray-50 text-gray-400 cursor-not-allowed outline-none"
+              />
             </div>
           </div>
 
