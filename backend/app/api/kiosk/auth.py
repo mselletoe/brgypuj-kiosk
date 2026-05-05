@@ -25,16 +25,43 @@ from app.models.resident import Resident, Address, Purok
 
 router = APIRouter(prefix="/auth")
 
-# bcrypt context for hashing and verifying resident PINs
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-# Sentinel value indicating a resident has not yet set a custom PIN
 RFID_PIN_DEFAULT = "0000"
 
 
-# =================================================================================
-# GUEST AUTHENTICATION
-# =================================================================================
+def _as_utc(dt):
+    """Return a timezone-aware UTC datetime, even if the DB returns a naive value."""
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+
+def _active_lockout_payload(resident: Resident, db: Session, now: datetime):
+    """
+    Return a 423 detail payload if lockout is still active.
+    If lockout already expired, clear both locked_until and failed attempts
+    so the next PIN try starts with a fresh attempt allowance.
+    """
+    locked_until = _as_utc(resident.locked_until)
+    if not locked_until:
+        return None
+
+    if locked_until > now:
+        remaining = max(1, int((locked_until - now).total_seconds()))
+        return {
+            "reason": "too_many_attempts",
+            "locked_until": locked_until.isoformat(),
+            "lockout_seconds_remaining": remaining,
+        }
+
+    # Lockout has expired. Clear stale lockout state before verifying again.
+    resident.locked_until = None
+    resident.failed_pin_attempts = 0
+    db.commit()
+    return None
+
 
 @router.post("/guest")
 def guest_login():
@@ -42,37 +69,18 @@ def guest_login():
     return {"mode": "guest"}
 
 
-# =================================================================================
-# RFID AUTHENTICATION
-# =================================================================================
-
 @router.post("/rfid", response_model=RFIDLoginResponse)
 def rfid_auth(payload: RFIDLoginRequest, db: Session = Depends(get_db)):
-    """
-    Authenticates a resident by their RFID card UID.
-
-    Validates the RFID tag, checks for an active lockout, then returns
-    the resident's profile and their current formatted address.
-    Raises 401 for invalid or inactive cards, and 423 if the account is locked.
-    """
     resident = rfid_login(db, payload.rfid_uid)
 
     if not resident:
         raise HTTPException(status_code=401, detail="Invalid or inactive RFID")
 
-    # Reject login if the resident is within an active lockout window
-    if resident.locked_until and resident.locked_until > datetime.now(timezone.utc):
-        remaining = int((resident.locked_until - datetime.now(timezone.utc)).total_seconds())
-        raise HTTPException(
-            status_code=status.HTTP_423_LOCKED,
-            detail={
-                "reason": "too_many_attempts",
-                "locked_until": resident.locked_until.isoformat(),
-                "lockout_seconds_remaining": remaining,
-            },
-        )
+    now = datetime.now(timezone.utc)
+    lockout_detail = _active_lockout_payload(resident, db, now)
+    if lockout_detail:
+        raise HTTPException(status_code=status.HTTP_423_LOCKED, detail=lockout_detail)
 
-    # Fetch the resident's current address with its associated purok
     current_address = (
         db.query(Address)
         .filter(
@@ -83,7 +91,6 @@ def rfid_auth(payload: RFIDLoginRequest, db: Session = Depends(get_db)):
         .first()
     )
 
-    # Format address into a single readable string if available
     formatted_address = None
     if current_address:
         formatted_address = (
@@ -105,23 +112,13 @@ def rfid_auth(payload: RFIDLoginRequest, db: Session = Depends(get_db)):
     }
 
 
-# =================================================================================
-# FIRST TIME SET PIN
-# =================================================================================
-
 @router.post("/set-pin", status_code=status.HTTP_200_OK)
 def set_pin(payload: SetPinRequest, db: Session = Depends(get_db)):
-    """
-    Sets a PIN for a resident who has not yet configured one.
-    Rejects the request if a custom PIN is already in place — use /verify-pin instead.
-    Resets any prior failed attempt counters and lockout on success.
-    """
     resident = db.query(Resident).filter(Resident.id == payload.resident_id).first()
 
     if not resident:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resident not found")
 
-    # Only allow set-pin if the resident is still on the default PIN
     if resident.rfid_pin not in (None, RFID_PIN_DEFAULT):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -136,71 +133,52 @@ def set_pin(payload: SetPinRequest, db: Session = Depends(get_db)):
     return {"message": "PIN set successfully"}
 
 
-# =================================================================================
-# VERIFY PIN
-# =================================================================================
-
 @router.post("/verify-pin", response_model=VerifyPinResponse)
 def verify_pin(payload: VerifyPinRequest, db: Session = Depends(get_db)):
-    """
-    Verifies a resident's PIN after an RFID scan.
-
-    Tracks failed attempts and enforces a lockout once the configured
-    maximum is reached. Returns remaining attempts on failure, or resets the counter on success.
-    Raises 423 if the resident is currently locked out.
-    """
     resident = db.query(Resident).filter(Resident.id == payload.resident_id).first()
 
     if not resident:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resident not found")
 
-    # Cannot verify a PIN that hasn't been set yet
     if resident.rfid_pin in (None, RFID_PIN_DEFAULT):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="No PIN configured. Please set a PIN first.",
         )
 
-    # Reject immediately if still within a lockout window
     now = datetime.now(timezone.utc)
-    if resident.locked_until and resident.locked_until > now:
-        remaining = int((resident.locked_until - now).total_seconds())
-        raise HTTPException(
-            status_code=status.HTTP_423_LOCKED,
-            detail={
-                "reason": "too_many_attempts",
-                "locked_until": resident.locked_until.isoformat(),
-                "lockout_seconds_remaining": remaining,
-            },
-        )
+    lockout_detail = _active_lockout_payload(resident, db, now)
+    if lockout_detail:
+        raise HTTPException(status_code=status.HTTP_423_LOCKED, detail=lockout_detail)
 
     is_valid = pwd_context.verify(payload.pin, resident.rfid_pin)
 
     if is_valid:
-        # Reset failure tracking on a successful verification
         resident.failed_pin_attempts = 0
         resident.locked_until = None
         db.commit()
         return {"valid": True}
 
     config = get_config(db)
+    max_failed_attempts = max(1, int(config.max_failed_attempts or 1))
+    lockout_minutes = max(1, int(config.lockout_minutes or 1))
+
     resident.failed_pin_attempts = (resident.failed_pin_attempts or 0) + 1
 
-    if resident.failed_pin_attempts >= config.max_failed_attempts:
-        resident.locked_until = now + timedelta(minutes=config.lockout_minutes)
+    if resident.failed_pin_attempts >= max_failed_attempts:
+        resident.locked_until = now + timedelta(minutes=lockout_minutes)
         db.commit()
 
-        remaining = int(config.lockout_minutes * 60)
         raise HTTPException(
             status_code=status.HTTP_423_LOCKED,
             detail={
                 "reason": "too_many_attempts",
                 "locked_until": resident.locked_until.isoformat(),
-                "lockout_seconds_remaining": remaining,
+                "lockout_seconds_remaining": lockout_minutes * 60,
             },
         )
 
     db.commit()
 
-    attempts_left = config.max_failed_attempts - resident.failed_pin_attempts
+    attempts_left = max_failed_attempts - resident.failed_pin_attempts
     return {"valid": False, "attempts_left": attempts_left}

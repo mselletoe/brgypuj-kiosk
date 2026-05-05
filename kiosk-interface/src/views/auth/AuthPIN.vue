@@ -56,42 +56,94 @@ const showPin = ref(false)
 const isLocked = ref(false)
 const lockoutSecondsLeft = ref(0)
 const lockoutTotalSeconds = ref(0)
+const lockedUntilMs = ref(null)
 const attemptsLeft = ref(null)
 let lockoutInterval = null
 
-function startLockoutCountdown(seconds) {
-  isLocked.value = true
-  lockoutSecondsLeft.value = seconds
-  lockoutTotalSeconds.value = seconds
+function stopLockoutTimer() {
   clearInterval(lockoutInterval)
-
-  lockoutInterval = setInterval(() => {
-    lockoutSecondsLeft.value -= 1
-    if (lockoutSecondsLeft.value <= 0) {
-      clearInterval(lockoutInterval)
-      isLocked.value = false
-      attemptsLeft.value = null
-      pin.value = ''
-      confirmPin.value = ''
-    }
-  }, 1000)
+  lockoutInterval = null
 }
 
-const lockoutDisplay = computed(() => {
-  const m = Math.floor(lockoutSecondsLeft.value / 60)
-  const s = lockoutSecondsLeft.value % 60
-  return m > 0
-    ? `${m}m ${String(s).padStart(2, '0')}s`
-    : `${s}s`
-})
+function finishLockout() {
+  stopLockoutTimer()
+  isLocked.value = false
+  lockoutSecondsLeft.value = 0
+  lockoutTotalSeconds.value = 0
+  lockedUntilMs.value = null
+  attemptsLeft.value = null
+  pin.value = ''
+  confirmPin.value = ''
+}
 
-// Circle circumference for r=44: 2 * PI * 44 ≈ 276.46
-const CIRCUMFERENCE = 276.46
-const lockoutDashOffset = computed(() => {
-  if (lockoutTotalSeconds.value === 0) return CIRCUMFERENCE
-  const progress = lockoutSecondsLeft.value / lockoutTotalSeconds.value
-  return CIRCUMFERENCE * (1 - progress)
-})
+function normalizeLockoutPayload(payload = {}) {
+  const detail = payload?.detail ?? payload
+
+  const seconds = Number(
+    detail?.lockout_seconds_remaining ??
+    detail?.lockoutSecondsRemaining ??
+    detail?.remaining_seconds ??
+    detail?.seconds ??
+    60
+  )
+
+  const lockedUntilRaw =
+    detail?.locked_until ??
+    detail?.lockedUntil ??
+    null
+
+  return {
+    seconds: Number.isFinite(seconds) ? seconds : 60,
+    lockedUntilMs: lockedUntilRaw ? Date.parse(lockedUntilRaw) : null,
+  }
+}
+
+function hasLockoutPayload(payload = {}) {
+  const detail = payload?.detail ?? payload
+  return Boolean(
+    payload?.locked ||
+    detail?.locked ||
+    detail?.reason === 'too_many_attempts' ||
+    detail?.lockout_seconds_remaining !== undefined ||
+    detail?.locked_until
+  )
+}
+
+function startLockoutCountdown(payload = {}) {
+  const { seconds, lockedUntilMs: parsedLockedUntilMs } = normalizeLockoutPayload(payload)
+
+  const targetMs = Number.isFinite(parsedLockedUntilMs)
+    ? parsedLockedUntilMs
+    : Date.now() + Math.max(1, seconds) * 1000
+
+  const initialSeconds = Math.max(1, Math.ceil((targetMs - Date.now()) / 1000))
+
+  isLocked.value = true
+  lockedUntilMs.value = targetMs
+  lockoutSecondsLeft.value = initialSeconds
+  lockoutTotalSeconds.value = initialSeconds
+  attemptsLeft.value = null
+  pin.value = ''
+  confirmPin.value = ''
+
+  stopLockoutTimer()
+
+  const tick = () => {
+    const left = Math.max(0, Math.ceil((lockedUntilMs.value - Date.now()) / 1000))
+    lockoutSecondsLeft.value = left
+
+    if (left <= 0) finishLockout()
+  }
+
+  tick()
+  lockoutInterval = setInterval(tick, 1000)
+}
+
+function maybeStartLockout(payload) {
+  if (!hasLockoutPayload(payload)) return false
+  startLockoutCountdown(payload)
+  return true
+}
 
 // =============================================================================
 // COMPUTED UI STATE
@@ -99,11 +151,13 @@ const lockoutDashOffset = computed(() => {
 const isAdminMode = computed(() => rfidRegStore.isAdminMode)
 
 const title = computed(() => {
+  if (isLocked.value) return t('accountLocked')
   if (isAdminMode.value) return t('adminAccessRequired')
   return t('welcome', { name: authStore.tempResident?.first_name || 'Resident' })
 })
 
 const subtitle = computed(() => {
+  if (isLocked.value) return t('waitBeforeTrying')
   if (isAdminMode.value) return t('enterAdminPasscode')
   if (!authStore.tempHasPin) return t('setYourPIN')
   return t('enterYourPIN')
@@ -164,8 +218,14 @@ const submitPin = async () => {
 
   try {
     if (isAdminMode.value) {
-      const { valid } = await verifyAdminPasscode(pin.value)
-      if (!valid) { triggerToast(t('incorrectPasscode')); onClear(); return }
+      const response = await verifyAdminPasscode(pin.value)
+
+      // Supports both response styles:
+      // 1) API returns { valid: false, reason: 'too_many_attempts', ... }
+      // 2) API throws/catches HTTP 423 below.
+      if (maybeStartLockout(response)) return
+
+      if (!response?.valid) { triggerToast(t('incorrectPasscode')); onClear(); return }
       triggerToast(t('accessGranted'), true)
       rfidRegStore.clearAdminMode()
       setTimeout(() => router.replace('/register'), 1000)
@@ -203,9 +263,7 @@ const submitPin = async () => {
     onClear()
 
     if (err?.response?.status === 423) {
-      const detail = err.response.data?.detail || {}
-      const secs   = detail.lockout_seconds_remaining ?? 60
-      startLockoutCountdown(secs)
+      maybeStartLockout(err.response.data?.detail ?? err.response.data ?? {})
       return
     }
 
@@ -217,7 +275,7 @@ const submitPin = async () => {
 // NAVIGATION
 // =============================================================================
 const goBack = () => {
-  clearInterval(lockoutInterval)
+  stopLockoutTimer()
   if (isAdminMode.value) rfidRegStore.clearAll()
   router.push('/login-rfid')
 }
@@ -233,7 +291,7 @@ onMounted(() => {
   if (!authStore.tempResident || !authStore.tempUid) { triggerToast(t('noSessionFound')); setTimeout(() => router.push('/login-rfid'), 1500) }
 })
 
-onUnmounted(() => clearInterval(lockoutInterval))
+onUnmounted(stopLockoutTimer)
 </script>
 
 <template>
@@ -253,8 +311,8 @@ onUnmounted(() => clearInterval(lockoutInterval))
 
         <div class="flex-grow flex flex-col justify-center items-center text-center">
           <div class="mb-20">
-            <ShieldCheckIcon v-if="isAdminMode" class="w-16 h-16 mx-auto mb-4 text-[#013C6D] opacity-80" />
-            <LockClosedIcon  v-else-if="isLocked" class="w-16 h-16 mx-auto mb-4 text-red-500" />
+            <LockClosedIcon v-if="isLocked" class="w-16 h-16 mx-auto mb-4 text-red-500" />
+            <ShieldCheckIcon v-else-if="isAdminMode" class="w-16 h-16 mx-auto mb-4 text-[#013C6D] opacity-80" />
             <h2 class="text-4xl font-bold mb-2 leading-tight">{{ title }}</h2>
             <p class="text-lg text-gray-500 italic">{{ subtitle }}</p>
           </div>
