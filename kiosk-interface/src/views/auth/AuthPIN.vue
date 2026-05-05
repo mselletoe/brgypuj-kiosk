@@ -8,7 +8,7 @@
  * Includes lockout enforcement with a countdown timer on repeated failures.
  */
 
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed, onActivated } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useSystemConfig } from '@/composables/useSystemConfig'
@@ -75,6 +75,27 @@ function finishLockout() {
   pin.value = ''
   confirmPin.value = ''
 }
+
+// =============================================================================
+// LOCKOUT DISPLAY
+// =============================================================================
+const CIRCUMFERENCE = 2 * Math.PI * 44 // r=44 → ≈ 276.46
+
+const lockoutDashOffset = computed(() => {
+  if (lockoutTotalSeconds.value === 0) return 0
+  const progress = lockoutSecondsLeft.value / lockoutTotalSeconds.value
+  return CIRCUMFERENCE * (1 - progress)
+})
+
+const lockoutDisplay = computed(() => {
+  const s = lockoutSecondsLeft.value
+  if (s >= 60) {
+    const m = Math.floor(s / 60)
+    const sec = s % 60
+    return `${m}:${String(sec).padStart(2, '0')}`
+  }
+  return `${s}s`
+})
 
 function normalizeLockoutPayload(payload = {}) {
   const detail = payload?.detail ?? payload
@@ -275,7 +296,7 @@ const submitPin = async () => {
 // NAVIGATION
 // =============================================================================
 const goBack = () => {
-  stopLockoutTimer()
+  finishLockout()
   if (isAdminMode.value) rfidRegStore.clearAll()
   router.push('/login-rfid')
 }
@@ -284,6 +305,8 @@ const goBack = () => {
 // LIFECYCLE
 // =============================================================================
 onMounted(() => {
+  finishLockout()
+  
   if (rfidRegStore.isAdminMode) {
     if (!rfidRegStore.pendingRfidUid) { triggerToast(t('noRFIDFound')); setTimeout(() => router.push('/login-rfid'), 1500) }
     return

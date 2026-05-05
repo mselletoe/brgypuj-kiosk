@@ -33,6 +33,7 @@ const MIN_UID_LENGTH = 4
 // =============================================================================
 const isLocked           = ref(false)
 const lockoutSecondsLeft = ref(0)
+const lockedUID          = ref('')
 let lockoutInterval      = null
 
 const lockoutDisplay = computed(() => {
@@ -41,8 +42,9 @@ const lockoutDisplay = computed(() => {
   return m > 0 ? `${m}m ${String(s).padStart(2, '0')}s` : `${s}s`
 })
 
-function startLockoutCountdown(seconds) {
+function startLockoutCountdown(seconds, uid = '') {
   isLocked.value           = true
+  lockedUID.value          = uid
   lockoutSecondsLeft.value = seconds
   isProcessing.value       = false
   clearInterval(lockoutInterval)
@@ -51,7 +53,8 @@ function startLockoutCountdown(seconds) {
     lockoutSecondsLeft.value -= 1
     if (lockoutSecondsLeft.value <= 0) {
       clearInterval(lockoutInterval)
-      isLocked.value = false
+      isLocked.value  = false
+      lockedUID.value = ''
       resetScanner()
     }
   }, 1000)
@@ -82,11 +85,19 @@ const resetScanner = () => {
   inputBuffer        = ''
   scannedUID.value   = ''
   manualUID.value    = ''
+  lockedUID.value    = ''
   if (hiddenInput.value) hiddenInput.value.value = ''
 }
 
 const authenticateRFID = async (uid) => {
-  if (isLocked.value) return
+  // If a different card is scanned while locked, clear the local lockout and
+  // let the server decide — lockouts are per-card, not global.
+  if (isLocked.value) {
+    if (uid === lockedUID.value) return   // same locked card, still blocked
+    clearInterval(lockoutInterval)
+    isLocked.value           = false
+    lockoutSecondsLeft.value = 0
+  }
 
   try {
     isProcessing.value = true
@@ -120,7 +131,7 @@ const authenticateRFID = async (uid) => {
     if (err?.response?.status === 423) {
       const detail = err.response.data?.detail || {}
       const secs   = detail.lockout_seconds_remaining ?? 60
-      startLockoutCountdown(secs)
+      startLockoutCountdown(secs, uid)
       return
     }
 
@@ -130,7 +141,7 @@ const authenticateRFID = async (uid) => {
 }
 
 const handleRFIDInput = async (event) => {
-  if (isProcessing.value || isLocked.value) return
+  if (isProcessing.value) return
 
   if (event.key === 'Enter') {
     const uid = inputBuffer.trim()
@@ -172,6 +183,9 @@ watch(
   () => route.path,
   async (newPath) => {
     if (newPath !== '/login-rfid') {
+      clearInterval(lockoutInterval)
+      isLocked.value           = false
+      lockoutSecondsLeft.value = 0
       resetScanner()
       window.removeEventListener('keydown', handleRFIDInput)
     } else {
