@@ -75,13 +75,14 @@ const emit = defineEmits([
 // NOTES POPOVER
 // =============================================================================
 const notes = ref('')
-const showNotesPopover = ref(false)
+const showNotesPopoverMobile = ref(false)
+const showNotesPopoverDesktop = ref(false)
 const isLoadingNotes = ref(false)
 const isSavingNotes = ref(false)
 const originalNotes = ref('')
 
-watch(showNotesPopover, async (isOpen) => {
-  if (isOpen) {
+watch([showNotesPopoverMobile, showNotesPopoverDesktop], async ([mobile, desktop]) => {
+  if (mobile || desktop) {
     await loadNotes()
   }
 })
@@ -110,7 +111,8 @@ const saveNotes = async () => {
       requestId: props.id,
       notes: data.notes
     })
-    showNotesPopover.value = false
+    showNotesPopoverMobile.value = false
+    showNotesPopoverDesktop.value = false
   } catch (error) {
     console.error('Failed to save notes:', error)
   } finally {
@@ -344,7 +346,7 @@ const handleButtonClick = (buttonId, btn) => {
             v-if="btn.id === 'notes'"
             trigger="click"
             placement="bottom-end"
-            v-model:show="showNotesPopover"
+            v-model:show="showNotesPopoverMobile"
             :show-arrow="false"
           >
             <template #trigger>
@@ -483,7 +485,7 @@ const handleButtonClick = (buttonId, btn) => {
               v-if="btn.id === 'notes'"
               trigger="click"
               placement="bottom-end"
-              v-model:show="showNotesPopover"
+              v-model:show="showNotesPopoverDesktop"
               :show-arrow="false"
             >
               <template #trigger>

@@ -102,6 +102,7 @@ const handleSendSMS = async (smsData) => {
   if (!request) return;
  
   await notifyResident(smsData.phone, smsData.message);
+  notifyTargetRequest.value = null;
 };
 
 // =============================================================================
@@ -442,7 +443,7 @@ onMounted(fetchPendingRequests);
     :recipient-name="smsRecipientName"
     :recipient-phone="smsRecipientPhone"
     :default-message="smsDefaultMessage"
+    :on-send="handleSendSMS"
     @update:show="(value) => (showSmsModal = value)"
-    @send="handleSendSMS"
   />
 </template>
