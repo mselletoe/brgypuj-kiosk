@@ -90,13 +90,7 @@ const handleNotify = (request) => {
  
   smsRecipientName.value = fullName || "Resident";
   smsRecipientPhone.value = request.raw?.resident_phone || "";
-  smsDefaultMessage.value = `Hello ${request.requester.firstName || "Resident"},
- 
-Your ${request.requestType} request (Transaction #${request.transaction_no}) has been approved and is ready for pickup.
- 
-Please visit the office during business hours to claim your document.
- 
-Thank you!`;
+  smsDefaultMessage.value = `Hello ${request.requester.firstName || "Resident"}, your ${request.requestType} request has been approved and is ready for pickup. Thank you!`;
  
   notifyTargetRequest.value = request;
   showSmsModal.value = true;
@@ -107,6 +101,7 @@ const handleSendSMS = async (smsData) => {
   if (!request) return;
  
   await notifyResident(smsData.phone, smsData.message);
+  notifyTargetRequest.value = null;
 };
 
 // =============================================================================
@@ -432,7 +427,7 @@ onMounted(fetchApprovedRequests);
     :recipient-name="smsRecipientName"
     :recipient-phone="smsRecipientPhone"
     :default-message="smsDefaultMessage"
+    :on-send="handleSendSMS"
     @update:show="(value) => (showSmsModal = value)"
-    @send="handleSendSMS"
   />
 </template>

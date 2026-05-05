@@ -166,6 +166,7 @@ const buttonConfigs = {
   pending: [
     { id: "details", label: "Details", variant: "primary" },
     { id: "notes", label: "Notes", variant: "gray" },
+    { id: "notify", label: "Notify", variant: "solidgreen" },
     { id: "approve", label: "Approve", variant: "green" },
     { id: "reject", label: "Reject", variant: "red" },
     { id: "delete", label: "", icon: TrashIcon, variant: "delete" },

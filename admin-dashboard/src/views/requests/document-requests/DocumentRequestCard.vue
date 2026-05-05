@@ -138,6 +138,7 @@ const buttonConfigs = {
     document: [
       { id: 'view', label: 'View File', variant: 'primary' },
       { id: 'notes', label: 'Notes', variant: 'gray' },
+      { id: 'notify', label: 'Notify', variant: 'solidgreen' },
       { id: 'approve', label: 'Approve', variant: 'green' },
       { id: 'reject', label: 'Reject', variant: 'red' },
       { id: 'delete', label: '', icon: TrashIcon, variant: 'delete' }

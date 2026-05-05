@@ -80,13 +80,7 @@ const handleNotify = (request) => {
  
   smsRecipientName.value = fullName || 'Resident'
   smsRecipientPhone.value = request.raw?.resident_phone || ''
-  smsDefaultMessage.value = `Hello ${request.requester.firstName || 'Resident'},
- 
-Regarding your ${request.requestType} request (Transaction #${request.transaction_no}): Unfortunately, your request has been rejected.
- 
-Please visit the barangay office for further clarification.
- 
-Thank you.`
+  smsDefaultMessage.value = `Hello ${request.requester.firstName || 'Resident'}. Unfortunately, your ${request.requestType} request has been rejected. Thank you.`
  
   notifyTargetRequest.value = request
   showSmsModal.value = true

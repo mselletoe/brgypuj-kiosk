@@ -19,6 +19,10 @@ const props = defineProps({
   defaultMessage: {
     type: String,
     default: ''
+  },
+  onSend: {
+    type: Function,
+    default: null
   }
 })
 
@@ -60,13 +64,14 @@ const handleSend = async () => {
   isSending.value = true
 
   try {
-    // Emit the send event with the data
-    await emit('send', {
-      phone: phoneNumber.value,
-      message: smsMessage.value,
-      recipientName: props.recipientName
-    })
-    
+    if (props.onSend) {
+      await props.onSend({
+        phone: phoneNumber.value,
+        message: smsMessage.value,
+        recipientName: props.recipientName
+      })
+    }
+
     message.success('SMS sent successfully!')
     handleClose()
   } catch (error) {

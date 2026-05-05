@@ -11,6 +11,7 @@
 import { ref, computed, onMounted } from 'vue'
 import EquipmentRequestCard from '@/views/requests/equipment-requests/EquipmentRequestCard.vue'
 import ConfirmModal from '@/components/shared/ConfirmationModal.vue'
+import SMSModal from "@/components/shared/SendSMSModal.vue"
 import {
   getEquipmentRequests,
   approveRequest,
@@ -18,7 +19,8 @@ import {
   deleteRequest,
   markAsPaid,
   markAsUnpaid,
-  bulkDeleteRequests
+  bulkDeleteRequests,
+  notifyResident
 } from '@/api/equipmentService'
 
 const props = defineProps({
@@ -69,6 +71,38 @@ const handleConfirm = async () => {
 const handleCancel = () => {
   showConfirmModal.value = false
   confirmAction.value = null
+}
+
+// =============================================================================
+// SMS MODAL
+// =============================================================================
+const showSmsModal = ref(false);
+const smsRecipientName = ref("");
+const smsRecipientPhone = ref("");
+const smsDefaultMessage = ref("");
+const notifyTargetRequest = ref(null)
+
+const handleNotify = (request) => {
+  const fullName = [
+    request.requester.firstName,
+    request.requester.middleName,
+    request.requester.lastName,
+  ]
+    .filter(Boolean).join(" ");
+
+  smsRecipientName.value = fullName || "Resident";
+  smsRecipientPhone.value = request.raw?.resident_phone || "";
+  smsDefaultMessage.value = `Hello ${request.requester.firstName || "Resident"}. Your ${request.requestType} request has been approved and is ready for pickup. Thank you!`;
+
+  notifyTargetRequest.value = request
+  showSmsModal.value = true
+};
+
+const handleSendSMS = async (smsData) => {
+  const request = notifyTargetRequest.value
+  if (!request) return
+
+  await notifyResident(smsData.phone, smsData.message)
 }
 
 // =============================================================================
@@ -159,6 +193,9 @@ const handleButtonClick = ({ action, requestId }) => {
   if (!request) return
 
   switch (action) {
+    case "notify":
+      handleNotify(request);
+      break;
     case 'approve':
       handleApprove(requestId)
       break
@@ -370,5 +407,14 @@ onMounted(fetchPendingRequests)
     cancel-text="Cancel"
     @confirm="handleConfirm"
     @cancel="handleCancel"
+  />
+
+  <SMSModal
+    :show="showSmsModal"
+    :recipient-name="smsRecipientName"
+    :recipient-phone="smsRecipientPhone"
+    :default-message="smsDefaultMessage"
+    @update:show="(value) => (showSmsModal = value)"
+    @send="handleSendSMS"
   />
 </template>

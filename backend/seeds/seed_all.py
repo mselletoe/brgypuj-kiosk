@@ -33,7 +33,6 @@ def seed_all():
         from seeds.seed_document_types import seed_document_types
         from seeds.seed_admin          import seed_admin
         from seeds.seed_announcements  import seed_announcements
-        from seeds.seed_blotter        import seed_blotter
         from seeds.seed_documents      import seed_documents
         from seeds.seed_equipment      import seed_equipment
         from seeds.seed_feedback       import seed_feedback
@@ -48,7 +47,6 @@ def seed_all():
         seed_document_types(db)   # 3. DocTypes before any requests
         seed_admin(db)            # 4. Admin accounts (linked to residents)
         seed_announcements(db)    # 5. Announcements (no dependencies)
-        seed_blotter(db)          # 7. Blotter (uses non-transaction residents)
         seed_documents(db)        # 8. Document requests (needs residents + doctypes)
         seed_equipment(db)        # 10. Inventory + borrow requests
         seed_feedback(db)         # 11. Feedback (needs residents)

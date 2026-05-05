@@ -88,11 +88,7 @@ const handleNotify = (request) => {
 
   smsRecipientName.value = fullName || 'Resident'
   smsRecipientPhone.value = request.raw?.resident_phone || ''
-  smsDefaultMessage.value = `Hello ${request.requester.firstName || 'Resident'},
-
-Just a reminder for your request ${request.requestType} request (Transaction #${request.transaction_no}) is to be returned soon.
-
-Thank you!`
+  smsDefaultMessage.value = `Hello ${request.requester.firstName || 'Resident'}. Reminder: Your request ${request.requestType} request (Transaction #${request.transaction_no}) is to be returned soon. Thank you!`
 
   notifyTargetRequest.value = request
   showSmsModal.value = true
