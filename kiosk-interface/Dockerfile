@@ -3,23 +3,28 @@ FROM node:20-alpine AS build
 
 WORKDIR /app
 
-# Copy package files first (layer caching)
+# Make sure devDependencies like vite are installed
+ENV NODE_ENV=development
+
+# Copy package files
 COPY package*.json ./
 
-# Explicitly install ALL deps including devDependencies
-# Do NOT set NODE_ENV=production before this step
-RUN npm ci
+# If package-lock.json exists, this is better than npm install
+RUN npm ci --include=dev
 
 # Copy source code
 COPY . .
 
-# Set NODE_ENV only for the build step, not for npm install
-RUN NODE_ENV=production npm run build
+# Build the app
+RUN npm run build
 
 # Stage 2: Serve with Nginx
 FROM nginx:alpine
 
+# Copy built files
 COPY --from=build /app/dist /usr/share/nginx/html
+
+# Copy nginx config
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
