@@ -40,6 +40,11 @@ const continueAsGuest = () => {
   router.replace('/home')
 }
 
+const requestID = () => {
+  authStore.setGuest()
+  router.replace('/id-services')
+}
+
 // =============================================================================
 // INACTIVITY COUNTDOWN
 // =============================================================================
@@ -99,17 +104,23 @@ onUnmounted(() => stopCountdown())
         <p class="text-xl">{{ brgySubname }}</p>
       </div>
 
-      <div class="mt-5 flex flex-col gap-y-5">
-        <Button @click.stop="handleRfidLogin" class="w-96 h-[80px] font-bold" variant="primary">
+      <div class="mt-5 flex flex-col gap-y-4">
+        <Button @click.stop="handleRfidLogin" class="w-full h-[80px] font-bold" variant="primary">
           <span class="flex items-center justify-center gap-x-3 text-xl">
             {{ t('useRFID') }}
             <SignalIcon class="h-8 w-8 mt-0" />
           </span>
         </Button>
 
-        <Button @click.stop="continueAsGuest()" variant="outline" class="w-96 h-[45px] text-[15px]">
-          {{ t('continueAsGuest') }}
-        </Button>
+        <div class="flex gap-4">
+          <Button @click.stop="continueAsGuest()" variant="outline" class="h-[45px] text-[15px]">
+            {{ t('continueAsGuest') }}
+          </Button>
+
+          <Button @click.stop="requestID()" variant="outline" class="h-[45px] text-[15px]">
+            {{ t('requestID') }}
+          </Button>
+        </div>
       </div>
 
       <p class="mt-[20px] text-gray-400 text-xs font-light tracking-wide">

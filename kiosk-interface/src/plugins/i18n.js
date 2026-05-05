@@ -38,6 +38,7 @@ const messages = {
     // ── Login ──────────────────────────────────────────────────────────────
     useRFID: 'Use RFID',
     continueAsGuest: 'Continue as Guest',
+    requestID: 'Request ID',
     screenCloses: 'Screen will close in {n} seconds...',
 
     // ── Scan RFID ──────────────────────────────────────────────────────────
@@ -418,6 +419,7 @@ const messages = {
     // ── Login ──────────────────────────────────────────────────────────────
     useRFID: 'Gumamit ng RFID',
     continueAsGuest: 'Magpatuloy bilang Guest',
+    requestID: 'Humiling ng ID',
     screenCloses: 'Magsasara ang screen sa loob ng {n} segundo...',
 
     // ── Scan RFID ──────────────────────────────────────────────────────────
