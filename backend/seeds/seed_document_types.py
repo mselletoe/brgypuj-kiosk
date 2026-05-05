@@ -43,6 +43,27 @@ def seed_document_types(db):
         return
 
     TYPES = [
+        # ── ID Application ────────────────────────────────────────────
+        # NOTE: is_id_application=True excludes this from the regular
+        # kiosk document list. It is served via its own dedicated flow
+        # (id_service.get_id_application_fields / submit_id_application).
+        dict(
+            doctype_name="BRGY ID Template",
+            price=100,
+            is_available=True,
+            is_id_application=True,
+            fields=[
+                {"name": "last_name",           "label": "Last Name",              "type": "text",   "required": True,  "autofill": True,  "source": "last_name"},
+                {"name": "first_name",          "label": "First Name",             "type": "text",   "required": True,  "autofill": True,  "source": "first_name"},
+                {"name": "middle_name",         "label": "Middle Name",            "type": "text",   "required": False, "autofill": True,  "source": "middle_name"},
+                {"name": "birthdate",           "label": "Birthdate",              "type": "date",   "required": True,  "autofill": True,  "source": "birthdate"},
+                {"name": "address",             "label": "Address",                "type": "text",   "required": True,  "autofill": True,  "source": "full_address"},
+                {"name": "phone_number",        "label": "Phone Number",           "type": "text",   "required": True,  "autofill": True,  "source": "contact_number"},
+                {"name": "contact_person_name", "label": "Contact Person Name",    "type": "text",   "required": True},
+                {"name": "contact_person_no",   "label": "Contact Person Number",  "type": "text",   "required": True},
+            ]
+        ),
+
         # ── Certificate of Indigency ──────────────────────────────────
         dict(
             doctype_name="Certificate of Indigency",
@@ -184,12 +205,12 @@ def seed_document_types(db):
             templates_found += 1
 
         docs.append(DocumentType(
-            doctype_name   = name,
-            price          = t["price"],
-            is_available   = t["is_available"],
+            doctype_name      = name,
+            price             = t["price"],
+            is_available      = t["is_available"],
             is_id_application = t["is_id_application"],
-            fields         = t["fields"],
-            file           = template_bytes,  # None if not found — that's fine
+            fields            = t["fields"],
+            file              = template_bytes,  # None if not found — that's fine
         ))
 
     db.add_all(docs)
