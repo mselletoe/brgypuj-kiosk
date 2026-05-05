@@ -23,7 +23,7 @@ Resident restriction:
 """
 
 import random
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 from sqlalchemy.orm import Session
 
 from seeds.utils import rand_dt, progression, DEPLOY_START, DEPLOY_END
@@ -137,7 +137,8 @@ def _resident_request_dt(resident) -> datetime:
         return rand_dt()
 
     offset     = random.randint(0, 3)
-    target_dt  = datetime(base_date.year, base_date.month, base_date.day) + timedelta(days=offset)
+    target_dt  = datetime(base_date.year, base_date.month, base_date.day,
+                          tzinfo=timezone.utc) + timedelta(days=offset)
     target_dt += timedelta(
         hours=random.randint(8, 16),
         minutes=random.randint(0, 59),

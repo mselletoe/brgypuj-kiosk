@@ -11,7 +11,7 @@ Resident restriction:
 """
 
 import random
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone  # ← added timezone
 from sqlalchemy.orm import Session
 
 from seeds.utils import rand_dt, progression, DEPLOY_START, DEPLOY_END
@@ -30,7 +30,7 @@ TRANSACTION_RESIDENTS = [
     ("Angcaya",    "Joana"),
     ("Delarmino",  "Chariel Althea"),
     ("Bataclan",   "Jenna Rose"),
-    ("Angcaya",    "Ma. Monica Yinley"),      
+    ("Angcaya",    "Ma. Monica Yinley"),
     ("Dela Rea",   "Justine Carl"),
     ("Jamon",      "Alliah Mae"),
     ("Plaganas",   "Maria Aleth"),
@@ -124,7 +124,9 @@ def _resident_request_dt(resident) -> datetime:
         return rand_dt()
 
     offset    = random.randint(0, 3)
-    target_dt = datetime(base_date.year, base_date.month, base_date.day) + timedelta(days=offset)
+    # ↓ tzinfo=timezone.utc added so target_dt is aware, matching DEPLOY_END
+    target_dt = datetime(base_date.year, base_date.month, base_date.day,
+                         tzinfo=timezone.utc) + timedelta(days=offset)
     target_dt += timedelta(
         hours=random.randint(8, 16),
         minutes=random.randint(0, 59),
